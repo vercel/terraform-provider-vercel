@@ -1,0 +1,8 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+terraform-provider-vercel
+.task/

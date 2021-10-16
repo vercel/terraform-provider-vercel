@@ -1,0 +1,25 @@
+# https://taskfile.dev
+version: '3'
+
+tasks:
+  build:
+    desc: "Build the provider binary"
+    cmds:
+      - go build -o terraform-provider-vercel
+    sources:
+      - "**/*.go"
+    generates:
+      - terraform-provider-vercel
+
+  install:
+    desc: "Set up an override allowing a local version of the provider to be used"
+    cmds:
+      - cmd: |-
+          cat << EOF > ~/.terraformrc
+          provider_installation {
+            dev_overrides {
+              "vercel/vercel" = "$(pwd)"
+            }
+            direct {}
+          }
+          EOF
