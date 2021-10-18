@@ -2,16 +2,16 @@ package vercel
 
 import (
 	"context"
-	"fmt"
 	"log"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-func dataSourceVercelUser() *schema.Resource {
+func dataSourceUser() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceVercelUserRead,
+		ReadContext: dataSourceUserRead,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Computed: true,
@@ -29,26 +29,25 @@ func dataSourceVercelUser() *schema.Resource {
 	}
 }
 
-func dataSourceVercelUserRead(d *schema.ResourceData, m interface{}) error {
+func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*client.Client)
 
 	log.Printf("[DEBUG] Reading User\n")
-	user, err := client.GetUser(context.Background())
+	user, err := client.GetUser(ctx)
 	if err != nil {
-		return fmt.Errorf("error getting user: %w", err)
+		return diag.Errorf("error getting user: %w", err)
 	}
 
 	if err := d.Set("name", user.Name); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if err := d.Set("username", user.Username); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if err := d.Set("plan", user.Billing.Plan); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	// Always read this resource
 	d.SetId(user.Username)
 
 	return nil

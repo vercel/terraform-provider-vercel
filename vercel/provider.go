@@ -18,12 +18,16 @@ func Provider() *schema.Provider {
 				DefaultFunc:  schema.EnvDefaultFunc("VERCEL_API_TOKEN", nil),
 				Description:  "The API key for operations.",
 				ValidateFunc: validation.StringMatch(regexp.MustCompile("[0-9a-zA-Z]{24}"), "API key must only contain characters 0-9 and a-f (all lowercased)"),
+				Sensitive:    true,
 			},
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"vercel_user": dataSourceVercelUser(),
+			"vercel_user": dataSourceUser(),
+			"vercel_file": dataSourceFile(),
 		},
-		ResourcesMap:  map[string]*schema.Resource{},
+		ResourcesMap: map[string]*schema.Resource{
+			"vercel_deployment": resourceDeployment(),
+		},
 		ConfigureFunc: configureProvider,
 	}
 }

@@ -7,6 +7,17 @@ import (
 	"net/http"
 )
 
+type APIError struct {
+	Code       string `json:"code"`
+	Message    string `json:"message"`
+	StatusCode int
+	RawMessage []byte
+}
+
+func (e APIError) Error() string {
+	return fmt.Sprintf("%s - %s", e.Code, e.Message)
+}
+
 func (c *Client) doRequest(req *http.Request, v interface{}) error {
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.token))
 	resp, err := c.http().Do(req)
@@ -21,7 +32,19 @@ func (c *Client) doRequest(req *http.Request, v interface{}) error {
 	}
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("non-200 status code returned: %d - %s", resp.StatusCode, responseBody)
+		var errorResponse APIError
+		err = json.Unmarshal(responseBody, &struct {
+			Error *APIError `json:"error"`
+		}{
+			Error: &errorResponse,
+		})
+		errorResponse.StatusCode = resp.StatusCode
+		errorResponse.RawMessage = responseBody
+		return errorResponse
+	}
+
+	if v == nil {
+		return nil
 	}
 
 	err = json.Unmarshal(responseBody, v)

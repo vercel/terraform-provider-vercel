@@ -6,8 +6,9 @@ import (
 )
 
 type Client struct {
-	token  string
-	client *http.Client
+	token   string
+	client  *http.Client
+	baseURL string
 }
 
 func (c *Client) http() *http.Client {
@@ -22,6 +23,7 @@ func (c *Client) http() *http.Client {
 
 func New(token string) *Client {
 	return &Client{
-		token: token,
+		token:   token,
+		baseURL: "https://api.vercel.com",
 	}
 }

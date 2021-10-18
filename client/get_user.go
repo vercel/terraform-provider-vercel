@@ -19,7 +19,7 @@ type User struct {
 }
 
 func (c *Client) GetUser(ctx context.Context) (u User, err error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.vercel.com/www/user", strings.NewReader(""))
+	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+"/www/user", strings.NewReader(""))
 	if err != nil {
 		return u, err
 	}
