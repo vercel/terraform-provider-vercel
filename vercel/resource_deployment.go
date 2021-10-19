@@ -42,7 +42,7 @@ func resourceDeployment() *schema.Resource {
 						return warnings, errors
 					}
 
-					if len(v) > 1 {
+					if len(v) < 1 {
 						errors = append(errors, fmt.Errorf("Expected at least one file"))
 						return warnings, errors
 					}

@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -55,10 +54,8 @@ func buildDetectedRequest(cr CreateDeploymentRequest, apiErr APIError) (CreateDe
 		} `json:"error"`
 	}
 
-	log.Printf("[DEBUG] %s", string(apiErr.RawMessage))
 	err := json.Unmarshal(apiErr.RawMessage, &frameworkDetection)
 	cr.ProjectSettings.Framework = frameworkDetection.Error.Framework.Slug
-	log.Printf("[DEBUG] settings %v", cr.ProjectSettings)
 	return cr, err
 }
 

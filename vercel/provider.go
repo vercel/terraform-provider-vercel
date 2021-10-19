@@ -22,8 +22,9 @@ func Provider() *schema.Provider {
 			},
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"vercel_user": dataSourceUser(),
-			"vercel_file": dataSourceFile(),
+			"vercel_user":              dataSourceUser(),
+			"vercel_file":              dataSourceFile(),
+			"vercel_project_directory": dataSourceProjectDirectory(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"vercel_deployment": resourceDeployment(),
