@@ -23,3 +23,8 @@ tasks:
             direct {}
           }
           EOF
+
+  uninstall:
+    desc: "Remove any local overrides for local development"
+    cmds:
+      - rm ~/.terraformrc
