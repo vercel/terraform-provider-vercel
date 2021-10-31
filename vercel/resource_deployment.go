@@ -105,6 +105,14 @@ func resourceDeployment() *schema.Resource {
 				ForceNew: true,
 				Type:     schema.TypeString,
 			},
+			"env": {
+				Optional: true,
+				ForceNew: true,
+				Type:     schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -149,6 +157,10 @@ func resourceDeploymentCreate(ctx context.Context, d *schema.ResourceData, m int
 		Public:      d.Get("public").(bool),
 		Target:      target,
 		Aliases:     []string{},
+		Environment: toStringMap(d.Get("env")),
+		Build: client.Build{
+			Environment: toStringMap(d.Get("env")),
+		},
 		ProjectSettings: client.ProjectSettings{
 			Framework:       d.Get("framework").(string),
 			DevCommand:      d.Get("dev_command").(string),
@@ -169,6 +181,19 @@ func resourceDeploymentCreate(ctx context.Context, d *schema.ResourceData, m int
 	d.SetId(out.ID)
 
 	return nil
+}
+
+func toStringMap(inVal interface{}) map[string]string {
+	// assume nil or a map of interface values
+	outVal := make(map[string]string)
+	if inVal == nil {
+		return outVal
+	}
+	for k, v := range inVal.(map[string]interface{}) {
+		strValue := fmt.Sprintf("%v", v)
+		outVal[k] = strValue
+	}
+	return outVal
 }
 
 func resourceDeploymentRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

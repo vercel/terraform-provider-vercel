@@ -8,10 +8,10 @@ import (
 )
 
 type ProjectSettings struct {
-	Framework       string `json:"framework,omitempty"`
-	DevCommand      string `json:"devCommand,omitempty"`
-	InstallCommand  string `json:"installCommand,omitempty"`
 	BuildCommand    string `json:"buildCommand,omitempty"`
+	DevCommand      string `json:"devCommand,omitempty"`
+	Framework       string `json:"framework,omitempty"`
+	InstallCommand  string `json:"installCommand,omitempty"`
 	OutputDirectory string `json:"outputDirectory,omitempty"`
 	RootDirectory   string `json:"rootDirectory,omitempty"`
 }
@@ -22,20 +22,24 @@ type DeploymentFile struct {
 	Size int    `json:"size,omitempty"`
 }
 
+type Build struct {
+	Environment map[string]string `json:"env,omitempty"`
+}
+
 type CreateDeploymentRequest struct {
-	ProjectName      string                 `json:"name,omitempty"`
-	Files            []DeploymentFile       `json:"files,omitempty"`
-	ProjectID        string                 `json:"project,omitempty"`
-	Meta             map[string]string      `json:"meta,omitempty"`
-	Environment      map[string]string      `json:"environment,omitempty"`
-	BuildEnvironment map[string]string      `json:"build.env,omitempty"`
-	Functions        map[string]interface{} `json:"functions,omitempty"`
-	Routes           []interface{}          `json:"routes,omitempty"`
-	Regions          []string               `json:"regions,omitempty"`
-	Public           bool                   `json:"public,omitempty"`
-	Target           string                 `json:"target,omitempty"`
-	Aliases          []string               `json:"alias,omitempty"`
-	ProjectSettings  ProjectSettings        `json:"projectSettings,omitempty"`
+	Aliases         []string               `json:"alias,omitempty"`
+	Build           Build                  `json:"build"`
+	Environment     map[string]string      `json:"env,omitempty"`
+	Files           []DeploymentFile       `json:"files,omitempty"`
+	Functions       map[string]interface{} `json:"functions,omitempty"`
+	Meta            map[string]string      `json:"meta,omitempty"`
+	ProjectID       string                 `json:"project,omitempty"`
+	ProjectName     string                 `json:"name,omitempty"`
+	ProjectSettings ProjectSettings        `json:"projectSettings,omitempty"`
+	Public          bool                   `json:"public,omitempty"`
+	Regions         []string               `json:"regions,omitempty"`
+	Routes          []interface{}          `json:"routes,omitempty"`
+	Target          string                 `json:"target,omitempty"`
 }
 
 type CreateDeploymentResponse struct {
