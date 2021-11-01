@@ -28,6 +28,7 @@ func Provider() *schema.Provider {
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"vercel_deployment": resourceDeployment(),
+			"vercel_files":      resourceFiles(),
 		},
 		ConfigureFunc: configureProvider,
 	}

@@ -135,12 +135,7 @@ func resourceDeploymentCreate(ctx context.Context, d *schema.ResourceData, m int
 		sha := isha.(string)
 		content, err := os.ReadFile(filename)
 		if err != nil {
-			return diag.Errorf("unable to read file %s: %s", filename, err)
-		}
-
-		err = c.CreateFile(ctx, filename, sha, string(content))
-		if err != nil {
-			return diag.FromErr(err)
+			return diag.Errorf("error reading file %s: %s", filename, err)
 		}
 
 		files = append(files, client.DeploymentFile{

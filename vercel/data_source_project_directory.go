@@ -27,8 +27,7 @@ func dataSourceProjectDirectory() *schema.Resource {
 				Computed: true,
 				Type:     schema.TypeMap,
 				Elem: &schema.Schema{
-					Type:     schema.TypeString,
-					Computed: true,
+					Type: schema.TypeString,
 				},
 			},
 		},
@@ -89,7 +88,6 @@ func dataSourceProjectDirectoryRead(ctx context.Context, d *schema.ResourceData,
 			sha := hex.EncodeToString(rawSha[:])
 
 			files[path] = sha
-
 			return nil
 		},
 	)
