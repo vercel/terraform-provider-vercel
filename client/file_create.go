@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -10,7 +11,7 @@ func (c *Client) CreateFile(ctx context.Context, filename, sha, content string) 
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",
-		c.baseURL+"/v2/now/files",
+		fmt.Sprintf("%s/v2/now/files", c.baseURL),
 		strings.NewReader(content),
 	)
 	if err != nil {
