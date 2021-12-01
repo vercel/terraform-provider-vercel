@@ -38,6 +38,9 @@ func (c *Client) doRequest(req *http.Request, v interface{}) error {
 		}{
 			Error: &errorResponse,
 		})
+		if err != nil {
+			return fmt.Errorf("error unmarshaling response: %w", err)
+		}
 		errorResponse.StatusCode = resp.StatusCode
 		errorResponse.RawMessage = responseBody
 		return errorResponse

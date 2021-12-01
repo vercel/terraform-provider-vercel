@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -20,15 +21,21 @@ type CreateProjectRequest struct {
 	GitRepository        GitRepository     `json:"gitRepository,omitempty"`
 	InstallCommand       *string           `json:"installCommand"`
 	OutputDirectory      *string           `json:"outputDirectory"`
-	PublicSource         *string           `json:"publicSource"`
+	PublicSource         bool              `json:"publicSource"`
 	RootDirectory        *string           `json:"rootDirectory"`
 }
 
+type UpdateProjectRequest CreateProjectRequest
+
 func (c *Client) CreateProject(ctx context.Context, request CreateProjectRequest, teamID string) (r ProjectResponse, err error) {
+	url := fmt.Sprintf("%s/v8/projects", c.baseURL)
+	if teamID != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	}
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",
-		c.baseURL+"/v8/projects",
+		url,
 		strings.NewReader(string(mustMarshal(request))),
 	)
 	if err != nil {

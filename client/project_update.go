@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-type UpdateProjectRequest = CreateProjectRequest
-
 func (c *Client) UpdateProject(ctx context.Context, request UpdateProjectRequest, projectID, teamID string) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
 	if teamID != "" {

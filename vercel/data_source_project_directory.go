@@ -67,6 +67,9 @@ func dataSourceProjectDirectoryRead(ctx context.Context, d *schema.ResourceData,
 	err := filepath.WalkDir(
 		d.Get("path").(string),
 		func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
 			// TODO - ignores should use a `glob` pattern instead.
 			_, ignored := ignores[d.Name()]
 

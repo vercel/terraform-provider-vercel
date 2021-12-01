@@ -11,11 +11,11 @@ type TeamCreateRequest struct {
 	Name string `json:"name"`
 }
 
-type TeamCreateResponse struct {
+type TeamResponse struct {
 	ID string `json:"id"`
 }
 
-func (c *Client) CreateTeam(ctx context.Context, request TeamCreateRequest) (r TeamCreateResponse, err error) {
+func (c *Client) CreateTeam(ctx context.Context, request TeamCreateRequest) (r TeamResponse, err error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",

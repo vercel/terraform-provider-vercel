@@ -29,12 +29,12 @@ func resourceFiles() *schema.Resource {
 				ValidateFunc: func(i interface{}, k string) (warnings []string, errors []error) {
 					v, ok := i.(map[string]interface{})
 					if !ok {
-						errors = append(errors, fmt.Errorf("Expected files to be a map of strings"))
+						errors = append(errors, fmt.Errorf("expected files to be a map of strings"))
 						return warnings, errors
 					}
 
 					if len(v) < 1 {
-						errors = append(errors, fmt.Errorf("Expected at least one file"))
+						errors = append(errors, fmt.Errorf("expected at least one file"))
 						return warnings, errors
 					}
 					return warnings, errors
