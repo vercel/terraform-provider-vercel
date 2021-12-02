@@ -34,7 +34,7 @@ func dataSourceFileRead(ctx context.Context, d *schema.ResourceData, m interface
 	path := d.Get("path").(string)
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return diag.Errorf("error reading file %s: %w", path, err)
+		return diag.Errorf("error reading file %s: %s", path, err)
 	}
 	rawSha := sha1.Sum(content)
 	sha := hex.EncodeToString(rawSha[:])

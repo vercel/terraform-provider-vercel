@@ -8,16 +8,16 @@ import (
 )
 
 type ProjectResponse struct {
-	BuildCommand    *string            `json:"buildCommand"`
-	DevCommand      *string            `json:"devCommand"`
-	Env             *map[string]string `json:"env"`
-	Framework       *string            `json:"framework"`
-	ID              string             `json:"id"`
-	InstallCommand  *string            `json:"installCommand"`
-	Name            string             `json:"name"`
-	OutputDirectory *string            `json:"outputDirectory"`
-	PublicSource    *bool              `json:"publicSource"`
-	RootDirectory   *string            `json:"rootDirectory"`
+	BuildCommand    *string               `json:"buildCommand"`
+	DevCommand      *string               `json:"devCommand"`
+	Env             []EnvironmentVariable `json:"env"`
+	Framework       *string               `json:"framework"`
+	ID              string                `json:"id"`
+	InstallCommand  *string               `json:"installCommand"`
+	Name            string                `json:"name"`
+	OutputDirectory *string               `json:"outputDirectory"`
+	PublicSource    *bool                 `json:"publicSource"`
+	RootDirectory   *string               `json:"rootDirectory"`
 }
 
 func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r ProjectResponse, err error) {

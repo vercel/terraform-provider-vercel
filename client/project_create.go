@@ -12,22 +12,26 @@ type GitRepository struct {
 	Repo string `json:"repo"`
 }
 
-type CreateProjectRequest struct {
-	Name                 string            `json:"name"`
-	BuildCommand         *string           `json:"buildCommand"`
-	DevCommand           *string           `json:"devCommand"`
-	EnvironmentVariables map[string]string `json:"environmentVariables"`
-	Framework            *string           `json:"framework"`
-	GitRepository        GitRepository     `json:"gitRepository,omitempty"`
-	InstallCommand       *string           `json:"installCommand"`
-	OutputDirectory      *string           `json:"outputDirectory"`
-	PublicSource         bool              `json:"publicSource"`
-	RootDirectory        *string           `json:"rootDirectory"`
+type EnvironmentVariable struct {
+	Key    string `json:"key"`
+	Value  string `json:"value"`
+	Target string `json:"target"`
 }
 
-type UpdateProjectRequest CreateProjectRequest
+type CreateProjectRequest struct {
+	Name                 string                `json:"name"`
+	BuildCommand         *string               `json:"buildCommand"`
+	DevCommand           *string               `json:"devCommand"`
+	EnvironmentVariables []EnvironmentVariable `json:"environmentVariables"`
+	Framework            *string               `json:"framework"`
+	GitRepository        *GitRepository        `json:"gitRepository,omitempty"`
+	InstallCommand       *string               `json:"installCommand"`
+	OutputDirectory      *string               `json:"outputDirectory"`
+	PublicSource         bool                  `json:"publicSource"`
+	RootDirectory        *string               `json:"rootDirectory"`
+}
 
-func (c *Client) CreateProject(ctx context.Context, request CreateProjectRequest, teamID string) (r ProjectResponse, err error) {
+func (c *Client) CreateProject(ctx context.Context, teamID string, request CreateProjectRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects", c.baseURL)
 	if teamID != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)

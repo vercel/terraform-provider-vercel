@@ -35,7 +35,7 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface
 	log.Printf("[DEBUG] Reading User\n")
 	user, err := client.GetUser(ctx)
 	if err != nil {
-		return diag.Errorf("error getting user: %w", err)
+		return diag.Errorf("error getting user: %s", err)
 	}
 
 	if err := d.Set("name", user.Name); err != nil {

@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
@@ -18,18 +17,10 @@ func resourceDeployment() *schema.Resource {
 		ReadContext:   resourceDeploymentRead,
 		DeleteContext: resourceDeploymentDelete,
 		Schema: map[string]*schema.Schema{
-			"project_name": {
-				Optional:     true,
-				ForceNew:     true,
-				Type:         schema.TypeString,
-				ValidateFunc: validation.StringLenBetween(1, 52),
-				ExactlyOneOf: []string{"project_name", "project_id"},
-			},
 			"project_id": {
-				Optional:     true,
-				ForceNew:     true,
-				Type:         schema.TypeString,
-				ExactlyOneOf: []string{"project_name", "project_id"},
+				Required: true,
+				ForceNew: true,
+				Type:     schema.TypeString,
 			},
 			"files": {
 				Required: true,
@@ -60,11 +51,6 @@ func resourceDeployment() *schema.Resource {
 				Computed: true,
 				Type:     schema.TypeString,
 			},
-			"public": {
-				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeBool,
-			},
 			"is_staging": {
 				Optional: true,
 				ForceNew: true,
@@ -74,44 +60,6 @@ func resourceDeployment() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 				Type:     schema.TypeBool,
-			},
-			"framework": {
-				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeString,
-			},
-			"dev_command": {
-				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeString,
-			},
-			"install_command": {
-				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeString,
-			},
-			"build_command": {
-				ForceNew: true,
-				Optional: true,
-				Type:     schema.TypeString,
-			},
-			"output_directory": {
-				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeString,
-			},
-			"root_directory": {
-				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeString,
-			},
-			"env": {
-				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeMap,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
 			},
 		},
 	}
@@ -146,24 +94,10 @@ func resourceDeploymentCreate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	out, err := c.CreateDeployment(ctx, client.CreateDeploymentRequest{
-		ProjectName: d.Get("project_name").(string),
-		Files:       files,
-		ProjectID:   d.Get("project_id").(string),
-		Public:      d.Get("public").(bool),
-		Target:      target,
-		Aliases:     []string{},
-		Environment: toStringMap(d.Get("env")),
-		Build: client.Build{
-			Environment: toStringMap(d.Get("env")),
-		},
-		ProjectSettings: client.ProjectSettings{
-			Framework:       d.Get("framework").(string),
-			DevCommand:      d.Get("dev_command").(string),
-			BuildCommand:    d.Get("build_command").(string),
-			InstallCommand:  d.Get("install_command").(string),
-			OutputDirectory: d.Get("output_directory").(string),
-			RootDirectory:   d.Get("root_directory").(string),
-		},
+		Files:     files,
+		ProjectID: d.Get("project_id").(string),
+		Target:    target,
+		Aliases:   []string{},
 	})
 	if err != nil {
 		return diag.Errorf("error creating deployment: %s", err)
@@ -176,19 +110,6 @@ func resourceDeploymentCreate(ctx context.Context, d *schema.ResourceData, m int
 	d.SetId(out.ID)
 
 	return nil
-}
-
-func toStringMap(inVal interface{}) map[string]string {
-	// assume nil or a map of interface values
-	outVal := make(map[string]string)
-	if inVal == nil {
-		return outVal
-	}
-	for k, v := range inVal.(map[string]interface{}) {
-		strValue := fmt.Sprintf("%v", v)
-		outVal[k] = strValue
-	}
-	return outVal
 }
 
 func resourceDeploymentRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
