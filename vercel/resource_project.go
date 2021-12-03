@@ -2,7 +2,9 @@ package vercel
 
 import (
 	"context"
+	"errors"
 	"log"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -38,21 +40,38 @@ func resourceProject() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "The dev command for this project. If omitted, this value will be automatically detected",
 			},
-			"production_environment_variables": {
-				Optional: true,
-				Type:     schema.TypeMap,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
+			"environment": {
+				Description: "An environment variable for the project.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"target": {
+							Description: "The environments that the environment variable should be present on. Valid targets are be either `production`, `preview`, or `development`. If omitted, the variable will exist across all targets.",
+							Type:        schema.TypeList,
+							MinItems:    1,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+								ValidateFunc: validation.StringInSlice([]string{
+									"production",
+									"preview",
+									"development",
+								}, false),
+							},
+							Required: true,
+						},
+						"key": {
+							Description: "The name of the environment variable",
+							Type:        schema.TypeString,
+							Required:    true,
+						},
+						"value": {
+							Description: "The value of the environment variable",
+							Type:        schema.TypeString,
+							Required:    true,
+						},
+					},
 				},
-				Description: "Collection of environment variables the Project will use on production deployments",
-			},
-			"preview_environment_variables": {
-				Optional: true,
-				Type:     schema.TypeMap,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Description: "Collection of environment variables the Project will use on preview deployments",
 			},
 			"framework": {
 				Optional:    true,
@@ -116,37 +135,32 @@ func getStringPointer(d *schema.ResourceData, key string) *string {
 	return nil
 }
 
-func getEnvVariables(d *schema.ResourceData) []client.EnvironmentVariable {
-	envVars := []client.EnvironmentVariable{}
-	if v, ok := d.GetOk("production_environment_variables"); ok {
-		for key, value := range v.(map[string]interface{}) {
-			envVars = append(envVars, client.EnvironmentVariable{
-				Key:    key,
-				Value:  value.(string),
-				Target: "production",
-			})
-		}
-	}
-	if v, ok := d.GetOk("preview_environment_variables"); ok {
-		for key, value := range v.(map[string]interface{}) {
-			envVars = append(envVars, client.EnvironmentVariable{
-				Key:    key,
-				Value:  value.(string),
-				Target: "preview",
-			})
-		}
-	}
-	return envVars
-}
-
 func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.Client)
 	log.Printf("[DEBUG] Creating Project")
+	environmentVariables := []client.EnvironmentVariable{}
+	for _, e := range d.Get("environment").([]interface{}) {
+		env := e.(map[string]interface{})
+
+		target := []string{}
+		for _, t := range env["target"].([]interface{}) {
+			target = append(target, t.(string))
+		}
+		if len(target) == 0 {
+			target = []string{"production", "preview", "development"}
+		}
+		environmentVariables = append(environmentVariables, client.EnvironmentVariable{
+			Key:    env["key"].(string),
+			Value:  env["value"].(string),
+			Target: target,
+			Type:   "encrypted",
+		})
+	}
 
 	out, err := c.CreateProject(ctx, d.Get("team_id").(string), client.CreateProjectRequest{
 		Name:                 d.Get("name").(string),
 		PublicSource:         d.Get("public_source").(bool),
-		EnvironmentVariables: getEnvVariables(d),
+		EnvironmentVariables: environmentVariables,
 		BuildCommand:         getStringPointer(d, "build_command"),
 		DevCommand:           getStringPointer(d, "dev_command"),
 		Framework:            getStringPointer(d, "framework"),
@@ -159,7 +173,6 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	d.SetId(out.ID)
-
 	return nil
 }
 
@@ -168,6 +181,11 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 	log.Printf("[DEBUG] Reading Project")
 
 	project, err := c.GetProject(ctx, d.Id(), d.Get("team_id").(string))
+	var apiErr client.APIError
+	if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound {
+		d.SetId("")
+		return nil
+	}
 	if err != nil {
 		return diag.Errorf("error reading project: %s", err)
 	}
@@ -184,32 +202,22 @@ func setAll(d *schema.ResourceData, m map[string]interface{}) error {
 	return nil
 }
 
-func getEnvironmentVariablesByTarget(vars []client.EnvironmentVariable, target string) map[string]interface{} {
-	m := map[string]interface{}{}
-	for _, v := range vars {
-		if v.Target == target {
-			m[v.Key] = v.Value
-		}
-	}
-	return m
-}
-
 func updateProjectSchema(d *schema.ResourceData, project client.ProjectResponse) diag.Diagnostics {
+	log.Printf("[DEBUG] Updating Project Schema %+v", project)
 	if err := setAll(d, map[string]interface{}{
-		"build_command":                    project.BuildCommand,
-		"dev_command":                      project.DevCommand,
-		"production_environment_variables": getEnvironmentVariablesByTarget(project.Env, "production"),
-		"preview_environment_variables":    getEnvironmentVariablesByTarget(project.Env, "preview"),
-		"framework":                        project.Framework,
-		"install_command":                  project.InstallCommand,
-		"name":                             project.Name,
-		"output_directory":                 project.OutputDirectory,
-		"public_source":                    project.PublicSource,
-		"root_directory":                   project.RootDirectory,
+		"build_command": project.BuildCommand,
+		"dev_command":   project.DevCommand,
+		// "environment":      project.Env,
+		"framework":        project.Framework,
+		"install_command":  project.InstallCommand,
+		"name":             project.Name,
+		"output_directory": project.OutputDirectory,
+		"public_source":    project.PublicSource,
+		"root_directory":   project.RootDirectory,
 	}); err != nil {
 		return diag.FromErr(err)
 	}
-	d.SetId(project.ID)
+	// d.SetId(project.ID)
 
 	return nil
 }
@@ -242,25 +250,38 @@ func getBoolPointerIfChanged(d *schema.ResourceData, key string) *bool {
 	return nil
 }
 
+func diffEnvVars(oldVars, newVars map[string]interface{}) (toUpsert, toRemove map[string]interface{}) {
+	toUpsert = map[string]interface{}{}
+	toRemove = map[string]interface{}{}
+
+	for key, value := range newVars {
+		if oldValue, ok := oldVars[key]; !ok || oldValue != value {
+			toUpsert[key] = value
+		}
+	}
+
+	for key, value := range oldVars {
+		if _, ok := newVars[key]; !ok {
+			toRemove[key] = value
+		}
+	}
+
+	return
+}
+
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.Client)
 	log.Printf("[DEBUG] Updating Project")
 
-	var envVars []client.EnvironmentVariable
-	if d.HasChange("production_environment_variables") || d.HasChange("preview_environment_variables") {
-		envVars = getEnvVariables(d)
-	}
-
 	update := client.UpdateProjectRequest{
-		EnvironmentVariables: envVars,
-		Name:                 getStringPointerIfChanged(d, "name"),
-		BuildCommand:         getStringPointerIfChanged(d, "build_command"),
-		DevCommand:           getStringPointerIfChanged(d, "dev_command"),
-		Framework:            getStringPointerIfChanged(d, "framework"),
-		InstallCommand:       getStringPointerIfChanged(d, "install_command"),
-		OutputDirectory:      getStringPointerIfChanged(d, "output_directory"),
-		RootDirectory:        getStringPointerIfChanged(d, "root_directory"),
-		PublicSource:         getBoolPointerIfChanged(d, "public_source"),
+		Name:            getStringPointerIfChanged(d, "name"),
+		BuildCommand:    getStringPointerIfChanged(d, "build_command"),
+		DevCommand:      getStringPointerIfChanged(d, "dev_command"),
+		Framework:       getStringPointerIfChanged(d, "framework"),
+		InstallCommand:  getStringPointerIfChanged(d, "install_command"),
+		OutputDirectory: getStringPointerIfChanged(d, "output_directory"),
+		RootDirectory:   getStringPointerIfChanged(d, "root_directory"),
+		PublicSource:    getBoolPointerIfChanged(d, "public_source"),
 	}
 
 	project, err := c.UpdateProject(ctx, d.Id(), d.Get("team_id").(string), update)
