@@ -21,6 +21,7 @@ func resourceProject() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"team_id": {
 				Optional:    true,
+				Computed:    true,
 				Type:        schema.TypeString,
 				Description: "The ID of the team the project should be created under",
 			},
@@ -32,17 +33,20 @@ func resourceProject() *schema.Resource {
 			},
 			"build_command": {
 				Optional:    true,
+				Computed:    true,
 				Type:        schema.TypeString,
 				Description: "The build command for this project. If omitted, this value will be automatically detected",
 			},
 			"dev_command": {
 				Optional:    true,
+				Computed:    true,
 				Type:        schema.TypeString,
 				Description: "The dev command for this project. If omitted, this value will be automatically detected",
 			},
 			"environment": {
 				Description: "An environment variable for the project.",
 				Optional:    true,
+				Computed:    true,
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -75,12 +79,14 @@ func resourceProject() *schema.Resource {
 			},
 			"framework": {
 				Optional:    true,
+				Computed:    true,
 				Type:        schema.TypeString,
 				Description: "The framework that is being used for this project. If omitted, no framework is selected",
 			},
 			"git_repository": {
 				Description: "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed",
 				Optional:    true,
+				Computed:    true,
 				Type:        schema.TypeList,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -104,22 +110,25 @@ func resourceProject() *schema.Resource {
 			},
 			"install_command": {
 				Optional:    true,
+				Computed:    true,
 				Type:        schema.TypeString,
 				Description: "The install command for this project. If omitted, this value will be automatically detected",
 			},
 			"output_directory": {
 				Optional:    true,
+				Computed:    true,
 				Type:        schema.TypeString,
 				Description: "The output directory of the project. When null is used this value will be automatically detected",
 			},
 			"public_source": {
 				Optional:    true,
-				Default:     false,
+				Computed:    true,
 				Type:        schema.TypeBool,
 				Description: "Specifies whether the source code and logs of the deployments for this project should be public or not",
 			},
 			"root_directory": {
 				Optional:    true,
+				Computed:    true,
 				Type:        schema.TypeString,
 				Description: "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root",
 			},
@@ -130,6 +139,14 @@ func resourceProject() *schema.Resource {
 func getStringPointer(d *schema.ResourceData, key string) *string {
 	if v, ok := d.GetOk(key); ok {
 		value := v.(string)
+		return &value
+	}
+	return nil
+}
+
+func getBoolPointer(d *schema.ResourceData, key string) *bool {
+	if v, ok := d.GetOk(key); ok {
+		value := v.(bool)
 		return &value
 	}
 	return nil
@@ -159,7 +176,7 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	out, err := c.CreateProject(ctx, d.Get("team_id").(string), client.CreateProjectRequest{
 		Name:                 d.Get("name").(string),
-		PublicSource:         d.Get("public_source").(bool),
+		PublicSource:         getBoolPointer(d, "public_source"),
 		EnvironmentVariables: environmentVariables,
 		BuildCommand:         getStringPointer(d, "build_command"),
 		DevCommand:           getStringPointer(d, "dev_command"),
@@ -193,8 +210,11 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 	return updateProjectSchema(d, project)
 }
 
-func setAll(d *schema.ResourceData, m map[string]interface{}) error {
+func setStringPointers(d *schema.ResourceData, m map[string]*string) error {
 	for k, v := range m {
+		if _, ok := d.GetOk(k); !ok && v == nil {
+			continue
+		}
 		if err := d.Set(k, v); err != nil {
 			return err
 		}
@@ -203,21 +223,22 @@ func setAll(d *schema.ResourceData, m map[string]interface{}) error {
 }
 
 func updateProjectSchema(d *schema.ResourceData, project client.ProjectResponse) diag.Diagnostics {
-	log.Printf("[DEBUG] Updating Project Schema %+v", project)
-	if err := setAll(d, map[string]interface{}{
-		"build_command": project.BuildCommand,
-		"dev_command":   project.DevCommand,
-		// "environment":      project.Env,
+	if err := setStringPointers(d, map[string]*string{
+		"build_command":    project.BuildCommand,
+		"dev_command":      project.DevCommand,
 		"framework":        project.Framework,
 		"install_command":  project.InstallCommand,
-		"name":             project.Name,
+		"name":             &project.Name,
 		"output_directory": project.OutputDirectory,
-		"public_source":    project.PublicSource,
 		"root_directory":   project.RootDirectory,
 	}); err != nil {
 		return diag.FromErr(err)
 	}
-	// d.SetId(project.ID)
+	// "environment":      project.Env,
+	if err := d.Set("public_source", project.PublicSource); err != nil {
+		return diag.FromErr(err)
+	}
+	d.SetId(project.ID)
 
 	return nil
 }

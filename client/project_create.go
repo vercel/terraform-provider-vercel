@@ -13,9 +13,10 @@ type GitRepository struct {
 }
 
 type EnvironmentVariable struct {
-	Key    string `json:"key"`
-	Value  string `json:"value"`
-	Target string `json:"target"`
+	Key    string   `json:"key"`
+	Value  string   `json:"value"`
+	Target []string `json:"target"`
+	Type   string   `json:"type"`
 }
 
 type CreateProjectRequest struct {
@@ -27,7 +28,7 @@ type CreateProjectRequest struct {
 	GitRepository        *GitRepository        `json:"gitRepository,omitempty"`
 	InstallCommand       *string               `json:"installCommand"`
 	OutputDirectory      *string               `json:"outputDirectory"`
-	PublicSource         bool                  `json:"publicSource"`
+	PublicSource         *bool                 `json:"publicSource"`
 	RootDirectory        *string               `json:"rootDirectory"`
 }
 
