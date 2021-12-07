@@ -39,24 +39,10 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r Pr
 		return r, err
 	}
 
-	url = fmt.Sprintf("%s/v8/projects/%s/env?decrypt=true", c.baseURL, projectID)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
-	}
-	req, err = http.NewRequestWithContext(
-		ctx,
-		"GET",
-		url,
-		strings.NewReader(""),
-	)
+	env, err := c.getEnvironmentVariables(ctx, projectID, teamID)
 	if err != nil {
 		return r, err
 	}
-
-	envResponse := struct {
-		Env []EnvironmentVariable `json:"envs"`
-	}{}
-	err = c.doRequest(req, &envResponse)
-	r.EnvironmentVariables = envResponse.Env
+	r.EnvironmentVariables = env
 	return r, err
 }

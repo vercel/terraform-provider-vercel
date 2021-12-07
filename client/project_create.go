@@ -49,5 +49,13 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 	}
 
 	err = c.doRequest(req, &r)
+	if err != nil {
+		return r, err
+	}
+	env, err := c.getEnvironmentVariables(ctx, r.ID, teamID)
+	if err != nil {
+		return r, err
+	}
+	r.EnvironmentVariables = env
 	return r, err
 }

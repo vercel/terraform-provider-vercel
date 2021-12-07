@@ -91,7 +91,6 @@ func resourceProject() *schema.Resource {
 			"git_repository": {
 				Description: "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed",
 				Optional:    true,
-				Computed:    true,
 				Type:        schema.TypeList,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -248,16 +247,44 @@ func setBoolPointer(d *schema.ResourceData, key string, value *bool) error {
 }
 
 func setEnvironment(d *schema.ResourceData, environment []client.EnvironmentVariable) error {
-	env := make([]interface{}, len(environment))
+	envs := []interface{}{}
+	envMap := map[string]client.EnvironmentVariable{}
 	for _, e := range environment {
-		env = append(env, map[string]interface{}{
+		envMap[e.Key] = e
+	}
+
+	// Iterate over d.Get("environment").([]interface{}) and set the values, removing
+	// from map as we go. This preserves the order of the environment variables.
+	for _, e := range d.Get("environment").([]interface{}) {
+		if e == nil {
+			continue
+		}
+		rawEnv := e.(map[string]interface{})
+		key := rawEnv["key"].(string)
+
+		if envVar, ok := envMap[key]; ok {
+			envs = append(envs, map[string]interface{}{
+				"key":    envVar.Key,
+				"value":  envVar.Value,
+				"target": envVar.Target,
+				"id":     envVar.ID,
+			})
+			delete(envMap, key)
+		}
+	}
+
+	// Then, iterate over any leftovers and append them to the end.
+	for _, e := range envMap {
+		envs = append(envs, map[string]interface{}{
 			"key":    e.Key,
 			"value":  e.Value,
 			"target": e.Target,
 			"id":     e.ID,
 		})
 	}
-	return d.Set("environment", env)
+
+	log.Printf("[DEBUG] Setting environment variables: %v", envs)
+	return d.Set("environment", envs)
 }
 
 func updateProjectSchema(d *schema.ResourceData, project client.ProjectResponse) diag.Diagnostics {
