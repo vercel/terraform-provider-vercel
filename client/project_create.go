@@ -17,6 +17,7 @@ type EnvironmentVariable struct {
 	Value  string   `json:"value"`
 	Target []string `json:"target"`
 	Type   string   `json:"type"`
+	ID     string   `json:"id"`
 }
 
 type CreateProjectRequest struct {

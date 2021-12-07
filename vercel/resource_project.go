@@ -74,6 +74,11 @@ func resourceProject() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 						},
+						"id": {
+							Description: "The ID of the environment variable",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
 					},
 				},
 			},
@@ -152,11 +157,12 @@ func getBoolPointer(d *schema.ResourceData, key string) *bool {
 	return nil
 }
 
-func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.Client)
-	log.Printf("[DEBUG] Creating Project")
-	environmentVariables := []client.EnvironmentVariable{}
-	for _, e := range d.Get("environment").([]interface{}) {
+func parseEnvironmentVariables(environment []interface{}) []client.EnvironmentVariable {
+	vars := []client.EnvironmentVariable{}
+	for _, e := range environment {
+		if e == nil {
+			continue
+		}
 		env := e.(map[string]interface{})
 
 		target := []string{}
@@ -166,13 +172,22 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 		if len(target) == 0 {
 			target = []string{"production", "preview", "development"}
 		}
-		environmentVariables = append(environmentVariables, client.EnvironmentVariable{
+		vars = append(vars, client.EnvironmentVariable{
 			Key:    env["key"].(string),
 			Value:  env["value"].(string),
 			Target: target,
 			Type:   "encrypted",
+			ID:     env["id"].(string),
 		})
 	}
+
+	return vars
+}
+
+func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := m.(*client.Client)
+	log.Printf("[DEBUG] Creating Project")
+	environmentVariables := parseEnvironmentVariables(d.Get("environment").([]interface{}))
 
 	out, err := c.CreateProject(ctx, d.Get("team_id").(string), client.CreateProjectRequest{
 		Name:                 d.Get("name").(string),
@@ -190,6 +205,9 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	d.SetId(out.ID)
+	if err := setEnvironment(d, out.EnvironmentVariables); err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 
@@ -222,6 +240,26 @@ func setStringPointers(d *schema.ResourceData, m map[string]*string) error {
 	return nil
 }
 
+func setBoolPointer(d *schema.ResourceData, key string, value *bool) error {
+	if _, ok := d.GetOk(key); !ok && value == nil {
+		return nil
+	}
+	return d.Set(key, value)
+}
+
+func setEnvironment(d *schema.ResourceData, environment []client.EnvironmentVariable) error {
+	env := make([]interface{}, len(environment))
+	for _, e := range environment {
+		env = append(env, map[string]interface{}{
+			"key":    e.Key,
+			"value":  e.Value,
+			"target": e.Target,
+			"id":     e.ID,
+		})
+	}
+	return d.Set("environment", env)
+}
+
 func updateProjectSchema(d *schema.ResourceData, project client.ProjectResponse) diag.Diagnostics {
 	if err := setStringPointers(d, map[string]*string{
 		"build_command":    project.BuildCommand,
@@ -234,8 +272,12 @@ func updateProjectSchema(d *schema.ResourceData, project client.ProjectResponse)
 	}); err != nil {
 		return diag.FromErr(err)
 	}
-	// "environment":      project.Env,
-	if err := d.Set("public_source", project.PublicSource); err != nil {
+
+	if err := setEnvironment(d, project.EnvironmentVariables); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := setBoolPointer(d, "public_source", project.PublicSource); err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(project.ID)
@@ -271,30 +313,66 @@ func getBoolPointerIfChanged(d *schema.ResourceData, key string) *bool {
 	return nil
 }
 
-func diffEnvVars(oldVars, newVars map[string]interface{}) (toUpsert, toRemove map[string]interface{}) {
-	toUpsert = map[string]interface{}{}
-	toRemove = map[string]interface{}{}
-
-	for key, value := range newVars {
-		if oldValue, ok := oldVars[key]; !ok || oldValue != value {
-			toUpsert[key] = value
+func containsEnvVar(env []client.EnvironmentVariable, v client.EnvironmentVariable) bool {
+	for _, e := range env {
+		if e.Key == v.Key &&
+			e.Value == v.Value &&
+			e.Type == v.Type &&
+			len(e.Target) == len(v.Target) {
+			for i, t := range e.Target {
+				if t != v.Target[i] {
+					continue
+				}
+			}
+			return true
 		}
 	}
+	return false
+}
 
-	for key, value := range oldVars {
-		if _, ok := newVars[key]; !ok {
-			toRemove[key] = value
+func diffEnvVars(oldVars, newVars []client.EnvironmentVariable) (toUpsert, toRemove []client.EnvironmentVariable) {
+	toRemove = []client.EnvironmentVariable{}
+	toUpsert = []client.EnvironmentVariable{}
+	for _, e := range oldVars {
+		if !containsEnvVar(newVars, e) {
+			toRemove = append(toRemove, e)
 		}
 	}
-
-	return
+	for _, e := range newVars {
+		if !containsEnvVar(oldVars, e) {
+			toUpsert = append(toUpsert, e)
+		}
+	}
+	return toUpsert, toRemove
 }
 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.Client)
 	log.Printf("[DEBUG] Updating Project")
+	teamID := d.Get("team_id").(string)
 
-	update := client.UpdateProjectRequest{
+	if d.HasChange("environment") {
+		oldVars, newVars := d.GetChange("environment")
+		log.Printf("[DEBUG] OLD VARS %#v", oldVars)
+		toUpsert, toRemove := diffEnvVars(
+			parseEnvironmentVariables(oldVars.([]interface{})),
+			parseEnvironmentVariables(newVars.([]interface{})),
+		)
+		for _, v := range toRemove {
+			err := c.DeleteEnvironmentVariable(ctx, d.Id(), teamID, v.ID)
+			if err != nil {
+				return diag.Errorf("error deleting environment variable: %s", err)
+			}
+		}
+		for _, v := range toUpsert {
+			err := c.UpsertEnvironmentVariable(ctx, d.Id(), teamID, client.UpsertEnvironmentVariableRequest(v))
+			if err != nil {
+				return diag.Errorf("error deleting environment variable: %s", err)
+			}
+		}
+	}
+
+	project, err := c.UpdateProject(ctx, d.Id(), teamID, client.UpdateProjectRequest{
 		Name:            getStringPointerIfChanged(d, "name"),
 		BuildCommand:    getStringPointerIfChanged(d, "build_command"),
 		DevCommand:      getStringPointerIfChanged(d, "dev_command"),
@@ -303,9 +381,7 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		OutputDirectory: getStringPointerIfChanged(d, "output_directory"),
 		RootDirectory:   getStringPointerIfChanged(d, "root_directory"),
 		PublicSource:    getBoolPointerIfChanged(d, "public_source"),
-	}
-
-	project, err := c.UpdateProject(ctx, d.Id(), d.Get("team_id").(string), update)
+	})
 	if err != nil {
 		return diag.Errorf("error updating project: %s", err)
 	}

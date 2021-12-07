@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -11,7 +10,6 @@ import (
 type UpsertEnvironmentVariableRequest EnvironmentVariable
 
 func (c *Client) UpsertEnvironmentVariable(ctx context.Context, projectID, teamID string, request UpsertEnvironmentVariableRequest) error {
-	log.Printf("[DEBUG], %s", string(mustMarshal(request)))
 	url := fmt.Sprintf("%s/v8/projects/%s/env", c.baseURL, projectID)
 	if teamID != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)

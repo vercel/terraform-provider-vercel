@@ -31,7 +31,7 @@ func (c *Client) doRequest(req *http.Request, v interface{}) error {
 		return fmt.Errorf("error reading response body: %w", err)
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode >= 300 {
 		var errorResponse APIError
 		err = json.Unmarshal(responseBody, &struct {
 			Error *APIError `json:"error"`

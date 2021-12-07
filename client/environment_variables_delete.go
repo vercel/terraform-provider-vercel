@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamID, variable string) error {
-	url := fmt.Sprintf("%s/v8/projects/%s/env/%s", c.baseURL, projectID, variable)
+func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamID, variableID string) error {
+	url := fmt.Sprintf("%s/v8/projects/%s/env/%s", c.baseURL, projectID, variableID)
 	if teamID != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
 	}
