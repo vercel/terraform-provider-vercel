@@ -8,15 +8,14 @@ import (
 )
 
 type UpdateProjectRequest struct {
-	Name            *string        `json:"name,omitempty"`
-	BuildCommand    *string        `json:"buildCommand,omitempty"`
-	DevCommand      *string        `json:"devCommand,omitempty"`
-	Framework       *string        `json:"framework,omitempty"`
-	GitRepository   *GitRepository `json:"gitRepository,omitempty"`
-	InstallCommand  *string        `json:"installCommand,omitempty"`
-	OutputDirectory *string        `json:"outputDirectory,omitempty"`
-	PublicSource    *bool          `json:"publicSource,omitempty"`
-	RootDirectory   *string        `json:"rootDirectory,omitempty"`
+	Name            *string `json:"name,omitempty"`
+	BuildCommand    *string `json:"buildCommand,omitempty"`
+	DevCommand      *string `json:"devCommand,omitempty"`
+	Framework       *string `json:"framework,omitempty"`
+	InstallCommand  *string `json:"installCommand,omitempty"`
+	OutputDirectory *string `json:"outputDirectory,omitempty"`
+	PublicSource    *bool   `json:"publicSource,omitempty"`
+	RootDirectory   *string `json:"rootDirectory,omitempty"`
 }
 
 func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, request UpdateProjectRequest) (r ProjectResponse, err error) {

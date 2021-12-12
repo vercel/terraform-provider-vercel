@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -32,8 +31,6 @@ type DeploymentResponse struct {
 
 func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentRequest) (r DeploymentResponse, err error) {
 	request.Name = request.ProjectID // Name is ignored if project is specified
-	body := string(mustMarshal(request))
-	log.Printf("[DEBUG] CreateDeploymentRequest: %s", body)
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",

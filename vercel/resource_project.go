@@ -91,6 +91,7 @@ func resourceProject() *schema.Resource {
 			"git_repository": {
 				Description: "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed",
 				Optional:    true,
+				ForceNew:    true,
 				Type:        schema.TypeList,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -99,11 +100,13 @@ func resourceProject() *schema.Resource {
 							Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
 							Type:        schema.TypeString,
 							Required:    true,
+							ForceNew:    true,
 						},
 						"repo": {
 							Description: "The name of the git repository. For example: `vercel/next.js`",
 							Type:        schema.TypeString,
 							Required:    true,
+							ForceNew:    true,
 						},
 					},
 				},
@@ -186,17 +189,26 @@ func parseEnvironmentVariables(environment []interface{}) []client.EnvironmentVa
 func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.Client)
 	log.Printf("[DEBUG] Creating Project")
-	environmentVariables := parseEnvironmentVariables(d.Get("environment").([]interface{}))
+	gitRepoList := d.Get("git_repository").([]interface{})
+	var repo *client.GitRepository
+	if len(gitRepoList) > 0 {
+		rawRepo := gitRepoList[0].(map[string]interface{})
+		repo = &client.GitRepository{
+			Type: rawRepo["type"].(string),
+			Repo: rawRepo["repo"].(string),
+		}
+	}
 
 	out, err := c.CreateProject(ctx, d.Get("team_id").(string), client.CreateProjectRequest{
-		Name:                 d.Get("name").(string),
-		PublicSource:         getBoolPointer(d, "public_source"),
-		EnvironmentVariables: environmentVariables,
 		BuildCommand:         getStringPointer(d, "build_command"),
 		DevCommand:           getStringPointer(d, "dev_command"),
+		EnvironmentVariables: parseEnvironmentVariables(d.Get("environment").([]interface{})),
 		Framework:            getStringPointer(d, "framework"),
+		GitRepository:        repo,
 		InstallCommand:       getStringPointer(d, "install_command"),
+		Name:                 d.Get("name").(string),
 		OutputDirectory:      getStringPointer(d, "output_directory"),
+		PublicSource:         getBoolPointer(d, "public_source"),
 		RootDirectory:        getStringPointer(d, "root_directory"),
 	})
 	if err != nil {
@@ -283,7 +295,6 @@ func setEnvironment(d *schema.ResourceData, environment []client.EnvironmentVari
 		})
 	}
 
-	log.Printf("[DEBUG] Setting environment variables: %v", envs)
 	return d.Set("environment", envs)
 }
 
@@ -306,6 +317,16 @@ func updateProjectSchema(d *schema.ResourceData, project client.ProjectResponse)
 
 	if err := setBoolPointer(d, "public_source", project.PublicSource); err != nil {
 		return diag.FromErr(err)
+	}
+	if repo := project.Repository(); repo != nil {
+		gitRepository := []map[string]interface{}{}
+		gitRepository = append(gitRepository, map[string]interface{}{
+			"type": repo.Type,
+			"repo": repo.Repo,
+		})
+		if err := d.Set("git_repository", gitRepository); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	d.SetId(project.ID)
 
@@ -380,7 +401,6 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 
 	if d.HasChange("environment") {
 		oldVars, newVars := d.GetChange("environment")
-		log.Printf("[DEBUG] OLD VARS %#v", oldVars)
 		toUpsert, toRemove := diffEnvVars(
 			parseEnvironmentVariables(oldVars.([]interface{})),
 			parseEnvironmentVariables(newVars.([]interface{})),
