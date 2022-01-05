@@ -62,7 +62,7 @@ var ignores = map[string]struct{}{
 	".vercel_build_output": {},
 }
 
-func dataSourceProjectDirectoryRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func dataSourceProjectDirectoryRead(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	files := map[string]interface{}{}
 	err := filepath.WalkDir(
 		d.Get("path").(string),
@@ -71,6 +71,7 @@ func dataSourceProjectDirectoryRead(ctx context.Context, d *schema.ResourceData,
 				return err
 			}
 			// TODO - ignores should use a `glob` pattern instead.
+			// look into how Jared does this on turbo
 			_, ignored := ignores[d.Name()]
 
 			if d.IsDir() && ignored {

@@ -26,7 +26,7 @@ func resourceFiles() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ValidateFunc: func(i interface{}, k string) (warnings []string, errors []error) {
+				ValidateFunc: func(i interface{}, _ string) (warnings []string, errors []error) {
 					v, ok := i.(map[string]interface{})
 					if !ok {
 						errors = append(errors, fmt.Errorf("expected files to be a map of strings"))
@@ -70,7 +70,7 @@ func resourceFilesRead(ctx context.Context, d *schema.ResourceData, m interface{
 	return nil
 }
 
-func resourceFilesDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceFilesDelete(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	d.SetId("")
 	return nil
 }

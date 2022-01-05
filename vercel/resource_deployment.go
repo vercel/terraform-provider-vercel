@@ -26,7 +26,7 @@ func resourceDeployment() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 				Type:     schema.TypeMap,
-				ValidateFunc: func(i interface{}, k string) (warnings []string, errors []error) {
+				ValidateFunc: func(i interface{}, _ string) (warnings []string, errors []error) {
 					v, ok := i.(map[string]interface{})
 					if !ok {
 						errors = append(errors, fmt.Errorf("expected files to be a map of strings"))
@@ -116,7 +116,7 @@ func resourceDeploymentRead(ctx context.Context, d *schema.ResourceData, m inter
 	return nil
 }
 
-func resourceDeploymentDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceDeploymentDelete(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	d.SetId("")
 	return nil
 }

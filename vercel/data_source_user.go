@@ -31,8 +31,8 @@ func dataSourceUser() *schema.Resource {
 
 func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*client.Client)
-
 	log.Printf("[DEBUG] Reading User\n")
+
 	user, err := client.GetUser(ctx)
 	if err != nil {
 		return diag.Errorf("error getting user: %s", err)

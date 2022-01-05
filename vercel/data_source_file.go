@@ -30,7 +30,7 @@ func dataSourceFile() *schema.Resource {
 	}
 }
 
-func dataSourceFileRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func dataSourceFileRead(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	path := d.Get("path").(string)
 	content, err := os.ReadFile(path)
 	if err != nil {
