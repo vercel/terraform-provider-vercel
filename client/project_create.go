@@ -26,7 +26,7 @@ type CreateProjectRequest struct {
 	DevCommand           *string               `json:"devCommand"`
 	EnvironmentVariables []EnvironmentVariable `json:"environmentVariables"`
 	Framework            *string               `json:"framework"`
-	GitRepository        *GitRepository        `json:"gitRepository"`
+	GitRepository        *GitRepository        `json:"gitRepository,omitempty"`
 	InstallCommand       *string               `json:"installCommand"`
 	OutputDirectory      *string               `json:"outputDirectory"`
 	PublicSource         *bool                 `json:"publicSource"`

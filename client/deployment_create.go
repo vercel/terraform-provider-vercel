@@ -2,6 +2,9 @@ package client
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -29,6 +32,16 @@ type DeploymentResponse struct {
 	CreatedIn string `json:"createdIn"`
 }
 
+type MissingFilesError struct {
+	Code    string   `json:"code"`
+	Message string   `json:"message"`
+	Missing []string `json:"missing"`
+}
+
+func (e MissingFilesError) Error() string {
+	return fmt.Sprintf("%s - %s", e.Code, e.Message)
+}
+
 func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentRequest) (r DeploymentResponse, err error) {
 	request.Name = request.ProjectID // Name is ignored if project is specified
 	req, err := http.NewRequestWithContext(
@@ -42,5 +55,18 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 	}
 
 	err = c.doRequest(req, &r)
+	var apiErr APIError
+	if errors.As(err, &apiErr) && apiErr.Code == "missing_files" {
+		var missingFilesError MissingFilesError
+		err = json.Unmarshal(apiErr.RawMessage, &struct {
+			Error *MissingFilesError `json:"error"`
+		}{
+			Error: &missingFilesError,
+		})
+		if err != nil {
+			return r, fmt.Errorf("error unmarshaling missing files error: %w", err)
+		}
+		return r, missingFilesError
+	}
 	return r, err
 }

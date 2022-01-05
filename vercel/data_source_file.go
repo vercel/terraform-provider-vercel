@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -41,7 +42,7 @@ func dataSourceFileRead(_ context.Context, d *schema.ResourceData, _ interface{}
 
 	d.SetId(path)
 	d.Set("file", map[string]interface{}{
-		path: sha,
+		path: fmt.Sprintf("%d~%s", len(content), sha),
 	})
 	return nil
 }
