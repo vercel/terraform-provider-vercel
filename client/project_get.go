@@ -82,7 +82,7 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r Pr
 
 	env, err := c.getEnvironmentVariables(ctx, projectID, teamID)
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("error getting environment variables for project: %w", err)
 	}
 	r.EnvironmentVariables = env
 	return r, err

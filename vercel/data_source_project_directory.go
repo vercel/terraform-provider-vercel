@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -91,7 +92,7 @@ func dataSourceProjectDirectoryRead(_ context.Context, d *schema.ResourceData, _
 			rawSha := sha1.Sum(content)
 			sha := hex.EncodeToString(rawSha[:])
 
-			files[path] = sha
+			files[path] = fmt.Sprintf("%d~%s", len(content), sha)
 			return nil
 		},
 	)

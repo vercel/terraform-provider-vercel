@@ -10,7 +10,7 @@ import (
 func (c *Client) getEnvironmentVariables(ctx context.Context, projectID, teamID string) ([]EnvironmentVariable, error) {
 	url := fmt.Sprintf("%s/v8/projects/%s/env?decrypt=true", c.baseURL, projectID)
 	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+		url = fmt.Sprintf("%s&teamId=%s", url, teamID)
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,

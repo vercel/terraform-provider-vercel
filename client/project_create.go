@@ -54,7 +54,7 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 	}
 	env, err := c.getEnvironmentVariables(ctx, r.ID, teamID)
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("error getting environment variables: %w", err)
 	}
 	r.EnvironmentVariables = env
 	return r, err
