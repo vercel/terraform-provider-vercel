@@ -414,7 +414,7 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		for _, v := range toUpsert {
 			err := c.UpsertEnvironmentVariable(ctx, d.Id(), teamID, client.UpsertEnvironmentVariableRequest(v))
 			if err != nil {
-				return diag.Errorf("error deleting environment variable: %s", err)
+				return diag.Errorf("error creating or updating environment variable: %s", err)
 			}
 		}
 	}

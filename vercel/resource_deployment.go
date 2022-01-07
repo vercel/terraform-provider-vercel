@@ -20,6 +20,11 @@ func resourceDeployment() *schema.Resource {
 		ReadContext:   resourceDeploymentRead,
 		DeleteContext: resourceDeploymentDelete,
 		Schema: map[string]*schema.Schema{
+			"team_id": {
+				Optional: true,
+				ForceNew: true,
+				Type:     schema.TypeString,
+			},
 			"project_id": {
 				Required: true,
 				ForceNew: true,
@@ -109,7 +114,7 @@ func resourceDeploymentCreate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	// First we attempt to create a deployment without bothering to upload any files.
-	out, err := c.CreateDeployment(ctx, cdr)
+	out, err := c.CreateDeployment(ctx, cdr, d.Get("team_id").(string))
 	var mfErr client.MissingFilesError
 	if errors.As(err, &mfErr) {
 		// Then we need to upload the files, and create the deployment again.
@@ -126,7 +131,7 @@ func resourceDeploymentCreate(ctx context.Context, d *schema.ResourceData, m int
 			}
 		}
 
-		out, err = c.CreateDeployment(ctx, cdr)
+		out, err = c.CreateDeployment(ctx, cdr, d.Get("team_id").(string))
 		if err != nil {
 			return diag.Errorf("error creating deployment: %s", err)
 		}
