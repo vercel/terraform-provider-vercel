@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -32,6 +33,7 @@ func dataSourceFile() *schema.Resource {
 }
 
 func dataSourceFileRead(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
+	log.Printf("[DEBUG] Reading File")
 	path := d.Get("path").(string)
 	content, err := os.ReadFile(path)
 	if err != nil {

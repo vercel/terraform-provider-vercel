@@ -5,14 +5,14 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io/fs"
+	"log"
 	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/vercel/terraform-provider-vercel/glob"
 )
 
 func dataSourceProjectDirectory() *schema.Resource {
@@ -35,74 +35,35 @@ func dataSourceProjectDirectory() *schema.Resource {
 	}
 }
 
-var ignores = map[string]struct{}{
-	".hg":                  {},
-	".git":                 {},
-	".gitmodules":          {},
-	".svn":                 {},
-	".cache":               {},
-	".next":                {},
-	".now":                 {},
-	".vercel":              {},
-	".npmignore":           {},
-	".dockerignore":        {},
-	".gitignore":           {},
-	".*.swp":               {},
-	".DS_Store":            {},
-	".wafpicke-*":          {},
-	".lock-wscript":        {},
-	".env.local":           {},
-	".env.*.local":         {},
-	".venv":                {},
-	"npm-debug.log":        {},
-	"config.gypi":          {},
-	"node_modules":         {},
-	"__pycache__":          {},
-	"venv":                 {},
-	"CVS":                  {},
-	".vercel_build_output": {},
-}
-
 func dataSourceProjectDirectoryRead(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
+	log.Printf("[DEBUG] Reading Project Directory")
 	files := map[string]interface{}{}
-	err := filepath.WalkDir(
-		d.Get("path").(string),
-		func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			// TODO - ignores should use a `glob` pattern instead.
-			// look into how Jared does this on turbo
-			_, ignored := ignores[d.Name()]
-
-			if d.IsDir() && ignored {
-				return filepath.SkipDir
-			}
-			if ignored {
-				return nil
-			}
-			if d.IsDir() {
-				return nil
-			}
-
-			content, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			rawSha := sha1.Sum(content)
-			sha := hex.EncodeToString(rawSha[:])
-
-			files[path] = fmt.Sprintf("%d~%s", len(content), sha)
-			return nil
-		},
-	)
+	dir := d.Get("path").(string)
+	ignoreRules, err := glob.GetIgnores(dir)
 	if err != nil {
-		return diag.FromErr(err)
+		return diag.Errorf("unable to get vercelignore rules: %s", err)
+	}
+
+	paths, err := glob.GetPaths(dir, ignoreRules)
+	if err != nil {
+		return diag.Errorf("unable to get files for directory %s: %s", dir, err)
+	}
+
+	for _, path := range paths {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return diag.Errorf("unable to read file %s: %s", path, err)
+		}
+		rawSha := sha1.Sum(content)
+		sha := hex.EncodeToString(rawSha[:])
+
+		files[path] = fmt.Sprintf("%d~%s", len(content), sha)
 	}
 
 	if err := d.Set("files", files); err != nil {
 		return diag.FromErr(err)
 	}
+
 	// Always read
 	d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
 	return nil

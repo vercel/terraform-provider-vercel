@@ -1,5 +1,5 @@
 # https://taskfile.dev
-version: '3'
+version: "3"
 
 tasks:
   build:
@@ -8,6 +8,8 @@ tasks:
       - go build -o terraform-provider-vercel
     sources:
       - "**/*.go"
+      - go.mod
+      - go.sum
     generates:
       - terraform-provider-vercel
 

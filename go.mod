@@ -2,7 +2,10 @@ module github.com/vercel/terraform-provider-vercel
 
 go 1.17
 
-require github.com/hashicorp/terraform-plugin-sdk/v2 v2.8.0
+require (
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.8.0
+	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
+)
 
 require (
 	github.com/agext/levenshtein v1.2.3 // indirect
