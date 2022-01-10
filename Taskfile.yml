@@ -13,6 +13,13 @@ tasks:
     generates:
       - terraform-provider-vercel
 
+  testacc:
+    desc: "Run acceptance tests against the provider"
+    env:
+      TF_ACC: "true"
+    cmds:
+      - go test ./...
+
   install:
     desc: "Set up an override allowing a local version of the provider to be used"
     cmds:

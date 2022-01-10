@@ -2,226 +2,214 @@ package vercel
 
 import (
 	"context"
-	"errors"
-	"log"
-	"net/http"
+	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/vercel/terraform-provider-vercel/client"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-func resourceProject() *schema.Resource {
-	return &schema.Resource{
-		CreateContext: resourceProjectCreate,
-		ReadContext:   resourceProjectRead,
-		DeleteContext: resourceProjectDelete,
-		UpdateContext: resourceProjectUpdate,
-		Schema: map[string]*schema.Schema{
+type resourceProjectType struct{}
+
+func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	return tfsdk.Schema{
+		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
 				Optional:    true,
-				Computed:    true,
-				Type:        schema.TypeString,
+				Type:        types.StringType,
 				Description: "The ID of the team the project should be created under",
 			},
 			"name": {
-				Required:     true,
-				Type:         schema.TypeString,
-				ValidateFunc: validation.StringLenBetween(1, 52),
-				Description:  "The desired name for the project",
+				Required: true,
+				Type:     types.StringType,
+				Validators: []tfsdk.AttributeValidator{
+					stringLengthBetween(1, 52),
+				},
+				Description: "The desired name for the project",
 			},
 			"build_command": {
 				Optional:    true,
-				Computed:    true,
-				Type:        schema.TypeString,
+				Type:        types.StringType,
 				Description: "The build command for this project. If omitted, this value will be automatically detected",
 			},
 			"dev_command": {
 				Optional:    true,
-				Computed:    true,
-				Type:        schema.TypeString,
+				Type:        types.StringType,
 				Description: "The dev command for this project. If omitted, this value will be automatically detected",
 			},
 			"environment": {
 				Description: "An environment variable for the project.",
 				Optional:    true,
-				Computed:    true,
-				Type:        schema.TypeList,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"target": {
-							Description: "The environments that the environment variable should be present on. Valid targets are be either `production`, `preview`, or `development`. If omitted, the variable will exist across all targets.",
-							Type:        schema.TypeList,
-							MinItems:    1,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-								ValidateFunc: validation.StringInSlice([]string{
-									"production",
-									"preview",
-									"development",
-								}, false),
-							},
-							Required: true,
+				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
+					"target": {
+						Description: "The environments that the environment variable should be present on. Valid targets are be either `production`, `preview`, or `development`. If omitted, the variable will exist across all targets.",
+						Type: types.SetType{
+							ElemType: types.StringType,
 						},
-						"key": {
-							Description: "The name of the environment variable",
-							Type:        schema.TypeString,
-							Required:    true,
+						Validators: []tfsdk.AttributeValidator{
+							setMinSize(1),
+							stringSetItemsIn("production", "preview", "development"),
 						},
-						"value": {
-							Description: "The value of the environment variable",
-							Type:        schema.TypeString,
-							Required:    true,
-						},
-						"id": {
-							Description: "The ID of the environment variable",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
+						Required: true,
 					},
-				},
+					"key": {
+						Description: "The name of the environment variable",
+						Type:        types.StringType,
+						Required:    true,
+					},
+					"value": {
+						Description: "The value of the environment variable",
+						Type:        types.StringType,
+						Required:    true,
+					},
+					"id": {
+						Description: "The ID of the environment variable",
+						Type:        types.StringType,
+						Computed:    true,
+					},
+				}, tfsdk.ListNestedAttributesOptions{}),
 			},
 			"framework": {
 				Optional:    true,
-				Computed:    true,
-				Type:        schema.TypeString,
+				Type:        types.StringType,
 				Description: "The framework that is being used for this project. If omitted, no framework is selected",
 			},
 			"git_repository": {
-				Description: "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed",
-				Optional:    true,
-				ForceNew:    true,
-				Type:        schema.TypeList,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"type": {
-							Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
-							Type:        schema.TypeString,
-							Required:    true,
-							ForceNew:    true,
-						},
-						"repo": {
-							Description: "The name of the git repository. For example: `vercel/next.js`",
-							Type:        schema.TypeString,
-							Required:    true,
-							ForceNew:    true,
-						},
+				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed",
+				Optional:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"type": {
+						Description:   "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
+						Type:          types.StringType,
+						Required:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 					},
-				},
+					"repo": {
+						Description:   "The name of the git repository. For example: `vercel/next.js`",
+						Type:          types.StringType,
+						Required:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+					},
+				}),
 			},
 			"id": {
 				Computed: true,
-				Type:     schema.TypeString,
+				Type:     types.StringType,
 			},
 			"install_command": {
 				Optional:    true,
-				Computed:    true,
-				Type:        schema.TypeString,
+				Type:        types.StringType,
 				Description: "The install command for this project. If omitted, this value will be automatically detected",
 			},
 			"output_directory": {
 				Optional:    true,
-				Computed:    true,
-				Type:        schema.TypeString,
+				Type:        types.StringType,
 				Description: "The output directory of the project. When null is used this value will be automatically detected",
 			},
 			"public_source": {
 				Optional:    true,
-				Computed:    true,
-				Type:        schema.TypeBool,
+				Type:        types.BoolType,
 				Description: "Specifies whether the source code and logs of the deployments for this project should be public or not",
 			},
 			"root_directory": {
 				Optional:    true,
-				Computed:    true,
-				Type:        schema.TypeString,
+				Type:        types.StringType,
 				Description: "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root",
 			},
 		},
-	}
+	}, nil
 }
 
-func getStringPointer(d *schema.ResourceData, key string) *string {
-	if v, ok := d.GetOk(key); ok {
-		value := v.(string)
-		return &value
-	}
-	return nil
+// New resource instance
+func (r resourceProjectType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
+	return resourceProject{
+		p: *(p.(*provider)),
+	}, nil
 }
 
-func getBoolPointer(d *schema.ResourceData, key string) *bool {
-	if v, ok := d.GetOk(key); ok {
-		value := v.(bool)
-		return &value
-	}
-	return nil
+type resourceProject struct {
+	p provider
 }
 
-func parseEnvironmentVariables(environment []interface{}) []client.EnvironmentVariable {
-	vars := []client.EnvironmentVariable{}
-	for _, e := range environment {
-		if e == nil {
-			continue
-		}
-		env := e.(map[string]interface{})
-
-		target := []string{}
-		for _, t := range env["target"].([]interface{}) {
-			target = append(target, t.(string))
-		}
-		if len(target) == 0 {
-			target = []string{"production", "preview", "development"}
-		}
-		vars = append(vars, client.EnvironmentVariable{
-			Key:    env["key"].(string),
-			Value:  env["value"].(string),
-			Target: target,
-			Type:   "encrypted",
-			ID:     env["id"].(string),
-		})
+func (r resourceProject) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	if !r.p.configured {
+		resp.Diagnostics.AddError(
+			"Provider not configured",
+			"The provider hasn't been configured before apply. This leads to weird stuff happening, so we'd prefer if you didn't do that. Thanks!",
+		)
+		return
 	}
 
-	return vars
-}
-
-func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.Client)
-	log.Printf("[DEBUG] Creating Project")
-	gitRepoList := d.Get("git_repository").([]interface{})
-	var repo *client.GitRepository
-	if len(gitRepoList) > 0 {
-		rawRepo := gitRepoList[0].(map[string]interface{})
-		repo = &client.GitRepository{
-			Type: rawRepo["type"].(string),
-			Repo: rawRepo["repo"].(string),
-		}
+	var plan Project
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	out, err := c.CreateProject(ctx, d.Get("team_id").(string), client.CreateProjectRequest{
-		BuildCommand:         getStringPointer(d, "build_command"),
-		DevCommand:           getStringPointer(d, "dev_command"),
-		EnvironmentVariables: parseEnvironmentVariables(d.Get("environment").([]interface{})),
-		Framework:            getStringPointer(d, "framework"),
-		GitRepository:        repo,
-		InstallCommand:       getStringPointer(d, "install_command"),
-		Name:                 d.Get("name").(string),
-		OutputDirectory:      getStringPointer(d, "output_directory"),
-		PublicSource:         getBoolPointer(d, "public_source"),
-		RootDirectory:        getStringPointer(d, "root_directory"),
-	})
+	out, err := r.p.client.CreateProject(ctx, plan.TeamID.Value, plan.toCreateProjectRequest())
 	if err != nil {
-		return diag.Errorf("error creating project: %s", err)
+		resp.Diagnostics.AddError(
+			"Error creating project",
+			"Could not create project, unexpected error: "+err.Error(),
+		)
+		return
 	}
 
-	d.SetId(out.ID)
-	if err := setEnvironment(d, out.EnvironmentVariables); err != nil {
-		return diag.FromErr(err)
+	result := convertResponseToProject(out, plan.TeamID)
+	tflog.Trace(ctx, "created project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	return nil
 }
 
+func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+	var state Project
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	out, err := r.p.client.GetProject(ctx, state.ID.Value, state.TeamID.Value)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project",
+			fmt.Sprintf("Could not read project %s for team %s, unexpected error: %s",
+				state.ID.Value,
+				state.TeamID.Value,
+				err.Error(),
+			),
+		)
+		return
+	}
+
+	result := convertResponseToProject(out, state.TeamID)
+	tflog.Trace(ctx, "created project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+}
+
+func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+}
+
+func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
+	tfsdk.ResourceImportStateNotImplemented(ctx, "", resp)
+}
+
+/*
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.Client)
 	log.Printf("[DEBUG] Reading Project")
@@ -237,100 +225,6 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 
 	return updateProjectSchema(d, project)
-}
-
-func setStringPointers(d *schema.ResourceData, m map[string]*string) error {
-	for k, v := range m {
-		if _, ok := d.GetOk(k); !ok && v == nil {
-			continue
-		}
-		if err := d.Set(k, v); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func setBoolPointer(d *schema.ResourceData, key string, value *bool) error {
-	if _, ok := d.GetOk(key); !ok && value == nil {
-		return nil
-	}
-	return d.Set(key, value)
-}
-
-func setEnvironment(d *schema.ResourceData, environment []client.EnvironmentVariable) error {
-	envs := []interface{}{}
-	envMap := map[string]client.EnvironmentVariable{}
-	for _, e := range environment {
-		envMap[e.Key] = e
-	}
-
-	// Iterate over d.Get("environment").([]interface{}) and set the values, removing
-	// from map as we go. This preserves the order of the environment variables.
-	for _, e := range d.Get("environment").([]interface{}) {
-		if e == nil {
-			continue
-		}
-		rawEnv := e.(map[string]interface{})
-		key := rawEnv["key"].(string)
-
-		if envVar, ok := envMap[key]; ok {
-			envs = append(envs, map[string]interface{}{
-				"key":    envVar.Key,
-				"value":  envVar.Value,
-				"target": envVar.Target,
-				"id":     envVar.ID,
-			})
-			delete(envMap, key)
-		}
-	}
-
-	// Then, iterate over any leftovers and append them to the end.
-	for _, e := range envMap {
-		envs = append(envs, map[string]interface{}{
-			"key":    e.Key,
-			"value":  e.Value,
-			"target": e.Target,
-			"id":     e.ID,
-		})
-	}
-
-	return d.Set("environment", envs)
-}
-
-func updateProjectSchema(d *schema.ResourceData, project client.ProjectResponse) diag.Diagnostics {
-	if err := setStringPointers(d, map[string]*string{
-		"build_command":    project.BuildCommand,
-		"dev_command":      project.DevCommand,
-		"framework":        project.Framework,
-		"install_command":  project.InstallCommand,
-		"name":             &project.Name,
-		"output_directory": project.OutputDirectory,
-		"root_directory":   project.RootDirectory,
-	}); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := setEnvironment(d, project.EnvironmentVariables); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := setBoolPointer(d, "public_source", project.PublicSource); err != nil {
-		return diag.FromErr(err)
-	}
-	if repo := project.Repository(); repo != nil {
-		gitRepository := []map[string]interface{}{}
-		gitRepository = append(gitRepository, map[string]interface{}{
-			"type": repo.Type,
-			"repo": repo.Repo,
-		})
-		if err := d.Set("git_repository", gitRepository); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	d.SetId(project.ID)
-
-	return nil
 }
 
 func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -435,3 +329,4 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 
 	return updateProjectSchema(d, project)
 }
+*/

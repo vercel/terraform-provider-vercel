@@ -1,12 +1,14 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
+	"context"
+
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/vercel/terraform-provider-vercel/vercel"
 )
 
 func main() {
-	plugin.Serve(&plugin.ServeOpts{
-		ProviderFunc: vercel.Provider,
+	tfsdk.Serve(context.Background(), vercel.New, tfsdk.ServeOpts{
+		Name: "vercel",
 	})
 }
