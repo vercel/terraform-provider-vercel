@@ -19,4 +19,7 @@ func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("VERCEL_API_TOKEN"); v == "" {
 		t.Fatal("VERCEL_API_TOKEN must be set for acceptance tests")
 	}
+	if v := os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"); v == "" {
+		t.Fatal("VERCEL_TERRAFORM_TESTING_TEAM must be set for acceptance tests against a specific team")
+	}
 }

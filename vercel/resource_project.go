@@ -181,9 +181,9 @@ func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
-			fmt.Sprintf("Could not read project %s for team %s, unexpected error: %s",
-				state.ID.Value,
+			fmt.Sprintf("Could not read project %s %s, unexpected error: %s",
 				state.TeamID.Value,
+				state.ID.Value,
 				err.Error(),
 			),
 		)
@@ -334,7 +334,12 @@ func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project",
-			"Could not delete project, unexpected error: "+err.Error(),
+			fmt.Sprintf(
+				"Could not delete project %s %s, unexpected error: %s",
+				state.TeamID.Value,
+				state.ID.Value,
+				err,
+			),
 		)
 		return
 	}
@@ -365,9 +370,9 @@ func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResour
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
-			fmt.Sprintf("Could not read project %s for team %s, unexpected error: %s",
-				projectID,
+			fmt.Sprintf("Could not get project %s %s, unexpected error: %s",
 				teamID,
+				projectID,
 				err.Error(),
 			),
 		)
