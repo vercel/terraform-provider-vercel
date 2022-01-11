@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -48,7 +49,6 @@ func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 							ElemType: types.StringType,
 						},
 						Validators: []tfsdk.AttributeValidator{
-							setMinSize(1),
 							stringSetItemsIn("production", "preview", "development"),
 						},
 						Required: true,
@@ -68,7 +68,9 @@ func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 						Type:        types.StringType,
 						Computed:    true,
 					},
-				}, tfsdk.ListNestedAttributesOptions{}),
+				}, tfsdk.ListNestedAttributesOptions{
+					MinItems: 1,
+				}),
 			},
 			"framework": {
 				Optional:    true,
@@ -122,7 +124,6 @@ func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 	}, nil
 }
 
-// New resource instance
 func (r resourceProjectType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceProject{
 		p: *(p.(*provider)),
@@ -199,67 +200,10 @@ func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 	}
 }
 
-func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
-}
-
-func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
-}
-
-func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStateNotImplemented(ctx, "", resp)
-}
-
-/*
-func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.Client)
-	log.Printf("[DEBUG] Reading Project")
-
-	project, err := c.GetProject(ctx, d.Id(), d.Get("team_id").(string))
-	var apiErr client.APIError
-	if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound {
-		d.SetId("")
-		return nil
-	}
-	if err != nil {
-		return diag.Errorf("error reading project: %s", err)
-	}
-
-	return updateProjectSchema(d, project)
-}
-
-func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*client.Client)
-	log.Printf("[DEBUG] Deleting Project")
-	err := client.DeleteProject(ctx, d.Id(), d.Get("team_id").(string))
-	if err != nil {
-		return diag.Errorf("error deleting project: %s", err)
-	}
-
-	d.SetId("")
-	return nil
-}
-
-func getStringPointerIfChanged(d *schema.ResourceData, key string) *string {
-	if d.HasChange(key) {
-		v := d.Get(key).(string)
-		return &v
-	}
-	return nil
-}
-
-func getBoolPointerIfChanged(d *schema.ResourceData, key string) *bool {
-	if d.HasChange(key) {
-		v := d.Get(key).(bool)
-		return &v
-	}
-	return nil
-}
-
-func containsEnvVar(env []client.EnvironmentVariable, v client.EnvironmentVariable) bool {
+func containsEnvVar(env []EnvironmentItem, v EnvironmentItem) bool {
 	for _, e := range env {
 		if e.Key == v.Key &&
 			e.Value == v.Value &&
-			e.Type == v.Type &&
 			len(e.Target) == len(v.Target) {
 			for i, t := range e.Target {
 				if t != v.Target[i] {
@@ -272,9 +216,9 @@ func containsEnvVar(env []client.EnvironmentVariable, v client.EnvironmentVariab
 	return false
 }
 
-func diffEnvVars(oldVars, newVars []client.EnvironmentVariable) (toUpsert, toRemove []client.EnvironmentVariable) {
-	toRemove = []client.EnvironmentVariable{}
-	toUpsert = []client.EnvironmentVariable{}
+func diffEnvVars(oldVars, newVars []EnvironmentItem) (toUpsert, toRemove []EnvironmentItem) {
+	toRemove = []EnvironmentItem{}
+	toUpsert = []EnvironmentItem{}
 	for _, e := range oldVars {
 		if !containsEnvVar(newVars, e) {
 			toRemove = append(toRemove, e)
@@ -288,45 +232,158 @@ func diffEnvVars(oldVars, newVars []client.EnvironmentVariable) (toUpsert, toRem
 	return toUpsert, toRemove
 }
 
-func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.Client)
-	log.Printf("[DEBUG] Updating Project")
-	teamID := d.Get("team_id").(string)
+func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+	var plan Project
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	if d.HasChange("environment") {
-		oldVars, newVars := d.GetChange("environment")
-		toUpsert, toRemove := diffEnvVars(
-			parseEnvironmentVariables(oldVars.([]interface{})),
-			parseEnvironmentVariables(newVars.([]interface{})),
+	var state Project
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	/* Update the environment variables first */
+	toUpsert, toRemove := diffEnvVars(state.Environment, plan.Environment)
+	for _, v := range toRemove {
+		err := r.p.client.DeleteEnvironmentVariable(ctx, state.ID.Value, state.TeamID.Value, v.ID.Value)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project",
+				fmt.Sprintf(
+					"Could not remove environment variable %s (%s), unexpected error: %s",
+					v.Key.Value,
+					v.ID.Value,
+					err,
+				),
+			)
+			return
+		}
+		tflog.Trace(
+			ctx,
+			"deleted environment variable",
+			"team_id", plan.TeamID.Value,
+			"project_id", plan.ID.Value,
+			"environment_id", v.ID.Value,
 		)
-		for _, v := range toRemove {
-			err := c.DeleteEnvironmentVariable(ctx, d.Id(), teamID, v.ID)
-			if err != nil {
-				return diag.Errorf("error deleting environment variable: %s", err)
-			}
+	}
+	for _, v := range toUpsert {
+		err := r.p.client.UpsertEnvironmentVariable(
+			ctx,
+			state.ID.Value,
+			state.TeamID.Value,
+			v.toUpsertEnvironmentVariableRequest(),
+		)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project",
+				fmt.Sprintf(
+					"Could not upsert environment variable %s (%s), unexpected error: %s",
+					v.Key.Value,
+					v.ID.Value,
+					err,
+				),
+			)
 		}
-		for _, v := range toUpsert {
-			err := c.UpsertEnvironmentVariable(ctx, d.Id(), teamID, client.UpsertEnvironmentVariableRequest(v))
-			if err != nil {
-				return diag.Errorf("error creating or updating environment variable: %s", err)
-			}
-		}
+		tflog.Trace(
+			ctx,
+			"upserted environment variable",
+			"team_id", plan.TeamID.Value,
+			"project_id", plan.ID.Value,
+			"environment_id", v.ID.Value,
+		)
 	}
 
-	project, err := c.UpdateProject(ctx, d.Id(), teamID, client.UpdateProjectRequest{
-		Name:            getStringPointerIfChanged(d, "name"),
-		BuildCommand:    getStringPointerIfChanged(d, "build_command"),
-		DevCommand:      getStringPointerIfChanged(d, "dev_command"),
-		Framework:       getStringPointerIfChanged(d, "framework"),
-		InstallCommand:  getStringPointerIfChanged(d, "install_command"),
-		OutputDirectory: getStringPointerIfChanged(d, "output_directory"),
-		RootDirectory:   getStringPointerIfChanged(d, "root_directory"),
-		PublicSource:    getBoolPointerIfChanged(d, "public_source"),
-	})
+	out, err := r.p.client.UpdateProject(ctx, state.ID.Value, state.TeamID.Value, plan.toUpdateProjectRequest(state.Name.Value))
 	if err != nil {
-		return diag.Errorf("error updating project: %s", err)
+		resp.Diagnostics.AddError(
+			"Error updating project",
+			fmt.Sprintf(
+				"Could not update project %s %s, unexpected error: %s",
+				state.TeamID.Value,
+				state.ID.Value,
+				err,
+			),
+		)
+		return
 	}
 
-	return updateProjectSchema(d, project)
+	result := convertResponseToProject(out, plan.TeamID)
+	tflog.Trace(ctx, "updated project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
-*/
+
+func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+	var state Project
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err := r.p.client.DeleteProject(ctx, state.ID.Value, state.TeamID.Value)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting project",
+			"Could not delete project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	resp.State.RemoveResource(ctx)
+}
+
+func splitID(id string) (teamID, projectID string, ok bool) {
+	if strings.Contains(id, "/") {
+		attributes := strings.Split(id, "/")
+		if len(attributes) != 2 {
+			return "", "", false
+		}
+		return attributes[0], attributes[1], true
+	}
+	return "", id, true
+}
+
+func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
+	teamID, projectID, ok := splitID(req.ID)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Error importing project",
+			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id\" or \"project_id\"", req.ID),
+		)
+	}
+
+	out, err := r.p.client.GetProject(ctx, projectID, teamID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project",
+			fmt.Sprintf("Could not read project %s for team %s, unexpected error: %s",
+				projectID,
+				teamID,
+				err.Error(),
+			),
+		)
+		return
+	}
+
+	stringTypeTeamID := types.String{Value: teamID}
+	if teamID == "" {
+		stringTypeTeamID.Null = true
+	}
+	result := convertResponseToProject(out, stringTypeTeamID)
+	tflog.Trace(ctx, "created project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+
+	diags := resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}

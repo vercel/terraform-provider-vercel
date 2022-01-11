@@ -40,7 +40,7 @@ func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 }
 
 func (p *Project) toCreateProjectRequest() client.CreateProjectRequest {
-	r := client.CreateProjectRequest{
+	return client.CreateProjectRequest{
 		Name:                 p.Name.Value,
 		BuildCommand:         toStrPointer(p.BuildCommand),
 		DevCommand:           toStrPointer(p.DevCommand),
@@ -52,11 +52,23 @@ func (p *Project) toCreateProjectRequest() client.CreateProjectRequest {
 		PublicSource:         toBoolPointer(p.PublicSource),
 		RootDirectory:        toStrPointer(p.RootDirectory),
 	}
-	if !p.BuildCommand.Null && !p.BuildCommand.Unknown {
-		r.BuildCommand = &p.BuildCommand.Value
-	}
+}
 
-	return r
+func (p *Project) toUpdateProjectRequest(oldName string) client.UpdateProjectRequest {
+	var name *string = nil
+	if oldName != p.Name.Value {
+		name = &p.Name.Value
+	}
+	return client.UpdateProjectRequest{
+		Name:            name,
+		BuildCommand:    toStrPointer(p.BuildCommand),
+		DevCommand:      toStrPointer(p.DevCommand),
+		Framework:       toStrPointer(p.Framework),
+		InstallCommand:  toStrPointer(p.InstallCommand),
+		OutputDirectory: toStrPointer(p.OutputDirectory),
+		RootDirectory:   toStrPointer(p.RootDirectory),
+		PublicSource:    toBoolPointer(p.PublicSource),
+	}
 }
 
 type EnvironmentItem struct {
@@ -64,6 +76,20 @@ type EnvironmentItem struct {
 	Key    types.String   `tfsdk:"key"`
 	Value  types.String   `tfsdk:"value"`
 	ID     types.String   `tfsdk:"id"`
+}
+
+func (e *EnvironmentItem) toUpsertEnvironmentVariableRequest() client.UpsertEnvironmentVariableRequest {
+	var target []string
+	for _, t := range e.Target {
+		target = append(target, t.Value)
+	}
+	return client.UpsertEnvironmentVariableRequest{
+		Key:    e.Key.Value,
+		Value:  e.Value.Value,
+		Target: target,
+		Type:   "encrypted",
+		ID:     e.ID.Value,
+	}
 }
 
 type GitRepository struct {
@@ -89,7 +115,7 @@ func convertResponseToProject(response client.ProjectResponse, tid types.String)
 			Repo: types.String{Value: repo.Repo},
 		}
 	}
-	env := []EnvironmentItem{}
+	var env []EnvironmentItem
 	for _, e := range response.EnvironmentVariables {
 		target := []types.String{}
 		for _, t := range e.Target {
