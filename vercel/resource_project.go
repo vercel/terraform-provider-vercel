@@ -184,14 +184,14 @@ func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 			fmt.Sprintf("Could not read project %s %s, unexpected error: %s",
 				state.TeamID.Value,
 				state.ID.Value,
-				err.Error(),
+				err,
 			),
 		)
 		return
 	}
 
 	result := convertResponseToProject(out, state.TeamID)
-	tflog.Trace(ctx, "created project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+	tflog.Trace(ctx, "read project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -343,10 +343,12 @@ func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 		)
 		return
 	}
+
+	tflog.Trace(ctx, "deleted project", "team_id", state.TeamID.Value, "project_id", state.ID.Value)
 	resp.State.RemoveResource(ctx)
 }
 
-func splitID(id string) (teamID, projectID string, ok bool) {
+func splitID(id string) (teamID, ID string, ok bool) {
 	if strings.Contains(id, "/") {
 		attributes := strings.Split(id, "/")
 		if len(attributes) != 2 {
@@ -373,7 +375,7 @@ func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResour
 			fmt.Sprintf("Could not get project %s %s, unexpected error: %s",
 				teamID,
 				projectID,
-				err.Error(),
+				err,
 			),
 		)
 		return

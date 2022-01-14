@@ -4,117 +4,106 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
-	"strconv"
-	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-func resourceDeployment() *schema.Resource {
-	return &schema.Resource{
-		CreateContext: resourceDeploymentCreate,
-		ReadContext:   resourceDeploymentRead,
-		DeleteContext: resourceDeploymentDelete,
-		Schema: map[string]*schema.Schema{
+type resourceDeploymentType struct{}
+
+func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	return tfsdk.Schema{
+		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
-				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeString,
+				Optional:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Type:          types.StringType,
 			},
 			"project_id": {
-				Required: true,
-				ForceNew: true,
-				Type:     schema.TypeString,
-			},
-			"files": {
-				Required: true,
-				ForceNew: true,
-				Type:     schema.TypeMap,
-				ValidateFunc: func(i interface{}, _ string) (warnings []string, errors []error) {
-					v, ok := i.(map[string]interface{})
-					if !ok {
-						errors = append(errors, fmt.Errorf("expected files to be a map of strings"))
-						return warnings, errors
-					}
-
-					if len(v) < 1 {
-						errors = append(errors, fmt.Errorf("expected at least one file"))
-						return warnings, errors
-					}
-					return warnings, errors
-				},
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
+				Required:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Type:          types.StringType,
 			},
 			"id": {
 				Computed: true,
-				Type:     schema.TypeString,
+				Type:     types.StringType,
 			},
 			"url": {
 				Computed: true,
-				Type:     schema.TypeString,
+				Type:     types.StringType,
 			},
-			"is_staging": {
-				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeBool,
+			"production": {
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Type:          types.BoolType,
 			},
-			"is_production": {
-				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeBool,
+			"files": {
+				Required:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Type: types.MapType{
+					ElemType: types.StringType,
+				},
+				Validators: []tfsdk.AttributeValidator{
+					mapItemsMinCount(1),
+				},
 			},
 		},
-	}
+	}, nil
 }
 
-func resourceDeploymentCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.Client)
+func (r resourceDeploymentType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
+	return resourceDeployment{
+		p: *(p.(*provider)),
+	}, nil
+}
 
-	log.Printf("[DEBUG] Creating Deployment")
+type resourceDeployment struct {
+	p provider
+}
 
-	target := ""
-	if d.Get("is_staging").(bool) {
-		target = "staging"
+func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	if !r.p.configured {
+		resp.Diagnostics.AddError(
+			"Provider not configured",
+			"The provider hasn't been configured before apply. This leads to weird stuff happening, so we'd prefer if you didn't do that. Thanks!",
+		)
+		return
 	}
-	if d.Get("is_production").(bool) {
+
+	var plan Deployment
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	files, filesBySha, err := plan.getFiles()
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating deployment",
+			"Could not parse files, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	target := "preview"
+	if plan.Production.Value {
 		target = "production"
-	}
-
-	// Build up files for the API, and files by SHA so we can easily identify which files to upload.
-	var files []client.DeploymentFile
-	filesBySha := map[string]client.DeploymentFile{}
-	for filename, rawSizeSha := range d.Get("files").(map[string]interface{}) {
-		sizeSha := strings.Split(rawSizeSha.(string), "~")
-		size, err := strconv.Atoi(sizeSha[0])
-		if err != nil {
-			return diag.Errorf("error parsing file input for file '%s': %s", filename, rawSizeSha.(string))
-		}
-		sha := sizeSha[1]
-
-		file := client.DeploymentFile{
-			File: filename,
-			Sha:  sha,
-			Size: size,
-		}
-		files = append(files, file)
-		filesBySha[sha] = file
 	}
 
 	cdr := client.CreateDeploymentRequest{
 		Files:     files,
-		ProjectID: d.Get("project_id").(string),
+		ProjectID: plan.ProjectID.Value,
 		Target:    target,
 		Aliases:   []string{},
 	}
 
-	// First we attempt to create a deployment without bothering to upload any files.
-	out, err := c.CreateDeployment(ctx, cdr, d.Get("team_id").(string))
+	out, err := r.p.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
 	var mfErr client.MissingFilesError
 	if errors.As(err, &mfErr) {
 		// Then we need to upload the files, and create the deployment again.
@@ -122,37 +111,97 @@ func resourceDeploymentCreate(ctx context.Context, d *schema.ResourceData, m int
 			f := filesBySha[sha]
 			content, err := os.ReadFile(f.File)
 			if err != nil {
-				return diag.Errorf("unable to read file '%s': %s", f.File, err)
+				resp.Diagnostics.AddError(
+					"Error reading file",
+					fmt.Sprintf(
+						"Could not read file %s, unexpected error: %s",
+						f.File,
+						err,
+					),
+				)
+				return
 			}
 
-			err = c.CreateFile(ctx, f.File, f.Sha, string(content))
+			err = r.p.client.CreateFile(ctx, f.File, f.Sha, string(content))
 			if err != nil {
-				return diag.Errorf("error uploading deployment file '%s': %s", f.File, err)
+				resp.Diagnostics.AddError(
+					"Error uploading deployment file",
+					fmt.Sprintf(
+						"Could not upload deployment file %s, unexpected error: %s",
+						f.File,
+						err,
+					),
+				)
+				return
 			}
 		}
 
-		out, err = c.CreateDeployment(ctx, cdr, d.Get("team_id").(string))
+		out, err = r.p.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
 		if err != nil {
-			return diag.Errorf("error creating deployment: %s", err)
+			resp.Diagnostics.AddError(
+				"Error creating deployment",
+				"Could not create deployment, unexpected error: "+err.Error(),
+			)
+			return
 		}
 	} else if err != nil {
-		return diag.Errorf("error creating deployment: %s", err)
+		resp.Diagnostics.AddError(
+			"Error creating deployment",
+			"Could not create deployment, unexpected error: "+err.Error()+out.ID,
+		)
+		return
 	}
 
-	if err := d.Set("url", out.URL); err != nil {
-		return diag.FromErr(err)
+	result := convertResponseToDeployment(out, plan.TeamID, plan.Files)
+	tflog.Trace(ctx, "created deployment", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+	var state Deployment
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	d.SetId(out.ID)
+	out, err := r.p.client.GetDeployment(ctx, state.ID.Value, state.TeamID.Value)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading deployment",
+			fmt.Sprintf("Could not get project %s %s, unexpected error: %s",
+				state.TeamID.Value,
+				state.URL.Value,
+				err,
+			),
+		)
+		return
+	}
 
-	return nil
+	result := convertResponseToDeployment(out, state.TeamID, state.Files)
+	tflog.Trace(ctx, "read deployment", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
-func resourceDeploymentRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	return nil
+func (r resourceDeployment) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+	// Nothing to do here - we can't update deployments
 }
 
-func resourceDeploymentDelete(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
-	d.SetId("")
-	return nil
+func (r resourceDeployment) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+	tflog.Trace(ctx, "deleted deployment")
+	resp.State.RemoveResource(ctx)
+}
+
+func (r resourceDeployment) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
+	tfsdk.ResourceImportStateNotImplemented(ctx, "", resp)
 }

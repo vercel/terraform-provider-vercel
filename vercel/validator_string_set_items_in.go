@@ -10,9 +10,9 @@ import (
 )
 
 func stringSetItemsIn(items ...string) validatorStringSetItemsIn {
-	itemMap := map[string]bool{}
+	itemMap := map[string]struct{}{}
 	for _, i := range items {
-		itemMap[i] = true
+		itemMap[i] = struct{}{}
 	}
 	return validatorStringSetItemsIn{
 		Items: itemMap,
@@ -20,7 +20,7 @@ func stringSetItemsIn(items ...string) validatorStringSetItemsIn {
 }
 
 type validatorStringSetItemsIn struct {
-	Items map[string]bool
+	Items map[string]struct{}
 }
 
 func (v validatorStringSetItemsIn) keys() (out []string) {
@@ -58,14 +58,13 @@ func (v validatorStringSetItemsIn) Validate(ctx context.Context, req tfsdk.Valid
 		if set.Unknown || set.Null {
 			return
 		}
-		if !v.Items[item.Value] {
+		if _, ok := v.Items[item.Value]; !ok {
 			resp.Diagnostics.AddAttributeError(
 				req.AttributePath,
 				"Invalid Set Item",
 				fmt.Sprintf("Set item must be one of %s, got: %s.", strings.Join(v.keys(), " "), item.Value),
 			)
 			return
-
 		}
 	}
 }

@@ -35,16 +35,16 @@ func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 
 func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
 	return map[string]tfsdk.ResourceType{
-		"vercel_project": resourceProjectType{},
-		// "vercel_deployment": resourceDeployment{},
+		"vercel_project":    resourceProjectType{},
+		"vercel_deployment": resourceDeploymentType{},
 	}, nil
 }
 
 func (p *provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
 	return map[string]tfsdk.DataSourceType{
-		// "vercel_user":              dataSourceUser{},
-		// "vercel_file":              dataSourceFile{},
-		// "vercel_project_directory": dataSourceProjectDirectory{},
+		"vercel_file":              dataSourceFileType{},
+		"vercel_project_directory": dataSourceProjectDirectoryType{},
+		"vercel_user":              dataSourceUserType{},
 	}, nil
 }
 

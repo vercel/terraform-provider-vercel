@@ -11,7 +11,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-func testAccVercelProjectExists(n, teamID string) resource.TestCheckFunc {
+func testAccProjectExists(n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -28,23 +28,40 @@ func testAccVercelProjectExists(n, teamID string) resource.TestCheckFunc {
 	}
 }
 
-func TestAccVercelProject(t *testing.T) {
-	testAccVercelProject(t, "")
+func TestAccProject(t *testing.T) {
+	testAccProject(t, "")
 }
 
-func TestAccVercelProjectWithTeamID(t *testing.T) {
-	testAccVercelProject(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
-}
-
-func TestAccVercelProjectImport(t *testing.T) {
+func TestAccProjectWithGitRepository(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProject(""),
+				Config: testAccProjectConfigWithGitRepo(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccVercelProjectExists("vercel_project.test", ""),
+					testAccProjectExists("vercel_project.test_git", ""),
+					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.type", "github"),
+					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", "vercel/next.js"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccProjectWithTeamID(t *testing.T) {
+	testAccProject(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
+}
+
+func TestAccProjectImport(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectConfig(""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test", ""),
 				),
 			},
 			{
@@ -56,23 +73,23 @@ func TestAccVercelProjectImport(t *testing.T) {
 	})
 }
 
-func testAccVercelProject(t *testing.T, tid string) {
+func testAccProject(t *testing.T, tid string) {
 	extraConfig := ""
 	testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
 	if tid != "" {
 		extraConfig = fmt.Sprintf(`team_id = "%s"`, tid)
 		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", tid)
 	}
-	//
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccProject(extraConfig),
+				Config: testAccProjectConfig(extraConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccVercelProjectExists("vercel_project.test", tid),
+					testAccProjectExists("vercel_project.test", tid),
 					testTeamID,
 					resource.TestCheckResourceAttr("vercel_project.test", "name", "test-acc-one"),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
@@ -91,7 +108,7 @@ func testAccVercelProject(t *testing.T, tid string) {
 			},
 			// Update testing
 			{
-				Config: testAccProjectUpdated(extraConfig),
+				Config: testAccProjectConfigUpdated(extraConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", "test-acc-two"),
 					resource.TestCheckNoResourceAttr("vercel_project.test", "build_command"),
@@ -105,7 +122,7 @@ func testAccVercelProject(t *testing.T, tid string) {
 	})
 }
 
-func testAccProjectUpdated(extras string) string {
+func testAccProjectConfigUpdated(extras string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-two"
@@ -121,7 +138,19 @@ resource "vercel_project" "test" {
 `, extras)
 }
 
-func testAccProject(extra string) string {
+func testAccProjectConfigWithGitRepo() string {
+	return `
+resource "vercel_project" "test_git" {
+  name = "test-acc-two"
+  git_repository = {
+    type = "github"
+    repo = "vercel/next.js"
+  }
+}
+    `
+}
+
+func testAccProjectConfig(extra string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-one"

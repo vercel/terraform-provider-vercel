@@ -45,13 +45,15 @@ type DeploymentResponse struct {
 	Team *struct {
 		Slug string `json:"slug"`
 	} `json:"team"`
-	ID               string `json:"id"`
-	URL              string `json:"url"`
-	AliasAssigned    bool   `json:"aliasAssigned"`
-	ChecksConclusion string `json:"checksConclusion"`
-	ReadyState       string `json:"readyState"`
-	ErrorCode        string `json:"errorCode"`
-	ErrorMessage     string `json:"errorMessage"`
+	ID               string  `json:"id"`
+	ProjectID        string  `json:"projectId"`
+	Target           *string `json:"target"`
+	URL              string  `json:"url"`
+	AliasAssigned    bool    `json:"aliasAssigned"`
+	ChecksConclusion string  `json:"checksConclusion"`
+	ReadyState       string  `json:"readyState"`
+	ErrorCode        string  `json:"errorCode"`
+	ErrorMessage     string  `json:"errorMessage"`
 }
 
 func (dr *DeploymentResponse) IsComplete() bool {
@@ -156,7 +158,7 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 			return r, err
 		}
 		time.Sleep(5 * time.Second)
-		r, err = c.getDeploymentByID(ctx, r.ID, teamID)
+		r, err = c.GetDeployment(ctx, r.ID, teamID)
 		if err != nil {
 			return r, fmt.Errorf("error getting deployment: %w", err)
 		}

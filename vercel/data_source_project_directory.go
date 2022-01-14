@@ -5,66 +5,107 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"os"
-	"strconv"
-	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/glob"
 )
 
-func dataSourceProjectDirectory() *schema.Resource {
-	return &schema.Resource{
-		ReadContext: dataSourceProjectDirectoryRead,
-		Schema: map[string]*schema.Schema{
+type dataSourceProjectDirectoryType struct{}
+
+func (r dataSourceProjectDirectoryType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	return tfsdk.Schema{
+		Attributes: map[string]tfsdk.Attribute{
 			"path": {
 				Required: true,
-				ForceNew: true,
-				Type:     schema.TypeString,
+				Type:     types.StringType,
+			},
+			"id": {
+				Computed: true,
+				Type:     types.StringType,
 			},
 			"files": {
 				Computed: true,
-				Type:     schema.TypeMap,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
+				Type: types.MapType{
+					ElemType: types.StringType,
 				},
 			},
 		},
-	}
+	}, nil
 }
 
-func dataSourceProjectDirectoryRead(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
-	log.Printf("[DEBUG] Reading Project Directory")
-	files := map[string]interface{}{}
-	dir := d.Get("path").(string)
-	ignoreRules, err := glob.GetIgnores(dir)
-	if err != nil {
-		return diag.Errorf("unable to get vercelignore rules: %s", err)
+func (r dataSourceProjectDirectoryType) NewDataSource(ctx context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+	return dataSourceProjectDirectory{
+		p: *(p.(*provider)),
+	}, nil
+}
+
+type dataSourceProjectDirectory struct {
+	p provider
+}
+
+type ProjectDirectoryData struct {
+	Path  types.String      `tfsdk:"path"`
+	ID    types.String      `tfsdk:"id"`
+	Files map[string]string `tfsdk:"files"`
+}
+
+func (r dataSourceProjectDirectory) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+	var config ProjectDirectoryData
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	paths, err := glob.GetPaths(dir, ignoreRules)
+	ignoreRules, err := glob.GetIgnores(config.Path.Value)
 	if err != nil {
-		return diag.Errorf("unable to get files for directory %s: %s", dir, err)
+		resp.Diagnostics.AddError(
+			"Error reading .vercelignore file",
+			fmt.Sprintf("Could not read file, unexpected error: %s",
+				err,
+			),
+		)
+		return
 	}
 
+	paths, err := glob.GetPaths(config.Path.Value, ignoreRules)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading directory",
+			fmt.Sprintf("Could not read files for directory %s, unexpected error: %s",
+				config.Path.Value,
+				err,
+			),
+		)
+		return
+	}
+
+	config.Files = map[string]string{}
 	for _, path := range paths {
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return diag.Errorf("unable to read file %s: %s", path, err)
+			resp.Diagnostics.AddError(
+				"Error reading file",
+				fmt.Sprintf("Could not read file %s, unexpected error: %s",
+					config.Path.Value,
+					err,
+				),
+			)
+			return
 		}
 		rawSha := sha1.Sum(content)
 		sha := hex.EncodeToString(rawSha[:])
 
-		files[path] = fmt.Sprintf("%d~%s", len(content), sha)
+		config.Files[path] = fmt.Sprintf("%d~%s", len(content), sha)
 	}
 
-	if err := d.Set("files", files); err != nil {
-		return diag.FromErr(err)
+	config.ID = config.Path
+	diags = resp.State.Set(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-
-	// Always read
-	d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
-	return nil
 }

@@ -28,10 +28,6 @@ func (v validatorStringLengthBetween) MarkdownDescription(ctx context.Context) s
 }
 
 func (v validatorStringLengthBetween) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
-	// types.String must be the attr.Value produced by the attr.Type in the schema for this attribute
-	// for generic validators, use
-	// https://pkg.go.dev/github.com/hashicorp/terraform-plugin-framework/tfsdk#ConvertValue
-	// to convert into a known type.
 	var str types.String
 	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &str)
 	resp.Diagnostics.Append(diags...)
