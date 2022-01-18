@@ -36,6 +36,27 @@ func TestAccDeploymentWithTeamID(t *testing.T) {
 	testAccDeployment(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
 }
 
+func TestAccDeploymentWithProjectSettings(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDeploymentConfig("", `project_settings = {
+                    output_directory = "."
+                    dev_command = "npm run dev"
+                }`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDeploymentExists("vercel_deployment.test", ""),
+					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
+					resource.TestCheckResourceAttr("vercel_deployment.test", "project_settings.output_directory", "."),
+					resource.TestCheckResourceAttr("vercel_deployment.test", "project_settings.dev_command", "npm run dev"),
+				),
+			},
+		},
+	})
+}
+
 func testAccDeployment(t *testing.T, tid string) {
 	extraConfig := ""
 	testTeamID := resource.TestCheckNoResourceAttr("vercel_deployment.test", "team_id")
@@ -49,7 +70,7 @@ func testAccDeployment(t *testing.T, tid string) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig(extraConfig),
+				Config: testAccDeploymentConfig(extraConfig, extraConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testTeamID,
 					testAccDeploymentExists("vercel_deployment.test", ""),
@@ -60,7 +81,7 @@ func testAccDeployment(t *testing.T, tid string) {
 	})
 }
 
-func testAccDeploymentConfig(extras string) string {
+func testAccDeploymentConfig(projectExtras, deploymentExtras string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-one"
@@ -85,5 +106,5 @@ resource "vercel_deployment" "test" {
   files         = data.vercel_file.index.file
   production = true
 }
-`, extras, extras)
+`, projectExtras, deploymentExtras)
 }

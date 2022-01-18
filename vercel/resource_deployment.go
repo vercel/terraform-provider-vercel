@@ -52,6 +52,48 @@ func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag
 					mapItemsMinCount(1),
 				},
 			},
+			"project_settings": {
+				Optional:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"build_command": {
+						Optional:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "The build command for this project. If omitted, this value will be automatically detected",
+					},
+					"dev_command": {
+						Optional:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "The dev command for this project. If omitted, this value will be automatically detected",
+					},
+					"framework": {
+						Optional:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "The framework that is being used for this project. If omitted, no framework is selected",
+					},
+					"install_command": {
+						Optional:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "The install command for this project. If omitted, this value will be automatically detected",
+					},
+					"output_directory": {
+						Optional:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "The output directory of the project. When null is used this value will be automatically detected",
+					},
+					"root_directory": {
+						Optional:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root",
+					},
+				}),
+			},
 		},
 	}, nil
 }
@@ -97,10 +139,11 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 	}
 
 	cdr := client.CreateDeploymentRequest{
-		Files:     files,
-		ProjectID: plan.ProjectID.Value,
-		Target:    target,
-		Aliases:   []string{},
+		Aliases:         []string{},
+		Files:           files,
+		ProjectID:       plan.ProjectID.Value,
+		ProjectSettings: plan.ProjectSettings.toRequest(),
+		Target:          target,
 	}
 
 	out, err := r.p.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
@@ -152,7 +195,7 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 		return
 	}
 
-	result := convertResponseToDeployment(out, plan.TeamID, plan.Files)
+	result := convertResponseToDeployment(out, plan.TeamID, plan.Files, plan.ProjectSettings)
 	tflog.Trace(ctx, "created deployment", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
 
 	diags = resp.State.Set(ctx, result)
@@ -183,7 +226,7 @@ func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequ
 		return
 	}
 
-	result := convertResponseToDeployment(out, state.TeamID, state.Files)
+	result := convertResponseToDeployment(out, state.TeamID, state.Files, state.ProjectSettings)
 	tflog.Trace(ctx, "read deployment", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
 
 	diags = resp.State.Set(ctx, result)

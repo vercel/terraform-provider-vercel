@@ -18,14 +18,15 @@ type DeploymentFile struct {
 }
 
 type CreateDeploymentRequest struct {
-	Aliases   []string               `json:"alias,omitempty"`
-	Files     []DeploymentFile       `json:"files,omitempty"`
-	Functions map[string]interface{} `json:"functions,omitempty"`
-	ProjectID string                 `json:"project,omitempty"`
-	Name      string                 `json:"name"`
-	Regions   []string               `json:"regions,omitempty"`
-	Routes    []interface{}          `json:"routes,omitempty"`
-	Target    string                 `json:"target,omitempty"`
+	Aliases         []string               `json:"alias,omitempty"`
+	Files           []DeploymentFile       `json:"files,omitempty"`
+	Functions       map[string]interface{} `json:"functions,omitempty"`
+	ProjectID       string                 `json:"project,omitempty"`
+	ProjectSettings map[string]*string     `json:"projectSettings,omitempty"`
+	Name            string                 `json:"name"`
+	Regions         []string               `json:"regions,omitempty"`
+	Routes          []interface{}          `json:"routes,omitempty"`
+	Target          string                 `json:"target,omitempty"`
 }
 
 type DeploymentResponse struct {

@@ -6,8 +6,6 @@ import (
 )
 
 type Project struct {
-	TeamID          types.String      `tfsdk:"team_id"`
-	Name            types.String      `tfsdk:"name"`
 	BuildCommand    types.String      `tfsdk:"build_command"`
 	DevCommand      types.String      `tfsdk:"dev_command"`
 	Environment     []EnvironmentItem `tfsdk:"environment"`
@@ -15,9 +13,11 @@ type Project struct {
 	GitRepository   *GitRepository    `tfsdk:"git_repository"`
 	ID              types.String      `tfsdk:"id"`
 	InstallCommand  types.String      `tfsdk:"install_command"`
+	Name            types.String      `tfsdk:"name"`
 	OutputDirectory types.String      `tfsdk:"output_directory"`
 	PublicSource    types.Bool        `tfsdk:"public_source"`
 	RootDirectory   types.String      `tfsdk:"root_directory"`
+	TeamID          types.String      `tfsdk:"team_id"`
 }
 
 func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {

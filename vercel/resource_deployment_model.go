@@ -9,13 +9,62 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+type ProjectSettings struct {
+	BuildCommand    types.String `tfsdk:"build_command"`
+	DevCommand      types.String `tfsdk:"dev_command"`
+	Framework       types.String `tfsdk:"framework"`
+	InstallCommand  types.String `tfsdk:"install_command"`
+	OutputDirectory types.String `tfsdk:"output_directory"`
+	RootDirectory   types.String `tfsdk:"root_directory"`
+}
+
 type Deployment struct {
-	TeamID     types.String      `tfsdk:"team_id"`
-	ProjectID  types.String      `tfsdk:"project_id"`
-	ID         types.String      `tfsdk:"id"`
-	URL        types.String      `tfsdk:"url"`
-	Production types.Bool        `tfsdk:"production"`
-	Files      map[string]string `tfsdk:"files"`
+	Files           map[string]string `tfsdk:"files"`
+	ID              types.String      `tfsdk:"id"`
+	Production      types.Bool        `tfsdk:"production"`
+	ProjectID       types.String      `tfsdk:"project_id"`
+	ProjectSettings *ProjectSettings  `tfsdk:"project_settings"`
+	TeamID          types.String      `tfsdk:"team_id"`
+	URL             types.String      `tfsdk:"url"`
+}
+
+func setIfNotUnknown(m map[string]*string, v types.String, name string) {
+	if v.Null {
+		m[name] = nil
+	}
+	if v.Value != "" {
+		m[name] = &v.Value
+	}
+}
+
+func (p *ProjectSettings) toRequest() map[string]*string {
+	if p == nil {
+		return nil
+	}
+	res := map[string]*string{}
+
+	setIfNotUnknown(res, p.BuildCommand, "buildCommand")
+	setIfNotUnknown(res, p.DevCommand, "devCommand")
+	setIfNotUnknown(res, p.Framework, "framework")
+	setIfNotUnknown(res, p.InstallCommand, "installCommand")
+	setIfNotUnknown(res, p.OutputDirectory, "outputDirectory")
+	setIfNotUnknown(res, p.RootDirectory, "rootDirectory")
+
+	return res
+}
+
+func (p *ProjectSettings) fillNulls() *ProjectSettings {
+	if p == nil {
+		return nil
+	}
+	return &ProjectSettings{
+		BuildCommand:    types.String{Null: p.BuildCommand.Null || p.BuildCommand.Unknown, Value: p.BuildCommand.Value},
+		DevCommand:      types.String{Null: p.DevCommand.Null || p.DevCommand.Unknown, Value: p.DevCommand.Value},
+		Framework:       types.String{Null: p.Framework.Null || p.Framework.Unknown, Value: p.Framework.Value},
+		InstallCommand:  types.String{Null: p.InstallCommand.Null || p.InstallCommand.Unknown, Value: p.InstallCommand.Value},
+		OutputDirectory: types.String{Null: p.OutputDirectory.Null || p.OutputDirectory.Unknown, Value: p.OutputDirectory.Value},
+		RootDirectory:   types.String{Null: p.RootDirectory.Null || p.RootDirectory.Unknown, Value: p.RootDirectory.Value},
+	}
 }
 
 func (d *Deployment) getFiles() ([]client.DeploymentFile, map[string]client.DeploymentFile, error) {
@@ -43,18 +92,19 @@ func (d *Deployment) getFiles() ([]client.DeploymentFile, map[string]client.Depl
 	return files, filesBySha, nil
 }
 
-func convertResponseToDeployment(response client.DeploymentResponse, tid types.String, files map[string]string) Deployment {
+func convertResponseToDeployment(response client.DeploymentResponse, tid types.String, files map[string]string, projectSettings *ProjectSettings) Deployment {
 	production := types.Bool{Value: false}
 	if response.Target != nil && *response.Target == "production" {
 		production.Value = true
 	}
 
 	return Deployment{
-		TeamID:     tid,
-		ProjectID:  types.String{Value: response.ProjectID},
-		ID:         types.String{Value: response.ID},
-		URL:        types.String{Value: response.URL},
-		Production: production,
-		Files:      files,
+		TeamID:          tid,
+		ProjectID:       types.String{Value: response.ProjectID},
+		ID:              types.String{Value: response.ID},
+		URL:             types.String{Value: response.URL},
+		Production:      production,
+		Files:           files,
+		ProjectSettings: projectSettings.fillNulls(),
 	}
 }
