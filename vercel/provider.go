@@ -45,6 +45,7 @@ func (p *provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourc
 		"vercel_file":              dataSourceFileType{},
 		"vercel_project_directory": dataSourceProjectDirectoryType{},
 		"vercel_user":              dataSourceUserType{},
+		"vercel_domain":            dataSourceDomainType{},
 	}, nil
 }
 

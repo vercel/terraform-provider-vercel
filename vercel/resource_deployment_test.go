@@ -28,17 +28,22 @@ func testAccDeploymentExists(n, teamID string) resource.TestCheckFunc {
 	}
 }
 
-func TestAccDeployment(t *testing.T) {
+func noopDestroyCheck(*terraform.State) error {
+	return nil
+}
+
+func TestAcc_Deployment(t *testing.T) {
 	testAccDeployment(t, "")
 }
 
-func TestAccDeploymentWithTeamID(t *testing.T) {
+func TestAcc_DeploymentWithTeamID(t *testing.T) {
 	testAccDeployment(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
 }
 
-func TestAccDeploymentWithProjectSettings(t *testing.T) {
+func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             noopDestroyCheck,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -68,6 +73,7 @@ func testAccDeployment(t *testing.T, tid string) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDeploymentConfig(extraConfig, extraConfig),

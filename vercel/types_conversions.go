@@ -29,3 +29,10 @@ func fromBoolPointer(v *bool) types.Bool {
 	}
 	return types.Bool{Value: *v}
 }
+
+func fromInt64Pointer(v *int64) types.Int64 {
+	if v == nil {
+		return types.Int64{Null: true}
+	}
+	return types.Int64{Value: *v}
+}

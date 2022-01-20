@@ -2,6 +2,7 @@ package vercel_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -10,6 +11,53 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
+
+func TestAcc_Project(t *testing.T) {
+	testAccProject(t, "")
+}
+
+func TestAcc_ProjectWithGitRepository(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test_git", ""),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectConfigWithGitRepo(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test_git", ""),
+					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.type", "github"),
+					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", "vercel/next.js"),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_ProjectWithTeamID(t *testing.T) {
+	testAccProject(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
+}
+
+func TestAcc_ProjectImport(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test", ""),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectConfig(""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test", ""),
+				),
+			},
+			{
+				ResourceName:      "vercel_project.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
 
 func testAccProjectExists(n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
@@ -28,49 +76,33 @@ func testAccProjectExists(n, teamID string) resource.TestCheckFunc {
 	}
 }
 
-func TestAccProject(t *testing.T) {
-	testAccProject(t, "")
-}
+func testAccProjectDestroy(n, teamID string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("not found: %s", n)
+		}
 
-func TestAccProjectWithGitRepository(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccProjectConfigWithGitRepo(),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test_git", ""),
-					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.type", "github"),
-					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", "vercel/next.js"),
-				),
-			},
-		},
-	})
-}
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("no projectID is set")
+		}
 
-func TestAccProjectWithTeamID(t *testing.T) {
-	testAccProject(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
-}
+		c := client.New(os.Getenv("VERCEL_API_TOKEN"))
+		_, err := c.GetProject(context.TODO(), rs.Primary.ID, teamID)
 
-func TestAccProjectImport(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccProjectConfig(""),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", ""),
-				),
-			},
-			{
-				ResourceName:      "vercel_project.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
+		var apiErr client.APIError
+		if err == nil {
+			return fmt.Errorf("Found project but expected it to have been deleted")
+		}
+		if err != nil && errors.As(err, &apiErr) {
+			if apiErr.StatusCode == 404 {
+				return nil
+			}
+			return fmt.Errorf("Unexpected error checking for deleted project: %s", apiErr)
+		}
+
+		return err
+	}
 }
 
 func testAccProject(t *testing.T, tid string) {
@@ -84,6 +116,7 @@ func testAccProject(t *testing.T, tid string) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test", tid),
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{

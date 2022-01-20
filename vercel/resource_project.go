@@ -348,7 +348,7 @@ func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 	resp.State.RemoveResource(ctx)
 }
 
-func splitID(id string) (teamID, ID string, ok bool) {
+func splitID(id string) (teamID, _id string, ok bool) {
 	if strings.Contains(id, "/") {
 		attributes := strings.Split(id, "/")
 		if len(attributes) != 2 {
