@@ -13,12 +13,40 @@ tasks:
     generates:
       - terraform-provider-vercel
 
-  testacc:
+  test:
     desc: "Run acceptance tests against the provider"
     env:
       TF_ACC: "true"
     cmds:
       - go test ./...
+
+  install-staticcheck:
+    desc: "Install the staticheck tool"
+    cmds:
+      - go install honnef.co/go/tools/cmd/staticcheck@2021.1
+    status:
+      - which staticcheck
+
+  install-providerlint:
+    desc: "Install tfproviderlint tool"
+    cmds:
+      - go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@latest
+    status:
+      - which tfproviderlint
+
+  lint:
+    desc: "Run linters against the provider"
+    deps:
+      - install-staticcheck
+      - install-providerlint
+    cmds:
+      - staticcheck -tags it ./...
+      - tfproviderlint -R018=false ./...
+      - cmd: |
+          export BADFMT=$(gofmt -s -l .)
+          test -z "$BADFMT" || (echo -e "invalid gofmt: $BADFMT"; exit 1)
+        silent: true
+      - go vet ./...
 
   install:
     desc: "Set up an override allowing a local version of the provider to be used"
