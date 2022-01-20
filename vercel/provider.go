@@ -35,8 +35,9 @@ func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 
 func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
 	return map[string]tfsdk.ResourceType{
-		"vercel_project":    resourceProjectType{},
-		"vercel_deployment": resourceDeploymentType{},
+		"vercel_deployment":     resourceDeploymentType{},
+		"vercel_project":        resourceProjectType{},
+		"vercel_project_domain": resourceProjectDomainType{},
 	}, nil
 }
 

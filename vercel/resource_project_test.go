@@ -16,6 +16,10 @@ func TestAcc_Project(t *testing.T) {
 	testAccProject(t, "")
 }
 
+func TestAcc_ProjectWithTeamID(t *testing.T) {
+	testAccProject(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
+}
+
 func TestAcc_ProjectWithGitRepository(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -32,10 +36,6 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 			},
 		},
 	})
-}
-
-func TestAcc_ProjectWithTeamID(t *testing.T) {
-	testAccProject(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
 }
 
 func TestAcc_ProjectImport(t *testing.T) {
@@ -124,7 +124,7 @@ func testAccProject(t *testing.T, tid string) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists("vercel_project.test", tid),
 					testTeamID,
-					resource.TestCheckResourceAttr("vercel_project.test", "name", "test-acc-one"),
+					resource.TestCheckResourceAttr("vercel_project.test", "name", "test-acc-project"),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
 					resource.TestCheckResourceAttr("vercel_project.test", "dev_command", "npm run serve"),
 					resource.TestCheckResourceAttr("vercel_project.test", "framework", "create-react-app"),
@@ -186,7 +186,7 @@ resource "vercel_project" "test_git" {
 func testAccProjectConfig(extra string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "test-acc-one"
+  name = "test-acc-project"
   %s
   build_command = "npm run build"
   dev_command = "npm run serve"

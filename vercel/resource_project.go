@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/vercel/terraform-provider-vercel/client"
 )
 
 type resourceProjectType struct{}
@@ -17,9 +19,10 @@ func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
-				Optional:    true,
-				Type:        types.StringType,
-				Description: "The ID of the team the project should be created under",
+				Optional:      true,
+				Type:          types.StringType,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Description:   "The ID of the team the project should be created under",
 			},
 			"name": {
 				Required: true,
@@ -331,6 +334,11 @@ func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 	}
 
 	err := r.p.client.DeleteProject(ctx, state.ID.Value, state.TeamID.Value)
+	var apiErr client.APIError
+	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project",
@@ -386,7 +394,7 @@ func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResour
 		stringTypeTeamID.Null = true
 	}
 	result := convertResponseToProject(out, stringTypeTeamID)
-	tflog.Trace(ctx, "created project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+	tflog.Trace(ctx, "imported project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
 
 	diags := resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)

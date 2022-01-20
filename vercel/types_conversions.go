@@ -16,6 +16,13 @@ func toBoolPointer(v types.Bool) *bool {
 	return &v.Value
 }
 
+func toInt64Pointer(v types.Int64) *int64 {
+	if v.Null || v.Unknown {
+		return nil
+	}
+	return &v.Value
+}
+
 func fromStringPointer(v *string) types.String {
 	if v == nil {
 		return types.String{Null: true}

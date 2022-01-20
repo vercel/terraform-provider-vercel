@@ -90,7 +90,7 @@ func testAccDeployment(t *testing.T, tid string) {
 func testAccDeploymentConfig(projectExtras, deploymentExtras string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "test-acc-one"
+  name = "test-acc-deployment"
   %s
   environment = [
     {
