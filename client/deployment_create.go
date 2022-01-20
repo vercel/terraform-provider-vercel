@@ -18,7 +18,6 @@ type DeploymentFile struct {
 }
 
 type CreateDeploymentRequest struct {
-	Aliases         []string               `json:"alias,omitempty"`
 	Files           []DeploymentFile       `json:"files,omitempty"`
 	Functions       map[string]interface{} `json:"functions,omitempty"`
 	ProjectID       string                 `json:"project,omitempty"`
@@ -30,6 +29,7 @@ type CreateDeploymentRequest struct {
 }
 
 type DeploymentResponse struct {
+	Aliases    []string `json:"alias"`
 	AliasError *struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`

@@ -18,6 +18,12 @@ type resourceDeploymentType struct{}
 func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
+			"domains": {
+				Computed: true,
+				Type: types.ListType{
+					ElemType: types.StringType,
+				},
+			},
 			"team_id": {
 				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
@@ -121,6 +127,10 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		resp.Diagnostics.AddError(
+			"Error creating deployment plan",
+			"Error creating deployment plan",
+		)
 		return
 	}
 
@@ -139,10 +149,6 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 	}
 
 	cdr := client.CreateDeploymentRequest{
-		Aliases: []string{
-			"what-does-this-do.vercel.app",
-			"nextjs-for-checks-demo.vercel.app",
-		},
 		Files:           files,
 		ProjectID:       plan.ProjectID.Value,
 		ProjectSettings: plan.ProjectSettings.toRequest(),

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -19,6 +20,7 @@ type ProjectSettings struct {
 }
 
 type Deployment struct {
+	Domains         types.List        `tfsdk:"domains"`
 	Files           map[string]string `tfsdk:"files"`
 	ID              types.String      `tfsdk:"id"`
 	Production      types.Bool        `tfsdk:"production"`
@@ -98,7 +100,16 @@ func convertResponseToDeployment(response client.DeploymentResponse, tid types.S
 		production.Value = true
 	}
 
+	var domains []attr.Value
+	for _, a := range response.Aliases {
+		domains = append(domains, types.String{Value: a})
+	}
+
 	return Deployment{
+		Domains: types.List{
+			ElemType: types.StringType,
+			Elems:    domains,
+		},
 		TeamID:          tid,
 		ProjectID:       types.String{Value: response.ProjectID},
 		ID:              types.String{Value: response.ID},
