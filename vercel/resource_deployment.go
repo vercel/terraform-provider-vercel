@@ -139,7 +139,10 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 	}
 
 	cdr := client.CreateDeploymentRequest{
-		Aliases:         []string{},
+		Aliases: []string{
+			"what-does-this-do.vercel.app",
+			"nextjs-for-checks-demo.vercel.app",
+		},
 		Files:           files,
 		ProjectID:       plan.ProjectID.Value,
 		ProjectSettings: plan.ProjectSettings.toRequest(),
@@ -190,7 +193,7 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 	} else if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating deployment",
-			"Could not create deployment, unexpected error: "+err.Error()+out.ID,
+			"Could not create deployment, unexpected error: "+err.Error(),
 		)
 		return
 	}
