@@ -24,6 +24,13 @@ func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag
 					ElemType: types.StringType,
 				},
 			},
+			"environment": {
+				Optional:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Type: types.MapType{
+					ElemType: types.StringType,
+				},
+			},
 			"team_id": {
 				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
@@ -128,8 +135,8 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		resp.Diagnostics.AddError(
-			"Error creating deployment plan",
-			"Error creating deployment plan",
+			"Error getting deployment plan",
+			"Error getting deployment plan",
 		)
 		return
 	}
@@ -147,9 +154,16 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 	if plan.Production.Value {
 		target = "production"
 	}
+	var environment map[string]string
+	diags = plan.Environment.ElementsAs(ctx, &environment, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	cdr := client.CreateDeploymentRequest{
 		Files:           files,
+		Environment:     environment,
 		ProjectID:       plan.ProjectID.Value,
 		ProjectSettings: plan.ProjectSettings.toRequest(),
 		Target:          target,
@@ -204,7 +218,7 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 		return
 	}
 
-	result := convertResponseToDeployment(out, plan.TeamID, plan.Files, plan.ProjectSettings)
+	result := convertResponseToDeployment(out, plan)
 	tflog.Trace(ctx, "created deployment", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
 
 	diags = resp.State.Set(ctx, result)
@@ -235,7 +249,7 @@ func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequ
 		return
 	}
 
-	result := convertResponseToDeployment(out, state.TeamID, state.Files, state.ProjectSettings)
+	result := convertResponseToDeployment(out, state)
 	tflog.Trace(ctx, "read deployment", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
 
 	diags = resp.State.Set(ctx, result)

@@ -21,6 +21,7 @@ type ProjectSettings struct {
 
 type Deployment struct {
 	Domains         types.List        `tfsdk:"domains"`
+	Environment     types.Map         `tfsdk:"environment"`
 	Files           map[string]string `tfsdk:"files"`
 	ID              types.String      `tfsdk:"id"`
 	Production      types.Bool        `tfsdk:"production"`
@@ -94,7 +95,7 @@ func (d *Deployment) getFiles() ([]client.DeploymentFile, map[string]client.Depl
 	return files, filesBySha, nil
 }
 
-func convertResponseToDeployment(response client.DeploymentResponse, tid types.String, files map[string]string, projectSettings *ProjectSettings) Deployment {
+func convertResponseToDeployment(response client.DeploymentResponse, plan Deployment) Deployment {
 	production := types.Bool{Value: false}
 	if response.Target != nil && *response.Target == "production" {
 		production.Value = true
@@ -105,17 +106,23 @@ func convertResponseToDeployment(response client.DeploymentResponse, tid types.S
 		domains = append(domains, types.String{Value: a})
 	}
 
+	if plan.Environment.Unknown || plan.Environment.Null {
+		plan.Environment.Unknown = false
+		plan.Environment.Null = true
+	}
+
 	return Deployment{
 		Domains: types.List{
 			ElemType: types.StringType,
 			Elems:    domains,
 		},
-		TeamID:          tid,
+		TeamID:          plan.TeamID,
+		Environment:     plan.Environment,
 		ProjectID:       types.String{Value: response.ProjectID},
 		ID:              types.String{Value: response.ID},
 		URL:             types.String{Value: response.URL},
 		Production:      production,
-		Files:           files,
-		ProjectSettings: projectSettings.fillNulls(),
+		Files:           plan.Files,
+		ProjectSettings: plan.ProjectSettings.fillNulls(),
 	}
 }

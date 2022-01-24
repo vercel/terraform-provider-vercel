@@ -18,14 +18,18 @@ type DeploymentFile struct {
 }
 
 type CreateDeploymentRequest struct {
-	Files           []DeploymentFile       `json:"files,omitempty"`
-	Functions       map[string]interface{} `json:"functions,omitempty"`
-	ProjectID       string                 `json:"project,omitempty"`
-	ProjectSettings map[string]*string     `json:"projectSettings,omitempty"`
-	Name            string                 `json:"name"`
-	Regions         []string               `json:"regions,omitempty"`
-	Routes          []interface{}          `json:"routes,omitempty"`
-	Target          string                 `json:"target,omitempty"`
+	Files       []DeploymentFile       `json:"files,omitempty"`
+	Functions   map[string]interface{} `json:"functions,omitempty"`
+	Environment map[string]string      `json:"env,omitempty"`
+	Build       struct {
+		Environment map[string]string `json:"env,omitempty"`
+	} `json:"build,omitempty"`
+	ProjectID       string             `json:"project,omitempty"`
+	ProjectSettings map[string]*string `json:"projectSettings,omitempty"`
+	Name            string             `json:"name"`
+	Regions         []string           `json:"regions,omitempty"`
+	Routes          []interface{}      `json:"routes,omitempty"`
+	Target          string             `json:"target,omitempty"`
 }
 
 type DeploymentResponse struct {
@@ -46,15 +50,18 @@ type DeploymentResponse struct {
 	Team *struct {
 		Slug string `json:"slug"`
 	} `json:"team"`
-	ID               string  `json:"id"`
-	ProjectID        string  `json:"projectId"`
-	Target           *string `json:"target"`
-	URL              string  `json:"url"`
+	Build struct {
+		Environment []string `json:"env"`
+	} `json:"build"`
 	AliasAssigned    bool    `json:"aliasAssigned"`
 	ChecksConclusion string  `json:"checksConclusion"`
-	ReadyState       string  `json:"readyState"`
 	ErrorCode        string  `json:"errorCode"`
 	ErrorMessage     string  `json:"errorMessage"`
+	ID               string  `json:"id"`
+	ProjectID        string  `json:"projectId"`
+	ReadyState       string  `json:"readyState"`
+	Target           *string `json:"target"`
+	URL              string  `json:"url"`
 }
 
 func (dr *DeploymentResponse) IsComplete() bool {
@@ -118,7 +125,8 @@ func (e MissingFilesError) Error() string {
 }
 
 func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentRequest, teamID string) (r DeploymentResponse, err error) {
-	request.Name = request.ProjectID // Name is ignored if project is specified
+	request.Name = request.ProjectID                // Name is ignored if project is specified
+	request.Build.Environment = request.Environment // Ensure they are both the same, as project environment variables are
 	url := fmt.Sprintf("%s/v12/now/deployments?skipAutoDetectionConfirmation=1", c.baseURL)
 	if teamID != "" {
 		url = fmt.Sprintf("%s&teamId=%s", url, teamID)
