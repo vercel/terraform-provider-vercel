@@ -37,6 +37,10 @@ In order to test the provider, you can simply run `task test`.
 
 _Note:_ This runs acceptance tests that will create real resources. You should expect that the full acceptance test suite will take some time to run.
 
+The acceptance tests require a `VERCEL_API_TOKEN` (which can be generated [here](https://vercel.com/account/tokens), and
+a `VERCEL_TERRAFORM_TESTING_TEAM` (which should be a Vercel team_id where resources can be created and destroyed)
+environment variable set.
+
 ```sh
 $ task test
 ```
@@ -46,9 +50,6 @@ In order to run the tests with extra debugging context, prefix with `TF_LOG` (se
 ```sh
 $ TF_LOG=trace task test
 ```
-
-Depending on your VERCEL_API_TOKEN, team access may not exist.
-This may result in some tests failing, potentially with `403 Unauthorised` errors, when the full test suite is being run.
 
 ## Building The Documentation
 
