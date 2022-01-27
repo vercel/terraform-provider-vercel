@@ -22,11 +22,17 @@ func New() tfsdk.Provider {
 
 func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
+		Description: `
+The Vercel provider is used to interact with resources supported by Vercel.
+The provider needs to be configured with the proper credentials before it can be used.
+
+Use the navigation to the left to read about the available resources.
+        `,
 		Attributes: map[string]tfsdk.Attribute{
 			"api_token": {
 				Type:        types.StringType,
 				Optional:    true,
-				Description: "The API Key to use",
+				Description: "The Vercel API Token to use. This can also be specified with the `VERCEL_API_TOKEN` shell environment variable. Tokens can be created from your [Vercel settings](https://vercel.com/account/tokens).",
 				Sensitive:   true,
 			},
 		},

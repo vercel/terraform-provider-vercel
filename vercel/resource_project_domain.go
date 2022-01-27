@@ -17,8 +17,15 @@ type resourceProjectDomainType struct{}
 
 func (r resourceProjectDomainType) GetSchema(context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
+		Description: `
+Provides a Project Domain resource.
+
+A Project Domain is used to associate a domain name with a ` + "`vercel_project`." + `
+
+By default, Project Domains will be automatically applied to any ` + "`production` deployments.",
 		Attributes: map[string]tfsdk.Attribute{
 			"project_id": {
+				Description:   "The project ID to add the deployment to.",
 				Required:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type:          types.StringType,
@@ -27,28 +34,35 @@ func (r resourceProjectDomainType) GetSchema(context.Context) (tfsdk.Schema, dia
 				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type:          types.StringType,
-				Description:   "The ID of the team the project should be created under",
+				Description:   "The ID of the team the project exists under.",
 			},
 			"id": {
 				Computed: true,
 				Type:     types.StringType,
 			},
 			"domain": {
+				Description:   "The domain name to associate with the project.",
 				Required:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type:          types.StringType,
 			},
 			"redirect": {
-				Optional: true,
-				Type:     types.StringType,
+				Description: "The domain name that serves as a target destination for redirects.",
+				Optional:    true,
+				Type:        types.StringType,
 			},
 			"redirect_status_code": {
-				Optional: true,
-				Type:     types.Int64Type,
+				Description: "The HTTP status code to use when serving as a redirect.",
+				Optional:    true,
+				Type:        types.Int64Type,
+				Validators: []tfsdk.AttributeValidator{
+					Int64ItemsIn(301, 302, 307, 308),
+				},
 			},
 			"git_branch": {
-				Optional: true,
-				Type:     types.StringType,
+				Description: "Git branch to link to the project domain. Deployments from this git branch will be assigned the domain name.",
+				Optional:    true,
+				Type:        types.StringType,
 			},
 		},
 	}, nil

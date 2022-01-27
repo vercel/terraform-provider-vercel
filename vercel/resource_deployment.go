@@ -17,14 +17,26 @@ type resourceDeploymentType struct{}
 
 func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
+		Description: `
+Provides a Deployment resource.
+
+A Deployment is the result of building your Project and making it available through a live URL.
+
+When making deployments, the Project will be uploaded and transformed into a production-ready output through the use of a Build Step.
+
+Once the build step has completed successfully, a new, immutable deployment will be made available at the preview URL. Deployments are retained indefinitely unless deleted manually.
+
+-> In order to provide files for a deployment, you'll need to use the ` + "`vercel_file` or `vercel_project_directory` data sources.",
 		Attributes: map[string]tfsdk.Attribute{
 			"domains": {
-				Computed: true,
+				Description: "A list of all the domains (default domains, staging domains and production domains) that were assigned upon deployment creation.",
+				Computed:    true,
 				Type: types.ListType{
 					ElemType: types.StringType,
 				},
 			},
 			"environment": {
+				Description:   "A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.",
 				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type: types.MapType{
@@ -32,11 +44,13 @@ func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag
 				},
 			},
 			"team_id": {
+				Description:   "The team ID to add the deployment to.",
 				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type:          types.StringType,
 			},
 			"project_id": {
+				Description:   "The project ID to add the deployment to.",
 				Required:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type:          types.StringType,
@@ -46,16 +60,19 @@ func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag
 				Type:     types.StringType,
 			},
 			"url": {
-				Computed: true,
-				Type:     types.StringType,
+				Description: "A unique URL that is automatically generated for a deployment.",
+				Computed:    true,
+				Type:        types.StringType,
 			},
 			"production": {
+				Description:   "true if the deployment is a production deployment, meaning production aliases will be assigned.",
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type:          types.BoolType,
 			},
 			"files": {
+				Description:   "A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source.",
 				Required:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type: types.MapType{
@@ -66,6 +83,7 @@ func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag
 				},
 			},
 			"project_settings": {
+				Description:   "Project settings that will be applied to the deployment.",
 				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
@@ -73,31 +91,25 @@ func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag
 						Optional:      true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 						Type:          types.StringType,
-						Description:   "The build command for this project. If omitted, this value will be automatically detected",
-					},
-					"dev_command": {
-						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
-						Type:          types.StringType,
-						Description:   "The dev command for this project. If omitted, this value will be automatically detected",
+						Description:   "The build command for this deployment. If omitted, this value will be taken from the project or automatically detected",
 					},
 					"framework": {
 						Optional:      true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 						Type:          types.StringType,
-						Description:   "The framework that is being used for this project. If omitted, no framework is selected",
+						Description:   "The framework that is being used for this deployment. If omitted, no framework is selected",
 					},
 					"install_command": {
 						Optional:      true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 						Type:          types.StringType,
-						Description:   "The install command for this project. If omitted, this value will be automatically detected",
+						Description:   "The install command for this deployment. If omitted, this value will be taken from the project or automatically detected",
 					},
 					"output_directory": {
 						Optional:      true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 						Type:          types.StringType,
-						Description:   "The output directory of the project. When null is used this value will be automatically detected",
+						Description:   "The output directory of the deployment. If omitted, this value will be taken from the project or automatically detected",
 					},
 					"root_directory": {
 						Optional:      true,

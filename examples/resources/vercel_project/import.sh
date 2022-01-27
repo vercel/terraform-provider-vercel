@@ -1,0 +1,1 @@
+terraform import vercel_project.example team_xxxxxxxxxxxxxxxxxxxxxxxx/prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx

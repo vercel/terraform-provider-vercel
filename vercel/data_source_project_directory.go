@@ -17,17 +17,28 @@ type dataSourceProjectDirectoryType struct{}
 
 func (r dataSourceProjectDirectoryType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
+		Description: `
+Provides information about files within a directory on disk.
+
+This will recursively read files, providing metadata for use with a deployment.
+
+-> This is intended to be used with the ` + "`vercel_deployment` resource only." + `
+
+-> If you want to prevent files from being included, this can be done with a [vercelignore file](https://vercel.com/guides/prevent-uploading-sourcepaths-with-vercelignore).
+        `,
 		Attributes: map[string]tfsdk.Attribute{
 			"path": {
-				Required: true,
-				Type:     types.StringType,
+				Description: "The path to the directory on your filesystem. Note that the path is relative to the root of the terraform files.",
+				Required:    true,
+				Type:        types.StringType,
 			},
 			"id": {
 				Computed: true,
 				Type:     types.StringType,
 			},
 			"files": {
-				Computed: true,
+				Description: "A map of filename to metadata about the file. The metadata contains the file size and hash, and allows a deployment to be created if the file changes.",
+				Computed:    true,
 				Type: types.MapType{
 					ElemType: types.StringType,
 				},

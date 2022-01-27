@@ -108,13 +108,13 @@ func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
 			{
 				Config: testAccDeploymentConfig("", `project_settings = {
                     output_directory = "."
-                    dev_command = "npm run dev"
+                    build_command = "npm run build"
                 }`),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists("vercel_deployment.test", ""),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "project_settings.output_directory", "."),
-					resource.TestCheckResourceAttr("vercel_deployment.test", "project_settings.dev_command", "npm run dev"),
+					resource.TestCheckResourceAttr("vercel_deployment.test", "project_settings.build_command", "npm run build"),
 				),
 			},
 		},

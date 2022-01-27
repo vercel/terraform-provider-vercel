@@ -12,7 +12,6 @@ import (
 
 type ProjectSettings struct {
 	BuildCommand    types.String `tfsdk:"build_command"`
-	DevCommand      types.String `tfsdk:"dev_command"`
 	Framework       types.String `tfsdk:"framework"`
 	InstallCommand  types.String `tfsdk:"install_command"`
 	OutputDirectory types.String `tfsdk:"output_directory"`
@@ -47,7 +46,6 @@ func (p *ProjectSettings) toRequest() map[string]*string {
 	res := map[string]*string{}
 
 	setIfNotUnknown(res, p.BuildCommand, "buildCommand")
-	setIfNotUnknown(res, p.DevCommand, "devCommand")
 	setIfNotUnknown(res, p.Framework, "framework")
 	setIfNotUnknown(res, p.InstallCommand, "installCommand")
 	setIfNotUnknown(res, p.OutputDirectory, "outputDirectory")
@@ -62,7 +60,6 @@ func (p *ProjectSettings) fillNulls() *ProjectSettings {
 	}
 	return &ProjectSettings{
 		BuildCommand:    types.String{Null: p.BuildCommand.Null || p.BuildCommand.Unknown, Value: p.BuildCommand.Value},
-		DevCommand:      types.String{Null: p.DevCommand.Null || p.DevCommand.Unknown, Value: p.DevCommand.Value},
 		Framework:       types.String{Null: p.Framework.Null || p.Framework.Unknown, Value: p.Framework.Value},
 		InstallCommand:  types.String{Null: p.InstallCommand.Null || p.InstallCommand.Unknown, Value: p.InstallCommand.Value},
 		OutputDirectory: types.String{Null: p.OutputDirectory.Null || p.OutputDirectory.Unknown, Value: p.OutputDirectory.Value},

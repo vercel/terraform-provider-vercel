@@ -10,7 +10,7 @@ import (
 
 func main() {
 	err := tfsdk.Serve(context.Background(), vercel.New, tfsdk.ServeOpts{
-		Name: "vercel",
+		Name: "Vercel",
 	})
 	if err != nil {
 		log.Fatalf("unable to serve provider: %s", err)

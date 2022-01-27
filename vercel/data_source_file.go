@@ -16,13 +16,19 @@ type dataSourceFileType struct{}
 
 func (r dataSourceFileType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
+		Description: `
+Provides information about a file on disk.
+
+-> This is intended to be used with the ` + "`vercel_deployment` resource only.",
 		Attributes: map[string]tfsdk.Attribute{
 			"path": {
-				Required: true,
-				Type:     types.StringType,
+				Description: "The path to the file on your filesystem. Note that the path is relative to the root of the terraform files.",
+				Required:    true,
+				Type:        types.StringType,
 			},
 			"file": {
-				Computed: true,
+				Description: "A map of filename to metadata about the file. The metadata contains the file size and hash, and allows a deployment to be created if the file changes.",
+				Computed:    true,
 				Type: types.MapType{
 					ElemType: types.StringType,
 				},

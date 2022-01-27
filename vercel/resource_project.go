@@ -17,12 +17,20 @@ type resourceProjectType struct{}
 
 func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
+		Description: `
+Provides a Project resource.
+
+A Project groups deployments and custom domains. To deploy on Vercel, you need to create a Project.
+
+~> If you are creating Deployments through terraform and intend to use both preview and production
+deployments, you may not want to create a Project within the same terraform workspace as a Deployment.
+        `,
 		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
 				Optional:      true,
 				Type:          types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
-				Description:   "The ID of the team the project should be created under",
+				Description:   "The team ID to add the project to.",
 			},
 			"name": {
 				Required: true,
@@ -30,24 +38,24 @@ func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 				Validators: []tfsdk.AttributeValidator{
 					stringLengthBetween(1, 52),
 				},
-				Description: "The desired name for the project",
+				Description: "The desired name for the project.",
 			},
 			"build_command": {
 				Optional:    true,
 				Type:        types.StringType,
-				Description: "The build command for this project. If omitted, this value will be automatically detected",
+				Description: "The build command for this project. If omitted, this value will be automatically detected.",
 			},
 			"dev_command": {
 				Optional:    true,
 				Type:        types.StringType,
-				Description: "The dev command for this project. If omitted, this value will be automatically detected",
+				Description: "The dev command for this project. If omitted, this value will be automatically detected.,",
 			},
 			"environment": {
-				Description: "An environment variable for the project.",
+				Description: "A list of environment variables that should be configured for the project.",
 				Optional:    true,
 				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
 					"target": {
-						Description: "The environments that the environment variable should be present on. Valid targets are be either `production`, `preview`, or `development`. If omitted, the variable will exist across all targets.",
+						Description: "The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 						Type: types.SetType{
 							ElemType: types.StringType,
 						},
@@ -57,12 +65,12 @@ func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 						Required: true,
 					},
 					"key": {
-						Description: "The name of the environment variable",
+						Description: "The name of the environment variable.",
 						Type:        types.StringType,
 						Required:    true,
 					},
 					"value": {
-						Description: "The value of the environment variable",
+						Description: "The value of the environment variable.",
 						Type:        types.StringType,
 						Required:    true,
 					},
@@ -78,10 +86,10 @@ func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 			"framework": {
 				Optional:    true,
 				Type:        types.StringType,
-				Description: "The framework that is being used for this project. If omitted, no framework is selected",
+				Description: "The framework that is being used for this project. If omitted, no framework is selected.",
 			},
 			"git_repository": {
-				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed",
+				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed.",
 				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
@@ -92,7 +100,7 @@ func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 					},
 					"repo": {
-						Description:   "The name of the git repository. For example: `vercel/next.js`",
+						Description:   "The name of the git repository. For example: `vercel/next.js`.",
 						Type:          types.StringType,
 						Required:      true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
@@ -106,22 +114,22 @@ func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 			"install_command": {
 				Optional:    true,
 				Type:        types.StringType,
-				Description: "The install command for this project. If omitted, this value will be automatically detected",
+				Description: "The install command for this project. If omitted, this value will be automatically detected.",
 			},
 			"output_directory": {
 				Optional:    true,
 				Type:        types.StringType,
-				Description: "The output directory of the project. When null is used this value will be automatically detected",
+				Description: "The output directory of the project. When null is used this value will be automatically detected.",
 			},
 			"public_source": {
 				Optional:    true,
 				Type:        types.BoolType,
-				Description: "Specifies whether the source code and logs of the deployments for this project should be public or not",
+				Description: "Specifies whether the source code and logs of the deployments for this project should be public or not.",
 			},
 			"root_directory": {
 				Optional:    true,
 				Type:        types.StringType,
-				Description: "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root",
+				Description: "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.",
 			},
 		},
 	}, nil
