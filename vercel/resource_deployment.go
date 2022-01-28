@@ -162,7 +162,7 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 		return
 	}
 
-	target := "preview"
+	target := ""
 	if plan.Production.Value {
 		target = "production"
 	}

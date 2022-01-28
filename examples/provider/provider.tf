@@ -3,7 +3,7 @@
 # version directive to prevent breaking changes occurring unannounced.
 terraform {
   required_providers {
-    cloudflare = {
+    vercel = {
       source  = "vercel/vercel"
       version = "~> 0.1"
     }
