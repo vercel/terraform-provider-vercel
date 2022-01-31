@@ -98,6 +98,9 @@ Once the build step has completed successfully, a new, immutable deployment will
 						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 						Type:          types.StringType,
 						Description:   "The framework that is being used for this deployment. If omitted, no framework is selected",
+						Validators: []tfsdk.AttributeValidator{
+							validateFramework(),
+						},
 					},
 					"install_command": {
 						Optional:      true,

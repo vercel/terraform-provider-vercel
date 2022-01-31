@@ -6,4 +6,4 @@
 *.test
 terraform-provider-vercel
 .task/
-.dist/
+Dist/

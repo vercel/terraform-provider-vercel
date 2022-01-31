@@ -87,6 +87,9 @@ deployments, you may not want to create a Project within the same terraform work
 				Optional:    true,
 				Type:        types.StringType,
 				Description: "The framework that is being used for this project. If omitted, no framework is selected.",
+				Validators: []tfsdk.AttributeValidator{
+					validateFramework(),
+				},
 			},
 			"git_repository": {
 				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed.",
