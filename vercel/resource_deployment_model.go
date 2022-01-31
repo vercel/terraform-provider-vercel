@@ -94,7 +94,18 @@ func (d *Deployment) getFiles() ([]client.DeploymentFile, map[string]client.Depl
 
 func convertResponseToDeployment(response client.DeploymentResponse, plan Deployment) Deployment {
 	production := types.Bool{Value: false}
-	if response.Target != nil && *response.Target == "production" {
+	/*
+	 * TODO - the first deployment to a new project is currently _always_ a
+	 * production deployment, even if you ask it to be a preview deployment.
+	 * In order to terraform complaining about an inconsistent output, we should only set
+	 * the state back if it matches what we expect. The third part of this
+	 * conditional ensures this, but can be removed if the behaviour is changed.
+	 * see:
+	 * https://github.com/vercel/customer-issues/issues/178#issuecomment-1012062345 and
+	 * https://vercel.slack.com/archives/C01A2M9R8RZ/p1639594164360300
+	 * for more context.
+	 */
+	if response.Target != nil && *response.Target == "production" && (plan.Production.Value || plan.Production.Unknown) {
 		production.Value = true
 	}
 
