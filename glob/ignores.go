@@ -36,6 +36,7 @@ var defaultIgnores = []string{
 	"venv",
 	"CVS",
 	".vercel_build_output",
+	".terraform*",
 }
 
 func GetIgnores(path string) ([]string, error) {
