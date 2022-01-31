@@ -14,7 +14,9 @@ type Client struct {
 func (c *Client) http() *http.Client {
 	if c.client == nil {
 		c.client = &http.Client{
-			Timeout: 120 * time.Second,
+			// Hopefully it doesn't take more than 5 minutes
+			// to upload a single file for a deployment.
+			Timeout: 5 * 60 * time.Second,
 		}
 	}
 
