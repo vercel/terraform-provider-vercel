@@ -49,9 +49,23 @@ func (p *ProjectSettings) toRequest() map[string]*string {
 	setIfNotUnknown(res, p.Framework, "framework")
 	setIfNotUnknown(res, p.InstallCommand, "installCommand")
 	setIfNotUnknown(res, p.OutputDirectory, "outputDirectory")
-	setIfNotUnknown(res, p.RootDirectory, "rootDirectory")
+
+	if p.RootDirectory.Null {
+		res["rootDirectory"] = nil
+	}
+	if p.RootDirectory.Value != "" {
+		v := trimFilePath(p.RootDirectory.Value)
+		res["rootDirectory"] = &v
+	}
 
 	return res
+}
+
+func fillStringNull(t types.String) types.String {
+	return types.String{
+		Null:  t.Null || t.Unknown,
+		Value: t.Value,
+	}
 }
 
 func (p *ProjectSettings) fillNulls() *ProjectSettings {
@@ -59,11 +73,11 @@ func (p *ProjectSettings) fillNulls() *ProjectSettings {
 		return nil
 	}
 	return &ProjectSettings{
-		BuildCommand:    types.String{Null: p.BuildCommand.Null || p.BuildCommand.Unknown, Value: p.BuildCommand.Value},
-		Framework:       types.String{Null: p.Framework.Null || p.Framework.Unknown, Value: p.Framework.Value},
-		InstallCommand:  types.String{Null: p.InstallCommand.Null || p.InstallCommand.Unknown, Value: p.InstallCommand.Value},
-		OutputDirectory: types.String{Null: p.OutputDirectory.Null || p.OutputDirectory.Unknown, Value: p.OutputDirectory.Value},
-		RootDirectory:   types.String{Null: p.RootDirectory.Null || p.RootDirectory.Unknown, Value: p.RootDirectory.Value},
+		BuildCommand:    fillStringNull(p.BuildCommand),
+		Framework:       fillStringNull(p.Framework),
+		InstallCommand:  fillStringNull(p.InstallCommand),
+		OutputDirectory: fillStringNull(p.OutputDirectory),
+		RootDirectory:   fillStringNull(p.RootDirectory),
 	}
 }
 
@@ -82,7 +96,7 @@ func (d *Deployment) getFiles() ([]client.DeploymentFile, map[string]client.Depl
 		sha := sizeSha[1]
 
 		file := client.DeploymentFile{
-			File: filename,
+			File: trimFilePath(filename),
 			Sha:  sha,
 			Size: size,
 		}

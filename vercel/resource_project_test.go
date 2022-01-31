@@ -131,7 +131,7 @@ func testAccProject(t *testing.T, tid string) {
 					resource.TestCheckResourceAttr("vercel_project.test", "install_command", "npm install"),
 					resource.TestCheckResourceAttr("vercel_project.test", "output_directory", ".output"),
 					resource.TestCheckResourceAttr("vercel_project.test", "public_source", "true"),
-					resource.TestCheckResourceAttr("vercel_project.test", "root_directory", "src"),
+					resource.TestCheckResourceAttr("vercel_project.test", "root_directory", "ui/src"),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
 						"key":   "foo",
 						"value": "bar",
@@ -194,7 +194,7 @@ resource "vercel_project" "test" {
   install_command = "npm install"
   output_directory = ".output"
   public_source = true
-  root_directory = "src"
+  root_directory = "ui/src"
   environment = [
     {
       key    = "foo"

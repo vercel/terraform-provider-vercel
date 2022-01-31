@@ -121,6 +121,23 @@ func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
 	})
 }
 
+func TestAcc_DeploymentWithUpwardRootDirectoryPath(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             noopDestroyCheck,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccNonRootDirectory(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDeploymentExists("vercel_deployment.test", ""),
+					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
+				),
+			},
+		},
+	})
+}
+
 func testAccDeployment(t *testing.T, tid string) {
 	extraConfig := ""
 	testTeamID := resource.TestCheckNoResourceAttr("vercel_deployment.test", "team_id")
@@ -172,4 +189,26 @@ resource "vercel_deployment" "test" {
   production = true
 }
 `, projectExtras, deploymentExtras)
+}
+
+func testAccNonRootDirectory() string {
+	return `
+resource "vercel_project" "test" {
+  name = "test-acc-deployment"
+  root_directory = "../foo"
+}
+
+data "vercel_file" "index" {
+    path = "../vercel/example/index.html"
+}
+
+resource "vercel_deployment" "test" {
+  project_id = vercel_project.test.id
+  files         = data.vercel_file.index.file
+  production = true
+  project_settings = {
+      root_directory = "../vercel/example"
+  }
+}
+    `
 }

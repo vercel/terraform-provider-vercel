@@ -173,7 +173,7 @@ func (r resourceProject) Create(ctx context.Context, req tfsdk.CreateResourceReq
 		return
 	}
 
-	result := convertResponseToProject(out, plan.TeamID)
+	result := convertResponseToProject(out, plan.TeamID, plan.RootDirectory)
 	tflog.Trace(ctx, "created project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
 
 	diags = resp.State.Set(ctx, result)
@@ -204,7 +204,7 @@ func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 		return
 	}
 
-	result := convertResponseToProject(out, state.TeamID)
+	result := convertResponseToProject(out, state.TeamID, state.RootDirectory)
 	tflog.Trace(ctx, "read project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
 
 	diags = resp.State.Set(ctx, result)
@@ -326,7 +326,7 @@ func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 		return
 	}
 
-	result := convertResponseToProject(out, plan.TeamID)
+	result := convertResponseToProject(out, plan.TeamID, plan.RootDirectory)
 	tflog.Trace(ctx, "updated project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
 
 	diags = resp.State.Set(ctx, result)
@@ -404,7 +404,7 @@ func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResour
 	if teamID == "" {
 		stringTypeTeamID.Null = true
 	}
-	result := convertResponseToProject(out, stringTypeTeamID)
+	result := convertResponseToProject(out, stringTypeTeamID, types.String{Unknown: true})
 	tflog.Trace(ctx, "imported project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
 
 	diags := resp.State.Set(ctx, result)
