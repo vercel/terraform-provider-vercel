@@ -74,6 +74,7 @@ func testAccProjectDomain(t *testing.T, tid string) {
 		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", tid)
 	}
 
+	projectSuffix := acctest.RandString(16)
 	domain := acctest.RandString(30) + ".vercel.app"
 
 	resource.Test(t, resource.TestCase{
@@ -83,7 +84,7 @@ func testAccProjectDomain(t *testing.T, tid string) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccProjectDomainConfig(domain, extraConfig),
+				Config: testAccProjectDomainConfig(projectSuffix, domain, extraConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectDomainExists("vercel_project.test", tid, domain),
 					testTeamID,
@@ -92,14 +93,14 @@ func testAccProjectDomain(t *testing.T, tid string) {
 			},
 			// Update testing
 			{
-				Config: testAccProjectDomainConfigUpdated(domain, extraConfig),
+				Config: testAccProjectDomainConfigUpdated(projectSuffix, domain, extraConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "redirect", "test-acc-domain.vercel.app"),
 				),
 			},
 			// Redirect Update testing
 			{
-				Config: testAccProjectDomainConfigUpdated2(domain, extraConfig),
+				Config: testAccProjectDomainConfigUpdated2(projectSuffix, domain, extraConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "redirect", "test-acc-domain.vercel.app"),
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "redirect_status_code", "307"),
@@ -107,17 +108,17 @@ func testAccProjectDomain(t *testing.T, tid string) {
 			},
 			// Delete testing
 			{
-				Config: testAccProjectDomainConfigDeleted(extraConfig),
+				Config: testAccProjectDomainConfigDeleted(projectSuffix, extraConfig),
 				Check:  testAccProjectDomainDestroy("vercel_project.test", tid, domain),
 			},
 		},
 	})
 }
 
-func testAccProjectDomainConfig(domain, extra string) string {
+func testAccProjectDomainConfig(projectSuffix, domain, extra string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "test-acc-domain"
+  name = "test-acc-domain-%s"
   %s
 }
 
@@ -126,13 +127,13 @@ resource "vercel_project_domain" "test" {
   %s
   project_id = vercel_project.test.id
 }
-`, extra, domain, extra)
+`, projectSuffix, extra, domain, extra)
 }
 
-func testAccProjectDomainConfigUpdated(domain, extra string) string {
+func testAccProjectDomainConfigUpdated(projectSuffix, domain, extra string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "test-acc-domain"
+  name = "test-acc-domain-%s"
   %s
 }
 
@@ -143,13 +144,13 @@ resource "vercel_project_domain" "test" {
 
   redirect = "test-acc-domain.vercel.app"
 }
-`, extra, domain, extra)
+`, projectSuffix, extra, domain, extra)
 }
 
-func testAccProjectDomainConfigUpdated2(domain, extra string) string {
+func testAccProjectDomainConfigUpdated2(projectSuffix, domain, extra string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "test-acc-domain"
+  name = "test-acc-domain-%s"
   %s
 }
 
@@ -161,14 +162,14 @@ resource "vercel_project_domain" "test" {
   redirect = "test-acc-domain.vercel.app"
   redirect_status_code = 307
 }
-`, extra, domain, extra)
+`, projectSuffix, extra, domain, extra)
 }
 
-func testAccProjectDomainConfigDeleted(extra string) string {
+func testAccProjectDomainConfigDeleted(projectSuffix, extra string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "test-acc-domain"
+  name = "test-acc-domain-%s"
   %s
 }
-`, extra)
+`, projectSuffix, extra)
 }

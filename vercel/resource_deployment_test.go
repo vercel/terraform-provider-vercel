@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/vercel/terraform-provider-vercel/client"
@@ -78,13 +79,14 @@ func TestAcc_DeploymentWithTeamID(t *testing.T) {
 }
 
 func TestAcc_DeploymentWithEnvironment(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             noopDestroyCheck,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig("", `environment = {
+				Config: testAccDeploymentConfig(projectSuffix, "", `environment = {
                     FOO = "baz",
                     BAR = "qux"
                 }`),
@@ -100,13 +102,14 @@ func TestAcc_DeploymentWithEnvironment(t *testing.T) {
 }
 
 func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             noopDestroyCheck,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig("", `project_settings = {
+				Config: testAccDeploymentConfig(projectSuffix, "", `project_settings = {
                     output_directory = "."
                     build_command = "npm run build"
                 }`),
@@ -122,13 +125,14 @@ func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
 }
 
 func TestAcc_DeploymentWithUpwardRootDirectoryPath(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             noopDestroyCheck,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccNonRootDirectory(),
+				Config: testAccNonRootDirectory(projectSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists("vercel_deployment.test", ""),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
@@ -139,6 +143,7 @@ func TestAcc_DeploymentWithUpwardRootDirectoryPath(t *testing.T) {
 }
 
 func testAccDeployment(t *testing.T, tid string) {
+	projectSuffix := acctest.RandString(16)
 	extraConfig := ""
 	testTeamID := resource.TestCheckNoResourceAttr("vercel_deployment.test", "team_id")
 	if tid != "" {
@@ -152,7 +157,7 @@ func testAccDeployment(t *testing.T, tid string) {
 		CheckDestroy:             noopDestroyCheck,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig(extraConfig, extraConfig),
+				Config: testAccDeploymentConfig(projectSuffix, extraConfig, extraConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testTeamID,
 					testAccDeploymentExists("vercel_deployment.test", ""),
@@ -163,10 +168,10 @@ func testAccDeployment(t *testing.T, tid string) {
 	})
 }
 
-func testAccDeploymentConfig(projectExtras, deploymentExtras string) string {
+func testAccDeploymentConfig(projectSuffix, projectExtras, deploymentExtras string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "test-acc-deployment"
+  name = "test-acc-deployment-%s"
   %s
   environment = [
     {
@@ -188,13 +193,13 @@ resource "vercel_deployment" "test" {
   files         = data.vercel_file.index.file
   production = true
 }
-`, projectExtras, deploymentExtras)
+`, projectSuffix, projectExtras, deploymentExtras)
 }
 
-func testAccNonRootDirectory() string {
-	return `
+func testAccNonRootDirectory(projectSuffix string) string {
+	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "test-acc-deployment"
+  name = "test-acc-deployment-%s"
   root_directory = "../foo"
 }
 
@@ -209,6 +214,5 @@ resource "vercel_deployment" "test" {
   project_settings = {
       root_directory = "../vercel/example"
   }
-}
-    `
+}`, projectSuffix)
 }
