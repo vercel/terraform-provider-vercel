@@ -33,7 +33,7 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists("vercel_project.test_git", ""),
 					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.type", "github"),
-					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", "vercel/next.js"),
+					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", "dglsparsons/test"),
 				),
 			},
 		},
@@ -181,7 +181,7 @@ resource "vercel_project" "test_git" {
   name = "test-acc-two-%s"
   git_repository = {
     type = "github"
-    repo = "vercel/next.js"
+    repo = "dglsparsons/test"
   }
 }
     `, projectSuffix)
