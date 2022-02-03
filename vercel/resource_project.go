@@ -22,6 +22,12 @@ Provides a Project resource.
 
 A Project groups deployments and custom domains. To deploy on Vercel, you need to create a Project.
 
+For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/overview).
+
+-> The ` + "`root_directory`" + ` field behaves slightly differently to the Vercel website as
+it allows upward path navigation (` + "`../`" + `). This is deliberately done so a ` + "`vercel_file` or `vercel_project_directory`" + `
+data source's ` + "`path`" + ` field can exactly match the ` + "`root_directory`" + `.
+
 ~> If you are creating Deployments through terraform and intend to use both preview and production
 deployments, you may not want to create a Project within the same terraform workspace as a Deployment.
         `,
@@ -48,7 +54,7 @@ deployments, you may not want to create a Project within the same terraform work
 			"dev_command": {
 				Optional:    true,
 				Type:        types.StringType,
-				Description: "The dev command for this project. If omitted, this value will be automatically detected.,",
+				Description: "The dev command for this project. If omitted, this value will be automatically detected.",
 			},
 			"environment": {
 				Description: "A list of environment variables that should be configured for the project.",
@@ -79,9 +85,7 @@ deployments, you may not want to create a Project within the same terraform work
 						Type:        types.StringType,
 						Computed:    true,
 					},
-				}, tfsdk.ListNestedAttributesOptions{
-					MinItems: 1,
-				}),
+				}, tfsdk.ListNestedAttributesOptions{}),
 			},
 			"framework": {
 				Optional:    true,
@@ -92,14 +96,17 @@ deployments, you may not want to create a Project within the same terraform work
 				},
 			},
 			"git_repository": {
-				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed.",
+				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
 				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"type": {
-						Description:   "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
-						Type:          types.StringType,
-						Required:      true,
+						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
+						Type:        types.StringType,
+						Required:    true,
+						Validators: []tfsdk.AttributeValidator{
+							stringOneOf("github", "gitlab", "bitbucket"),
+						},
 						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 					},
 					"repo": {

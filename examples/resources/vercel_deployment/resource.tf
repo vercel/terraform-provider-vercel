@@ -1,5 +1,5 @@
 data "vercel_project_directory" "example" {
-  path = "packages/ui"
+  path = "../ui"
 }
 
 resource "vercel_deployment" "example" {
@@ -8,10 +8,10 @@ resource "vercel_deployment" "example" {
   production = true
 
   project_settings = {
-    output_directory = "packages/ui/.build"
+    output_directory = ".build"
     build_command    = "npm run build && npm run post-build"
     framework        = "create-react-app"
-    root_directory   = "packages/ui"
+    root_directory   = "../ui"
   }
 
   environment = {

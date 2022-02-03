@@ -20,9 +20,7 @@ func (r dataSourceProjectDirectoryType) GetSchema(_ context.Context) (tfsdk.Sche
 		Description: `
 Provides information about files within a directory on disk.
 
-This will recursively read files, providing metadata for use with a deployment.
-
--> This is intended to be used with the ` + "`vercel_deployment` resource only." + `
+This will recursively read files, providing metadata for use with a ` + "`vercel_deployment`." + `
 
 -> If you want to prevent files from being included, this can be done with a [vercelignore file](https://vercel.com/guides/prevent-uploading-sourcepaths-with-vercelignore).
         `,

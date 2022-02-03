@@ -7,7 +7,7 @@ description: |-
   A Deployment is the result of building your Project and making it available through a live URL.
   When making deployments, the Project will be uploaded and transformed into a production-ready output through the use of a Build Step.
   Once the build step has completed successfully, a new, immutable deployment will be made available at the preview URL. Deployments are retained indefinitely unless deleted manually.
-  -> In order to provide files for a deployment, you'll need to use the vercel_file or vercel_project_directory data sources.
+  -> In order to provide files to a deployment, you'll need to use the vercel_file or vercel_project_directory data sources.
 ---
 
 # vercel_deployment (Resource)
@@ -20,13 +20,13 @@ When making deployments, the Project will be uploaded and transformed into a pro
 
 Once the build step has completed successfully, a new, immutable deployment will be made available at the preview URL. Deployments are retained indefinitely unless deleted manually.
 
--> In order to provide files for a deployment, you'll need to use the `vercel_file` or `vercel_project_directory` data sources.
+-> In order to provide files to a deployment, you'll need to use the `vercel_file` or `vercel_project_directory` data sources.
 
 ## Example Usage
 
 ```terraform
 data "vercel_project_directory" "example" {
-  path = "packages/ui"
+  path = "../ui"
 }
 
 resource "vercel_deployment" "example" {
@@ -35,10 +35,10 @@ resource "vercel_deployment" "example" {
   production = true
 
   project_settings = {
-    output_directory = "packages/ui/.build"
+    output_directory = ".build"
     build_command    = "npm run build && npm run post-build"
     framework        = "create-react-app"
-    root_directory   = "packages/ui"
+    root_directory   = "../ui"
   }
 
   environment = {

@@ -26,7 +26,7 @@ When making deployments, the Project will be uploaded and transformed into a pro
 
 Once the build step has completed successfully, a new, immutable deployment will be made available at the preview URL. Deployments are retained indefinitely unless deleted manually.
 
--> In order to provide files for a deployment, you'll need to use the ` + "`vercel_file` or `vercel_project_directory` data sources.",
+-> In order to provide files to a deployment, you'll need to use the ` + "`vercel_file` or `vercel_project_directory` data sources.",
 		Attributes: map[string]tfsdk.Attribute{
 			"domains": {
 				Description: "A list of all the domains (default domains, staging domains and production domains) that were assigned upon deployment creation.",

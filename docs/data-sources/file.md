@@ -4,14 +4,14 @@ page_title: "vercel_file Data Source - terraform-provider-vercel"
 subcategory: ""
 description: |-
   Provides information about a file on disk.
-  -> This is intended to be used with the vercel_deployment resource only.
+  This will read a single file, providing metadata for use with a vercel_deployment.
 ---
 
 # vercel_file (Data Source)
 
 Provides information about a file on disk.
 
--> This is intended to be used with the `vercel_deployment` resource only.
+This will read a single file, providing metadata for use with a `vercel_deployment`.
 
 ## Example Usage
 

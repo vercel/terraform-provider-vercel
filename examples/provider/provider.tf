@@ -1,6 +1,6 @@
-# Configure the Vercel provider using the required_providers stanza
-# required with Terraform 0.13 and beyond. You may optionally use a
-# version directive to prevent breaking changes occurring unannounced.
+# Configure the Vercel provider using the required_providers stanza.
+# You may optionally use a version directive to prevent breaking
+# changes occurring unannounced.
 terraform {
   required_providers {
     vercel = {

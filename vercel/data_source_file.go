@@ -19,7 +19,7 @@ func (r dataSourceFileType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Dia
 		Description: `
 Provides information about a file on disk.
 
--> This is intended to be used with the ` + "`vercel_deployment` resource only.",
+This will read a single file, providing metadata for use with a ` + "`vercel_deployment`.",
 		Attributes: map[string]tfsdk.Attribute{
 			"path": {
 				Description: "The path to the file on your filesystem. Note that the path is relative to the root of the terraform files.",
