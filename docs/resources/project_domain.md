@@ -20,7 +20,7 @@ By default, Project Domains will be automatically applied to any `production` de
 
 ```terraform
 resource "vercel_project" "example" {
-  name      = "example_project"
+  name      = "example-project"
   framework = "create-react-app"
 }
 
