@@ -7,6 +7,7 @@ import (
 )
 
 func TestAcc_ProjectDirectoryDataSource(t *testing.T) {
+	t.Parallel()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,

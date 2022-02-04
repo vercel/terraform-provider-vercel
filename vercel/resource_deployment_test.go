@@ -71,14 +71,17 @@ func noopDestroyCheck(*terraform.State) error {
 }
 
 func TestAcc_Deployment(t *testing.T) {
+	t.Parallel()
 	testAccDeployment(t, "")
 }
 
 func TestAcc_DeploymentWithTeamID(t *testing.T) {
+	t.Parallel()
 	testAccDeployment(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
 }
 
 func TestAcc_DeploymentWithEnvironment(t *testing.T) {
+	t.Parallel()
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -102,6 +105,7 @@ func TestAcc_DeploymentWithEnvironment(t *testing.T) {
 }
 
 func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
+	t.Parallel()
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -125,6 +129,7 @@ func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
 }
 
 func TestAcc_DeploymentWithUpwardRootDirectoryPath(t *testing.T) {
+	t.Parallel()
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },

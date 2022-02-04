@@ -14,10 +14,12 @@ import (
 )
 
 func TestAcc_ProjectDomain(t *testing.T) {
+	t.Parallel()
 	testAccProjectDomain(t, "")
 }
 
 func TestAcc_ProjectDomainWithTeamID(t *testing.T) {
+	t.Parallel()
 	testAccProjectDomain(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
 }
 

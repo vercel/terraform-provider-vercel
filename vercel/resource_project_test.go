@@ -14,14 +14,17 @@ import (
 )
 
 func TestAcc_Project(t *testing.T) {
+	t.Parallel()
 	testAccProject(t, "")
 }
 
 func TestAcc_ProjectWithTeamID(t *testing.T) {
+	t.Parallel()
 	testAccProject(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
 }
 
 func TestAcc_ProjectWithGitRepository(t *testing.T) {
+	t.Parallel()
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -41,6 +44,7 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 }
 
 func TestAcc_ProjectImport(t *testing.T) {
+	t.Parallel()
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },

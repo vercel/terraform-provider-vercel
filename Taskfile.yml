@@ -33,6 +33,8 @@ tasks:
       - install-tfplugindocs
     cmds:
       - tfplugindocs
+      - sed -i.bak 's/vercel Provider/Vercel Provider/g' docs/index.md
+      - rm docs/index.md.bak
     sources:
       - "vercel/**/*.go"
       - "main.go"
