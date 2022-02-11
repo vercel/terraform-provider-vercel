@@ -75,7 +75,6 @@ func TestAcc_Deployment(t *testing.T) {
 }
 
 func TestAcc_DeploymentWithTeamID(t *testing.T) {
-	t.Parallel()
 	testAccDeployment(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
 }
 

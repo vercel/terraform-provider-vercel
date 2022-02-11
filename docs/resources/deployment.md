@@ -25,25 +25,32 @@ Once the build step has completed successfully, a new, immutable deployment will
 ## Example Usage
 
 ```terraform
+# In this example, we are assuming that a nextjs UI
+# exists in a `ui` directory alongside any terraform.
+# E.g.
+# ```
+# ui/
+#    src/
+#    next.config.js
+#    // etc...
+# main.tf
+# ```
+
 data "vercel_project_directory" "example" {
-  path = "../ui"
+  path = "ui"
 }
 
 data "vercel_project" "example" {
   name = "my-awesome-project"
+  # The root directory here is also set to reflect the
+  # file structure.
+  root_directory = "ui"
 }
 
 resource "vercel_deployment" "example" {
   project_id = data.vercel_project.example.id
   files      = data.vercel_project_directory.example.files
   production = true
-
-  project_settings = {
-    output_directory = ".build"
-    build_command    = "npm run build && npm run post-build"
-    framework        = "create-react-app"
-    root_directory   = "../ui"
-  }
 
   environment = {
     FOO = "bar"

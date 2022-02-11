@@ -135,7 +135,7 @@ func testAccProject(t *testing.T, tid string) {
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-project-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
 					resource.TestCheckResourceAttr("vercel_project.test", "dev_command", "npm run serve"),
-					resource.TestCheckResourceAttr("vercel_project.test", "framework", "create-react-app"),
+					resource.TestCheckResourceAttr("vercel_project.test", "framework", "nextjs"),
 					resource.TestCheckResourceAttr("vercel_project.test", "install_command", "npm install"),
 					resource.TestCheckResourceAttr("vercel_project.test", "output_directory", ".output"),
 					resource.TestCheckResourceAttr("vercel_project.test", "public_source", "true"),
@@ -198,7 +198,7 @@ resource "vercel_project" "test" {
   %s
   build_command = "npm run build"
   dev_command = "npm run serve"
-  framework = "create-react-app"
+  framework = "nextjs"
   install_command = "npm install"
   output_directory = ".output"
   public_source = true

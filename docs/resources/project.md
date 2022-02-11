@@ -35,9 +35,8 @@ deployments, you may not want to create a Project within the same terraform work
 # Deployments will be created automatically
 # on every branch push and merges onto the Production Branch.
 resource "vercel_project" "with_git" {
-  name           = "example-project-with-git"
-  framework      = "create-react-app"
-  root_directory = "ui"
+  name      = "example-project-with-git"
+  framework = "nextjs"
 
   environment = [
     {
@@ -57,15 +56,14 @@ resource "vercel_project" "with_git" {
 # Deployments will need to be created manually through
 # terraform, or via the vercel CLI.
 resource "vercel_project" "example" {
-  name           = "example-project"
-  framework      = "create-react-app"
-  root_directory = "packages/ui"
+  name      = "example-project"
+  framework = "nextjs"
 
   environment = [
     {
       key    = "bar"
       value  = "baz"
-      target = ["preview"]
+      target = ["preview", "production"]
     }
   ]
 }
@@ -103,7 +101,7 @@ Optional:
 - **id** (String) The ID of the environment variable
 - **key** (String) The name of the environment variable.
 - **target** (Set of String) The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.
-- **value** (String) The value of the environment variable.
+- **value** (String, Sensitive) The value of the environment variable.
 
 
 <a id="nestedatt--git_repository"></a>
