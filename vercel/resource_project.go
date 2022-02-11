@@ -79,6 +79,7 @@ deployments, you may not want to create a Project within the same terraform work
 						Description: "The value of the environment variable.",
 						Type:        types.StringType,
 						Required:    true,
+						Sensitive:   true,
 					},
 					"id": {
 						Description: "The ID of the environment variable",
