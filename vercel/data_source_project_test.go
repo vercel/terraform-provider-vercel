@@ -21,7 +21,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "name", name),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "build_command", "npm run build"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "dev_command", "npm run serve"),
-					resource.TestCheckResourceAttr("data.vercel_project.test", "framework", "create-react-app"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "framework", "nextjs"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "install_command", "npm install"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "output_directory", ".output"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "public_source", "true"),
@@ -43,7 +43,7 @@ resource "vercel_project" "test" {
   name = "%s"
   build_command = "npm run build"
   dev_command = "npm run serve"
-  framework = "create-react-app"
+  framework = "nextjs"
   install_command = "npm install"
   output_directory = ".output"
   public_source = true

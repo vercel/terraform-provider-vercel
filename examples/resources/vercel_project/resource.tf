@@ -2,9 +2,8 @@
 # Deployments will be created automatically
 # on every branch push and merges onto the Production Branch.
 resource "vercel_project" "with_git" {
-  name           = "example-project-with-git"
-  framework      = "create-react-app"
-  root_directory = "ui"
+  name      = "example-project-with-git"
+  framework = "nextjs"
 
   environment = [
     {
@@ -24,15 +23,14 @@ resource "vercel_project" "with_git" {
 # Deployments will need to be created manually through
 # terraform, or via the vercel CLI.
 resource "vercel_project" "example" {
-  name           = "example-project"
-  framework      = "create-react-app"
-  root_directory = "packages/ui"
+  name      = "example-project"
+  framework = "nextjs"
 
   environment = [
     {
       key    = "bar"
       value  = "baz"
-      target = ["preview"]
+      target = ["preview", "production"]
     }
   ]
 }
