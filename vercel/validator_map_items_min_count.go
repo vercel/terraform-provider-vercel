@@ -20,10 +20,10 @@ type validatorMapItemsMinCount struct {
 }
 
 func (v validatorMapItemsMinCount) Description(ctx context.Context) string {
-	return fmt.Sprintf("map must contain at least %d item(s)", v.Min)
+	return fmt.Sprintf("Map must contain at least %d item(s)", v.Min)
 }
 func (v validatorMapItemsMinCount) MarkdownDescription(ctx context.Context) string {
-	return fmt.Sprintf("map must contain at least `%d` item(s)", v.Min)
+	return fmt.Sprintf("Map must contain at least `%d` item(s)", v.Min)
 }
 
 func (v validatorMapItemsMinCount) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
@@ -40,7 +40,7 @@ func (v validatorMapItemsMinCount) Validate(ctx context.Context, req tfsdk.Valid
 	if count < v.Min {
 		resp.Diagnostics.AddAttributeError(
 			req.AttributePath,
-			"Invalid Map Count",
+			"Invalid value provided",
 			fmt.Sprintf(
 				"Map must contain at least %d items, got: %d.",
 				v.Min,

@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -33,6 +34,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Type:     types.StringType,
 				Validators: []tfsdk.AttributeValidator{
 					stringLengthBetween(1, 52),
+					stringRegex(
+						regexp.MustCompile(`^[a-z0-9\-]{0,100}$`),
+						"The name of a Project can only contain up to 100 alphanumeric lowercase characters and hyphens",
+					),
 				},
 				Description: "The name of the project.",
 			},
