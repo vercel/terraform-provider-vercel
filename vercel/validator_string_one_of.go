@@ -31,10 +31,10 @@ func (v validatorStringOneOf) keys() (out []string) {
 }
 
 func (v validatorStringOneOf) Description(ctx context.Context) string {
-	return fmt.Sprintf("item must be one of %s", strings.Join(v.keys(), " "))
+	return fmt.Sprintf("Item must be one of %s", strings.Join(v.keys(), " "))
 }
 func (v validatorStringOneOf) MarkdownDescription(ctx context.Context) string {
-	return fmt.Sprintf("item must be one of `%s`", strings.Join(v.keys(), "` `"))
+	return fmt.Sprintf("Item must be one of `%s`", strings.Join(v.keys(), "` `"))
 }
 
 func (v validatorStringOneOf) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
@@ -51,7 +51,7 @@ func (v validatorStringOneOf) Validate(ctx context.Context, req tfsdk.ValidateAt
 	if _, ok := v.Items[item.Value]; !ok {
 		resp.Diagnostics.AddAttributeError(
 			req.AttributePath,
-			"Invalid Item",
+			"Invalid value provided",
 			fmt.Sprintf("Item must be one of %s, got: %s.", strings.Join(v.keys(), " "), item.Value),
 		)
 		return

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -43,6 +44,10 @@ deployments, you may not want to create a Project within the same terraform work
 				Type:     types.StringType,
 				Validators: []tfsdk.AttributeValidator{
 					stringLengthBetween(1, 52),
+					stringRegex(
+						regexp.MustCompile(`^[a-z0-9\-]{0,100}$`),
+						"The name of a Project can only contain up to 100 alphanumeric lowercase characters and hyphens",
+					),
 				},
 				Description: "The desired name for the project.",
 			},

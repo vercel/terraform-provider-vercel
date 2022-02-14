@@ -21,10 +21,10 @@ type validatorStringLengthBetween struct {
 }
 
 func (v validatorStringLengthBetween) Description(ctx context.Context) string {
-	return fmt.Sprintf("string length must be between %d and %d", v.Min, v.Max)
+	return fmt.Sprintf("String length must be between %d and %d", v.Min, v.Max)
 }
 func (v validatorStringLengthBetween) MarkdownDescription(ctx context.Context) string {
-	return fmt.Sprintf("string length must be between `%d` and `%d`", v.Min, v.Max)
+	return fmt.Sprintf("String length must be between `%d` and `%d`", v.Min, v.Max)
 }
 
 func (v validatorStringLengthBetween) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
@@ -39,7 +39,11 @@ func (v validatorStringLengthBetween) Validate(ctx context.Context, req tfsdk.Va
 	}
 	strLen := len(str.Value)
 	if strLen < v.Min || strLen > v.Max {
-		resp.Diagnostics.AddAttributeError(req.AttributePath, "Invalid String Length", fmt.Sprintf("String length must be between %d and %d, got: %d.", v.Min, v.Max, strLen))
+		resp.Diagnostics.AddAttributeError(
+			req.AttributePath,
+			"Invalid value provided",
+			fmt.Sprintf("String length must be between %d and %d, got: %d.", v.Min, v.Max, strLen),
+		)
 		return
 	}
 }

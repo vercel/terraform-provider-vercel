@@ -61,7 +61,7 @@ func (v validatorStringSetItemsIn) Validate(ctx context.Context, req tfsdk.Valid
 		if _, ok := v.Items[item.Value]; !ok {
 			resp.Diagnostics.AddAttributeError(
 				req.AttributePath,
-				"Invalid Set Item",
+				"Invalid value provided",
 				fmt.Sprintf("Set item must be one of %s, got: %s.", strings.Join(v.keys(), " "), item.Value),
 			)
 			return
