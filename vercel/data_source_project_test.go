@@ -18,7 +18,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 			{
 				Config: testAccProjectDataSourceConfig(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vercel_project.test", "name", name),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "name", "test-acc-"+name),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "build_command", "npm run build"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "dev_command", "npm run serve"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "framework", "nextjs"),
@@ -40,7 +40,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 func testAccProjectDataSourceConfig(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "%s"
+  name = "test-acc-%s"
   build_command = "npm run build"
   dev_command = "npm run serve"
   framework = "nextjs"

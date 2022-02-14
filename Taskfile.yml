@@ -87,3 +87,9 @@ tasks:
     desc: "Remove any local overrides for local development"
     cmds:
       - rm ~/.terraformrc
+
+  sweep:
+    desc: "Remove any leftover resources from failed test runs"
+    dir: "sweep"
+    cmds:
+      - go run .
