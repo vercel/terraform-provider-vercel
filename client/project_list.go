@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// ListProjects lists the top 100 projects (no pagination) from within Vercel.
 func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects?limit=100", c.baseURL)
 	if teamID != "" {

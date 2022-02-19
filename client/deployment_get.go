@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// GetDeployment retrieves information from Vercel about an existing Deployment.
 func (c *Client) GetDeployment(ctx context.Context, deploymentID, teamID string) (r DeploymentResponse, err error) {
 	url := fmt.Sprintf("%s/v13/deployments/%s", c.baseURL, deploymentID)
 	if teamID != "" {

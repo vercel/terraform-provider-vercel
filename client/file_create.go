@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// CreateFile will upload a file to Vercel so that it can be later used for a Deployment.
 func (c *Client) CreateFile(ctx context.Context, filename, sha, content string) error {
 	req, err := http.NewRequestWithContext(
 		ctx,

@@ -10,6 +10,8 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+// ProjectSettings represents the terraform state for a nested deployment -> project_settings
+// block. These are overrides specific to a single deployment.
 type ProjectSettings struct {
 	BuildCommand    types.String `tfsdk:"build_command"`
 	Framework       types.String `tfsdk:"framework"`
@@ -18,6 +20,7 @@ type ProjectSettings struct {
 	RootDirectory   types.String `tfsdk:"root_directory"`
 }
 
+// Deployment represents the terraform state for a deployment resource.
 type Deployment struct {
 	Domains         types.List        `tfsdk:"domains"`
 	Environment     types.Map         `tfsdk:"environment"`
@@ -30,6 +33,8 @@ type Deployment struct {
 	URL             types.String      `tfsdk:"url"`
 }
 
+// setIfNotUnknown is a helper function to set a value in a map if it is not unknown.
+// Null values are set as nil, and actual values are set directly.
 func setIfNotUnknown(m map[string]interface{}, v types.String, name string) {
 	if v.Null {
 		m[name] = nil
@@ -39,8 +44,17 @@ func setIfNotUnknown(m map[string]interface{}, v types.String, name string) {
 	}
 }
 
+// toRequest takes a set of ProjectSettings and converts them into the required
+// format for a CreateDeploymentRequest.
 func (p *ProjectSettings) toRequest() map[string]interface{} {
 	res := map[string]interface{}{
+		/* Source files outside the root directory are required
+		 * for a monorepo style codebase. This allows a root_directory
+		 * to be set, but enables navigating upwards into a parent workspace.
+		 *
+		 * Surprisngly, even though this is the default setting for a project,
+		 * it has to be explicitly passed for each request.
+		 */
 		"sourceFilesOutsideRootDirectory": true,
 	}
 	if p == nil {
@@ -63,6 +77,8 @@ func (p *ProjectSettings) toRequest() map[string]interface{} {
 	return res
 }
 
+// fillStringNull is used to populate unknown resource values within state. Unknown values
+// are coerced into null values. Explicitly set values are left unchanged.
 func fillStringNull(t types.String) types.String {
 	return types.String{
 		Null:  t.Null || t.Unknown,
@@ -70,6 +86,8 @@ func fillStringNull(t types.String) types.String {
 	}
 }
 
+// fillNulls takes a ProjectSettings and ensures that none of the values are unknown.
+// Any unknown values are instead converted to nulls.
 func (p *ProjectSettings) fillNulls() *ProjectSettings {
 	if p == nil {
 		return nil
@@ -83,6 +101,9 @@ func (p *ProjectSettings) fillNulls() *ProjectSettings {
 	}
 }
 
+// getFiles is a helper for turning the terraform deployment state into a set of client.DeploymentFile
+// structs, ready to hit the API with. It also returns a map of files by sha, which is used to quickly
+// look up any missing SHAs from the create deployment resposnse.
 func (d *Deployment) getFiles() ([]client.DeploymentFile, map[string]client.DeploymentFile, error) {
 	var files []client.DeploymentFile
 	filesBySha := map[string]client.DeploymentFile{}
@@ -108,6 +129,9 @@ func (d *Deployment) getFiles() ([]client.DeploymentFile, map[string]client.Depl
 	return files, filesBySha, nil
 }
 
+// convertResponseToDeployment is used to populate terraform state based on an API response.
+// Where possible, values from the API response are used to populate state. If not possible,
+// values from the existing deployment state are used.
 func convertResponseToDeployment(response client.DeploymentResponse, plan Deployment) Deployment {
 	production := types.Bool{Value: false}
 	/*

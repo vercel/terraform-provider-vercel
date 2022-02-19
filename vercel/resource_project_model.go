@@ -5,6 +5,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+// Project reflects the state terraform stores internally for a project.
 type Project struct {
 	BuildCommand    types.String      `tfsdk:"build_command"`
 	DevCommand      types.String      `tfsdk:"dev_command"`
@@ -80,6 +81,7 @@ func (p *Project) toUpdateProjectRequest(oldName string) client.UpdateProjectReq
 	}
 }
 
+// EnvironmentItem reflects the state terraform stores internally for a project's environment variable.
 type EnvironmentItem struct {
 	Target []types.String `tfsdk:"target"`
 	Key    types.String   `tfsdk:"key"`
@@ -101,6 +103,7 @@ func (e *EnvironmentItem) toUpsertEnvironmentVariableRequest() client.UpsertEnvi
 	}
 }
 
+// GitRepository reflects the state terraform stores internally for a nested git_repository block on a project resource.
 type GitRepository struct {
 	Type types.String `tfsdk:"type"`
 	Repo types.String `tfsdk:"repo"`

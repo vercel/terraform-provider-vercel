@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// DeleteTeam deletes an existing team within vercel.
 func (c *Client) DeleteTeam(ctx context.Context, teamID string) error {
 	req, err := http.NewRequestWithContext(
 		ctx,

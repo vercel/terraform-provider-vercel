@@ -14,6 +14,7 @@ import (
 
 type dataSourceFileType struct{}
 
+// GetSchema returns the schema information for a file data source
 func (r dataSourceFileType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
@@ -41,6 +42,7 @@ This will read a single file, providing metadata for use with a ` + "`vercel_dep
 	}, nil
 }
 
+// NewDataSource instantiates a new DataSource of this DataSourceType.
 func (r dataSourceFileType) NewDataSource(ctx context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceFile{
 		p: *(p.(*provider)),
@@ -51,12 +53,15 @@ type dataSourceFile struct {
 	p provider
 }
 
+// FileData represents the information terraform knows about a File data source
 type FileData struct {
 	Path types.String      `tfsdk:"path"`
 	ID   types.String      `tfsdk:"id"`
 	File map[string]string `tfsdk:"file"`
 }
 
+// Read will read a file from the filesytem and provide terraform with information about it.
+// It is called by the provider whenever data source values should be read to update state.
 func (r dataSourceFile) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	var config FileData
 	diags := req.Config.Get(ctx, &config)

@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// GetTeam returns information about an existing team within vercel.
 func (c *Client) GetTeam(ctx context.Context, teamID, slug string) (r TeamResponse, err error) {
 	url := c.baseURL + "/v1/teams"
 	if teamID != "" {

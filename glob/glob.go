@@ -8,6 +8,8 @@ import (
 	gitignore "github.com/sabhiram/go-gitignore"
 )
 
+// GetPaths is used to find all the files within a directory that do not match a specified
+// set of ignore patterns.
 func GetPaths(basePath string, ignorePatterns []string) ([]string, error) {
 	ignore := gitignore.CompileIgnoreLines(ignorePatterns...)
 

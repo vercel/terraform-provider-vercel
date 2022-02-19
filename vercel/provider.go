@@ -16,10 +16,12 @@ type provider struct {
 	client     *client.Client
 }
 
+// New instantiates a new instance of a vercel terraform provider.
 func New() tfsdk.Provider {
 	return &provider{}
 }
 
+// GetSchema returns the schema information for the provider configuration itself.
 func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
@@ -39,6 +41,7 @@ Use the navigation to the left to read about the available resources.
 	}, nil
 }
 
+// GetResources shows the available resources for the vercel provider
 func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
 	return map[string]tfsdk.ResourceType{
 		"vercel_deployment":     resourceDeploymentType{},
@@ -47,6 +50,7 @@ func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceTyp
 	}, nil
 }
 
+// GetDataSources shows the available data sources for the vercel provider
 func (p *provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
 	return map[string]tfsdk.DataSourceType{
 		"vercel_file":              dataSourceFileType{},
@@ -59,8 +63,12 @@ type providerData struct {
 	APIToken types.String `tfsdk:"api_token"`
 }
 
+// apiTokenRe is a regex for an API access token. We use this to validate that the
+// token provided matches the expected format.
 var apiTokenRe = regexp.MustCompile("[0-9a-zA-Z]{24}")
 
+// Configure takes a provider and applies any configuration. In the context of Vercel
+// this allows us to set up an API token.
 func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
 	var config providerData
 	diags := req.Config.Get(ctx, &config)

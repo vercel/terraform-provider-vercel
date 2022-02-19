@@ -15,6 +15,7 @@ import (
 
 type resourceDeploymentType struct{}
 
+// GetSchema returns the schema information for a deployment resource.
 func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
@@ -126,6 +127,7 @@ Once the build step has completed successfully, a new, immutable deployment will
 	}, nil
 }
 
+// NewResource instantiates a new Resource of this ResourceType.
 func (r resourceDeploymentType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceDeployment{
 		p: *(p.(*provider)),
@@ -136,6 +138,9 @@ type resourceDeployment struct {
 	p provider
 }
 
+// Create will create a deployment within Vercel. This is done by first attempting to trigger a deployment, seeing what
+// files are required, uploading those files, and then attempting to create a deployment again.
+// This is called automatically by the provider when a new resource should be created.
 func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
 	if !r.p.configured {
 		resp.Diagnostics.AddError(
@@ -243,6 +248,8 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 	}
 }
 
+// Read will read a file from the filesytem and provide terraform with information about it.
+// It is called by the provider whenever data source values should be read to update state.
 func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
 	var state Deployment
 	diags := req.State.Get(ctx, &state)
@@ -252,6 +259,11 @@ func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequ
 	}
 
 	out, err := r.p.client.GetDeployment(ctx, state.ID.Value, state.TeamID.Value)
+	var apiErr client.APIError
+	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading deployment",
@@ -274,15 +286,22 @@ func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequ
 	}
 }
 
+// Update is a noop as it is not possible to update an existing deployment. Instead, all
+// attributes must be set to force recreation.
+// This method has to exist, however, to satisfy the resource interface.
 func (r resourceDeployment) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
 	// Nothing to do here - we can't update deployments
 }
 
+// Delete does nothing other than clear the existing terraform state for a Deployment.
+// This is done intentionally, as typically, Vercel users do not continually delete old Deployments.
 func (r resourceDeployment) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	tflog.Trace(ctx, "deleted deployment")
 	resp.State.RemoveResource(ctx)
 }
 
+// ImportState is not implemented as it is not possible to get all the required information for a
+// Deployment resource from the vercel API.
 func (r resourceDeployment) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	tfsdk.ResourceImportStateNotImplemented(ctx, "", resp)
 }

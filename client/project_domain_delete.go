@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// DeleteProjectDomain removes any association of a domain name with a Vercel project.
 func (c *Client) DeleteProjectDomain(ctx context.Context, projectID, domain, teamID string) error {
 	url := fmt.Sprintf("%s/v8/projects/%s/domains/%s", c.baseURL, projectID, domain)
 	if teamID != "" {

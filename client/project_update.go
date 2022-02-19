@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+// UpdateProjectRequest defines the possible fields that can be updated within a vercel project.
+// note that the values are all pointers, with many containing `omitempty` for serialisation.
+// This is because the Vercel API behaves in the following manner:
+// - a provided field will be updated
+// - setting the field to an empty value (e.g. '') will remove the setting for that field.
+// - omitting the value entirely from the request will _not_ update the field.
 type UpdateProjectRequest struct {
 	Name            *string `json:"name,omitempty"`
 	BuildCommand    *string `json:"buildCommand"`
@@ -18,6 +24,7 @@ type UpdateProjectRequest struct {
 	RootDirectory   *string `json:"rootDirectory"`
 }
 
+// UpdateProject updates an existing projects configuration within vercel.
 func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, request UpdateProjectRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
 	if teamID != "" {

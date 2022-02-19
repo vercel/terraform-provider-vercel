@@ -39,6 +39,8 @@ var defaultIgnores = []string{
 	".terraform*",
 }
 
+// GetIgnores is used to parse a .vercelignore file from a given directory, and
+// combine the expected results with a default set of ignored files.
 func GetIgnores(path string) ([]string, error) {
 	ignoreFilePath := filepath.Join(path, ".vercelignore")
 	ignoreFile, err := os.ReadFile(ignoreFilePath)

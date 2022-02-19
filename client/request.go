@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// APIError is an error type that exposes additional information about why an API request failed.
 type APIError struct {
 	Code       string `json:"code"`
 	Message    string `json:"message"`
@@ -14,10 +15,16 @@ type APIError struct {
 	RawMessage []byte
 }
 
+// Error provides a user friendly error message.
 func (e APIError) Error() string {
 	return fmt.Sprintf("%s - %s", e.Code, e.Message)
 }
 
+// doRequest is a helper function for consistently requesting data from vercel.
+// This manages:
+// - Authorization via the Bearer token
+// - Converting error responses into an inspectable type
+// - Unmarshaling responses
 func (c *Client) doRequest(req *http.Request, v interface{}) error {
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.token))
 	resp, err := c.http().Do(req)

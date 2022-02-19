@@ -13,6 +13,7 @@ import (
 
 type dataSourceProjectType struct{}
 
+// GetSchema returns the schema information for a project data source
 func (r dataSourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
@@ -137,6 +138,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 	}, nil
 }
 
+// NewDataSource instantiates a new DataSource of this DataSourceType.
 func (r dataSourceProjectType) NewDataSource(ctx context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceProject{
 		p: *(p.(*provider)),
@@ -147,6 +149,9 @@ type dataSourceProject struct {
 	p provider
 }
 
+// Read will read project information by requesting it from the Vercel API, and will update terraform
+// with this information.
+// It is called by the provider whenever data source values should be read to update state.
 func (r dataSourceProject) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	var config Project
 	diags := req.Config.Get(ctx, &config)
