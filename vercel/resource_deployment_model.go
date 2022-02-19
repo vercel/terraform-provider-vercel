@@ -30,7 +30,7 @@ type Deployment struct {
 	URL             types.String      `tfsdk:"url"`
 }
 
-func setIfNotUnknown(m map[string]*string, v types.String, name string) {
+func setIfNotUnknown(m map[string]interface{}, v types.String, name string) {
 	if v.Null {
 		m[name] = nil
 	}
@@ -39,11 +39,13 @@ func setIfNotUnknown(m map[string]*string, v types.String, name string) {
 	}
 }
 
-func (p *ProjectSettings) toRequest() map[string]*string {
-	if p == nil {
-		return nil
+func (p *ProjectSettings) toRequest() map[string]interface{} {
+	res := map[string]interface{}{
+		"sourceFilesOutsideRootDirectory": true,
 	}
-	res := map[string]*string{}
+	if p == nil {
+		return res
+	}
 
 	setIfNotUnknown(res, p.BuildCommand, "buildCommand")
 	setIfNotUnknown(res, p.Framework, "framework")
