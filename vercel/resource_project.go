@@ -16,6 +16,7 @@ import (
 
 type resourceProjectType struct{}
 
+// GetSchema returns the schema information for a deployment resource.
 func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
@@ -151,6 +152,7 @@ deployments, you may not want to create a Project within the same terraform work
 	}, nil
 }
 
+// NewResource instantiates a new Resource of this ResourceType.
 func (r resourceProjectType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceProject{
 		p: *(p.(*provider)),
@@ -161,6 +163,8 @@ type resourceProject struct {
 	p provider
 }
 
+// Create will create a project within Vercel by calling the Vercel API.
+// This is called automatically by the provider when a new resource should be created.
 func (r resourceProject) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
 	if !r.p.configured {
 		resp.Diagnostics.AddError(
@@ -196,6 +200,8 @@ func (r resourceProject) Create(ctx context.Context, req tfsdk.CreateResourceReq
 	}
 }
 
+// Read will read a project from the vercel API and provide terraform with information about it.
+// It is called by the provider whenever data source values should be read to update state.
 func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
 	var state Project
 	diags := req.State.Get(ctx, &state)
@@ -205,6 +211,11 @@ func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 	}
 
 	out, err := r.p.client.GetProject(ctx, state.ID.Value, state.TeamID.Value)
+	var apiErr client.APIError
+	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
@@ -227,6 +238,8 @@ func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 	}
 }
 
+// containsEnvVar is a helper function for working out whether a specific environment variable
+// is present within a slice. It ensures that all properties of the environment variable match.
 func containsEnvVar(env []EnvironmentItem, v EnvironmentItem) bool {
 	for _, e := range env {
 		if e.Key == v.Key &&
@@ -243,6 +256,8 @@ func containsEnvVar(env []EnvironmentItem, v EnvironmentItem) bool {
 	return false
 }
 
+// diffEnvVars is used to determine the set of environment variables that need to be updated,
+// and the set of environment variables that need to be removed.
 func diffEnvVars(oldVars, newVars []EnvironmentItem) (toUpsert, toRemove []EnvironmentItem) {
 	toRemove = []EnvironmentItem{}
 	toUpsert = []EnvironmentItem{}
@@ -259,6 +274,9 @@ func diffEnvVars(oldVars, newVars []EnvironmentItem) (toUpsert, toRemove []Envir
 	return toUpsert, toRemove
 }
 
+// Update will update a project and it's associated environment variables via the vercel API.
+// Environment variables are manually diffed and updated individually. Once the environment
+// variables are all updated, the project is updated too.
 func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
 	var plan Project
 	diags := req.Plan.Get(ctx, &plan)
@@ -349,6 +367,8 @@ func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 	}
 }
 
+// Delete a project and any associated environment variables from within terraform.
+// Environment variables do not need to be explicitly deleted, as Vercel will automatically prune them.
 func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	var state Project
 	diags := req.State.Get(ctx, &state)
@@ -380,6 +400,8 @@ func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 	resp.State.RemoveResource(ctx)
 }
 
+// splitID is a helper function for splitting an import ID into the corresponding parts.
+// It also validates whether the ID is in a correct format.
 func splitID(id string) (teamID, _id string, ok bool) {
 	if strings.Contains(id, "/") {
 		attributes := strings.Split(id, "/")
@@ -391,6 +413,8 @@ func splitID(id string) (teamID, _id string, ok bool) {
 	return "", id, true
 }
 
+// ImportState takes an identifier and reads all the project information from the Vercel API.
+// Note that environment variables are also read. The results are then stored in terraform state.
 func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	teamID, projectID, ok := splitID(req.ID)
 	if !ok {

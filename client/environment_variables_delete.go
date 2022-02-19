@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// DeleteEnvironmentVariable will remove an environment variable from Vercel.
 func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamID, variableID string) error {
 	url := fmt.Sprintf("%s/v8/projects/%s/env/%s", c.baseURL, projectID, variableID)
 	if teamID != "" {

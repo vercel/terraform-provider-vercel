@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func Int64ItemsIn(items ...int64) validatorInt64ItemsIn {
+func int64ItemsIn(items ...int64) validatorInt64ItemsIn {
 	itemMap := map[int64]struct{}{}
 	for _, i := range items {
 		itemMap[i] = struct{}{}

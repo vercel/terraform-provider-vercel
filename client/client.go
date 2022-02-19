@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Client is an API wrapper, providing a high-level interface to the Vercel API.
 type Client struct {
 	token   string
 	client  *http.Client
@@ -23,6 +24,7 @@ func (c *Client) http() *http.Client {
 	return c.client
 }
 
+// New creates a new instace of Client for a given API token.
 func New(token string) *Client {
 	return &Client{
 		token:   token,

@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// ProjectDomainResponse defines the information that Vercel exposes about a domain that is
+// associated with a vercel project.
 type ProjectDomainResponse struct {
 	Name               string  `json:"name"`
 	ProjectID          string  `json:"projectId"`
@@ -15,6 +17,7 @@ type ProjectDomainResponse struct {
 	GitBranch          *string `json:"gitBranch"`
 }
 
+// GetProjectDomain retrieves information about a project domain from Vercel.
 func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID string) (r ProjectDomainResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s/domains/%s", c.baseURL, projectID, domain)
 	if teamID != "" {

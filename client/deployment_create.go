@@ -13,12 +13,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
+// DeploymentFile is a struct defining the required information about a singular file
+// that should be used within a deployment.
 type DeploymentFile struct {
 	File string `json:"file"`
 	Sha  string `json:"sha"`
 	Size int    `json:"size"`
 }
 
+// CreateDeploymentRequest defines the request the Vercel API expects in order to create a deployment.
 type CreateDeploymentRequest struct {
 	Files       []DeploymentFile       `json:"files,omitempty"`
 	Functions   map[string]interface{} `json:"functions,omitempty"`
@@ -34,6 +37,7 @@ type CreateDeploymentRequest struct {
 	Target          string                 `json:"target,omitempty"`
 }
 
+// DeploymentResponse defines the response the Vercel API returns when a deployment is created or updated.
 type DeploymentResponse struct {
 	Aliases    []string `json:"alias"`
 	AliasError *struct {
@@ -66,10 +70,12 @@ type DeploymentResponse struct {
 	URL              string  `json:"url"`
 }
 
+// IsComplete is used to determine whether a deployment is still processing, or whether it is fully done.
 func (dr *DeploymentResponse) IsComplete() bool {
 	return dr.AliasAssigned && dr.AliasError == nil
 }
 
+// DeploymentLogsURL provides a user friendly URL that links directly to the vercel UI for a particular deployment.
 func (dr *DeploymentResponse) DeploymentLogsURL(projectID string) string {
 	teamSlug := dr.Creator.Username
 	if dr.Team != nil {
@@ -83,6 +89,7 @@ func (dr *DeploymentResponse) DeploymentLogsURL(projectID string) string {
 	)
 }
 
+// CheckForError checks through the various failure modes of a deployment to see if any were hit.
 func (dr *DeploymentResponse) CheckForError(projectID string) error {
 	if dr.ReadyState == "CANCELED" {
 		return fmt.Errorf("deployment canceled")
@@ -116,16 +123,20 @@ func (dr *DeploymentResponse) CheckForError(projectID string) error {
 	return nil
 }
 
+// MissingFilesError is a sentinel error that indicates a deployment could not be created
+// because additional files need to be uploaded first.
 type MissingFilesError struct {
 	Code    string   `json:"code"`
 	Message string   `json:"message"`
 	Missing []string `json:"missing"`
 }
 
+// Error gives the MissingFilesError a user friendly error message.
 func (e MissingFilesError) Error() string {
 	return fmt.Sprintf("%s - %s", e.Code, e.Message)
 }
 
+// CreateDeployment creates a deployment within Vercel.
 func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentRequest, teamID string) (r DeploymentResponse, err error) {
 	request.Name = request.ProjectID                // Name is ignored if project is specified
 	request.Build.Environment = request.Environment // Ensure they are both the same, as project environment variables are

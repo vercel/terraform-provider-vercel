@@ -7,11 +7,15 @@ import (
 	"strings"
 )
 
+// GitRepository is the information Vercel requires and surfaces about which git provider and repository
+// a project is linked with.
 type GitRepository struct {
 	Type string `json:"type"`
 	Repo string `json:"repo"`
 }
 
+// EnvironmentVariable defines the information Vercel requires and surfaces about an environment variable
+// that is associated with a project.
 type EnvironmentVariable struct {
 	Key    string   `json:"key"`
 	Value  string   `json:"value"`
@@ -20,6 +24,7 @@ type EnvironmentVariable struct {
 	ID     string   `json:"id,omitempty"`
 }
 
+// CreateProjectRequest defines the information necessary to create a project.
 type CreateProjectRequest struct {
 	Name                 string                `json:"name"`
 	BuildCommand         *string               `json:"buildCommand"`
@@ -33,6 +38,7 @@ type CreateProjectRequest struct {
 	RootDirectory        *string               `json:"rootDirectory"`
 }
 
+// CreateProject will create a project within Vercel.
 func (c *Client) CreateProject(ctx context.Context, teamID string, request CreateProjectRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects", c.baseURL)
 	if teamID != "" {

@@ -15,6 +15,7 @@ import (
 
 type dataSourceProjectDirectoryType struct{}
 
+// GetSchema returns the schema information for a project directory data source
 func (r dataSourceProjectDirectoryType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
@@ -45,6 +46,7 @@ This will recursively read files, providing metadata for use with a ` + "`vercel
 	}, nil
 }
 
+// NewDataSource instantiates a new DataSource of this DataSourceType.
 func (r dataSourceProjectDirectoryType) NewDataSource(ctx context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceProjectDirectory{
 		p: *(p.(*provider)),
@@ -55,12 +57,16 @@ type dataSourceProjectDirectory struct {
 	p provider
 }
 
+// ProjectDirectoryData represents the information terraform knows about a project directory data source
 type ProjectDirectoryData struct {
 	Path  types.String      `tfsdk:"path"`
 	ID    types.String      `tfsdk:"id"`
 	Files map[string]string `tfsdk:"files"`
 }
 
+// Read will recursively scan a directory looking for any files that do not match a .vercelignore file (if a
+// .vercelignore is present). Metadata about all these files will then be made available to terraform.
+// It is called by the provider whenever data source values should be read to update state.
 func (r dataSourceProjectDirectory) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	var config ProjectDirectoryData
 	diags := req.Config.Get(ctx, &config)

@@ -5,6 +5,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+// ProjectDomain reflects the state terraform stores internally for a project domain.
 type ProjectDomain struct {
 	Domain             types.String `tfsdk:"domain"`
 	GitBranch          types.String `tfsdk:"git_branch"`
