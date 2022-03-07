@@ -84,9 +84,6 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Type:        types.StringType,
 				Description: "The framework that is being used for this project. If omitted, no framework is selected.",
-				Validators: []tfsdk.AttributeValidator{
-					validateFramework(),
-				},
 			},
 			"git_repository": {
 				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",

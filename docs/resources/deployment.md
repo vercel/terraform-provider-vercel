@@ -42,9 +42,6 @@ data "vercel_project_directory" "example" {
 
 data "vercel_project" "example" {
   name = "my-awesome-project"
-  # The root directory here is also set to reflect the
-  # file structure.
-  root_directory = "ui"
 }
 
 resource "vercel_deployment" "example" {
