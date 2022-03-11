@@ -37,6 +37,8 @@ var defaultIgnores = []string{
 	"CVS",
 	".vercel_build_output",
 	".terraform*",
+	"*.tfstate",
+	"*.tfstate.backup",
 }
 
 // GetIgnores is used to parse a .vercelignore file from a given directory, and
