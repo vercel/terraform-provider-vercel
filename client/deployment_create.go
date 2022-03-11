@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // DeploymentFile is a struct defining the required information about a singular file
@@ -141,7 +139,6 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 	request.Name = request.ProjectID                // Name is ignored if project is specified
 	request.Build.Environment = request.Environment // Ensure they are both the same, as project environment variables are
 	url := fmt.Sprintf("%s/v12/now/deployments?skipAutoDetectionConfirmation=1", c.baseURL)
-	tflog.Info(ctx, "creating deployment", "request", string(mustMarshal(request)))
 	if teamID != "" {
 		url = fmt.Sprintf("%s&teamId=%s", url, teamID)
 	}

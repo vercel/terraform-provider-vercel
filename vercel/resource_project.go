@@ -191,7 +191,10 @@ func (r resourceProject) Create(ctx context.Context, req tfsdk.CreateResourceReq
 	}
 
 	result := convertResponseToProject(out, plan.TeamID, plan.RootDirectory)
-	tflog.Trace(ctx, "created project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+	tflog.Trace(ctx, "created project", map[string]interface{}{
+		"team_id":    result.TeamID.Value,
+		"project_id": result.ID.Value,
+	})
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -229,7 +232,10 @@ func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 	}
 
 	result := convertResponseToProject(out, state.TeamID, state.RootDirectory)
-	tflog.Trace(ctx, "read project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+	tflog.Trace(ctx, "read project", map[string]interface{}{
+		"team_id":    result.TeamID.Value,
+		"project_id": result.ID.Value,
+	})
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -308,13 +314,11 @@ func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 			)
 			return
 		}
-		tflog.Trace(
-			ctx,
-			"deleted environment variable",
-			"team_id", plan.TeamID.Value,
-			"project_id", plan.ID.Value,
-			"environment_id", v.ID.Value,
-		)
+		tflog.Trace(ctx, "deleted environment variable", map[string]interface{}{
+			"team_id":        plan.TeamID.Value,
+			"project_id":     plan.ID.Value,
+			"environment_id": v.ID.Value,
+		})
 	}
 	for _, v := range toUpsert {
 		err := r.p.client.UpsertEnvironmentVariable(
@@ -334,13 +338,11 @@ func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 				),
 			)
 		}
-		tflog.Trace(
-			ctx,
-			"upserted environment variable",
-			"team_id", plan.TeamID.Value,
-			"project_id", plan.ID.Value,
-			"environment_id", v.ID.Value,
-		)
+		tflog.Trace(ctx, "upserted environment variable", map[string]interface{}{
+			"team_id":        plan.TeamID.Value,
+			"project_id":     plan.ID.Value,
+			"environment_id": v.ID.Value,
+		})
 	}
 
 	out, err := r.p.client.UpdateProject(ctx, state.ID.Value, state.TeamID.Value, plan.toUpdateProjectRequest(state.Name.Value))
@@ -358,7 +360,10 @@ func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 	}
 
 	result := convertResponseToProject(out, plan.TeamID, plan.RootDirectory)
-	tflog.Trace(ctx, "updated project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+	tflog.Trace(ctx, "updated project", map[string]interface{}{
+		"team_id":    result.TeamID.Value,
+		"project_id": result.ID.Value,
+	})
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -396,7 +401,10 @@ func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 		return
 	}
 
-	tflog.Trace(ctx, "deleted project", "team_id", state.TeamID.Value, "project_id", state.ID.Value)
+	tflog.Trace(ctx, "deleted project", map[string]interface{}{
+		"team_id":    state.TeamID.Value,
+		"project_id": state.ID.Value,
+	})
 	resp.State.RemoveResource(ctx)
 }
 
@@ -442,7 +450,10 @@ func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResour
 		stringTypeTeamID.Null = true
 	}
 	result := convertResponseToProject(out, stringTypeTeamID, types.String{Unknown: true})
-	tflog.Trace(ctx, "imported project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+	tflog.Trace(ctx, "imported project", map[string]interface{}{
+		"team_id":    result.TeamID.Value,
+		"project_id": result.ID.Value,
+	})
 
 	diags := resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)

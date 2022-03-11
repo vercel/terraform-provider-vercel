@@ -113,12 +113,11 @@ func (r resourceProjectDomain) Create(ctx context.Context, req tfsdk.CreateResou
 	}
 
 	result := convertResponseToProjectDomain(out, plan.TeamID)
-	tflog.Trace(
-		ctx, "added domain to project",
-		"project_id", result.ProjectID.Value,
-		"domain", result.Domain.Value,
-		"team_id", result.TeamID.Value,
-	)
+	tflog.Trace(ctx, "added domain to project", map[string]interface{}{
+		"project_id": result.ProjectID.Value,
+		"domain":     result.Domain.Value,
+		"team_id":    result.TeamID.Value,
+	})
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -156,12 +155,11 @@ func (r resourceProjectDomain) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}
 
 	result := convertResponseToProjectDomain(out, state.TeamID)
-	tflog.Trace(
-		ctx, "read project domain",
-		"project_id", result.ProjectID.Value,
-		"domain", result.Domain.Value,
-		"team_id", result.TeamID.Value,
-	)
+	tflog.Trace(ctx, "read project domain", map[string]interface{}{
+		"project_id": result.ProjectID.Value,
+		"domain":     result.Domain.Value,
+		"team_id":    result.TeamID.Value,
+	})
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -206,12 +204,11 @@ func (r resourceProjectDomain) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	result := convertResponseToProjectDomain(out, state.TeamID)
-	tflog.Trace(
-		ctx, "update project domain",
-		"project_id", result.ProjectID.Value,
-		"domain", result.Domain.Value,
-		"team_id", result.TeamID.Value,
-	)
+	tflog.Trace(ctx, "update project domain", map[string]interface{}{
+		"project_id": result.ProjectID.Value,
+		"domain":     result.Domain.Value,
+		"team_id":    result.TeamID.Value,
+	})
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -248,12 +245,11 @@ func (r resourceProjectDomain) Delete(ctx context.Context, req tfsdk.DeleteResou
 		return
 	}
 
-	tflog.Trace(
-		ctx, "delete project domain",
-		"project_id", state.ProjectID.Value,
-		"domain", state.Domain.Value,
-		"team_id", state.TeamID.Value,
-	)
+	tflog.Trace(ctx, "delete project domain", map[string]interface{}{
+		"project_id": state.ProjectID.Value,
+		"domain":     state.Domain.Value,
+		"team_id":    state.TeamID.Value,
+	})
 	resp.State.RemoveResource(ctx)
 }
 
@@ -301,12 +297,11 @@ func (r resourceProjectDomain) ImportState(ctx context.Context, req tfsdk.Import
 		stringTypeTeamID.Null = true
 	}
 	result := convertResponseToProjectDomain(out, stringTypeTeamID)
-	tflog.Trace(
-		ctx, "imported project domain",
-		"project_id", result.ProjectID.Value,
-		"domain", result.Domain.Value,
-		"team_id", result.TeamID.Value,
-	)
+	tflog.Trace(ctx, "imported project domain", map[string]interface{}{
+		"project_id": result.ProjectID.Value,
+		"domain":     result.Domain.Value,
+		"team_id":    result.TeamID.Value,
+	})
 
 	diags := resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)

@@ -171,7 +171,10 @@ func (r dataSourceProject) Read(ctx context.Context, req tfsdk.ReadDataSourceReq
 	}
 
 	result := convertResponseToProject(out, config.TeamID, types.String{})
-	tflog.Trace(ctx, "read project", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+	tflog.Trace(ctx, "read project", map[string]interface{}{
+		"team_id":    result.TeamID.Value,
+		"project_id": result.ID.Value,
+	})
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)

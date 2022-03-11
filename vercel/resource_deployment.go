@@ -239,7 +239,10 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 	}
 
 	result := convertResponseToDeployment(out, plan)
-	tflog.Trace(ctx, "created deployment", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+	tflog.Trace(ctx, "created deployment", map[string]interface{}{
+		"team_id":    result.TeamID.Value,
+		"project_id": result.ID.Value,
+	})
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -277,7 +280,10 @@ func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequ
 	}
 
 	result := convertResponseToDeployment(out, state)
-	tflog.Trace(ctx, "read deployment", "team_id", result.TeamID.Value, "project_id", result.ID.Value)
+	tflog.Trace(ctx, "read deployment", map[string]interface{}{
+		"team_id":    result.TeamID.Value,
+		"project_id": result.ID.Value,
+	})
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
