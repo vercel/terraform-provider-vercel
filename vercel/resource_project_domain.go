@@ -57,7 +57,7 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 				Optional:    true,
 				Type:        types.Int64Type,
 				Validators: []tfsdk.AttributeValidator{
-					int64ItemsIn(301, 302, 307, 308),
+					int64OneOf(301, 302, 307, 308),
 				},
 			},
 			"git_branch": {
@@ -177,13 +177,6 @@ func (r resourceProjectDomain) Update(ctx context.Context, req tfsdk.UpdateResou
 		return
 	}
 
-	var state ProjectDomain
-	diags = req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	out, err := r.p.client.UpdateProjectDomain(
 		ctx,
 		plan.ProjectID.Value,
@@ -195,15 +188,15 @@ func (r resourceProjectDomain) Update(ctx context.Context, req tfsdk.UpdateResou
 		resp.Diagnostics.AddError(
 			"Error updating project domain",
 			fmt.Sprintf("Could not update domain %s for project %s, unexpected error: %s",
-				state.Domain.Value,
-				state.ProjectID.Value,
+				plan.Domain.Value,
+				plan.ProjectID.Value,
 				err,
 			),
 		)
 		return
 	}
 
-	result := convertResponseToProjectDomain(out, state.TeamID)
+	result := convertResponseToProjectDomain(out, plan.TeamID)
 	tflog.Trace(ctx, "update project domain", map[string]interface{}{
 		"project_id": result.ProjectID.Value,
 		"domain":     result.Domain.Value,
@@ -230,6 +223,7 @@ func (r resourceProjectDomain) Delete(ctx context.Context, req tfsdk.DeleteResou
 	var apiErr client.APIError
 	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
 		// The domain is already gone - do nothing.
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	if err != nil {

@@ -14,32 +14,33 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	"vercel": providerserver.NewProtocol6WithError(vercel.New()),
 }
 
+func mustHaveEnv(t *testing.T, name string) {
+	if os.Getenv(name) == "" {
+		t.Fatalf("%s environment variable must be set for acceptance tests", name)
+	}
+}
+
 func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("VERCEL_API_TOKEN"); v == "" {
-		t.Fatal("VERCEL_API_TOKEN must be set for acceptance tests")
-	}
-	if v := testTeam(); v == "" {
-		t.Fatal("VERCEL_TERRAFORM_TESTING_TEAM must be set for acceptance tests against a specific team")
-	}
-	if v := testGithubRepo(); v == "" {
-		t.Fatal("VERCEL_TERRAFORM_TESTING_GITHUB_REPO must be set for acceptance tests against a github repository")
-	}
-	if v := testGitlabRepo(); v == "" {
-		t.Fatal("VERCEL_TERRAFORM_TESTING_GITLAB_REPO must be set for acceptance tests against a gitlab repository")
-	}
-	if v := testBitbucketRepo(); v == "" {
-		t.Fatal("VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO must be set for acceptance tests against a bitbucket repository")
-	}
+	mustHaveEnv(t, "VERCEL_API_TOKEN")
+	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_GITHUB_REPO")
+	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_GITLAB_REPO")
+	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO")
+	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_TEAM")
+	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_DOMAIN")
 }
 
 var tc *client.Client
 
 func testClient() *client.Client {
 	if tc == nil {
-		tc = client.New(os.Getenv("VERCEL_API_TOKEN"))
+		tc = client.New(apiToken())
 	}
 
 	return tc
+}
+
+func apiToken() string {
+	return os.Getenv("VERCEL_API_TOKEN")
 }
 
 func testGithubRepo() string {
@@ -56,4 +57,8 @@ func testBitbucketRepo() string {
 
 func testTeam() string {
 	return os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM")
+}
+
+func testDomain() string {
+	return os.Getenv("VERCEL_TERRAFORM_TESTING_DOMAIN")
 }

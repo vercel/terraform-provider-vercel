@@ -206,7 +206,7 @@ func (r resourceProject) Create(ctx context.Context, req tfsdk.CreateResourceReq
 }
 
 // Read will read a project from the vercel API and provide terraform with information about it.
-// It is called by the provider whenever data source values should be read to update state.
+// It is called by the provider whenever values should be read to update state.
 func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
 	var state Project
 	diags := req.State.Get(ctx, &state)

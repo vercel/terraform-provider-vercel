@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -20,7 +19,7 @@ func TestAcc_ProjectDomain(t *testing.T) {
 
 func TestAcc_ProjectDomainWithTeamID(t *testing.T) {
 	t.Parallel()
-	testAccProjectDomain(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
+	testAccProjectDomain(t, testTeam())
 }
 
 func testAccProjectDomainExists(n, teamID, domain string) resource.TestCheckFunc {

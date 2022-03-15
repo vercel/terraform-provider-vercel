@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -16,7 +15,7 @@ import (
 func TestAcc_Project(t *testing.T) {
 	tests := map[string]string{
 		"personal scope": "",
-		"team scope":     os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"),
+		"team scope":     testTeam(),
 	}
 
 	for name, teamID := range tests {
