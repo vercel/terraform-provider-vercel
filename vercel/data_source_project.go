@@ -55,7 +55,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"environment": {
 				Description: "A list of environment variables that should be configured for the project.",
 				Computed:    true,
-				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
+				Attributes: tfsdk.SetNestedAttributes(map[string]tfsdk.Attribute{
 					"target": {
 						Description: "The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 						Type: types.SetType{
@@ -78,7 +78,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Type:        types.StringType,
 						Computed:    true,
 					},
-				}, tfsdk.ListNestedAttributesOptions{}),
+				}, tfsdk.SetNestedAttributesOptions{}),
 			},
 			"framework": {
 				Computed:    true,

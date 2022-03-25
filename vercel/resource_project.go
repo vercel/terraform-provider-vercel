@@ -65,7 +65,7 @@ deployments, you may not want to create a Project within the same terraform work
 			"environment": {
 				Description: "A list of environment variables that should be configured for the project.",
 				Optional:    true,
-				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
+				Attributes: tfsdk.SetNestedAttributes(map[string]tfsdk.Attribute{
 					"target": {
 						Description: "The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 						Type: types.SetType{
@@ -92,7 +92,7 @@ deployments, you may not want to create a Project within the same terraform work
 						Type:        types.StringType,
 						Computed:    true,
 					},
-				}, tfsdk.ListNestedAttributesOptions{}),
+				}, tfsdk.SetNestedAttributesOptions{}),
 			},
 			"framework": {
 				Optional:    true,

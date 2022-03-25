@@ -203,9 +203,34 @@ resource "vercel_project" "test" {
   %s
   environment = [
     {
+      key    = "two"
+      value  = "bar"
+      target = ["production"]
+    },
+    {
+      key    = "foo"
+      value  = "bar"
+      target = ["production"]
+    },
+    {
+      key    = "baz"
+      value  = "bar"
+      target = ["production"]
+    },
+    {
+      key    = "three"
+      value  = "bar"
+      target = ["production"]
+    },
+    {
+      key    = "oh_no"
+      value  = "bar"
+      target = ["production"]
+    },
+    {
       key    = "bar"
       value  = "baz"
-      target = ["preview"]
+      target = ["production"]
     }
   ]
 }
@@ -239,6 +264,31 @@ resource "vercel_project" "test" {
   environment = [
     {
       key    = "foo"
+      value  = "bar"
+      target = ["production"]
+    },
+    {
+      key    = "two"
+      value  = "bar"
+      target = ["production"]
+    },
+    {
+      key    = "three"
+      value  = "bar"
+      target = ["production"]
+    },
+    {
+      key    = "baz"
+      value  = "bar"
+      target = ["production"]
+    },
+    {
+      key    = "bar"
+      value  = "bar"
+      target = ["production"]
+    },
+    {
+      key    = "oh_no"
       value  = "bar"
       target = ["production"]
     }
