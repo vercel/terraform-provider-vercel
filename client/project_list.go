@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // ListProjects lists the top 100 projects (no pagination) from within Vercel.
@@ -27,6 +29,9 @@ func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectRe
 	pr := struct {
 		Projects []ProjectResponse `json:"projects"`
 	}{}
+	tflog.Trace(ctx, "listing projects", map[string]interface{}{
+		"url": url,
+	})
 	err = c.doRequest(req, &pr)
 	return pr.Projects, err
 }

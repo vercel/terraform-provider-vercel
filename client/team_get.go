@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // GetTeam returns information about an existing team within vercel.
@@ -25,6 +27,9 @@ func (c *Client) GetTeam(ctx context.Context, teamID, slug string) (r TeamRespon
 		return r, err
 	}
 
+	tflog.Trace(ctx, "getting team", map[string]interface{}{
+		"url": url,
+	})
 	err = c.doRequest(req, &r)
 	return r, err
 }

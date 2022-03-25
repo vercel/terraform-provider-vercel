@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // DeleteProject deletes a project within Vercel. Note that there is no need to explicitly
@@ -24,5 +26,8 @@ func (c *Client) DeleteProject(ctx context.Context, projectID, teamID string) er
 		return err
 	}
 
+	tflog.Trace(ctx, "deleting project", map[string]interface{}{
+		"url": url,
+	})
 	return c.doRequest(req, nil)
 }

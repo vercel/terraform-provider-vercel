@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Repository defines the information about a projects git connection.
@@ -80,6 +82,9 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r Pr
 	if err != nil {
 		return r, err
 	}
+	tflog.Trace(ctx, "getting project", map[string]interface{}{
+		"url": url,
+	})
 	err = c.doRequest(req, &r)
 	if err != nil {
 		return r, err

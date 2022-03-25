@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // ProjectDomainResponse defines the information that Vercel exposes about a domain that is
@@ -34,6 +36,9 @@ func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID
 		return r, err
 	}
 
+	tflog.Trace(ctx, "getting project domain", map[string]interface{}{
+		"url": url,
+	})
 	err = c.doRequest(req, &r)
 	return r, err
 }

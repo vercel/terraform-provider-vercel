@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // DeleteEnvironmentVariable will remove an environment variable from Vercel.
@@ -23,5 +25,8 @@ func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamI
 		return err
 	}
 
+	tflog.Trace(ctx, "deleting environment variable", map[string]interface{}{
+		"url": url,
+	})
 	return c.doRequest(req, nil)
 }

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // GetDeployment retrieves information from Vercel about an existing Deployment.
@@ -23,6 +25,9 @@ func (c *Client) GetDeployment(ctx context.Context, deploymentID, teamID string)
 		return r, err
 	}
 
+	tflog.Trace(ctx, "getting deployment", map[string]interface{}{
+		"url": url,
+	})
 	err = c.doRequest(req, &r)
 	return r, err
 }

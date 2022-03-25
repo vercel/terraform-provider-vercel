@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // DeleteProjectDomain removes any association of a domain name with a Vercel project.
@@ -24,5 +26,8 @@ func (c *Client) DeleteProjectDomain(ctx context.Context, projectID, domain, tea
 		return err
 	}
 
+	tflog.Trace(ctx, "deleting project domain", map[string]interface{}{
+		"url": url,
+	})
 	return c.doRequest(req, nil)
 }

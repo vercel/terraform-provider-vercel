@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // UpdateProjectDomainRequest defines the information necessary to update a project domain.
@@ -21,16 +23,21 @@ func (c *Client) UpdateProjectDomain(ctx context.Context, projectID, domain, tea
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
 	}
 
+	payload := string(mustMarshal(request))
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"PATCH",
 		url,
-		strings.NewReader(string(mustMarshal(request))),
+		strings.NewReader(payload),
 	)
 	if err != nil {
 		return r, err
 	}
 
+	tflog.Trace(ctx, "updating project domain", map[string]interface{}{
+		"url":     url,
+		"payload": payload,
+	})
 	err = c.doRequest(req, &r)
 	return r, err
 }

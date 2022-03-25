@@ -3,7 +3,7 @@ module github.com/vercel/terraform-provider-vercel
 go 1.17
 
 require (
-	github.com/hashicorp/terraform-plugin-framework v0.6.0
+	github.com/hashicorp/terraform-plugin-framework v0.6.1-0.20220311205704-e0e806bddeca
 	github.com/hashicorp/terraform-plugin-go v0.8.0
 	github.com/hashicorp/terraform-plugin-log v0.3.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.10.1

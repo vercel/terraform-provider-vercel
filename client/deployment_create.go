@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // DeploymentFile is a struct defining the required information about a singular file
@@ -142,16 +144,21 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 	if teamID != "" {
 		url = fmt.Sprintf("%s&teamId=%s", url, teamID)
 	}
+	payload := string(mustMarshal(request))
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",
 		url,
-		strings.NewReader(string(mustMarshal(request))),
+		strings.NewReader(payload),
 	)
 	if err != nil {
 		return r, err
 	}
 
+	tflog.Trace(ctx, "creating deployment", map[string]interface{}{
+		"url":     url,
+		"payload": payload,
+	})
 	err = c.doRequest(req, &r)
 	var apiErr APIError
 	if errors.As(err, &apiErr) && apiErr.Code == "missing_files" {

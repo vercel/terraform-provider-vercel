@@ -2,8 +2,11 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // TeamCreateRequest defines the information needed to create a team within vercel.
@@ -19,16 +22,23 @@ type TeamResponse struct {
 
 // CreateTeam creates a team within vercel.
 func (c *Client) CreateTeam(ctx context.Context, request TeamCreateRequest) (r TeamResponse, err error) {
+	url := fmt.Sprintf("%s/v1/teams", c.baseURL)
+
+	payload := string(mustMarshal(request))
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",
-		c.baseURL+"/v1/teams",
-		strings.NewReader(string(mustMarshal(request))),
+		url,
+		strings.NewReader(payload),
 	)
 	if err != nil {
 		return r, err
 	}
 
+	tflog.Trace(ctx, "creating team", map[string]interface{}{
+		"url":     url,
+		"payload": payload,
+	})
 	err = c.doRequest(req, &r)
 	return r, err
 }

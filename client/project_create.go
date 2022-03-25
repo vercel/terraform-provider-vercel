@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // GitRepository is the information Vercel requires and surfaces about which git provider and repository
@@ -54,6 +56,10 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 		return r, err
 	}
 
+	tflog.Trace(ctx, "creating project", map[string]interface{}{
+		"url":     url,
+		"payload": string(mustMarshal(request)),
+	})
 	err = c.doRequest(req, &r)
 	if err != nil {
 		return r, err

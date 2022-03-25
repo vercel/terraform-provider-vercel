@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // CreateProjectDomainRequest defines the information necessary to create a project domain.
@@ -25,16 +27,21 @@ func (c *Client) CreateProjectDomain(ctx context.Context, projectID, teamID stri
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
 	}
 
+	payload := string(mustMarshal(request))
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",
 		url,
-		strings.NewReader(string(mustMarshal(request))),
+		strings.NewReader(payload),
 	)
 	if err != nil {
 		return r, err
 	}
 
+	tflog.Trace(ctx, "creating project domain", map[string]interface{}{
+		"url":     url,
+		"payload": payload,
+	})
 	err = c.doRequest(req, &r)
 	return r, err
 }

@@ -23,6 +23,30 @@ func TestAcc_ProjectWithTeamID(t *testing.T) {
 	testAccProject(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
 }
 
+func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
+	t.Parallel()
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test", ""),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectConfigWithoutEnv(projectSuffix, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test", ""),
+				),
+			},
+			{
+				Config: testAccProjectConfigUpdated(projectSuffix, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test", ""),
+				),
+			},
+		},
+	})
+}
+
 func TestAcc_ProjectWithGitRepository(t *testing.T) {
 	t.Parallel()
 	projectSuffix := acctest.RandString(16)
@@ -161,6 +185,15 @@ func testAccProject(t *testing.T, tid string) {
 			},
 		},
 	})
+}
+
+func testAccProjectConfigWithoutEnv(projectSuffix, extras string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-two-%s"
+  %s
+}
+`, projectSuffix, extras)
 }
 
 func testAccProjectConfigUpdated(projectSuffix, extras string) string {

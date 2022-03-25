@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // UpdateProjectRequest defines the possible fields that can be updated within a vercel project.
@@ -30,16 +32,21 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 	if teamID != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
 	}
+	payload := string(mustMarshal(request))
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"PATCH",
 		url,
-		strings.NewReader(string(mustMarshal(request))),
+		strings.NewReader(payload),
 	)
 	if err != nil {
 		return r, err
 	}
 
+	tflog.Trace(ctx, "updating project", map[string]interface{}{
+		"url":     url,
+		"payload": payload,
+	})
 	err = c.doRequest(req, &r)
 	if err != nil {
 		return r, err

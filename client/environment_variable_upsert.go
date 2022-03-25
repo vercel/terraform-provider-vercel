@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // UpsertEnvironmentVariableRequest defines the information that needs to be passed to Vercel in order to
@@ -18,15 +20,20 @@ func (c *Client) UpsertEnvironmentVariable(ctx context.Context, projectID, teamI
 	if teamID != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
 	}
+	payload := string(mustMarshal(request))
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",
 		url,
-		strings.NewReader(string(mustMarshal(request))),
+		strings.NewReader(payload),
 	)
 	if err != nil {
 		return err
 	}
 
+	tflog.Trace(ctx, "upserting environment variable", map[string]interface{}{
+		"url":     url,
+		"payload": payload,
+	})
 	return c.doRequest(req, nil)
 }
