@@ -1,3 +1,6 @@
+# In this example, we are assuming that a single index.html file
+# is being deployed. This file lives directly next to the terraform file.
+
 data "vercel_file" "example" {
   path = "index.html"
 }

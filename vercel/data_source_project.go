@@ -170,7 +170,7 @@ func (r dataSourceProject) Read(ctx context.Context, req tfsdk.ReadDataSourceReq
 		return
 	}
 
-	result := convertResponseToProject(out, config.TeamID, types.String{})
+	result := convertResponseToProject(out, config.TeamID)
 	tflog.Trace(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,

@@ -40,14 +40,6 @@ func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 	return out
 }
 
-func toStrPointerWithFileTrim(v types.String) *string {
-	if v.Null || v.Unknown {
-		return nil
-	}
-	trimmed := trimFilePath(v.Value)
-	return &trimmed
-}
-
 func (p *Project) toCreateProjectRequest() client.CreateProjectRequest {
 	return client.CreateProjectRequest{
 		Name:                 p.Name.Value,
@@ -59,7 +51,7 @@ func (p *Project) toCreateProjectRequest() client.CreateProjectRequest {
 		InstallCommand:       toStrPointer(p.InstallCommand),
 		OutputDirectory:      toStrPointer(p.OutputDirectory),
 		PublicSource:         toBoolPointer(p.PublicSource),
-		RootDirectory:        toStrPointerWithFileTrim(p.RootDirectory),
+		RootDirectory:        toStrPointer(p.RootDirectory),
 	}
 }
 
@@ -68,7 +60,6 @@ func (p *Project) toUpdateProjectRequest(oldName string) client.UpdateProjectReq
 	if oldName != p.Name.Value {
 		name = &p.Name.Value
 	}
-	p.RootDirectory.Value = trimFilePath(p.RootDirectory.Value)
 	return client.UpdateProjectRequest{
 		Name:            name,
 		BuildCommand:    toStrPointer(p.BuildCommand),
@@ -76,7 +67,7 @@ func (p *Project) toUpdateProjectRequest(oldName string) client.UpdateProjectReq
 		Framework:       toStrPointer(p.Framework),
 		InstallCommand:  toStrPointer(p.InstallCommand),
 		OutputDirectory: toStrPointer(p.OutputDirectory),
-		RootDirectory:   toStrPointerWithFileTrim(p.RootDirectory),
+		RootDirectory:   toStrPointer(p.RootDirectory),
 		PublicSource:    toBoolPointer(p.PublicSource),
 	}
 }
@@ -119,7 +110,7 @@ func (g *GitRepository) toCreateProjectRequest() *client.GitRepository {
 	}
 }
 
-func convertResponseToProject(response client.ProjectResponse, tid, rootDir types.String) Project {
+func convertResponseToProject(response client.ProjectResponse, tid types.String) Project {
 	var gr *GitRepository
 	if repo := response.Repository(); repo != nil {
 		gr = &GitRepository{
@@ -143,10 +134,6 @@ func convertResponseToProject(response client.ProjectResponse, tid, rootDir type
 	teamID := types.String{Value: tid.Value}
 	if tid.Unknown || tid.Null {
 		teamID.Null = true
-	}
-
-	if response.RootDirectory != nil && trimFilePath(rootDir.Value) == *response.RootDirectory {
-		response.RootDirectory = &rootDir.Value
 	}
 
 	return Project{
