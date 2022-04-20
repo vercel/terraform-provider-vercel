@@ -1,16 +1,18 @@
 # In this example, we are assuming that a nextjs UI
-# exists in a `ui` directory alongside any terraform.
+# exists in a `ui` directory and any terraform exists in a `terraform` directory.
 # E.g.
 # ```
 # ui/
 #    src/
-#    next.config.js
+#        index.js
+#    package.json
 #    // etc...
-# main.tf
+# terraform/
+#    main.tf
 # ```
 
 data "vercel_project_directory" "example" {
-  path = "ui"
+  path = "../ui"
 }
 
 data "vercel_project" "example" {
@@ -18,9 +20,10 @@ data "vercel_project" "example" {
 }
 
 resource "vercel_deployment" "example" {
-  project_id = data.vercel_project.example.id
-  files      = data.vercel_project_directory.example.files
-  production = true
+  project_id  = data.vercel_project.example.id
+  files       = data.vercel_project_directory.example.files
+  path_prefix = data.vercel_project_directory.example.path
+  production  = true
 
   environment = {
     FOO = "bar"

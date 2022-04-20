@@ -16,6 +16,9 @@ This will read a single file, providing metadata for use with a `vercel_deployme
 ## Example Usage
 
 ```terraform
+# In this example, we are assuming that a single index.html file
+# is being deployed. This file lives directly next to the terraform file.
+
 data "vercel_file" "example" {
   path = "index.html"
 }

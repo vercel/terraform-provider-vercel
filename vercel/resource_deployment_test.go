@@ -125,7 +125,7 @@ func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
 	})
 }
 
-func TestAcc_DeploymentWithUpwardRootDirectoryPath(t *testing.T) {
+func TestAcc_DeploymentWithRootDirectoryOverride(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -133,10 +133,27 @@ func TestAcc_DeploymentWithUpwardRootDirectoryPath(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccNonRootDirectory(projectSuffix),
+				Config: testAccRootDirectoryOverride(projectSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists("vercel_deployment.test", ""),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_DeploymentWithPathPrefix(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             noopDestroyCheck,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRootDirectoryWithPathPrefix(projectSuffix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDeploymentExists("vercel_deployment.test", ""),
 				),
 			},
 		},
@@ -197,11 +214,10 @@ resource "vercel_deployment" "test" {
 `, projectSuffix, projectExtras, deploymentExtras)
 }
 
-func testAccNonRootDirectory(projectSuffix string) string {
+func testAccRootDirectoryOverride(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-deployment-%s"
-  root_directory = "../foo"
 }
 
 data "vercel_file" "index" {
@@ -213,7 +229,24 @@ resource "vercel_deployment" "test" {
   files         = data.vercel_file.index.file
   production = true
   project_settings = {
-      root_directory = "../vercel/example"
+      root_directory = "vercel/example"
   }
+}`, projectSuffix)
+}
+
+func testAccRootDirectoryWithPathPrefix(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-deployment-%s"
+}
+
+data "vercel_file" "index" {
+    path = "../vercel/example/index.html"
+}
+
+resource "vercel_deployment" "test" {
+  project_id    = vercel_project.test.id
+  files         = data.vercel_file.index.file
+  path_prefix   = "../vercel/example"
 }`, projectSuffix)
 }

@@ -26,12 +26,9 @@ A Project groups deployments and custom domains. To deploy on Vercel, you need t
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/overview).
 
--> The ` + "`root_directory`" + ` field behaves slightly differently to the Vercel website as
-it allows upward path navigation (` + "`../`" + `). This is deliberately done so a ` + "`vercel_file` or `vercel_project_directory`" + `
-data source's ` + "`path`" + ` field can exactly match the ` + "`root_directory`" + `.
-
 ~> If you are creating Deployments through terraform and intend to use both preview and production
-deployments, you may not want to create a Project within the same terraform workspace as a Deployment.
+deployments, you may wish to 'layer' your terraform, creating the Project with a different set of
+terraform to your Deployment.
         `,
 		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
@@ -63,7 +60,7 @@ deployments, you may not want to create a Project within the same terraform work
 				Description: "The dev command for this project. If omitted, this value will be automatically detected.",
 			},
 			"environment": {
-				Description: "A list of environment variables that should be configured for the project.",
+				Description: "A set of environment variables that should be configured for the project.",
 				Optional:    true,
 				Attributes: tfsdk.SetNestedAttributes(map[string]tfsdk.Attribute{
 					"target": {
@@ -190,7 +187,7 @@ func (r resourceProject) Create(ctx context.Context, req tfsdk.CreateResourceReq
 		return
 	}
 
-	result := convertResponseToProject(out, plan.TeamID, plan.RootDirectory)
+	result := convertResponseToProject(out, plan.TeamID)
 	tflog.Trace(ctx, "created project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -231,7 +228,7 @@ func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 		return
 	}
 
-	result := convertResponseToProject(out, state.TeamID, state.RootDirectory)
+	result := convertResponseToProject(out, state.TeamID)
 	tflog.Trace(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -359,7 +356,7 @@ func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 		return
 	}
 
-	result := convertResponseToProject(out, plan.TeamID, plan.RootDirectory)
+	result := convertResponseToProject(out, plan.TeamID)
 	tflog.Trace(ctx, "updated project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -449,7 +446,7 @@ func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResour
 	if teamID == "" {
 		stringTypeTeamID.Null = true
 	}
-	result := convertResponseToProject(out, stringTypeTeamID, types.String{Unknown: true})
+	result := convertResponseToProject(out, stringTypeTeamID)
 	tflog.Trace(ctx, "imported project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,

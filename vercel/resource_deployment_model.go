@@ -28,6 +28,7 @@ type Deployment struct {
 	ID              types.String      `tfsdk:"id"`
 	Production      types.Bool        `tfsdk:"production"`
 	ProjectID       types.String      `tfsdk:"project_id"`
+	PathPrefix      types.String      `tfsdk:"path_prefix"`
 	ProjectSettings *ProjectSettings  `tfsdk:"project_settings"`
 	TeamID          types.String      `tfsdk:"team_id"`
 	URL             types.String      `tfsdk:"url"`
@@ -68,10 +69,6 @@ func (p *ProjectSettings) toRequest() map[string]interface{} {
 
 	if p.RootDirectory.Null {
 		res["rootDirectory"] = nil
-	}
-	if p.RootDirectory.Value != "" {
-		v := trimFilePath(p.RootDirectory.Value)
-		res["rootDirectory"] = &v
 	}
 
 	return res
@@ -118,13 +115,28 @@ func (d *Deployment) getFiles() ([]client.DeploymentFile, map[string]client.Depl
 		}
 		sha := sizeSha[1]
 
+		untrimmedFilename := filename
+		if d.PathPrefix.Unknown || d.PathPrefix.Null {
+			for strings.HasPrefix(filename, "../") {
+				filename = strings.TrimPrefix(filename, "../")
+			}
+		} else {
+			filename = strings.TrimPrefix(filename, d.PathPrefix.Value)
+		}
 		file := client.DeploymentFile{
-			File: trimFilePath(filename),
+			File: filename,
 			Sha:  sha,
 			Size: size,
 		}
 		files = append(files, file)
-		filesBySha[sha] = file
+
+		/* The API can return a set of missing files. When this happens, we want the path name
+		 * complete with the original, untrimmed prefix. */
+		filesBySha[sha] = client.DeploymentFile{
+			File: untrimmedFilename,
+			Sha:  sha,
+			Size: size,
+		}
 	}
 	return files, filesBySha, nil
 }
@@ -171,6 +183,7 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		URL:             types.String{Value: response.URL},
 		Production:      production,
 		Files:           plan.Files,
+		PathPrefix:      fillStringNull(plan.PathPrefix),
 		ProjectSettings: plan.ProjectSettings.fillNulls(),
 	}
 }

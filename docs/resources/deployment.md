@@ -26,18 +26,20 @@ Once the build step has completed successfully, a new, immutable deployment will
 
 ```terraform
 # In this example, we are assuming that a nextjs UI
-# exists in a `ui` directory alongside any terraform.
+# exists in a `ui` directory and any terraform exists in a `terraform` directory.
 # E.g.
 # ```
 # ui/
 #    src/
-#    next.config.js
+#        index.js
+#    package.json
 #    // etc...
-# main.tf
+# terraform/
+#    main.tf
 # ```
 
 data "vercel_project_directory" "example" {
-  path = "ui"
+  path = "../ui"
 }
 
 data "vercel_project" "example" {
@@ -45,9 +47,10 @@ data "vercel_project" "example" {
 }
 
 resource "vercel_deployment" "example" {
-  project_id = data.vercel_project.example.id
-  files      = data.vercel_project_directory.example.files
-  production = true
+  project_id  = data.vercel_project.example.id
+  files       = data.vercel_project_directory.example.files
+  path_prefix = data.vercel_project_directory.example.path
+  production  = true
 
   environment = {
     FOO = "bar"
@@ -66,6 +69,7 @@ resource "vercel_deployment" "example" {
 ### Optional
 
 - **environment** (Map of String) A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.
+- **path_prefix** (String) If specified then the `path_prefix` will be stripped from the start of file paths as they are uploaded to Vercel. If this is omitted, then any leading `../`s will be stripped.
 - **production** (Boolean) true if the deployment is a production deployment, meaning production aliases will be assigned.
 - **project_settings** (Attributes) Project settings that will be applied to the deployment. (see [below for nested schema](#nestedatt--project_settings))
 - **team_id** (String) The team ID to add the deployment to.

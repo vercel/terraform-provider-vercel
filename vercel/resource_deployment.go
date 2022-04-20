@@ -60,6 +60,12 @@ Once the build step has completed successfully, a new, immutable deployment will
 				Computed: true,
 				Type:     types.StringType,
 			},
+			"path_prefix": {
+				Description:   "If specified then the `path_prefix` will be stripped from the start of file paths as they are uploaded to Vercel. If this is omitted, then any leading `../`s will be stripped.",
+				Optional:      true,
+				Type:          types.StringType,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+			},
 			"url": {
 				Description: "A unique URL that is automatically generated for a deployment.",
 				Computed:    true,

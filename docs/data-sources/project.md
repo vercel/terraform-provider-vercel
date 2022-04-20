@@ -44,7 +44,7 @@ output "project_id" {
 
 - **build_command** (String) The build command for this project. If omitted, this value will be automatically detected.
 - **dev_command** (String) The dev command for this project. If omitted, this value will be automatically detected.
-- **environment** (Attributes List) A list of environment variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
+- **environment** (Attributes Set) A list of environment variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
 - **framework** (String) The framework that is being used for this project. If omitted, no framework is selected.
 - **git_repository** (Attributes) The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed. (see [below for nested schema](#nestedatt--git_repository))
 - **id** (String) The ID of this resource.
