@@ -20,6 +20,13 @@ type ProjectSettings struct {
 	RootDirectory   types.String `tfsdk:"root_directory"`
 }
 
+// GitSource represents the Git integration source for a deployment.
+type GitSource struct {
+	RepoId types.String `tfsdk:"repo_id"`
+	Ref    types.String `tfsdk:"ref"`
+	Type   types.String `tfsdk:"type"`
+}
+
 // Deployment represents the terraform state for a deployment resource.
 type Deployment struct {
 	Domains         types.List        `tfsdk:"domains"`
@@ -32,6 +39,7 @@ type Deployment struct {
 	ProjectSettings *ProjectSettings  `tfsdk:"project_settings"`
 	TeamID          types.String      `tfsdk:"team_id"`
 	URL             types.String      `tfsdk:"url"`
+	GitSource       *GitSource        `tfsdk:"git_source"`
 }
 
 // setIfNotUnknown is a helper function to set a value in a map if it is not unknown.
@@ -43,6 +51,16 @@ func setIfNotUnknown(m map[string]interface{}, v types.String, name string) {
 	if v.Value != "" {
 		m[name] = &v.Value
 	}
+}
+
+// toRequest takes the input of GitSource and converts them into the required
+// format for a CreateDeploymentRequest.
+func (g *GitSource) toRequest() client.GitSource {
+	var gs client.GitSource
+	gs.Ref = g.Ref.Value
+	gs.RepoId = g.RepoId.Value
+	gs.Type = g.Type.Value
+	return gs
 }
 
 // toRequest takes a set of ProjectSettings and converts them into the required
@@ -185,5 +203,6 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		Files:           plan.Files,
 		PathPrefix:      fillStringNull(plan.PathPrefix),
 		ProjectSettings: plan.ProjectSettings.fillNulls(),
+		GitSource:       plan.GitSource,
 	}
 }

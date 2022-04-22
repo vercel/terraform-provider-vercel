@@ -80,7 +80,7 @@ Once the build step has completed successfully, a new, immutable deployment will
 			},
 			"files": {
 				Description:   "A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source.",
-				Required:      true,
+				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type: types.MapType{
 					ElemType: types.StringType,
@@ -88,6 +88,34 @@ Once the build step has completed successfully, a new, immutable deployment will
 				Validators: []tfsdk.AttributeValidator{
 					mapItemsMinCount(1),
 				},
+			},
+			"git_source": {
+				Description:   "A map with the Git repo information",
+				Optional:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"repo_id": {
+						Required:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "Frontend git repo ID",
+					},
+					"ref": {
+						Required:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "Branch or commit hash",
+					},
+					"type": {
+						Required:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "Type of git repo, supported values are: github",
+						Validators: []tfsdk.AttributeValidator{
+							stringOneOf("github"),
+						},
+					},
+				}),
 			},
 			"project_settings": {
 				Description:   "Project settings that will be applied to the deployment.",
@@ -193,6 +221,7 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 		ProjectID:       plan.ProjectID.Value,
 		ProjectSettings: plan.ProjectSettings.toRequest(),
 		Target:          target,
+		GitSource:       plan.GitSource.toRequest(),
 	}
 
 	out, err := r.p.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
