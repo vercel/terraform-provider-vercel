@@ -93,6 +93,7 @@ resource "vercel_project" "example" {
 
 Optional:
 
+- **git_branch** (String) The git branch of the environment variable.
 - **id** (String) The ID of the environment variable
 - **key** (String) The name of the environment variable.
 - **target** (Set of String) The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.

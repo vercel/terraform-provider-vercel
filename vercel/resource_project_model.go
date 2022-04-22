@@ -30,11 +30,12 @@ func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 		}
 
 		out = append(out, client.EnvironmentVariable{
-			Key:    e.Key.Value,
-			Value:  e.Value.Value,
-			Target: target,
-			Type:   "encrypted",
-			ID:     e.ID.Value,
+			Key:       e.Key.Value,
+			Value:     e.Value.Value,
+			Target:    target,
+			GitBranch: toStrPointer(e.GitBranch),
+			Type:      "encrypted",
+			ID:        e.ID.Value,
 		})
 	}
 	return out
@@ -74,10 +75,11 @@ func (p *Project) toUpdateProjectRequest(oldName string) client.UpdateProjectReq
 
 // EnvironmentItem reflects the state terraform stores internally for a project's environment variable.
 type EnvironmentItem struct {
-	Target []types.String `tfsdk:"target"`
-	Key    types.String   `tfsdk:"key"`
-	Value  types.String   `tfsdk:"value"`
-	ID     types.String   `tfsdk:"id"`
+	Target    []types.String `tfsdk:"target"`
+	GitBranch types.String   `tfsdk:"git_branch"`
+	Key       types.String   `tfsdk:"key"`
+	Value     types.String   `tfsdk:"value"`
+	ID        types.String   `tfsdk:"id"`
 }
 
 func (e *EnvironmentItem) toUpsertEnvironmentVariableRequest() client.UpsertEnvironmentVariableRequest {
@@ -86,11 +88,12 @@ func (e *EnvironmentItem) toUpsertEnvironmentVariableRequest() client.UpsertEnvi
 		target = append(target, t.Value)
 	}
 	return client.UpsertEnvironmentVariableRequest{
-		Key:    e.Key.Value,
-		Value:  e.Value.Value,
-		Target: target,
-		Type:   "encrypted",
-		ID:     e.ID.Value,
+		Key:       e.Key.Value,
+		Value:     e.Value.Value,
+		Target:    target,
+		GitBranch: toStrPointer(e.GitBranch),
+		Type:      "encrypted",
+		ID:        e.ID.Value,
 	}
 }
 
@@ -125,10 +128,11 @@ func convertResponseToProject(response client.ProjectResponse, tid types.String)
 			target = append(target, types.String{Value: t})
 		}
 		env = append(env, EnvironmentItem{
-			Key:    types.String{Value: e.Key},
-			Value:  types.String{Value: e.Value},
-			Target: target,
-			ID:     types.String{Value: e.ID},
+			Key:       types.String{Value: e.Key},
+			Value:     types.String{Value: e.Value},
+			Target:    target,
+			GitBranch: fromStringPointer(e.GitBranch),
+			ID:        types.String{Value: e.ID},
 		})
 	}
 	teamID := types.String{Value: tid.Value}

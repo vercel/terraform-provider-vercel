@@ -61,6 +61,22 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 					testAccProjectExists("vercel_project.test_git", ""),
 					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.type", "github"),
 					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", "dglsparsons/test"),
+					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test_git", "environment.*", map[string]string{
+						"key":        "foo",
+						"value":      "bar",
+						"git_branch": "staging",
+					}),
+				),
+			},
+			{
+				Config: testAccProjectConfigWithGitRepoUpdated(projectSuffix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test_git", ""),
+					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test_git", "environment.*", map[string]string{
+						"key":        "foo",
+						"value":      "bar2",
+						"git_branch": "staging",
+					}),
 				),
 			},
 		},
@@ -245,6 +261,34 @@ resource "vercel_project" "test_git" {
     type = "github"
     repo = "dglsparsons/test"
   }
+  environment = [
+    {
+      key        = "foo"
+      value      = "bar"
+      target     = ["preview"]
+      git_branch = "staging"
+    }
+  ]
+}
+    `, projectSuffix)
+}
+
+func testAccProjectConfigWithGitRepoUpdated(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test_git" {
+  name = "test-acc-two-%s"
+  git_repository = {
+    type = "github"
+    repo = "dglsparsons/test"
+  }
+  environment = [
+    {
+      key        = "foo"
+      value      = "bar2"
+      target     = ["preview"]
+      git_branch = "staging"
+    }
+  ]
 }
     `, projectSuffix)
 }

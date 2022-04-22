@@ -73,6 +73,11 @@ terraform to your Deployment.
 						},
 						Required: true,
 					},
+					"git_branch": {
+						Description: "The git branch of the environment variable.",
+						Type:        types.StringType,
+						Optional:    true,
+					},
 					"key": {
 						Description: "The name of the environment variable.",
 						Type:        types.StringType,
@@ -247,6 +252,7 @@ func containsEnvVar(env []EnvironmentItem, v EnvironmentItem) bool {
 	for _, e := range env {
 		if e.Key == v.Key &&
 			e.Value == v.Value &&
+			e.GitBranch == v.GitBranch &&
 			len(e.Target) == len(v.Target) {
 			for i, t := range e.Target {
 				if t != v.Target[i] {

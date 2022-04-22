@@ -19,11 +19,12 @@ type GitRepository struct {
 // EnvironmentVariable defines the information Vercel requires and surfaces about an environment variable
 // that is associated with a project.
 type EnvironmentVariable struct {
-	Key    string   `json:"key"`
-	Value  string   `json:"value"`
-	Target []string `json:"target"`
-	Type   string   `json:"type"`
-	ID     string   `json:"id,omitempty"`
+	Key       string   `json:"key"`
+	Value     string   `json:"value"`
+	Target    []string `json:"target"`
+	GitBranch *string  `json:"gitBranch,omitempty"`
+	Type      string   `json:"type"`
+	ID        string   `json:"id,omitempty"`
 }
 
 // CreateProjectRequest defines the information necessary to create a project.
