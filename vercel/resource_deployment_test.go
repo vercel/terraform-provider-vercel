@@ -248,6 +248,24 @@ func testAccDeployment(t *testing.T, tid string) {
 	})
 }
 
+func TestAcc_DeployFromGitSource(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             noopDestroyCheck,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDeployFromGitSource(projectSuffix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDeploymentExists("vercel_deployment.test", ""),
+					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
+				),
+			},
+		},
+	})
+}
+
 func testAccDeploymentConfigWithNoDeployment(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
@@ -325,5 +343,22 @@ resource "vercel_deployment" "test" {
   project_id    = vercel_project.test.id
   files         = data.vercel_file.index.file
   path_prefix   = "../vercel/example"
+}`, projectSuffix)
+}
+
+func testAccDeployFromGitSource(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-deployment-%s"
+}
+
+resource "vercel_deployment" "test" {
+  project_id    = vercel_project.test.id
+  git_source = {
+    ref = "main"
+    repo_id = "452772221"
+    type = "github"
+  }
+  path_prefix   = "vercel/example"
 }`, projectSuffix)
 }

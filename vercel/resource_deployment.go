@@ -79,8 +79,8 @@ Once the build step has completed successfully, a new, immutable deployment will
 				Type:          types.BoolType,
 			},
 			"files": {
-				Description:   "A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source.",
-				Required:      true,
+				Description:   "A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source. Required if `git_source` is not set",
+				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type: types.MapType{
 					ElemType: types.StringType,
@@ -88,6 +88,34 @@ Once the build step has completed successfully, a new, immutable deployment will
 				Validators: []tfsdk.AttributeValidator{
 					mapItemsMinCount(1),
 				},
+			},
+			"git_source": {
+				Description:   "A map with the Git repo information. Required if `files` is not set",
+				Optional:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"repo_id": {
+						Required:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "Frontend git repo ID",
+					},
+					"ref": {
+						Required:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "Branch or commit hash",
+					},
+					"type": {
+						Required:      true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Type:          types.StringType,
+						Description:   "Type of git repo, supported values are: github",
+						Validators: []tfsdk.AttributeValidator{
+							stringOneOf("github", "gitlab", "bitbucket", "custom"),
+						},
+					},
+				}),
 			},
 			"project_settings": {
 				Description:   "Project settings that will be applied to the deployment.",
@@ -171,6 +199,14 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 		)
 		return
 	}
+	err := plan.checkMutualyExclusiveAttributes()
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating deployment",
+			"Error checking arguments: "+err.Error(),
+		)
+		return
+	}
 
 	files, filesBySha, err := plan.getFiles()
 	if err != nil {
@@ -192,12 +228,19 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 		return
 	}
 
+	var gitSource *client.GitSource
+	if plan.GitSource != nil {
+		gs := plan.GitSource.toRequest()
+		gitSource = &gs
+	}
+
 	cdr := client.CreateDeploymentRequest{
 		Files:           files,
 		Environment:     environment,
 		ProjectID:       plan.ProjectID.Value,
 		ProjectSettings: plan.ProjectSettings.toRequest(),
 		Target:          target,
+		GitSource:       gitSource,
 	}
 
 	out, err := r.p.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)

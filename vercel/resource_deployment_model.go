@@ -20,6 +20,13 @@ type ProjectSettings struct {
 	RootDirectory   types.String `tfsdk:"root_directory"`
 }
 
+// GitSource represents the Git integration source for a deployment.
+type GitSource struct {
+	RepoId types.String `tfsdk:"repo_id"`
+	Ref    types.String `tfsdk:"ref"`
+	Type   types.String `tfsdk:"type"`
+}
+
 // Deployment represents the terraform state for a deployment resource.
 type Deployment struct {
 	Domains         types.List        `tfsdk:"domains"`
@@ -33,6 +40,7 @@ type Deployment struct {
 	TeamID          types.String      `tfsdk:"team_id"`
 	URL             types.String      `tfsdk:"url"`
 	DeleteOnDestroy types.Bool        `tfsdk:"delete_on_destroy"`
+	GitSource       *GitSource        `tfsdk:"git_source"`
 }
 
 // setIfNotUnknown is a helper function to set a value in a map if it is not unknown.
@@ -43,6 +51,16 @@ func setIfNotUnknown(m map[string]interface{}, v types.String, name string) {
 	}
 	if v.Value != "" {
 		m[name] = &v.Value
+	}
+}
+
+// toRequest takes the input of GitSource and converts them into the required
+// format for a CreateDeploymentRequest.
+func (g *GitSource) toRequest() client.GitSource {
+	return client.GitSource{
+		Ref:    g.Ref.Value,
+		RepoId: g.RepoId.Value,
+		Type:   g.Type.Value,
 	}
 }
 
@@ -187,5 +205,19 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		PathPrefix:      fillStringNull(plan.PathPrefix),
 		ProjectSettings: plan.ProjectSettings.fillNulls(),
 		DeleteOnDestroy: plan.DeleteOnDestroy,
+		GitSource:       plan.GitSource,
 	}
+}
+
+// checkMutualyExclusiveAttributes checks whether git_source and files are not set at the same time
+func (d *Deployment) checkMutualyExclusiveAttributes() error {
+	// Error if both are nil
+	if d.Files != nil && d.GitSource != nil {
+		return fmt.Errorf("only one of \"files\" or \"git_source\" must be set, not both")
+	}
+	// Error if both are set
+	if d.Files == nil && d.GitSource == nil {
+		return fmt.Errorf("either \"files\" or \"git_source\" must be set")
+	}
+	return nil
 }

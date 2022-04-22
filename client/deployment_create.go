@@ -20,6 +20,11 @@ type DeploymentFile struct {
 	Sha  string `json:"sha"`
 	Size int    `json:"size"`
 }
+type GitSource struct {
+	RepoId string `json:"repoId"`
+	Ref    string `json:"ref"`
+	Type   string `json:"type"`
+}
 
 // CreateDeploymentRequest defines the request the Vercel API expects in order to create a deployment.
 type CreateDeploymentRequest struct {
@@ -35,6 +40,7 @@ type CreateDeploymentRequest struct {
 	Regions         []string               `json:"regions,omitempty"`
 	Routes          []interface{}          `json:"routes,omitempty"`
 	Target          string                 `json:"target,omitempty"`
+	GitSource       *GitSource             `json:"gitSource,omitempty"`
 }
 
 // DeploymentResponse defines the response the Vercel API returns when a deployment is created or updated.
@@ -59,15 +65,16 @@ type DeploymentResponse struct {
 	Build struct {
 		Environment []string `json:"env"`
 	} `json:"build"`
-	AliasAssigned    bool    `json:"aliasAssigned"`
-	ChecksConclusion string  `json:"checksConclusion"`
-	ErrorCode        string  `json:"errorCode"`
-	ErrorMessage     string  `json:"errorMessage"`
-	ID               string  `json:"id"`
-	ProjectID        string  `json:"projectId"`
-	ReadyState       string  `json:"readyState"`
-	Target           *string `json:"target"`
-	URL              string  `json:"url"`
+	AliasAssigned    bool      `json:"aliasAssigned"`
+	ChecksConclusion string    `json:"checksConclusion"`
+	ErrorCode        string    `json:"errorCode"`
+	ErrorMessage     string    `json:"errorMessage"`
+	ID               string    `json:"id"`
+	ProjectID        string    `json:"projectId"`
+	ReadyState       string    `json:"readyState"`
+	Target           *string   `json:"target"`
+	URL              string    `json:"url"`
+	GitSource        GitSource `json:"gitSource"`
 }
 
 // IsComplete is used to determine whether a deployment is still processing, or whether it is fully done.
