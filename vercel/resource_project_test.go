@@ -60,7 +60,7 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists("vercel_project.test_git", ""),
 					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.type", "github"),
-					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", "dglsparsons/test"),
+					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", testGithubRepo()),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test_git", "environment.*", map[string]string{
 						"key":        "foo",
 						"value":      "bar",
@@ -117,8 +117,7 @@ func testAccProjectExists(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no projectID is set")
 		}
 
-		c := client.New(os.Getenv("VERCEL_API_TOKEN"))
-		_, err := c.GetProject(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID)
 		return err
 	}
 }
@@ -134,8 +133,7 @@ func testAccProjectDestroy(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no projectID is set")
 		}
 
-		c := client.New(os.Getenv("VERCEL_API_TOKEN"))
-		_, err := c.GetProject(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID)
 
 		var apiErr client.APIError
 		if err == nil {
@@ -259,7 +257,7 @@ resource "vercel_project" "test_git" {
   name = "test-acc-two-%s"
   git_repository = {
     type = "github"
-    repo = "dglsparsons/test"
+    repo = "%s"
   }
   environment = [
     {
@@ -270,7 +268,7 @@ resource "vercel_project" "test_git" {
     }
   ]
 }
-    `, projectSuffix)
+    `, projectSuffix, testGithubRepo())
 }
 
 func testAccProjectConfigWithGitRepoUpdated(projectSuffix string) string {
@@ -279,7 +277,7 @@ resource "vercel_project" "test_git" {
   name = "test-acc-two-%s"
   git_repository = {
     type = "github"
-    repo = "dglsparsons/test"
+    repo = "%s"
   }
   environment = [
     {
@@ -290,7 +288,7 @@ resource "vercel_project" "test_git" {
     }
   ]
 }
-    `, projectSuffix)
+    `, projectSuffix, testGithubRepo())
 }
 
 func testAccProjectConfig(projectSuffix, extra string) string {

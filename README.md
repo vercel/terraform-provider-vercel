@@ -37,9 +37,12 @@ In order to test the provider, you can simply run `task test`.
 
 _Note:_ This runs acceptance tests that will create real resources. You should expect that the full acceptance test suite will take some time to run.
 
-The acceptance tests require a `VERCEL_API_TOKEN` (which can be generated [here](https://vercel.com/account/tokens), and
-a `VERCEL_TERRAFORM_TESTING_TEAM` (which should be a Vercel team_id where resources can be created and destroyed)
-environment variable set.
+The acceptance tests require a few environment variables to be set:
+* `VERCEL_API_TOKEN` - this can be generated [here](https://vercel.com/account/tokens)
+* `VERCEL_TERRAFORM_TESTING_TEAM` - a Vercel team_id where resources can be created and destroyed
+* `VERCEL_TERRAFORM_TESTING_GITHUB_REPO` - a github repository in the form 'org/repo' that can be used to trigger deployments
+* `VERCEL_TERRAFORM_TESTING_GITLAB_REPO` - a gitlab repository in the form 'namespace/repo' that can be used to trigger deployments
+* `VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO` - a bitbucket repository in the form 'project/repo' that can be used to trigger deployments
 
 ```sh
 $ task test

@@ -98,7 +98,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					"type": {
 						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
 						Type:        types.StringType,
-						Required:    true,
+						Computed:    true,
 						Validators: []tfsdk.AttributeValidator{
 							stringOneOf("github", "gitlab", "bitbucket"),
 						},
@@ -107,7 +107,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					"repo": {
 						Description:   "The name of the git repository. For example: `vercel/next.js`.",
 						Type:          types.StringType,
-						Required:      true,
+						Computed:      true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 					},
 				}),

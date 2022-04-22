@@ -21,6 +21,16 @@ type DeploymentFile struct {
 	Size int    `json:"size"`
 }
 
+type gitSource struct {
+	Type      string `json:"type"`
+	Org       string `json:"org,omitempty"`
+	Repo      string `json:"repo,omitempty"`
+	ProjectID int64  `json:"projectId,omitempty"`
+	Owner     string `json:"owner,omitempty"`
+	Slug      string `json:"slug,omitempty"`
+	Ref       string `json:"ref"`
+}
+
 // CreateDeploymentRequest defines the request the Vercel API expects in order to create a deployment.
 type CreateDeploymentRequest struct {
 	Files       []DeploymentFile       `json:"files,omitempty"`
@@ -35,6 +45,8 @@ type CreateDeploymentRequest struct {
 	Regions         []string               `json:"regions,omitempty"`
 	Routes          []interface{}          `json:"routes,omitempty"`
 	Target          string                 `json:"target,omitempty"`
+	GitSource       *gitSource             `json:"gitSource,omitempty"`
+	Ref             string                 `json:"-"`
 }
 
 // DeploymentResponse defines the response the Vercel API returns when a deployment is created or updated.
@@ -59,15 +71,16 @@ type DeploymentResponse struct {
 	Build struct {
 		Environment []string `json:"env"`
 	} `json:"build"`
-	AliasAssigned    bool    `json:"aliasAssigned"`
-	ChecksConclusion string  `json:"checksConclusion"`
-	ErrorCode        string  `json:"errorCode"`
-	ErrorMessage     string  `json:"errorMessage"`
-	ID               string  `json:"id"`
-	ProjectID        string  `json:"projectId"`
-	ReadyState       string  `json:"readyState"`
-	Target           *string `json:"target"`
-	URL              string  `json:"url"`
+	AliasAssigned    bool      `json:"aliasAssigned"`
+	ChecksConclusion string    `json:"checksConclusion"`
+	ErrorCode        string    `json:"errorCode"`
+	ErrorMessage     string    `json:"errorMessage"`
+	ID               string    `json:"id"`
+	ProjectID        string    `json:"projectId"`
+	ReadyState       string    `json:"readyState"`
+	Target           *string   `json:"target"`
+	URL              string    `json:"url"`
+	GitSource        gitSource `json:"gitSource"`
 }
 
 // IsComplete is used to determine whether a deployment is still processing, or whether it is fully done.
@@ -136,10 +149,52 @@ func (e MissingFilesError) Error() string {
 	return fmt.Sprintf("%s - %s", e.Code, e.Message)
 }
 
+func (c *Client) getGitSource(ctx context.Context, projectID, ref, teamID string) (gs gitSource, err error) {
+	project, err := c.GetProject(ctx, projectID, teamID)
+	if err != nil {
+		return gs, fmt.Errorf("error getting project: %w", err)
+	}
+	if project.Link == nil {
+		return gs, fmt.Errorf("unable to deploy project by ref: project has no linked git repository")
+	}
+
+	switch project.Link.Type {
+	case "github":
+		return gitSource{
+			Type: "github",
+			Org:  project.Link.Org,
+			Repo: project.Link.Repo,
+			Ref:  ref,
+		}, nil
+	case "gitlab":
+		return gitSource{
+			ProjectID: project.Link.ProjectID,
+			Type:      "gitlab",
+			Ref:       ref,
+		}, nil
+	case "bitbucket":
+		return gitSource{
+			Type:  "bitbucket",
+			Ref:   ref,
+			Owner: project.Link.Owner,
+			Slug:  project.Link.Slug,
+		}, nil
+	default:
+		return gs, fmt.Errorf("unable to deploy project by ref: project has no linked git repository")
+	}
+}
+
 // CreateDeployment creates a deployment within Vercel.
 func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentRequest, teamID string) (r DeploymentResponse, err error) {
 	request.Name = request.ProjectID                // Name is ignored if project is specified
 	request.Build.Environment = request.Environment // Ensure they are both the same, as project environment variables are
+	if request.Ref != "" {
+		gitSource, err := c.getGitSource(ctx, request.ProjectID, request.Ref, teamID)
+		if err != nil {
+			return r, err
+		}
+		request.GitSource = &gitSource
+	}
 	url := fmt.Sprintf("%s/v12/now/deployments?skipAutoDetectionConfirmation=1", c.baseURL)
 	if teamID != "" {
 		url = fmt.Sprintf("%s&teamId=%s", url, teamID)

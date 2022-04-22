@@ -79,8 +79,8 @@ Once the build step has completed successfully, a new, immutable deployment will
 				Type:          types.BoolType,
 			},
 			"files": {
-				Description:   "A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source.",
-				Required:      true,
+				Description:   "A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source. Required if `git_source` is not set.",
+				Optional:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 				Type: types.MapType{
 					ElemType: types.StringType,
@@ -88,6 +88,12 @@ Once the build step has completed successfully, a new, immutable deployment will
 				Validators: []tfsdk.AttributeValidator{
 					mapItemsMinCount(1),
 				},
+			},
+			"ref": {
+				Description:   "The branch or commit hash that should be deployed. Note this will only work if the project is configured to use a Git repository. Required if `ref` is not set.",
+				Optional:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Type:          types.StringType,
 			},
 			"project_settings": {
 				Description:   "Project settings that will be applied to the deployment.",
@@ -149,6 +155,29 @@ type resourceDeployment struct {
 	p provider
 }
 
+// ValidateConfig allows additional validation (specifically cross-field validation) to be added.
+func (r resourceDeployment) ValidateConfig(ctx context.Context, req tfsdk.ValidateResourceConfigRequest, resp *tfsdk.ValidateResourceConfigResponse) {
+	var config Deployment
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if config.Ref.Value != "" && !config.Files.Null {
+		resp.Diagnostics.AddError(
+			"Deployment Invalid",
+			"A Deployment cannot have both `ref` and `files` specified",
+		)
+	}
+	if config.Ref.Value == "" && config.Files.Null {
+		resp.Diagnostics.AddError(
+			"Deployment Invalid",
+			"A Deployment must have either `ref` or `files` specified",
+		)
+	}
+}
+
 // Create will create a deployment within Vercel. This is done by first attempting to trigger a deployment, seeing what
 // files are required, uploading those files, and then attempting to create a deployment again.
 // This is called automatically by the provider when a new resource should be created.
@@ -172,7 +201,13 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 		return
 	}
 
-	files, filesBySha, err := plan.getFiles()
+	var unparsedFiles map[string]string
+	diags = plan.Files.ElementsAs(ctx, &unparsedFiles, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	files, filesBySha, err := getFiles(unparsedFiles, plan.PathPrefix)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating deployment",
@@ -198,6 +233,7 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 		ProjectID:       plan.ProjectID.Value,
 		ProjectSettings: plan.ProjectSettings.toRequest(),
 		Target:          target,
+		Ref:             plan.Ref.Value,
 	}
 
 	out, err := r.p.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)

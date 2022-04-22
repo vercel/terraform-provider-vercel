@@ -22,17 +22,18 @@ type ProjectSettings struct {
 
 // Deployment represents the terraform state for a deployment resource.
 type Deployment struct {
-	Domains         types.List        `tfsdk:"domains"`
-	Environment     types.Map         `tfsdk:"environment"`
-	Files           map[string]string `tfsdk:"files"`
-	ID              types.String      `tfsdk:"id"`
-	Production      types.Bool        `tfsdk:"production"`
-	ProjectID       types.String      `tfsdk:"project_id"`
-	PathPrefix      types.String      `tfsdk:"path_prefix"`
-	ProjectSettings *ProjectSettings  `tfsdk:"project_settings"`
-	TeamID          types.String      `tfsdk:"team_id"`
-	URL             types.String      `tfsdk:"url"`
-	DeleteOnDestroy types.Bool        `tfsdk:"delete_on_destroy"`
+	Domains         types.List       `tfsdk:"domains"`
+	Environment     types.Map        `tfsdk:"environment"`
+	Files           types.Map        `tfsdk:"files"`
+	ID              types.String     `tfsdk:"id"`
+	Production      types.Bool       `tfsdk:"production"`
+	ProjectID       types.String     `tfsdk:"project_id"`
+	PathPrefix      types.String     `tfsdk:"path_prefix"`
+	ProjectSettings *ProjectSettings `tfsdk:"project_settings"`
+	TeamID          types.String     `tfsdk:"team_id"`
+	URL             types.String     `tfsdk:"url"`
+	DeleteOnDestroy types.Bool       `tfsdk:"delete_on_destroy"`
+	Ref             types.String     `tfsdk:"ref"`
 }
 
 // setIfNotUnknown is a helper function to set a value in a map if it is not unknown.
@@ -102,10 +103,11 @@ func (p *ProjectSettings) fillNulls() *ProjectSettings {
 // getFiles is a helper for turning the terraform deployment state into a set of client.DeploymentFile
 // structs, ready to hit the API with. It also returns a map of files by sha, which is used to quickly
 // look up any missing SHAs from the create deployment resposnse.
-func (d *Deployment) getFiles() ([]client.DeploymentFile, map[string]client.DeploymentFile, error) {
+func getFiles(unparsedFiles map[string]string, pathPrefix types.String) ([]client.DeploymentFile, map[string]client.DeploymentFile, error) {
 	var files []client.DeploymentFile
 	filesBySha := map[string]client.DeploymentFile{}
-	for filename, rawSizeAndSha := range d.Files {
+
+	for filename, rawSizeAndSha := range unparsedFiles {
 		sizeSha := strings.Split(rawSizeAndSha, "~")
 		if len(sizeSha) != 2 {
 			return nil, nil, fmt.Errorf("expected file to have format `filename: size~sha`, but could not parse")
@@ -117,12 +119,12 @@ func (d *Deployment) getFiles() ([]client.DeploymentFile, map[string]client.Depl
 		sha := sizeSha[1]
 
 		untrimmedFilename := filename
-		if d.PathPrefix.Unknown || d.PathPrefix.Null {
+		if pathPrefix.Unknown || pathPrefix.Null {
 			for strings.HasPrefix(filename, "../") {
 				filename = strings.TrimPrefix(filename, "../")
 			}
 		} else {
-			filename = strings.TrimPrefix(filename, d.PathPrefix.Value)
+			filename = strings.TrimPrefix(filename, pathPrefix.Value)
 		}
 		file := client.DeploymentFile{
 			File: filename,
@@ -172,6 +174,11 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		plan.Environment.Null = true
 	}
 
+	if plan.Files.Unknown || plan.Files.Null {
+		plan.Files.Unknown = false
+		plan.Files.Null = true
+	}
+
 	return Deployment{
 		Domains: types.List{
 			ElemType: types.StringType,
@@ -187,5 +194,6 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		PathPrefix:      fillStringNull(plan.PathPrefix),
 		ProjectSettings: plan.ProjectSettings.fillNulls(),
 		DeleteOnDestroy: plan.DeleteOnDestroy,
+		Ref:             types.String{Value: response.GitSource.Ref, Unknown: false, Null: response.GitSource.Ref == ""},
 	}
 }
