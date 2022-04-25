@@ -129,6 +129,11 @@ Once the build step has completed successfully, a new, immutable deployment will
 					},
 				}),
 			},
+			"delete_on_destroy": {
+				Description: "Set to true to delete the Vercel deployment when destroying the Terraform resource. Defaults to False",
+				Optional:    true,
+				Type:        types.BoolType,
+			},
 		},
 	}, nil
 }
@@ -305,10 +310,33 @@ func (r resourceDeployment) Update(ctx context.Context, req tfsdk.UpdateResource
 	// Nothing to do here - we can't update deployments
 }
 
-// Delete does nothing other than clear the existing terraform state for a Deployment.
-// This is done intentionally, as typically, Vercel users do not continually delete old Deployments.
+// Delete conditionally deletes a Deployment.
+// Typically, Vercel users do not delete old Deployments so deployments will be deleted only if delete_on_destroy parameter is set to true
 func (r resourceDeployment) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
-	tflog.Trace(ctx, "deleted deployment")
+	var state Deployment
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if state.DeleteOnDestroy.Value {
+		dResp, err := r.p.client.DeleteDeployment(ctx, state.ID.Value, state.TeamID.Value)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error deleting deployment",
+				fmt.Sprintf(
+					"Could not delete deployment %s, unexpected error: %s",
+					state.URL.Value,
+					err,
+				),
+			)
+			return
+		}
+		tflog.Trace(ctx, fmt.Sprintf("deleted deployment %s", dResp.UID))
+	} else {
+		tflog.Trace(ctx, fmt.Sprintf("deplyment %s deleted from the Terraform state", state.ID.Value))
+	}
 	resp.State.RemoveResource(ctx)
 }
 

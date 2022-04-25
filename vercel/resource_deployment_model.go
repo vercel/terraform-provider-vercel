@@ -32,6 +32,7 @@ type Deployment struct {
 	ProjectSettings *ProjectSettings  `tfsdk:"project_settings"`
 	TeamID          types.String      `tfsdk:"team_id"`
 	URL             types.String      `tfsdk:"url"`
+	DeleteOnDestroy types.Bool        `tfsdk:"delete_on_destroy"`
 }
 
 // setIfNotUnknown is a helper function to set a value in a map if it is not unknown.
@@ -185,5 +186,6 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		Files:           plan.Files,
 		PathPrefix:      fillStringNull(plan.PathPrefix),
 		ProjectSettings: plan.ProjectSettings.fillNulls(),
+		DeleteOnDestroy: plan.DeleteOnDestroy,
 	}
 }
