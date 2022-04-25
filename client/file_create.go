@@ -23,6 +23,7 @@ func (c *Client) CreateFile(ctx context.Context, filename, sha, content string) 
 	}
 
 	req.Header.Add("x-vercel-digest", sha)
+	req.Header.Set("Content-Type", "application/octet-stream")
 
 	tflog.Trace(ctx, "uploading file", map[string]interface{}{
 		"url":     url,

@@ -38,6 +38,8 @@ func (c *Client) CreateProjectDomain(ctx context.Context, projectID, teamID stri
 		return r, err
 	}
 
+	req.Header.Set("Content-Type", "application/json")
+
 	tflog.Trace(ctx, "creating project domain", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
