@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -30,7 +29,7 @@ func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID
 		ctx,
 		"GET",
 		url,
-		strings.NewReader(""),
+		nil,
 	)
 	if err != nil {
 		return r, err

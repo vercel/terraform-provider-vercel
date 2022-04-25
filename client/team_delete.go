@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -16,7 +15,7 @@ func (c *Client) DeleteTeam(ctx context.Context, teamID string) error {
 		ctx,
 		"DELETE",
 		url,
-		strings.NewReader(""),
+		nil,
 	)
 	if err != nil {
 		return err

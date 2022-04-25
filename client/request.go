@@ -22,10 +22,15 @@ func (e APIError) Error() string {
 
 // doRequest is a helper function for consistently requesting data from vercel.
 // This manages:
+// - Setting the default Content-Type for requests with a body
 // - Authorization via the Bearer token
 // - Converting error responses into an inspectable type
 // - Unmarshaling responses
 func (c *Client) doRequest(req *http.Request, v interface{}) error {
+	if req.Body != nil && req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.token))
 	resp, err := c.http().Do(req)
 	if err != nil {

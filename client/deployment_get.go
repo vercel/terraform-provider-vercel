@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -19,7 +18,7 @@ func (c *Client) GetDeployment(ctx context.Context, deploymentID, teamID string)
 		ctx,
 		"GET",
 		url,
-		strings.NewReader(""),
+		nil,
 	)
 	if err != nil {
 		return r, err
