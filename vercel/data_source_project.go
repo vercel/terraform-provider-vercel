@@ -78,6 +78,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Type:        types.StringType,
 						Computed:    true,
 					},
+					"git_branch": {
+						Description: "The git branch of the environment variable.",
+						Type:        types.StringType,
+						Computed:    true,
+					},
 				}, tfsdk.SetNestedAttributesOptions{}),
 			},
 			"framework": {
