@@ -31,8 +31,6 @@ func (c *Client) UpsertEnvironmentVariable(ctx context.Context, projectID, teamI
 		return err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-
 	tflog.Trace(ctx, "upserting environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,

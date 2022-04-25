@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -18,7 +17,7 @@ func (c *Client) getEnvironmentVariables(ctx context.Context, projectID, teamID 
 		ctx,
 		"GET",
 		url,
-		strings.NewReader(""),
+		nil,
 	)
 	if err != nil {
 		return nil, err

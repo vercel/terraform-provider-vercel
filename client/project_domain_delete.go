@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -20,7 +19,7 @@ func (c *Client) DeleteProjectDomain(ctx context.Context, projectID, domain, tea
 		ctx,
 		"DELETE",
 		url,
-		strings.NewReader(""),
+		nil,
 	)
 	if err != nil {
 		return err

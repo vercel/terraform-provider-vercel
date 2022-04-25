@@ -34,8 +34,6 @@ func (c *Client) UpdateProjectDomain(ctx context.Context, projectID, domain, tea
 		return r, err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-
 	tflog.Trace(ctx, "updating project domain", map[string]interface{}{
 		"url":     url,
 		"payload": payload,

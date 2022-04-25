@@ -155,8 +155,6 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 		return r, err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-
 	tflog.Trace(ctx, "creating deployment", map[string]interface{}{
 		"url":     url,
 		"payload": payload,

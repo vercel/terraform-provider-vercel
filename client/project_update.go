@@ -43,8 +43,6 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 		return r, err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-
 	tflog.Trace(ctx, "updating project", map[string]interface{}{
 		"url":     url,
 		"payload": payload,

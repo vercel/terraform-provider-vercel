@@ -57,8 +57,6 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 		return r, err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-
 	tflog.Trace(ctx, "creating project", map[string]interface{}{
 		"url":     url,
 		"payload": string(mustMarshal(request)),
