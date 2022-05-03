@@ -2,6 +2,7 @@ package vercel_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -160,6 +161,67 @@ func TestAcc_DeploymentWithPathPrefix(t *testing.T) {
 	})
 }
 
+func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
+	t.Parallel()
+	projectSuffix := acctest.RandString(16)
+	extraConfig := "delete_on_destroy = true"
+	deploymentId := ""
+	storeDeploymentId := func(n string, did *string) resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			rs, ok := s.RootModule().Resources[n]
+			if !ok {
+				return fmt.Errorf("not found: %s", n)
+			}
+			*did = rs.Primary.ID
+			return nil
+		}
+	}
+	testDeploymentGone := func() resource.TestCheckFunc {
+		return func(*terraform.State) error {
+			c := client.New(os.Getenv("VERCEL_API_TOKEN"))
+			_, err := c.GetDeployment(context.TODO(), deploymentId, "")
+			if err == nil {
+				return fmt.Errorf("expected not_found error, but got no error")
+			}
+
+			var apiErr client.APIError
+			if err == nil {
+				return fmt.Errorf("Found deployment but expected it to have been deleted")
+			}
+			if err != nil && errors.As(err, &apiErr) {
+				if apiErr.StatusCode == 404 {
+					return nil
+				}
+				return fmt.Errorf("Unexpected error checking for deleted deployment: %s", apiErr)
+			}
+			return err
+		}
+	}
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		CheckDestroy: func(s *terraform.State) error {
+			return nil
+		},
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDeploymentConfig(projectSuffix, "", extraConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDeploymentExists("vercel_deployment.test", ""),
+					storeDeploymentId("vercel_deployment.test", &deploymentId),
+				),
+			},
+			{
+				Config: testAccDeploymentConfigWithNoDeployment(projectSuffix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testDeploymentGone(),
+				),
+			},
+		},
+	})
+
+}
+
 func testAccDeployment(t *testing.T, tid string) {
 	projectSuffix := acctest.RandString(16)
 	extraConfig := ""
@@ -184,6 +246,21 @@ func testAccDeployment(t *testing.T, tid string) {
 			},
 		},
 	})
+}
+
+func testAccDeploymentConfigWithNoDeployment(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-deployment-%s"
+  environment = [
+    {
+      key    = "bar"
+      value  = "baz"
+      target = ["preview"]
+    }
+  ]
+}
+`, projectSuffix)
 }
 
 func testAccDeploymentConfig(projectSuffix, projectExtras, deploymentExtras string) string {
