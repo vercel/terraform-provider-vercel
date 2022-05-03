@@ -34,35 +34,35 @@ output "project_id" {
 
 ### Required
 
-- **name** (String) The name of the project.
+- `name` (String) The name of the project.
 
 ### Optional
 
-- **team_id** (String) The team ID the project exists beneath.
+- `team_id` (String) The team ID the project exists beneath.
 
 ### Read-Only
 
-- **build_command** (String) The build command for this project. If omitted, this value will be automatically detected.
-- **dev_command** (String) The dev command for this project. If omitted, this value will be automatically detected.
-- **environment** (Attributes Set) A list of environment variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
-- **framework** (String) The framework that is being used for this project. If omitted, no framework is selected.
-- **git_repository** (Attributes) The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed. (see [below for nested schema](#nestedatt--git_repository))
-- **id** (String) The ID of this resource.
-- **install_command** (String) The install command for this project. If omitted, this value will be automatically detected.
-- **output_directory** (String) The output directory of the project. When null is used this value will be automatically detected.
-- **public_source** (Boolean) Specifies whether the source code and logs of the deployments for this project should be public or not.
-- **root_directory** (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.
+- `build_command` (String) The build command for this project. If omitted, this value will be automatically detected.
+- `dev_command` (String) The dev command for this project. If omitted, this value will be automatically detected.
+- `environment` (Attributes Set) A list of environment variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
+- `framework` (String) The framework that is being used for this project. If omitted, no framework is selected.
+- `git_repository` (Attributes) The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed. (see [below for nested schema](#nestedatt--git_repository))
+- `id` (String) The ID of this resource.
+- `install_command` (String) The install command for this project. If omitted, this value will be automatically detected.
+- `output_directory` (String) The output directory of the project. When null is used this value will be automatically detected.
+- `public_source` (Boolean) Specifies whether the source code and logs of the deployments for this project should be public or not.
+- `root_directory` (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.
 
 <a id="nestedatt--environment"></a>
 ### Nested Schema for `environment`
 
 Read-Only:
 
-- **git_branch** (String) The git branch of the environment variable.
-- **id** (String) The ID of the environment variable
-- **key** (String) The name of the environment variable.
-- **target** (Set of String) The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.
-- **value** (String) The value of the environment variable.
+- `git_branch` (String) The git branch of the environment variable.
+- `id` (String) The ID of the environment variable
+- `key` (String) The name of the environment variable.
+- `target` (Set of String) The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.
+- `value` (String) The value of the environment variable.
 
 
 <a id="nestedatt--git_repository"></a>
@@ -70,7 +70,7 @@ Read-Only:
 
 Read-Only:
 
-- **repo** (String) The name of the git repository. For example: `vercel/next.js`.
-- **type** (String) The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.
+- `repo` (String) The name of the git repository. For example: `vercel/next.js`.
+- `type` (String) The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.
 
 

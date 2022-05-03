@@ -38,11 +38,11 @@ resource "vercel_deployment" "example" {
 
 ### Required
 
-- **path** (String) The path to the file on your filesystem. Note that the path is relative to the root of the terraform files.
+- `path` (String) The path to the file on your filesystem. Note that the path is relative to the root of the terraform files.
 
 ### Read-Only
 
-- **file** (Map of String) A map of filename to metadata about the file. The metadata contains the file size and hash, and allows a deployment to be created if the file changes.
-- **id** (String) The ID of this resource.
+- `file` (Map of String) A map of filename to metadata about the file. The metadata contains the file size and hash, and allows a deployment to be created if the file changes.
+- `id` (String) The ID of this resource.
 
 

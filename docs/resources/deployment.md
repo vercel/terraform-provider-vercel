@@ -63,32 +63,33 @@ resource "vercel_deployment" "example" {
 
 ### Required
 
-- **files** (Map of String) A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source.
-- **project_id** (String) The project ID to add the deployment to.
+- `files` (Map of String) A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source.
+- `project_id` (String) The project ID to add the deployment to.
 
 ### Optional
 
-- **environment** (Map of String) A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.
-- **path_prefix** (String) If specified then the `path_prefix` will be stripped from the start of file paths as they are uploaded to Vercel. If this is omitted, then any leading `../`s will be stripped.
-- **production** (Boolean) true if the deployment is a production deployment, meaning production aliases will be assigned.
-- **project_settings** (Attributes) Project settings that will be applied to the deployment. (see [below for nested schema](#nestedatt--project_settings))
-- **team_id** (String) The team ID to add the deployment to.
+- `delete_on_destroy` (Boolean) Set to true to hard delete the Vercel deployment when destroying the Terraform resource. If unspecified, deployments are retained indefinitely. Note that deleted deployments are not recoverable.
+- `environment` (Map of String) A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.
+- `path_prefix` (String) If specified then the `path_prefix` will be stripped from the start of file paths as they are uploaded to Vercel. If this is omitted, then any leading `../`s will be stripped.
+- `production` (Boolean) true if the deployment is a production deployment, meaning production aliases will be assigned.
+- `project_settings` (Attributes) Project settings that will be applied to the deployment. (see [below for nested schema](#nestedatt--project_settings))
+- `team_id` (String) The team ID to add the deployment to.
 
 ### Read-Only
 
-- **domains** (List of String) A list of all the domains (default domains, staging domains and production domains) that were assigned upon deployment creation.
-- **id** (String) The ID of this resource.
-- **url** (String) A unique URL that is automatically generated for a deployment.
+- `domains` (List of String) A list of all the domains (default domains, staging domains and production domains) that were assigned upon deployment creation.
+- `id` (String) The ID of this resource.
+- `url` (String) A unique URL that is automatically generated for a deployment.
 
 <a id="nestedatt--project_settings"></a>
 ### Nested Schema for `project_settings`
 
 Optional:
 
-- **build_command** (String) The build command for this deployment. If omitted, this value will be taken from the project or automatically detected
-- **framework** (String) The framework that is being used for this deployment. If omitted, no framework is selected
-- **install_command** (String) The install command for this deployment. If omitted, this value will be taken from the project or automatically detected
-- **output_directory** (String) The output directory of the deployment. If omitted, this value will be taken from the project or automatically detected
-- **root_directory** (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root
+- `build_command` (String) The build command for this deployment. If omitted, this value will be taken from the project or automatically detected.
+- `framework` (String) The framework that is being used for this deployment. If omitted, no framework is selected.
+- `install_command` (String) The install command for this deployment. If omitted, this value will be taken from the project or automatically detected.
+- `output_directory` (String) The output directory of the deployment. If omitted, this value will be taken from the project or automatically detected.
+- `root_directory` (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.
 
 

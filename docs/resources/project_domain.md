@@ -46,19 +46,19 @@ resource "vercel_project_domain" "example_redirect" {
 
 ### Required
 
-- **domain** (String) The domain name to associate with the project.
-- **project_id** (String) The project ID to add the deployment to.
+- `domain` (String) The domain name to associate with the project.
+- `project_id` (String) The project ID to add the deployment to.
 
 ### Optional
 
-- **git_branch** (String) Git branch to link to the project domain. Deployments from this git branch will be assigned the domain name.
-- **redirect** (String) The domain name that serves as a target destination for redirects.
-- **redirect_status_code** (Number) The HTTP status code to use when serving as a redirect.
-- **team_id** (String) The ID of the team the project exists under.
+- `git_branch` (String) Git branch to link to the project domain. Deployments from this git branch will be assigned the domain name.
+- `redirect` (String) The domain name that serves as a target destination for redirects.
+- `redirect_status_code` (Number) The HTTP status code to use when serving as a redirect.
+- `team_id` (String) The ID of the team the project exists under.
 
 ### Read-Only
 
-- **id** (String) The ID of this resource.
+- `id` (String) The ID of this resource.
 
 ## Import
 

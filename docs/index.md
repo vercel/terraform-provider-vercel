@@ -42,4 +42,4 @@ provider "vercel" {
 
 ### Optional
 
-- **api_token** (String, Sensitive) The Vercel API Token to use. This can also be specified with the `VERCEL_API_TOKEN` shell environment variable. Tokens can be created from your [Vercel settings](https://vercel.com/account/tokens).
+- `api_token` (String, Sensitive) The Vercel API Token to use. This can also be specified with the `VERCEL_API_TOKEN` shell environment variable. Tokens can be created from your [Vercel settings](https://vercel.com/account/tokens).
