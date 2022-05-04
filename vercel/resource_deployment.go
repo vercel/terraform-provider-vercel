@@ -281,9 +281,9 @@ func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequ
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading deployment",
-			fmt.Sprintf("Could not get project %s %s, unexpected error: %s",
+			fmt.Sprintf("Could not get deployment %s %s, unexpected error: %s",
 				state.TeamID.Value,
-				state.URL.Value,
+				state.ID.Value,
 				err,
 			),
 		)
@@ -303,15 +303,40 @@ func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequ
 	}
 }
 
-// Update is a noop as it is not possible to update an existing deployment. Instead, all
-// attributes must be set to force recreation.
-// This method has to exist, however, to satisfy the resource interface.
+// Update updates the deployment state.
+// Note that only the `delete_on_destroy` field is updatable, and this does not affect Vercel. So it is just a case
+// of setting terraform state.
 func (r resourceDeployment) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
-	// Nothing to do here - we can't update deployments
+	var plan Deployment
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		resp.Diagnostics.AddError(
+			"Error getting deployment plan",
+			"Error getting deployment plan",
+		)
+		return
+	}
+
+	var state Deployment
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Copy over the planned field only
+	state.DeleteOnDestroy = plan.DeleteOnDestroy
+	diags = resp.State.Set(ctx, state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Delete conditionally deletes a Deployment.
-// Typically, Vercel users do not delete old Deployments so deployments will be deleted only if delete_on_destroy parameter is set to true
+// Typically, Vercel users do not delete old Deployments so deployments will be deleted only if delete_on_destroy
+// parameter is set to true.
 func (r resourceDeployment) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	var state Deployment
 	diags := req.State.Get(ctx, &state)
@@ -335,7 +360,7 @@ func (r resourceDeployment) Delete(ctx context.Context, req tfsdk.DeleteResource
 		}
 		tflog.Trace(ctx, fmt.Sprintf("deleted deployment %s", dResp.UID))
 	} else {
-		tflog.Trace(ctx, fmt.Sprintf("deplyment %s deleted from the Terraform state", state.ID.Value))
+		tflog.Trace(ctx, fmt.Sprintf("deployment %s deleted from the Terraform state", state.ID.Value))
 	}
 	resp.State.RemoveResource(ctx)
 }
