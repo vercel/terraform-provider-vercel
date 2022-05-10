@@ -17,6 +17,9 @@ type DeleteDeploymentResponse struct {
 // DeleteDeployment deletes a deployment within Vercel.
 func (c *Client) DeleteDeployment(ctx context.Context, deploymentID string, teamID string) (r DeleteDeploymentResponse, err error) {
 	url := fmt.Sprintf("%s/v13/deployments/%s", c.baseURL, deploymentID)
+	if teamID != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	}
 	req, err := http.NewRequest(
 		"DELETE",
 		url,
@@ -25,13 +28,6 @@ func (c *Client) DeleteDeployment(ctx context.Context, deploymentID string, team
 	if err != nil {
 		return r, err
 	}
-
-	// Add query parameters
-	q := req.URL.Query()
-	if teamID != "" {
-		q.Add("teamId", teamID)
-	}
-	req.URL.RawQuery = q.Encode()
 
 	tflog.Trace(ctx, "deleting deployment", map[string]interface{}{
 		"url": url,

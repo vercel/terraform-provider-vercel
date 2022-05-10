@@ -2,7 +2,6 @@ package vercel_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -185,19 +184,14 @@ func testAccProjectDestroy(n, teamID string) resource.TestCheckFunc {
 		}
 
 		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID)
-
-		var apiErr client.APIError
 		if err == nil {
-			return fmt.Errorf("Found project but expected it to have been deleted")
+			return fmt.Errorf("expected not_found error, but got no error")
 		}
-		if err != nil && errors.As(err, &apiErr) {
-			if apiErr.StatusCode == 404 {
-				return nil
-			}
-			return fmt.Errorf("Unexpected error checking for deleted project: %s", apiErr)
+		if !client.NotFound(err) {
+			return fmt.Errorf("Unexpected error checking for deleted project: %s", err)
 		}
 
-		return err
+		return nil
 	}
 }
 

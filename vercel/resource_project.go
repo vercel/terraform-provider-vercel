@@ -154,8 +154,9 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				}),
 			},
 			"id": {
-				Computed: true,
-				Type:     types.StringType,
+				Computed:      true,
+				Type:          types.StringType,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 			},
 			"install_command": {
 				Optional:    true,
@@ -165,7 +166,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"output_directory": {
 				Optional:    true,
 				Type:        types.StringType,
-				Description: "The output directory of the project. When null is used this value will be automatically detected.",
+				Description: "The output directory of the project. If omitted, this value will be automatically detected.",
 			},
 			"public_source": {
 				Optional:    true,
@@ -175,7 +176,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"root_directory": {
 				Optional:    true,
 				Type:        types.StringType,
-				Description: "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.",
+				Description: "The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.",
 			},
 		},
 	}, nil
@@ -243,8 +244,7 @@ func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 	}
 
 	out, err := r.p.client.GetProject(ctx, state.ID.Value, state.TeamID.Value)
-	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
 	}

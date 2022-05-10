@@ -71,10 +71,12 @@ resource "vercel_project" "example" {
 - `environment` (Attributes Set) A set of environment variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
 - `framework` (String) The framework that is being used for this project. If omitted, no framework is selected.
 - `git_repository` (Attributes) The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed. (see [below for nested schema](#nestedatt--git_repository))
+- `ignore_command` (String) When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.
 - `install_command` (String) The install command for this project. If omitted, this value will be automatically detected.
-- `output_directory` (String) The output directory of the project. When null is used this value will be automatically detected.
+- `output_directory` (String) The output directory of the project. If omitted, this value will be automatically detected.
 - `public_source` (Boolean) Specifies whether the source code and logs of the deployments for this project should be public or not.
-- `root_directory` (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.
+- `root_directory` (String) The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.
+- `serverless_function_region` (String) The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.
 - `team_id` (String) The team ID to add the project to.
 
 ### Read-Only

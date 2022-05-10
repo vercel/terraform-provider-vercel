@@ -329,8 +329,7 @@ func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequ
 	}
 
 	out, err := r.p.client.GetDeployment(ctx, state.ID.Value, state.TeamID.Value)
-	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
 	}

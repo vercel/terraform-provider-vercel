@@ -2,7 +2,6 @@ package vercel_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -179,18 +178,11 @@ func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
 			if err == nil {
 				return fmt.Errorf("expected not_found error, but got no error")
 			}
+			if !client.NotFound(err) {
+				return fmt.Errorf("Unexpected error checking for deleted deployment: %s", err)
+			}
 
-			var apiErr client.APIError
-			if err == nil {
-				return fmt.Errorf("Found deployment but expected it to have been deleted")
-			}
-			if err != nil && errors.As(err, &apiErr) {
-				if apiErr.StatusCode == 404 {
-					return nil
-				}
-				return fmt.Errorf("Unexpected error checking for deleted deployment: %s", apiErr)
-			}
-			return err
+			return nil
 		}
 	}
 	resource.Test(t, resource.TestCase{
