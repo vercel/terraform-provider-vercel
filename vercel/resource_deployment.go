@@ -164,13 +164,13 @@ func (r resourceDeployment) ValidateConfig(ctx context.Context, req tfsdk.Valida
 		return
 	}
 
-	if config.Ref.Value != "" && !config.Files.Null {
+	if !config.Ref.Null && !config.Files.Null {
 		resp.Diagnostics.AddError(
 			"Deployment Invalid",
 			"A Deployment cannot have both `ref` and `files` specified",
 		)
 	}
-	if config.Ref.Value == "" && config.Files.Null {
+	if config.Ref.Null && config.Files.Null {
 		resp.Diagnostics.AddError(
 			"Deployment Invalid",
 			"A Deployment must have either `ref` or `files` specified",
