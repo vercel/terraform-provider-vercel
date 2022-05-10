@@ -388,7 +388,6 @@ func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 	err := r.p.client.DeleteProject(ctx, state.ID.Value, state.TeamID.Value)
 	var apiErr client.APIError
 	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
-		resp.State.RemoveResource(ctx)
 		return
 	}
 	if err != nil {
@@ -408,7 +407,6 @@ func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 		"team_id":    state.TeamID.Value,
 		"project_id": state.ID.Value,
 	})
-	resp.State.RemoveResource(ctx)
 }
 
 // splitID is a helper function for splitting an import ID into the corresponding parts.

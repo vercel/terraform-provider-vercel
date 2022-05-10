@@ -250,7 +250,6 @@ func (r resourceProjectDomain) Delete(ctx context.Context, req tfsdk.DeleteResou
 		"domain":     state.Domain.Value,
 		"team_id":    state.TeamID.Value,
 	})
-	resp.State.RemoveResource(ctx)
 }
 
 // splitProjectDomainID is a helper function for splitting an import ID into the corresponding parts.

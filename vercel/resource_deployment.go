@@ -395,14 +395,5 @@ func (r resourceDeployment) Delete(ctx context.Context, req tfsdk.DeleteResource
 			return
 		}
 		tflog.Trace(ctx, fmt.Sprintf("deleted deployment %s", dResp.UID))
-	} else {
-		tflog.Trace(ctx, fmt.Sprintf("deployment %s deleted from the Terraform state", state.ID.Value))
 	}
-	resp.State.RemoveResource(ctx)
-}
-
-// ImportState is not implemented as it is not possible to get all the required information for a
-// Deployment resource from the vercel API.
-func (r resourceDeployment) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStateNotImplemented(ctx, "", resp)
 }
