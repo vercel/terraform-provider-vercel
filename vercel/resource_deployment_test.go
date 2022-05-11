@@ -332,7 +332,7 @@ data "vercel_file" "index" {
 
 resource "vercel_deployment" "test" {
   project_id = vercel_project.test.id
-  files         = data.vercel_file.index.file
+  files      = data.vercel_file.index.file
   production = true
   project_settings = {
       root_directory = "vercel/example"
