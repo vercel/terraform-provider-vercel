@@ -161,23 +161,23 @@ func (c *Client) getGitSource(ctx context.Context, projectID, ref, teamID string
 	switch project.Link.Type {
 	case "github":
 		return gitSource{
-			Type: "github",
 			Org:  project.Link.Org,
-			Repo: project.Link.Repo,
 			Ref:  ref,
+			Repo: project.Link.Repo,
+			Type: "github",
 		}, nil
 	case "gitlab":
 		return gitSource{
 			ProjectID: project.Link.ProjectID,
-			Type:      "gitlab",
 			Ref:       ref,
+			Type:      "gitlab",
 		}, nil
 	case "bitbucket":
 		return gitSource{
-			Type:  "bitbucket",
-			Ref:   ref,
 			Owner: project.Link.Owner,
+			Ref:   ref,
 			Slug:  project.Link.Slug,
+			Type:  "bitbucket",
 		}, nil
 	default:
 		return gs, fmt.Errorf("unable to deploy project by ref: project has no linked git repository")

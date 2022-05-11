@@ -40,9 +40,9 @@ _Note:_ This runs acceptance tests that will create real resources. You should e
 The acceptance tests require a few environment variables to be set:
 * `VERCEL_API_TOKEN` - this can be generated [here](https://vercel.com/account/tokens)
 * `VERCEL_TERRAFORM_TESTING_TEAM` - a Vercel team_id where resources can be created and destroyed
-* `VERCEL_TERRAFORM_TESTING_GITHUB_REPO` - a github repository in the form 'org/repo' that can be used to trigger deployments
-* `VERCEL_TERRAFORM_TESTING_GITLAB_REPO` - a gitlab repository in the form 'namespace/repo' that can be used to trigger deployments
-* `VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO` - a bitbucket repository in the form 'project/repo' that can be used to trigger deployments
+* `VERCEL_TERRAFORM_TESTING_GITHUB_REPO` - a GitHub repository in the form 'org/repo' that can be used to trigger deployments
+* `VERCEL_TERRAFORM_TESTING_GITLAB_REPO` - a GitLab repository in the form 'namespace/repo' that can be used to trigger deployments
+* `VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO` - a Bitbucket repository in the form 'project/repo' that can be used to trigger deployments
 
 ```sh
 $ task test
