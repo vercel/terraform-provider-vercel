@@ -25,8 +25,7 @@ func testAccDeploymentExists(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no DeploymentID is set")
 		}
 
-		c := client.New(os.Getenv("VERCEL_API_TOKEN"))
-		_, err := c.GetDeployment(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient().GetDeployment(context.TODO(), rs.Primary.ID, teamID)
 		return err
 	}
 }
@@ -50,8 +49,7 @@ func testAccEnvironmentSet(n, teamID string, envs ...string) resource.TestCheckF
 			return fmt.Errorf("no DeploymentID is set")
 		}
 
-		c := client.New(os.Getenv("VERCEL_API_TOKEN"))
-		dpl, err := c.GetDeployment(context.TODO(), rs.Primary.ID, teamID)
+		dpl, err := testClient().GetDeployment(context.TODO(), rs.Primary.ID, teamID)
 		if err != nil {
 			return err
 		}
@@ -178,8 +176,7 @@ func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
 	}
 	testDeploymentGone := func() resource.TestCheckFunc {
 		return func(*terraform.State) error {
-			c := client.New(os.Getenv("VERCEL_API_TOKEN"))
-			_, err := c.GetDeployment(context.TODO(), deploymentId, "")
+			_, err := testClient().GetDeployment(context.TODO(), deploymentId, "")
 			if err == nil {
 				return fmt.Errorf("expected not_found error, but got no error")
 			}
@@ -246,6 +243,38 @@ func testAccDeployment(t *testing.T, tid string) {
 			},
 		},
 	})
+}
+
+func TestAcc_DeploymentWithGitSource(t *testing.T) {
+	tests := map[string]string{
+		"personal scope": "",
+		"team scope":     os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"),
+	}
+
+	for name, teamID := range tests {
+		t.Run(name, func(t *testing.T) {
+			extraConfig := ""
+			projectSuffix := acctest.RandString(16)
+			if teamID != "" {
+				extraConfig = fmt.Sprintf(`team_id = "%s"`, teamID)
+			}
+			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { testAccPreCheck(t) },
+				CheckDestroy:             noopDestroyCheck,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: testAccDeployFromGitSource(projectSuffix, extraConfig),
+						Check: resource.ComposeAggregateTestCheckFunc(
+							testAccDeploymentExists("vercel_deployment.bitbucket", teamID),
+							testAccDeploymentExists("vercel_deployment.gitlab", teamID),
+							testAccDeploymentExists("vercel_deployment.github", teamID),
+						),
+					},
+				},
+			})
+		})
+	}
 }
 
 func testAccDeploymentConfigWithNoDeployment(projectSuffix string) string {
@@ -326,4 +355,48 @@ resource "vercel_deployment" "test" {
   files         = data.vercel_file.index.file
   path_prefix   = "../vercel/example"
 }`, projectSuffix)
+}
+
+func testAccDeployFromGitSource(projectSuffix, extras string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "github" {
+  name = "test-acc-deployment-%[1]s-github"
+  git_repository = {
+      type = "github"
+      repo = "%[2]s"
+  }
+  %[5]s
+}
+resource "vercel_project" "gitlab" {
+  name = "test-acc-deployment-%[1]s-gitlab"
+  git_repository = {
+      type = "gitlab"
+      repo = "%[3]s"
+  }
+  %[5]s
+}
+resource "vercel_project" "bitbucket" {
+  name = "test-acc-deployment-%[1]s-bitbucket"
+  git_repository = {
+      type = "bitbucket"
+      repo = "%[4]s"
+  }
+  %[5]s
+}
+resource "vercel_deployment" "github" {
+  project_id = vercel_project.github.id
+  ref        = "main"
+  %[5]s
+}
+resource "vercel_deployment" "gitlab" {
+  project_id = vercel_project.gitlab.id
+  ref        = "main"
+  %[5]s
+}
+resource "vercel_deployment" "bitbucket" {
+  project_id = vercel_project.bitbucket.id
+  ref        = "main"
+  %[5]s
+}
+`, projectSuffix, testGithubRepo(), testGitlabRepo(), testBitbucketRepo(), extras)
 }

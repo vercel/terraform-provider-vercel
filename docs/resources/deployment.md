@@ -38,23 +38,38 @@ Once the build step has completed successfully, a new, immutable deployment will
 #    main.tf
 # ```
 
-data "vercel_project_directory" "example" {
+data "vercel_project_directory" "files_example" {
   path = "../ui"
 }
 
-data "vercel_project" "example" {
+data "vercel_project" "files_example" {
   name = "my-awesome-project"
 }
 
-resource "vercel_deployment" "example" {
-  project_id  = data.vercel_project.example.id
-  files       = data.vercel_project_directory.example.files
-  path_prefix = data.vercel_project_directory.example.path
+resource "vercel_deployment" "files_example" {
+  project_id  = data.vercel_project.files_example.id
+  files       = data.vercel_project_directory.files_example.files
+  path_prefix = data.vercel_project_directory.files_example.path
   production  = true
 
   environment = {
     FOO = "bar"
   }
+}
+
+## Or deploying a specific commit or branch
+resource "vercel_project" "git_example" {
+  name      = "my-awesome-git-project"
+  framework = "nextjs"
+  git_repository = {
+    type = "github"
+    repo = "vercel/some-repo"
+  }
+}
+
+resource "vercel_deployment" "git_example" {
+  project_id = vercel_project.git_example.id
+  ref        = "d92f10e" # or a git branch
 }
 ```
 
@@ -63,16 +78,17 @@ resource "vercel_deployment" "example" {
 
 ### Required
 
-- `files` (Map of String) A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source.
 - `project_id` (String) The project ID to add the deployment to.
 
 ### Optional
 
 - `delete_on_destroy` (Boolean) Set to true to hard delete the Vercel deployment when destroying the Terraform resource. If unspecified, deployments are retained indefinitely. Note that deleted deployments are not recoverable.
 - `environment` (Map of String) A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.
+- `files` (Map of String) A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source. Required if `git_source` is not set.
 - `path_prefix` (String) If specified then the `path_prefix` will be stripped from the start of file paths as they are uploaded to Vercel. If this is omitted, then any leading `../`s will be stripped.
 - `production` (Boolean) true if the deployment is a production deployment, meaning production aliases will be assigned.
 - `project_settings` (Attributes) Project settings that will be applied to the deployment. (see [below for nested schema](#nestedatt--project_settings))
+- `ref` (String) The branch or commit hash that should be deployed. Note this will only work if the project is configured to use a Git repository. Required if `ref` is not set.
 - `team_id` (String) The team ID to add the deployment to.
 
 ### Read-Only

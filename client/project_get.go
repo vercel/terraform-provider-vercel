@@ -59,6 +59,7 @@ type ProjectResponse struct {
 		// gitlab
 		ProjectNamespace string `json:"projectNamespace"`
 		ProjectName      string `json:"projectName"`
+		ProjectID        int64  `json:"projectId,string"`
 	} `json:"link"`
 	Name            string  `json:"name"`
 	OutputDirectory *string `json:"outputDirectory"`

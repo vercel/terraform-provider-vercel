@@ -34,8 +34,7 @@ func testAccProjectDomainExists(n, teamID, domain string) resource.TestCheckFunc
 			return fmt.Errorf("no projectID is set")
 		}
 
-		c := client.New(os.Getenv("VERCEL_API_TOKEN"))
-		_, err := c.GetProjectDomain(context.TODO(), rs.Primary.ID, domain, teamID)
+		_, err := testClient().GetProjectDomain(context.TODO(), rs.Primary.ID, domain, teamID)
 		return err
 	}
 }
@@ -51,8 +50,7 @@ func testAccProjectDomainDestroy(n, teamID, domain string) resource.TestCheckFun
 			return fmt.Errorf("no projectID is set")
 		}
 
-		c := client.New(os.Getenv("VERCEL_API_TOKEN"))
-		_, err := c.GetProjectDomain(context.TODO(), rs.Primary.ID, domain, teamID)
+		_, err := testClient().GetProjectDomain(context.TODO(), rs.Primary.ID, domain, teamID)
 		var apiErr client.APIError
 		if err == nil {
 			return fmt.Errorf("Found project domain but expected it to have been deleted")
