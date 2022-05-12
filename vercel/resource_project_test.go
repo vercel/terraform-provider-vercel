@@ -14,13 +14,63 @@ import (
 )
 
 func TestAcc_Project(t *testing.T) {
-	t.Parallel()
-	testAccProject(t, "")
-}
+	tests := map[string]string{
+		"personal scope": "",
+		"team scope":     os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"),
+	}
 
-func TestAcc_ProjectWithTeamID(t *testing.T) {
-	t.Parallel()
-	testAccProject(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
+	for name, teamID := range tests {
+		t.Run(name, func(t *testing.T) {
+			extraConfig := ""
+			testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
+			if teamID != "" {
+				extraConfig = fmt.Sprintf(`team_id = "%s"`, teamID)
+				testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", teamID)
+			}
+			projectSuffix := acctest.RandString(16)
+
+			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { testAccPreCheck(t) },
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				CheckDestroy:             testAccProjectDestroy("vercel_project.test", teamID),
+				Steps: []resource.TestStep{
+					// Create and Read testing
+					{
+						Config: testAccProjectConfig(projectSuffix, extraConfig),
+						Check: resource.ComposeAggregateTestCheckFunc(
+							testAccProjectExists("vercel_project.test", teamID),
+							testTeamID,
+							resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-project-%s", projectSuffix)),
+							resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
+							resource.TestCheckResourceAttr("vercel_project.test", "dev_command", "npm run serve"),
+							resource.TestCheckResourceAttr("vercel_project.test", "framework", "nextjs"),
+							resource.TestCheckResourceAttr("vercel_project.test", "install_command", "npm install"),
+							resource.TestCheckResourceAttr("vercel_project.test", "output_directory", ".output"),
+							resource.TestCheckResourceAttr("vercel_project.test", "public_source", "true"),
+							resource.TestCheckResourceAttr("vercel_project.test", "root_directory", "ui/src"),
+							resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
+								"key":   "foo",
+								"value": "bar",
+							}),
+							resource.TestCheckTypeSetElemAttr("vercel_project.test", "environment.0.target.*", "production"),
+						),
+					},
+					// Update testing
+					{
+						Config: testAccProjectConfigUpdated(projectSuffix, extraConfig),
+						Check: resource.ComposeAggregateTestCheckFunc(
+							resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-two-%s", projectSuffix)),
+							resource.TestCheckNoResourceAttr("vercel_project.test", "build_command"),
+							resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
+								"key":   "bar",
+								"value": "baz",
+							}),
+						),
+					},
+				},
+			})
+		})
+	}
 }
 
 func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
@@ -148,57 +198,6 @@ func testAccProjectDestroy(n, teamID string) resource.TestCheckFunc {
 
 		return err
 	}
-}
-
-func testAccProject(t *testing.T, tid string) {
-	extraConfig := ""
-	testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
-	if tid != "" {
-		extraConfig = fmt.Sprintf(`team_id = "%s"`, tid)
-		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", tid)
-	}
-	projectSuffix := acctest.RandString(16)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", tid),
-		Steps: []resource.TestStep{
-			// Create and Read testing
-			{
-				Config: testAccProjectConfig(projectSuffix, extraConfig),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", tid),
-					testTeamID,
-					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-project-%s", projectSuffix)),
-					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
-					resource.TestCheckResourceAttr("vercel_project.test", "dev_command", "npm run serve"),
-					resource.TestCheckResourceAttr("vercel_project.test", "framework", "nextjs"),
-					resource.TestCheckResourceAttr("vercel_project.test", "install_command", "npm install"),
-					resource.TestCheckResourceAttr("vercel_project.test", "output_directory", ".output"),
-					resource.TestCheckResourceAttr("vercel_project.test", "public_source", "true"),
-					resource.TestCheckResourceAttr("vercel_project.test", "root_directory", "ui/src"),
-					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
-						"key":   "foo",
-						"value": "bar",
-					}),
-					resource.TestCheckTypeSetElemAttr("vercel_project.test", "environment.0.target.*", "production"),
-				),
-			},
-			// Update testing
-			{
-				Config: testAccProjectConfigUpdated(projectSuffix, extraConfig),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-two-%s", projectSuffix)),
-					resource.TestCheckNoResourceAttr("vercel_project.test", "build_command"),
-					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
-						"key":   "bar",
-						"value": "baz",
-					}),
-				),
-			},
-		},
-	})
 }
 
 func testAccProjectConfigWithoutEnv(projectSuffix, extras string) string {
