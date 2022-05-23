@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
@@ -74,7 +73,7 @@ func TestAcc_Deployment(t *testing.T) {
 }
 
 func TestAcc_DeploymentWithTeamID(t *testing.T) {
-	testAccDeployment(t, os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"))
+	testAccDeployment(t, testTeam())
 }
 
 func TestAcc_DeploymentWithEnvironment(t *testing.T) {
@@ -248,7 +247,7 @@ func testAccDeployment(t *testing.T, tid string) {
 func TestAcc_DeploymentWithGitSource(t *testing.T) {
 	tests := map[string]string{
 		"personal scope": "",
-		"team scope":     os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM"),
+		"team scope":     testTeam(),
 	}
 
 	for name, teamID := range tests {

@@ -70,6 +70,6 @@ jobs:
           VERCEL_TERRAFORM_TESTING_GITHUB_REPO: "dglsparsons/test"
           VERCEL_TERRAFORM_TESTING_GITLAB_REPO: "dglsparsons/test"
           VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO: "dglsparsons-test/test"
-
+          VERCEL_TERRAFORM_TESTING_DOMAIN: "dgls.dev"
         run: |
           go test -v -cover ./...

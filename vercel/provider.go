@@ -47,6 +47,7 @@ func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceTyp
 		"vercel_deployment":     resourceDeploymentType{},
 		"vercel_project":        resourceProjectType{},
 		"vercel_project_domain": resourceProjectDomainType{},
+		"vercel_dns_record":     resourceDNSRecordType{},
 	}, nil
 }
 

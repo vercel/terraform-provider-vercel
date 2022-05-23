@@ -10,35 +10,35 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func int64ItemsIn(items ...int64) validatorInt64ItemsIn {
+func int64OneOf(items ...int64) validatorInt64OneOf {
 	itemMap := map[int64]struct{}{}
 	for _, i := range items {
 		itemMap[i] = struct{}{}
 	}
-	return validatorInt64ItemsIn{
+	return validatorInt64OneOf{
 		Items: itemMap,
 	}
 }
 
-type validatorInt64ItemsIn struct {
+type validatorInt64OneOf struct {
 	Items map[int64]struct{}
 }
 
-func (v validatorInt64ItemsIn) keys() (out []string) {
+func (v validatorInt64OneOf) keys() (out []string) {
 	for k := range v.Items {
 		out = append(out, strconv.Itoa(int(k)))
 	}
 	return
 }
 
-func (v validatorInt64ItemsIn) Description(ctx context.Context) string {
+func (v validatorInt64OneOf) Description(ctx context.Context) string {
 	return fmt.Sprintf("Item must be one of %s", strings.Join(v.keys(), " "))
 }
-func (v validatorInt64ItemsIn) MarkdownDescription(ctx context.Context) string {
+func (v validatorInt64OneOf) MarkdownDescription(ctx context.Context) string {
 	return fmt.Sprintf("Item must be one of `%s`", strings.Join(v.keys(), "` `"))
 }
 
-func (v validatorInt64ItemsIn) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
+func (v validatorInt64OneOf) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
 	var item types.Int64
 	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &item)
 	resp.Diagnostics.Append(diags...)
