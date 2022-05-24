@@ -16,14 +16,17 @@ import (
 // - setting the field to an empty value (e.g. '') will remove the setting for that field.
 // - omitting the value entirely from the request will _not_ update the field.
 type UpdateProjectRequest struct {
-	Name            *string `json:"name,omitempty"`
-	BuildCommand    *string `json:"buildCommand"`
-	DevCommand      *string `json:"devCommand"`
-	Framework       *string `json:"framework"`
-	InstallCommand  *string `json:"installCommand"`
-	OutputDirectory *string `json:"outputDirectory"`
-	PublicSource    *bool   `json:"publicSource"`
-	RootDirectory   *string `json:"rootDirectory"`
+	BuildCommand                *string `json:"buildCommand"`
+	CommandForIgnoringBuildStep *string `json:"commandForIgnoringBuildStep"`
+	DevCommand                  *string `json:"devCommand"`
+	Framework                   *string `json:"framework"`
+	InstallCommand              *string `json:"installCommand"`
+	Name                        *string `json:"name,omitempty"`
+	NodeVersion                 *string `json:"nodeVersion,omitempty"`
+	OutputDirectory             *string `json:"outputDirectory"`
+	PublicSource                *bool   `json:"publicSource"`
+	RootDirectory               *string `json:"rootDirectory"`
+	ServerlessFunctionRegion    *string `json:"serverlessFunctionRegion"`
 }
 
 // UpdateProject updates an existing projects configuration within vercel.
