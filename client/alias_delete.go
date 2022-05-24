@@ -15,7 +15,7 @@ type DeleteAliasResponse struct {
 
 // DeleteAlias deletes an alias within Vercel.
 func (c *Client) DeleteAlias(ctx context.Context, aliasUID string, teamID string) (r DeleteAliasResponse, err error) {
-	url := fmt.Sprintf("%s/now/aliases/%s", c.baseURL, aliasUID)
+	url := fmt.Sprintf("%s/v2/aliases/%s", c.baseURL, aliasUID)
 	req, err := http.NewRequest(
 		"DELETE",
 		url,
