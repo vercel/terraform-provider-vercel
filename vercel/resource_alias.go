@@ -119,7 +119,7 @@ func (r resourceAlias) Read(ctx context.Context, req tfsdk.ReadResourceRequest, 
 
 	out, err := r.p.client.GetAlias(ctx, state.UID.Value, state.TeamID.Value)
 	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if err != nil && (errors.As(err, &apiErr) && apiErr.StatusCode == 404) || (err != nil && err.Error() == "no content") {
 		resp.State.RemoveResource(ctx)
 		return
 	}

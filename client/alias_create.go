@@ -16,7 +16,7 @@ type CreateAliasRequest struct {
 
 // CreateAlias creates an alias within Vercel.
 func (c *Client) CreateAlias(ctx context.Context, request CreateAliasRequest, deploymentID string, teamID string) (r AliasResponse, err error) {
-	url := fmt.Sprintf("%s/now/deployments/%s/aliases", c.baseURL, deploymentID)
+	url := fmt.Sprintf("%s/v2/deployments/%s/aliases", c.baseURL, deploymentID)
 	if teamID != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
 	}

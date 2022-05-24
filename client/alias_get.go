@@ -16,7 +16,7 @@ type AliasResponse struct {
 
 // GetAlias retrieves information about an existing alias from vercel.
 func (c *Client) GetAlias(ctx context.Context, aliasID, teamID string) (r AliasResponse, err error) {
-	url := fmt.Sprintf("%s/now/aliases/%s", c.baseURL, aliasID)
+	url := fmt.Sprintf("%s/v3/aliases/%s", c.baseURL, aliasID)
 	if teamID != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
 	}
@@ -27,9 +27,8 @@ func (c *Client) GetAlias(ctx context.Context, aliasID, teamID string) (r AliasR
 		nil,
 	)
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("creating request: %s", err)
 	}
-
 	tflog.Trace(ctx, "getting alias", map[string]interface{}{
 		"url": url,
 	})
@@ -37,6 +36,5 @@ func (c *Client) GetAlias(ctx context.Context, aliasID, teamID string) (r AliasR
 	if err != nil {
 		return r, err
 	}
-
 	return r, nil
 }

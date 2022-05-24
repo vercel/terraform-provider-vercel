@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -56,6 +57,10 @@ func (c *Client) doRequest(req *http.Request, v interface{}) error {
 		errorResponse.StatusCode = resp.StatusCode
 		errorResponse.RawMessage = responseBody
 		return errorResponse
+	}
+	if resp.StatusCode == 204 {
+		//204 means "no content", we are treating it as an error
+		return errors.New("no content")
 	}
 
 	if v == nil {
