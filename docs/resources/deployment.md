@@ -8,6 +8,9 @@ description: |-
   When making deployments, the Project will be uploaded and transformed into a production-ready output through the use of a Build Step.
   Once the build step has completed successfully, a new, immutable deployment will be made available at the preview URL. Deployments are retained indefinitely unless deleted manually.
   -> In order to provide files to a deployment, you'll need to use the vercel_file or vercel_project_directory data sources.
+  ~> If you are creating Deployments through terraform and intend to use both preview and production
+  deployments, you may wish to 'layer' your terraform, creating the Project with a different set of
+  terraform to your Deployment.
 ---
 
 # vercel_deployment (Resource)
@@ -21,6 +24,10 @@ When making deployments, the Project will be uploaded and transformed into a pro
 Once the build step has completed successfully, a new, immutable deployment will be made available at the preview URL. Deployments are retained indefinitely unless deleted manually.
 
 -> In order to provide files to a deployment, you'll need to use the `vercel_file` or `vercel_project_directory` data sources.
+
+~> If you are creating Deployments through terraform and intend to use both preview and production
+deployments, you may wish to 'layer' your terraform, creating the Project with a different set of
+terraform to your Deployment.
 
 ## Example Usage
 
