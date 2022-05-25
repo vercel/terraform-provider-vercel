@@ -25,10 +25,6 @@ Provides a Project resource.
 A Project groups deployments and custom domains. To deploy on Vercel, you need to create a Project.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/overview).
-
-~> If you are creating Deployments through terraform and intend to use both preview and production
-deployments, you may wish to 'layer' your terraform, creating the Project with a different set of
-terraform to your Deployment.
         `,
 		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {

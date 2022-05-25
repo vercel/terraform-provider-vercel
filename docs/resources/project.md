@@ -6,9 +6,6 @@ description: |-
   Provides a Project resource.
   A Project groups deployments and custom domains. To deploy on Vercel, you need to create a Project.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/overview.
-  ~> If you are creating Deployments through terraform and intend to use both preview and production
-  deployments, you may wish to 'layer' your terraform, creating the Project with a different set of
-  terraform to your Deployment.
 ---
 
 # vercel_project (Resource)
@@ -18,10 +15,6 @@ Provides a Project resource.
 A Project groups deployments and custom domains. To deploy on Vercel, you need to create a Project.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/overview).
-
-~> If you are creating Deployments through terraform and intend to use both preview and production
-deployments, you may wish to 'layer' your terraform, creating the Project with a different set of
-terraform to your Deployment.
 
 ## Example Usage
 
@@ -113,5 +106,11 @@ Optional:
 Import is supported using the following syntax:
 
 ```shell
+# Import via the team_id and project_id.
+# team_id can be found in the team `settings` tab in the Vercel UI.
+# project_id can be found in the project `settings` tab in the Vercel UI.
 terraform import vercel_project.example team_xxxxxxxxxxxxxxxxxxxxxxxx/prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# If importing without a team, simply use the project ID.
+terraform import vercel_project.personal_example prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
