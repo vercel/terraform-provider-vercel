@@ -241,6 +241,16 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 		Ref:             plan.Ref.Value,
 	}
 
+	_, err = r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value)
+	var apiErr client.APIError
+	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+		resp.Diagnostics.AddError(
+			"Error creating deployment",
+			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
+		)
+		return
+	}
+
 	out, err := r.p.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
 	var mfErr client.MissingFilesError
 	if errors.As(err, &mfErr) {

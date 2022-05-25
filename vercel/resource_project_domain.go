@@ -98,6 +98,16 @@ func (r resourceProjectDomain) Create(ctx context.Context, req tfsdk.CreateResou
 		return
 	}
 
+	_, err := r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value)
+	var apiErr client.APIError
+	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+		resp.Diagnostics.AddError(
+			"Error creating project domain",
+			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
+		)
+		return
+	}
+
 	out, err := r.p.client.CreateProjectDomain(ctx, plan.ProjectID.Value, plan.TeamID.Value, plan.toCreateRequest())
 	if err != nil {
 		resp.Diagnostics.AddError(
