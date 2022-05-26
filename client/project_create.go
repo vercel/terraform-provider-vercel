@@ -37,7 +37,6 @@ type CreateProjectRequest struct {
 	GitRepository               *GitRepository        `json:"gitRepository,omitempty"`
 	InstallCommand              *string               `json:"installCommand"`
 	Name                        string                `json:"name"`
-	NodeVersion                 *string               `json:"nodeVersion,omitempty"`
 	OutputDirectory             *string               `json:"outputDirectory"`
 	PublicSource                *bool                 `json:"publicSource"`
 	RootDirectory               *string               `json:"rootDirectory"`

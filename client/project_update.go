@@ -22,7 +22,6 @@ type UpdateProjectRequest struct {
 	Framework                   *string `json:"framework"`
 	InstallCommand              *string `json:"installCommand"`
 	Name                        *string `json:"name,omitempty"`
-	NodeVersion                 *string `json:"nodeVersion,omitempty"`
 	OutputDirectory             *string `json:"outputDirectory"`
 	PublicSource                *bool   `json:"publicSource"`
 	RootDirectory               *string `json:"rootDirectory"`

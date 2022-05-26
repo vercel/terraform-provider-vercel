@@ -16,7 +16,6 @@ type Project struct {
 	IgnoreCommand            types.String      `tfsdk:"ignore_command"`
 	InstallCommand           types.String      `tfsdk:"install_command"`
 	Name                     types.String      `tfsdk:"name"`
-	NodeVersion              types.String      `tfsdk:"node_version"`
 	OutputDirectory          types.String      `tfsdk:"output_directory"`
 	PublicSource             types.Bool        `tfsdk:"public_source"`
 	RootDirectory            types.String      `tfsdk:"root_directory"`
@@ -54,7 +53,6 @@ func (p *Project) toCreateProjectRequest() client.CreateProjectRequest {
 		GitRepository:               p.GitRepository.toCreateProjectRequest(),
 		InstallCommand:              toStrPointer(p.InstallCommand),
 		Name:                        p.Name.Value,
-		NodeVersion:                 toStrPointer(p.NodeVersion),
 		OutputDirectory:             toStrPointer(p.OutputDirectory),
 		PublicSource:                toBoolPointer(p.PublicSource),
 		RootDirectory:               toStrPointer(p.RootDirectory),
@@ -74,7 +72,6 @@ func (p *Project) toUpdateProjectRequest(oldName string) client.UpdateProjectReq
 		Framework:                   toStrPointer(p.Framework),
 		InstallCommand:              toStrPointer(p.InstallCommand),
 		Name:                        name,
-		NodeVersion:                 toStrPointer(p.NodeVersion),
 		OutputDirectory:             toStrPointer(p.OutputDirectory),
 		PublicSource:                toBoolPointer(p.PublicSource),
 		RootDirectory:               toStrPointer(p.RootDirectory),
@@ -159,7 +156,6 @@ func convertResponseToProject(response client.ProjectResponse, tid types.String)
 		IgnoreCommand:            fromStringPointer(response.CommandForIgnoringBuildStep),
 		InstallCommand:           fromStringPointer(response.InstallCommand),
 		Name:                     types.String{Value: response.Name},
-		NodeVersion:              types.String{Value: response.NodeVersion},
 		OutputDirectory:          fromStringPointer(response.OutputDirectory),
 		PublicSource:             fromBoolPointer(response.PublicSource),
 		RootDirectory:            fromStringPointer(response.RootDirectory),

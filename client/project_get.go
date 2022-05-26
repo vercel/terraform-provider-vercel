@@ -63,7 +63,6 @@ type ProjectResponse struct {
 		ProjectID        int64  `json:"projectId,string"`
 	} `json:"link"`
 	Name                     string  `json:"name"`
-	NodeVersion              string  `json:"nodeVersion"`
 	OutputDirectory          *string `json:"outputDirectory"`
 	PublicSource             *bool   `json:"publicSource"`
 	RootDirectory            *string `json:"rootDirectory"`

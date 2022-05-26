@@ -52,11 +52,6 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Type:        types.StringType,
 				Description: "The dev command for this project. If omitted, this value will be automatically detected.",
 			},
-			"node_version": {
-				Computed:    true,
-				Type:        types.StringType,
-				Description: "The version of Node.js that is used in the Build Step and for Serverless Functions. A new Deployment is required for your changes to take effect. Valid values are `16.x`, `14.x` or `12.x`.",
-			},
 			"ignore_command": {
 				Computed:    true,
 				Type:        types.StringType,
