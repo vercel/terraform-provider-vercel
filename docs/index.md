@@ -24,8 +24,8 @@ Use the navigation to the left to read about the available resources.
 terraform {
   required_providers {
     vercel = {
-      source  = "streetteam/vercel"
-      version = "~> 0.4"
+      source  = "vercel/vercel"
+      version = "~> 0.1"
     }
   }
 }
