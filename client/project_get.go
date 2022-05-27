@@ -40,15 +40,16 @@ func (r *ProjectResponse) Repository() *Repository {
 	return nil
 }
 
-// ProjectResponse defines the information vercel returns about a project.
+// ProjectResponse defines the information Vercel returns about a project.
 type ProjectResponse struct {
-	BuildCommand         *string               `json:"buildCommand"`
-	DevCommand           *string               `json:"devCommand"`
-	EnvironmentVariables []EnvironmentVariable `json:"env"`
-	Framework            *string               `json:"framework"`
-	ID                   string                `json:"id"`
-	InstallCommand       *string               `json:"installCommand"`
-	Link                 *struct {
+	BuildCommand                *string               `json:"buildCommand"`
+	CommandForIgnoringBuildStep *string               `json:"commandForIgnoringBuildStep"`
+	DevCommand                  *string               `json:"devCommand"`
+	EnvironmentVariables        []EnvironmentVariable `json:"env"`
+	Framework                   *string               `json:"framework"`
+	ID                          string                `json:"id"`
+	InstallCommand              *string               `json:"installCommand"`
+	Link                        *struct {
 		Type string `json:"type"`
 		// github
 		Org  string `json:"org"`
@@ -61,13 +62,14 @@ type ProjectResponse struct {
 		ProjectName      string `json:"projectName"`
 		ProjectID        int64  `json:"projectId,string"`
 	} `json:"link"`
-	Name            string  `json:"name"`
-	OutputDirectory *string `json:"outputDirectory"`
-	PublicSource    *bool   `json:"publicSource"`
-	RootDirectory   *string `json:"rootDirectory"`
+	Name                     string  `json:"name"`
+	OutputDirectory          *string `json:"outputDirectory"`
+	PublicSource             *bool   `json:"publicSource"`
+	RootDirectory            *string `json:"rootDirectory"`
+	ServerlessFunctionRegion *string `json:"serverlessFunctionRegion"`
 }
 
-// GetProject retrieves information about an existing project from vercel.
+// GetProject retrieves information about an existing project from Vercel.
 func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
 	if teamID != "" {

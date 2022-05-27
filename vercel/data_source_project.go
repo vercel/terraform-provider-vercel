@@ -52,6 +52,16 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Type:        types.StringType,
 				Description: "The dev command for this project. If omitted, this value will be automatically detected.",
 			},
+			"ignore_command": {
+				Computed:    true,
+				Type:        types.StringType,
+				Description: "When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.",
+			},
+			"serverless_function_region": {
+				Computed:    true,
+				Type:        types.StringType,
+				Description: "The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.",
+			},
 			"environment": {
 				Description: "A list of environment variables that should be configured for the project.",
 				Computed:    true,
@@ -91,9 +101,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The framework that is being used for this project. If omitted, no framework is selected.",
 			},
 			"git_repository": {
-				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
-				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				Description: "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
+				Computed:    true,
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"type": {
 						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
@@ -102,13 +111,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Validators: []tfsdk.AttributeValidator{
 							stringOneOf("github", "gitlab", "bitbucket"),
 						},
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 					},
 					"repo": {
-						Description:   "The name of the git repository. For example: `vercel/next.js`.",
-						Type:          types.StringType,
-						Computed:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						Description: "The name of the git repository. For example: `vercel/next.js`.",
+						Type:        types.StringType,
+						Computed:    true,
 					},
 				}),
 			},

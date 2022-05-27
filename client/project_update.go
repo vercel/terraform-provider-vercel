@@ -16,17 +16,19 @@ import (
 // - setting the field to an empty value (e.g. '') will remove the setting for that field.
 // - omitting the value entirely from the request will _not_ update the field.
 type UpdateProjectRequest struct {
-	Name            *string `json:"name,omitempty"`
-	BuildCommand    *string `json:"buildCommand"`
-	DevCommand      *string `json:"devCommand"`
-	Framework       *string `json:"framework"`
-	InstallCommand  *string `json:"installCommand"`
-	OutputDirectory *string `json:"outputDirectory"`
-	PublicSource    *bool   `json:"publicSource"`
-	RootDirectory   *string `json:"rootDirectory"`
+	BuildCommand                *string `json:"buildCommand"`
+	CommandForIgnoringBuildStep *string `json:"commandForIgnoringBuildStep"`
+	DevCommand                  *string `json:"devCommand"`
+	Framework                   *string `json:"framework"`
+	InstallCommand              *string `json:"installCommand"`
+	Name                        *string `json:"name,omitempty"`
+	OutputDirectory             *string `json:"outputDirectory"`
+	PublicSource                *bool   `json:"publicSource"`
+	RootDirectory               *string `json:"rootDirectory"`
+	ServerlessFunctionRegion    *string `json:"serverlessFunctionRegion"`
 }
 
-// UpdateProject updates an existing projects configuration within vercel.
+// UpdateProject updates an existing projects configuration within Vercel.
 func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, request UpdateProjectRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
 	if teamID != "" {

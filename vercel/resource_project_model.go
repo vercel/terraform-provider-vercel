@@ -7,18 +7,20 @@ import (
 
 // Project reflects the state terraform stores internally for a project.
 type Project struct {
-	BuildCommand    types.String      `tfsdk:"build_command"`
-	DevCommand      types.String      `tfsdk:"dev_command"`
-	Environment     []EnvironmentItem `tfsdk:"environment"`
-	Framework       types.String      `tfsdk:"framework"`
-	GitRepository   *GitRepository    `tfsdk:"git_repository"`
-	ID              types.String      `tfsdk:"id"`
-	InstallCommand  types.String      `tfsdk:"install_command"`
-	Name            types.String      `tfsdk:"name"`
-	OutputDirectory types.String      `tfsdk:"output_directory"`
-	PublicSource    types.Bool        `tfsdk:"public_source"`
-	RootDirectory   types.String      `tfsdk:"root_directory"`
-	TeamID          types.String      `tfsdk:"team_id"`
+	BuildCommand             types.String      `tfsdk:"build_command"`
+	DevCommand               types.String      `tfsdk:"dev_command"`
+	Environment              []EnvironmentItem `tfsdk:"environment"`
+	Framework                types.String      `tfsdk:"framework"`
+	GitRepository            *GitRepository    `tfsdk:"git_repository"`
+	ID                       types.String      `tfsdk:"id"`
+	IgnoreCommand            types.String      `tfsdk:"ignore_command"`
+	InstallCommand           types.String      `tfsdk:"install_command"`
+	Name                     types.String      `tfsdk:"name"`
+	OutputDirectory          types.String      `tfsdk:"output_directory"`
+	PublicSource             types.Bool        `tfsdk:"public_source"`
+	RootDirectory            types.String      `tfsdk:"root_directory"`
+	ServerlessFunctionRegion types.String      `tfsdk:"serverless_function_region"`
+	TeamID                   types.String      `tfsdk:"team_id"`
 }
 
 func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
@@ -43,16 +45,18 @@ func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 
 func (p *Project) toCreateProjectRequest() client.CreateProjectRequest {
 	return client.CreateProjectRequest{
-		Name:                 p.Name.Value,
-		BuildCommand:         toStrPointer(p.BuildCommand),
-		DevCommand:           toStrPointer(p.DevCommand),
-		EnvironmentVariables: parseEnvironment(p.Environment),
-		Framework:            toStrPointer(p.Framework),
-		GitRepository:        p.GitRepository.toCreateProjectRequest(),
-		InstallCommand:       toStrPointer(p.InstallCommand),
-		OutputDirectory:      toStrPointer(p.OutputDirectory),
-		PublicSource:         toBoolPointer(p.PublicSource),
-		RootDirectory:        toStrPointer(p.RootDirectory),
+		BuildCommand:                toStrPointer(p.BuildCommand),
+		CommandForIgnoringBuildStep: toStrPointer(p.IgnoreCommand),
+		DevCommand:                  toStrPointer(p.DevCommand),
+		EnvironmentVariables:        parseEnvironment(p.Environment),
+		Framework:                   toStrPointer(p.Framework),
+		GitRepository:               p.GitRepository.toCreateProjectRequest(),
+		InstallCommand:              toStrPointer(p.InstallCommand),
+		Name:                        p.Name.Value,
+		OutputDirectory:             toStrPointer(p.OutputDirectory),
+		PublicSource:                toBoolPointer(p.PublicSource),
+		RootDirectory:               toStrPointer(p.RootDirectory),
+		ServerlessFunctionRegion:    toStrPointer(p.ServerlessFunctionRegion),
 	}
 }
 
@@ -62,14 +66,16 @@ func (p *Project) toUpdateProjectRequest(oldName string) client.UpdateProjectReq
 		name = &p.Name.Value
 	}
 	return client.UpdateProjectRequest{
-		Name:            name,
-		BuildCommand:    toStrPointer(p.BuildCommand),
-		DevCommand:      toStrPointer(p.DevCommand),
-		Framework:       toStrPointer(p.Framework),
-		InstallCommand:  toStrPointer(p.InstallCommand),
-		OutputDirectory: toStrPointer(p.OutputDirectory),
-		RootDirectory:   toStrPointer(p.RootDirectory),
-		PublicSource:    toBoolPointer(p.PublicSource),
+		BuildCommand:                toStrPointer(p.BuildCommand),
+		CommandForIgnoringBuildStep: toStrPointer(p.IgnoreCommand),
+		DevCommand:                  toStrPointer(p.DevCommand),
+		Framework:                   toStrPointer(p.Framework),
+		InstallCommand:              toStrPointer(p.InstallCommand),
+		Name:                        name,
+		OutputDirectory:             toStrPointer(p.OutputDirectory),
+		PublicSource:                toBoolPointer(p.PublicSource),
+		RootDirectory:               toStrPointer(p.RootDirectory),
+		ServerlessFunctionRegion:    toStrPointer(p.ServerlessFunctionRegion),
 	}
 }
 
@@ -141,17 +147,19 @@ func convertResponseToProject(response client.ProjectResponse, tid types.String)
 	}
 
 	return Project{
-		TeamID:          teamID,
-		ID:              types.String{Value: response.ID},
-		Name:            types.String{Value: response.Name},
-		BuildCommand:    fromStringPointer(response.BuildCommand),
-		DevCommand:      fromStringPointer(response.DevCommand),
-		Framework:       fromStringPointer(response.Framework),
-		InstallCommand:  fromStringPointer(response.InstallCommand),
-		OutputDirectory: fromStringPointer(response.OutputDirectory),
-		PublicSource:    fromBoolPointer(response.PublicSource),
-		RootDirectory:   fromStringPointer(response.RootDirectory),
-		GitRepository:   gr,
-		Environment:     env,
+		BuildCommand:             fromStringPointer(response.BuildCommand),
+		DevCommand:               fromStringPointer(response.DevCommand),
+		Environment:              env,
+		Framework:                fromStringPointer(response.Framework),
+		GitRepository:            gr,
+		ID:                       types.String{Value: response.ID},
+		IgnoreCommand:            fromStringPointer(response.CommandForIgnoringBuildStep),
+		InstallCommand:           fromStringPointer(response.InstallCommand),
+		Name:                     types.String{Value: response.Name},
+		OutputDirectory:          fromStringPointer(response.OutputDirectory),
+		PublicSource:             fromBoolPointer(response.PublicSource),
+		RootDirectory:            fromStringPointer(response.RootDirectory),
+		ServerlessFunctionRegion: fromStringPointer(response.ServerlessFunctionRegion),
+		TeamID:                   teamID,
 	}
 }

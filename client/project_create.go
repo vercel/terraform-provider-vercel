@@ -29,16 +29,18 @@ type EnvironmentVariable struct {
 
 // CreateProjectRequest defines the information necessary to create a project.
 type CreateProjectRequest struct {
-	Name                 string                `json:"name"`
-	BuildCommand         *string               `json:"buildCommand"`
-	DevCommand           *string               `json:"devCommand"`
-	EnvironmentVariables []EnvironmentVariable `json:"environmentVariables"`
-	Framework            *string               `json:"framework"`
-	GitRepository        *GitRepository        `json:"gitRepository,omitempty"`
-	InstallCommand       *string               `json:"installCommand"`
-	OutputDirectory      *string               `json:"outputDirectory"`
-	PublicSource         *bool                 `json:"publicSource"`
-	RootDirectory        *string               `json:"rootDirectory"`
+	BuildCommand                *string               `json:"buildCommand"`
+	CommandForIgnoringBuildStep *string               `json:"commandForIgnoringBuildStep,omitempty"`
+	DevCommand                  *string               `json:"devCommand"`
+	EnvironmentVariables        []EnvironmentVariable `json:"environmentVariables"`
+	Framework                   *string               `json:"framework"`
+	GitRepository               *GitRepository        `json:"gitRepository,omitempty"`
+	InstallCommand              *string               `json:"installCommand"`
+	Name                        string                `json:"name"`
+	OutputDirectory             *string               `json:"outputDirectory"`
+	PublicSource                *bool                 `json:"publicSource"`
+	RootDirectory               *string               `json:"rootDirectory"`
+	ServerlessFunctionRegion    *string               `json:"serverlessFunctionRegion,omitempty"`
 }
 
 // CreateProject will create a project within Vercel.

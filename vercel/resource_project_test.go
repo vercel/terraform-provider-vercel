@@ -47,6 +47,8 @@ func TestAcc_Project(t *testing.T) {
 							resource.TestCheckResourceAttr("vercel_project.test", "output_directory", ".output"),
 							resource.TestCheckResourceAttr("vercel_project.test", "public_source", "true"),
 							resource.TestCheckResourceAttr("vercel_project.test", "root_directory", "ui/src"),
+							resource.TestCheckResourceAttr("vercel_project.test", "ignore_command", "echo 'wat'"),
+							resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "syd1"),
 							resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
 								"key":   "foo",
 								"value": "bar",
@@ -296,6 +298,8 @@ resource "vercel_project" "test" {
   %s
   build_command = "npm run build"
   dev_command = "npm run serve"
+  ignore_command = "echo 'wat'"
+  serverless_function_region = "syd1"
   framework = "nextjs"
   install_command = "npm install"
   output_directory = ".output"
