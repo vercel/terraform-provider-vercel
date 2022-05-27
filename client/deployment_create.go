@@ -29,6 +29,7 @@ type gitSource struct {
 	Owner     string `json:"owner,omitempty"`
 	Slug      string `json:"slug,omitempty"`
 	Ref       string `json:"ref"`
+	SHA       string `json:"sha"`
 }
 
 // CreateDeploymentRequest defines the request the Vercel API expects in order to create a deployment.

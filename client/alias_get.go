@@ -10,8 +10,9 @@ import (
 
 // AliasResponse defines the response the Vercel API returns for an alias.
 type AliasResponse struct {
-	UID   string `json:"uid"`
-	Alias string `json:"alias"`
+	UID          string `json:"uid"`
+	Alias        string `json:"alias"`
+	DeploymentId string `json:"deploymentId"`
 }
 
 // GetAlias retrieves information about an existing alias from vercel.
