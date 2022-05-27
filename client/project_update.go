@@ -28,7 +28,7 @@ type UpdateProjectRequest struct {
 	ServerlessFunctionRegion    *string `json:"serverlessFunctionRegion"`
 }
 
-// UpdateProject updates an existing projects configuration within vercel.
+// UpdateProject updates an existing projects configuration within Vercel.
 func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, request UpdateProjectRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
 	if teamID != "" {

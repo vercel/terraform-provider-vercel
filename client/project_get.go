@@ -40,7 +40,7 @@ func (r *ProjectResponse) Repository() *Repository {
 	return nil
 }
 
-// ProjectResponse defines the information vercel returns about a project.
+// ProjectResponse defines the information Vercel returns about a project.
 type ProjectResponse struct {
 	BuildCommand                *string               `json:"buildCommand"`
 	CommandForIgnoringBuildStep *string               `json:"commandForIgnoringBuildStep"`
@@ -69,7 +69,7 @@ type ProjectResponse struct {
 	ServerlessFunctionRegion *string `json:"serverlessFunctionRegion"`
 }
 
-// GetProject retrieves information about an existing project from vercel.
+// GetProject retrieves information about an existing project from Vercel.
 func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
 	if teamID != "" {
