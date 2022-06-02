@@ -270,7 +270,12 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 				return
 			}
 
-			err = r.p.client.CreateFile(ctx, f.File, f.Sha, string(content))
+			err = r.p.client.CreateFile(ctx, client.CreateFileRequest{
+				Filename: f.File,
+				SHA:      f.Sha,
+				Content:  string(content),
+				TeamID:   plan.TeamID.Value,
+			})
 			if err != nil {
 				resp.Diagnostics.AddError(
 					"Error uploading deployment file",
