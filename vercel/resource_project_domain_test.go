@@ -2,7 +2,6 @@ package vercel_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 

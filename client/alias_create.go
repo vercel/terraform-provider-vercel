@@ -14,6 +14,12 @@ type CreateAliasRequest struct {
 	Alias string `json:"alias"`
 }
 
+// The create Alias endpoint does not return the full AliasResponse, only the UID and Alias.
+type createAliasResponse struct {
+	UID   string `json:"uid"`
+	Alias string `json:"alias"`
+}
+
 // CreateAlias creates an alias within Vercel.
 func (c *Client) CreateAlias(ctx context.Context, request CreateAliasRequest, deploymentID string, teamID string) (r AliasResponse, err error) {
 	url := fmt.Sprintf("%s/v2/deployments/%s/aliases", c.baseURL, deploymentID)
@@ -35,10 +41,15 @@ func (c *Client) CreateAlias(ctx context.Context, request CreateAliasRequest, de
 		"url":     url,
 		"payload": payload,
 	})
-	err = c.doRequest(req, &r)
+	var aliasResponse createAliasResponse
+	err = c.doRequest(req, &aliasResponse)
 	if err != nil {
 		return r, err
 	}
 
-	return r, nil
+	return AliasResponse{
+		UID:          aliasResponse.UID,
+		Alias:        aliasResponse.Alias,
+		DeploymentID: deploymentID,
+	}, nil
 }

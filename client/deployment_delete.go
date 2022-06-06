@@ -33,9 +33,5 @@ func (c *Client) DeleteDeployment(ctx context.Context, deploymentID string, team
 		"url": url,
 	})
 	err = c.doRequest(req, &r)
-	if err != nil {
-		return r, err
-	}
-
-	return r, nil
+	return r, err
 }
