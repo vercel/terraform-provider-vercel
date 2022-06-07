@@ -147,8 +147,7 @@ func (r resourceProjectDomain) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}
 
 	out, err := r.p.client.GetProjectDomain(ctx, state.ProjectID.Value, state.Domain.Value, state.TeamID.Value)
-	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
 	}

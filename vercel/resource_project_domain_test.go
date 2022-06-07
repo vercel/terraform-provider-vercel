@@ -2,7 +2,6 @@ package vercel_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -50,18 +49,13 @@ func testAccProjectDomainDestroy(n, teamID, domain string) resource.TestCheckFun
 		}
 
 		_, err := testClient().GetProjectDomain(context.TODO(), rs.Primary.ID, domain, teamID)
-		var apiErr client.APIError
 		if err == nil {
-			return fmt.Errorf("Found project domain but expected it to have been deleted")
+			return fmt.Errorf("expected not_found error, but got no error")
 		}
-		if err != nil && errors.As(err, &apiErr) {
-			if apiErr.StatusCode == 404 {
-				return nil
-			}
-			return fmt.Errorf("Unexpected error checking for deleted project domain: %s", apiErr)
+		if !client.NotFound(err) {
+			return fmt.Errorf("Unexpected error checking for deleted deployment: %s", err)
 		}
-
-		return err
+		return nil
 	}
 }
 

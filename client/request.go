@@ -45,13 +45,17 @@ func (c *Client) doRequest(req *http.Request, v interface{}) error {
 
 	if resp.StatusCode >= 300 {
 		var errorResponse APIError
+		if string(responseBody) == "" {
+			errorResponse.StatusCode = resp.StatusCode
+			return errorResponse
+		}
 		err = json.Unmarshal(responseBody, &struct {
 			Error *APIError `json:"error"`
 		}{
 			Error: &errorResponse,
 		})
 		if err != nil {
-			return fmt.Errorf("error unmarshaling response: %w", err)
+			return fmt.Errorf("error unmarshaling response for status code %d: %w", resp.StatusCode, err)
 		}
 		errorResponse.StatusCode = resp.StatusCode
 		errorResponse.RawMessage = responseBody
