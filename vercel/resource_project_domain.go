@@ -38,8 +38,9 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 				Description:   "The ID of the team the project exists under.",
 			},
 			"id": {
-				Computed: true,
-				Type:     types.StringType,
+				Computed:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
+				Type:          types.StringType,
 			},
 			"domain": {
 				Description:   "The domain name to associate with the project.",
