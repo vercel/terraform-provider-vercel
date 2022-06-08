@@ -51,7 +51,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Required:      true,
 				Type:          types.StringType,
 				Validators: []tfsdk.AttributeValidator{
-					stringOneOf("A", "AAAA", "ALIAS", "CAA", "CNAME", "MX", "SRV", "TXT"),
+					stringOneOf("A", "AAAA", "ALIAS", "CAA", "CNAME", "MX", "NS", "SRV", "TXT"),
 				},
 			},
 			"value": {
