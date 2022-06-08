@@ -35,8 +35,9 @@ terraform to your Deployment.
 `,
 		Attributes: map[string]tfsdk.Attribute{
 			"domains": {
-				Description: "A list of all the domains (default domains, staging domains and production domains) that were assigned upon deployment creation.",
-				Computed:    true,
+				Description:   "A list of all the domains (default domains, staging domains and production domains) that were assigned upon deployment creation.",
+				Computed:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
 				Type: types.ListType{
 					ElemType: types.StringType,
 				},
@@ -62,8 +63,9 @@ terraform to your Deployment.
 				Type:          types.StringType,
 			},
 			"id": {
-				Computed: true,
-				Type:     types.StringType,
+				Computed:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
+				Type:          types.StringType,
 			},
 			"path_prefix": {
 				Description:   "If specified then the `path_prefix` will be stripped from the start of file paths as they are uploaded to Vercel. If this is omitted, then any leading `../`s will be stripped.",
@@ -72,9 +74,10 @@ terraform to your Deployment.
 				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
 			},
 			"url": {
-				Description: "A unique URL that is automatically generated for a deployment.",
-				Computed:    true,
-				Type:        types.StringType,
+				Description:   "A unique URL that is automatically generated for a deployment.",
+				Computed:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
+				Type:          types.StringType,
 			},
 			"production": {
 				Description:   "true if the deployment is a production deployment, meaning production aliases will be assigned.",

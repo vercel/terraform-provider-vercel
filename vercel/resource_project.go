@@ -117,9 +117,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Sensitive:   true,
 					},
 					"id": {
-						Description: "The ID of the environment variable",
-						Type:        types.StringType,
-						Computed:    true,
+						Description:   "The ID of the environment variable",
+						Type:          types.StringType,
+						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
+						Computed:      true,
 					},
 				}, tfsdk.SetNestedAttributesOptions{}),
 			},
@@ -156,7 +157,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"id": {
 				Computed:      true,
 				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
 			},
 			"install_command": {
 				Optional:    true,

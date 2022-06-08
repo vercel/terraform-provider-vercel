@@ -233,35 +233,35 @@ resource "vercel_dns_record" "a" {
 }
 resource "vercel_dns_record" "aaaa" {
   domain = "%[1]s"
-  name  = "test-acc-%s-aaaa-record"
+  name  = "test-acc-%[2]s-aaaa-record"
   type  = "AAAA"
   ttl   = 120
   value = "::1"
 }
 resource "vercel_dns_record" "alias" {
   domain = "%[1]s"
-  name  = "test-acc-%s-alias"
+  name  = "test-acc-%[2]s-alias"
   type  = "ALIAS"
   ttl   = 120
   value = "example.com."
 }
 resource "vercel_dns_record" "caa" {
   domain = "%[1]s"
-  name   = "test-acc-%s-caa"
+  name   = "test-acc-%[2]s-caa"
   type   = "CAA"
   ttl    = 120
   value  = "0 issue \"letsencrypt.org\""
 }
 resource "vercel_dns_record" "cname" {
   domain = "%[1]s"
-  name  = "test-acc-%s-cname"
+  name  = "test-acc-%[2]s-cname"
   type  = "CNAME"
   ttl   = 120
   value = "example.com."
 }
 resource "vercel_dns_record" "mx" {
   domain = "%[1]s"
-  name        = "test-acc-%s-mx"
+  name        = "test-acc-%[2]s-mx"
   type        = "MX"
   ttl         = 120
   mx_priority = 123
