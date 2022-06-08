@@ -127,6 +127,11 @@ func TestAcc_DNSRecord(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "type", "TXT"),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "value", "terraform testing"),
+					testAccDNSRecordExists("vercel_dns_record.ns", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.ns", "domain", testDomain()),
+					resource.TestCheckResourceAttr("vercel_dns_record.ns", "type", "NS"),
+					resource.TestCheckResourceAttr("vercel_dns_record.ns", "ttl", "120"),
+					resource.TestCheckResourceAttr("vercel_dns_record.ns", "value", "example.com."),
 				),
 			},
 			{
@@ -176,6 +181,11 @@ func TestAcc_DNSRecord(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "type", "TXT"),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "value", "terraform testing two"),
+					testAccDNSRecordExists("vercel_dns_record.ns", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.ns", "domain", testDomain()),
+					resource.TestCheckResourceAttr("vercel_dns_record.ns", "type", "NS"),
+					resource.TestCheckResourceAttr("vercel_dns_record.ns", "ttl", "60"),
+					resource.TestCheckResourceAttr("vercel_dns_record.ns", "value", "example2.com."),
 				),
 			},
 			{
@@ -298,6 +308,13 @@ resource "vercel_dns_record" "txt" {
   ttl  = 120
   value = "terraform testing"
 }
+resource "vercel_dns_record" "ns" {
+  domain = "%[1]s"
+  name = "test-acc-%[2]s-ns"
+  type = "NS"
+  ttl  = 120
+  value = "example.com."
+}
 `, testDomain, nameSuffix)
 }
 
@@ -364,6 +381,13 @@ resource "vercel_dns_record" "txt" {
   type = "TXT"
   ttl  = 60
   value = "terraform testing two"
+}
+resource "vercel_dns_record" "ns" {
+  domain = "%[1]s"
+  name = "test-acc-%[2]s-ns-updated"
+  type = "NS"
+  ttl  = 60
+  value = "example2.com."
 }
 `, testDomain, nameSuffix)
 }
