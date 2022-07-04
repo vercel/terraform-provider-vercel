@@ -139,36 +139,35 @@ func (r resourceDNSRecord) ValidateConfig(ctx context.Context, req tfsdk.Validat
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if config.Type == "SRV" && config.SRV == nil {
+	if config.Type.Value == "SRV" && config.SRV == nil {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"A DNS Record type of 'SRV' requires the `srv` attribute to be set",
 		)
 	}
 
-	if config.Type == "SRV" && config.Value.Value != "" {
+	if config.Type.Value == "SRV" && !config.Value.Null {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"The `value` attribute should not be set on records of `type` 'SRV'",
 		)
 	}
 
-	if config.Type != "SRV" && config.SRV != nil {
+	if config.Type.Value != "SRV" && config.SRV != nil {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"The `srv` attribute should only be set on records of `type` 'SRV'",
 		)
 	}
 
-	if config.Type != "MX" && !config.MXPriority.Null {
+	if config.Type.Value != "MX" && !config.MXPriority.Null {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"The `mx_priority` attribute should only be set on records of `type` 'MX'",
 		)
 	}
 
-	if config.Type == "MX" && config.MXPriority.Null {
+	if config.Type.Value == "MX" && config.MXPriority.Null {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"A DNS Record type of 'MX' requires the `mx_priority` attribute to be set",
@@ -301,7 +300,7 @@ func (r resourceDNSRecord) Update(ctx context.Context, req tfsdk.UpdateResourceR
 			fmt.Sprintf(
 				"Could not update DNS Record %s for domain %s, unexpected error: %s",
 				state.ID.Value,
-				state.Domain,
+				state.Domain.Value,
 				err,
 			),
 		)
@@ -338,7 +337,7 @@ func (r resourceDNSRecord) Delete(ctx context.Context, req tfsdk.DeleteResourceR
 		return
 	}
 
-	err := r.p.client.DeleteDNSRecord(ctx, state.Domain, state.ID.Value, state.TeamID.Value)
+	err := r.p.client.DeleteDNSRecord(ctx, state.Domain.Value, state.ID.Value, state.TeamID.Value)
 	var apiErr client.APIError
 	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
 		// The DNS Record is already gone - do nothing.
@@ -350,7 +349,7 @@ func (r resourceDNSRecord) Delete(ctx context.Context, req tfsdk.DeleteResourceR
 			fmt.Sprintf(
 				"Could not delete DNS Record %s for domain %s, unexpected error: %s",
 				state.ID.Value,
-				state.Domain,
+				state.Domain.Value,
 				err,
 			),
 		)

@@ -11,41 +11,41 @@ import (
 
 // SRV reflect the state terraform stores internally for a nested SRV Record.
 type SRV struct {
-	Port     int64  `tfsdk:"port"`
-	Priority int64  `tfsdk:"priority"`
-	Target   string `tfsdk:"target"`
-	Weight   int64  `tfsdk:"weight"`
+	Port     types.Int64  `tfsdk:"port"`
+	Priority types.Int64  `tfsdk:"priority"`
+	Target   types.String `tfsdk:"target"`
+	Weight   types.Int64  `tfsdk:"weight"`
 }
 
 // DNSRecord reflects the state terraform stores internally for a DNS Record.
 type DNSRecord struct {
 	ID         types.String `tfsdk:"id"`
-	Domain     string       `tfsdk:"domain"`
+	Domain     types.String `tfsdk:"domain"`
 	MXPriority types.Int64  `tfsdk:"mx_priority"`
-	Name       string       `tfsdk:"name"`
+	Name       types.String `tfsdk:"name"`
 	SRV        *SRV         `tfsdk:"srv"`
 	TTL        types.Int64  `tfsdk:"ttl"`
 	TeamID     types.String `tfsdk:"team_id"`
-	Type       string       `tfsdk:"type"`
+	Type       types.String `tfsdk:"type"`
 	Value      types.String `tfsdk:"value"`
 }
 
 func (d DNSRecord) toCreateDNSRecordRequest() client.CreateDNSRecordRequest {
 	var srv *client.SRV = nil
-	if d.Type == "SRV" {
+	if d.Type.Value == "SRV" {
 		srv = &client.SRV{
-			Port:     d.SRV.Port,
-			Priority: d.SRV.Priority,
-			Target:   d.SRV.Target,
-			Weight:   d.SRV.Weight,
+			Port:     d.SRV.Port.Value,
+			Priority: d.SRV.Priority.Value,
+			Target:   d.SRV.Target.Value,
+			Weight:   d.SRV.Weight.Value,
 		}
 	}
 	return client.CreateDNSRecordRequest{
-		Domain:     d.Domain,
+		Domain:     d.Domain.Value,
 		MXPriority: d.MXPriority.Value,
-		Name:       d.Name,
+		Name:       d.Name.Value,
 		TTL:        d.TTL.Value,
-		Type:       d.Type,
+		Type:       d.Type.Value,
 		Value:      d.Value.Value,
 		SRV:        srv,
 	}
@@ -55,15 +55,15 @@ func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 	var srv *client.SRVUpdate = nil
 	if d.SRV != nil {
 		srv = &client.SRVUpdate{
-			Port:     &d.SRV.Port,
-			Priority: &d.SRV.Priority,
-			Target:   &d.SRV.Target,
-			Weight:   &d.SRV.Weight,
+			Port:     &d.SRV.Port.Value,
+			Priority: &d.SRV.Priority.Value,
+			Target:   &d.SRV.Target.Value,
+			Weight:   &d.SRV.Weight.Value,
 		}
 	}
 	return client.UpdateDNSRecordRequest{
 		MXPriority: toInt64Pointer(d.MXPriority),
-		Name:       &d.Name,
+		Name:       &d.Name.Value,
 		SRV:        srv,
 		TTL:        toInt64Pointer(d.TTL),
 		Value:      toStrPointer(d.Value),
@@ -77,13 +77,13 @@ func convertResponseToDNSRecord(r client.DNSRecord, tid types.String, value type
 	}
 
 	record = DNSRecord{
-		Domain:     r.Domain,
+		Domain:     types.String{Value: r.Domain},
 		ID:         types.String{Value: r.ID},
 		MXPriority: types.Int64{Null: true},
-		Name:       r.Name,
+		Name:       types.String{Value: r.Name},
 		TTL:        types.Int64{Value: r.TTL},
 		TeamID:     teamID,
-		Type:       r.RecordType,
+		Type:       types.String{Value: r.RecordType},
 	}
 
 	if r.RecordType == "SRV" {
@@ -110,14 +110,14 @@ func convertResponseToDNSRecord(r client.DNSRecord, tid types.String, value type
 			target = split[3]
 		}
 		record.SRV = &SRV{
-			Weight:   int64(weight),
-			Port:     int64(port),
-			Priority: int64(priority),
-			Target:   target,
+			Weight:   types.Int64{Value: int64(weight)},
+			Port:     types.Int64{Value: int64(port)},
+			Priority: types.Int64{Value: int64(priority)},
+			Target:   types.String{Value: target},
 		}
 		// SRV records have no value
 		record.Value = types.String{Null: true}
-		if srv != nil && fmt.Sprintf("%s.", srv.Target) == record.SRV.Target {
+		if srv != nil && fmt.Sprintf("%s.", srv.Target.Value) == record.SRV.Target.Value {
 			record.SRV.Target = srv.Target
 		}
 		return record, nil
