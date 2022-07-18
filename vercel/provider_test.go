@@ -1,6 +1,7 @@
 package vercel_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -25,7 +26,6 @@ func testAccPreCheck(t *testing.T) {
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_GITHUB_REPO")
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_GITLAB_REPO")
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO")
-	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_TEAM")
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_DOMAIN")
 }
 
@@ -57,6 +57,13 @@ func testBitbucketRepo() string {
 
 func testTeam() string {
 	return os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM")
+}
+
+func teamIDConfig() string {
+	if testTeam() == "" {
+		return ""
+	}
+	return fmt.Sprintf("team_id = \"%s\"", testTeam())
 }
 
 func testDomain() string {
