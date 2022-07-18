@@ -93,7 +93,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Type:        types.StringType,
 						Computed:    true,
 					},
-				}, tfsdk.SetNestedAttributesOptions{}),
+				}),
 			},
 			"framework": {
 				Computed:    true,

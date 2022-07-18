@@ -122,7 +122,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
 						Computed:      true,
 					},
-				}, tfsdk.SetNestedAttributesOptions{}),
+				}),
 			},
 			"framework": {
 				Optional:    true,
