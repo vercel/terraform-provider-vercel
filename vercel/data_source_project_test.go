@@ -16,7 +16,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectDataSourceConfig(name),
+				Config: testAccProjectDataSourceConfig(name, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_project.test", "name", "test-acc-"+name),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "build_command", "npm run build"),
@@ -37,7 +37,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectDataSourceConfig(name string) string {
+func testAccProjectDataSourceConfig(name, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-%s"
@@ -48,6 +48,7 @@ resource "vercel_project" "test" {
   output_directory = ".output"
   public_source = true
   root_directory = "ui/src"
+  %s
   environment = [
     {
       key    = "foo"
@@ -59,6 +60,7 @@ resource "vercel_project" "test" {
 
 data "vercel_project" "test" {
     name = vercel_project.test.name
+    %[2]s
 }
-`, name)
+`, name, teamID)
 }

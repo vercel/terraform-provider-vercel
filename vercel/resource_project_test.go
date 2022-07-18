@@ -12,65 +12,54 @@ import (
 )
 
 func TestAcc_Project(t *testing.T) {
-	tests := map[string]string{
-		"personal scope": "",
-		"team scope":     testTeam(),
+	testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
+	if testTeam() != "" {
+		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam())
 	}
+	projectSuffix := acctest.RandString(16)
 
-	for name, teamID := range tests {
-		t.Run(name, func(t *testing.T) {
-			extraConfig := ""
-			testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
-			if teamID != "" {
-				extraConfig = fmt.Sprintf(`team_id = "%s"`, teamID)
-				testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", teamID)
-			}
-			projectSuffix := acctest.RandString(16)
-
-			resource.Test(t, resource.TestCase{
-				PreCheck:                 func() { testAccPreCheck(t) },
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				CheckDestroy:             testAccProjectDestroy("vercel_project.test", teamID),
-				Steps: []resource.TestStep{
-					// Create and Read testing
-					{
-						Config: testAccProjectConfig(projectSuffix, extraConfig),
-						Check: resource.ComposeAggregateTestCheckFunc(
-							testAccProjectExists("vercel_project.test", teamID),
-							testTeamID,
-							resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-project-%s", projectSuffix)),
-							resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
-							resource.TestCheckResourceAttr("vercel_project.test", "dev_command", "npm run serve"),
-							resource.TestCheckResourceAttr("vercel_project.test", "framework", "nextjs"),
-							resource.TestCheckResourceAttr("vercel_project.test", "install_command", "npm install"),
-							resource.TestCheckResourceAttr("vercel_project.test", "output_directory", ".output"),
-							resource.TestCheckResourceAttr("vercel_project.test", "public_source", "true"),
-							resource.TestCheckResourceAttr("vercel_project.test", "root_directory", "ui/src"),
-							resource.TestCheckResourceAttr("vercel_project.test", "ignore_command", "echo 'wat'"),
-							resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "syd1"),
-							resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
-								"key":   "foo",
-								"value": "bar",
-							}),
-							resource.TestCheckTypeSetElemAttr("vercel_project.test", "environment.0.target.*", "production"),
-						),
-					},
-					// Update testing
-					{
-						Config: testAccProjectConfigUpdated(projectSuffix, extraConfig),
-						Check: resource.ComposeAggregateTestCheckFunc(
-							resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-two-%s", projectSuffix)),
-							resource.TestCheckNoResourceAttr("vercel_project.test", "build_command"),
-							resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
-								"key":   "bar",
-								"value": "baz",
-							}),
-						),
-					},
-				},
-			})
-		})
-	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: testAccProjectConfig(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test", testTeam()),
+					testTeamID,
+					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-project-%s", projectSuffix)),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
+					resource.TestCheckResourceAttr("vercel_project.test", "dev_command", "npm run serve"),
+					resource.TestCheckResourceAttr("vercel_project.test", "framework", "nextjs"),
+					resource.TestCheckResourceAttr("vercel_project.test", "install_command", "npm install"),
+					resource.TestCheckResourceAttr("vercel_project.test", "output_directory", ".output"),
+					resource.TestCheckResourceAttr("vercel_project.test", "public_source", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "root_directory", "ui/src"),
+					resource.TestCheckResourceAttr("vercel_project.test", "ignore_command", "echo 'wat'"),
+					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "syd1"),
+					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
+						"key":   "foo",
+						"value": "bar",
+					}),
+					resource.TestCheckTypeSetElemAttr("vercel_project.test", "environment.0.target.*", "production"),
+				),
+			},
+			// Update testing
+			{
+				Config: testAccProjectConfigUpdated(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-two-%s", projectSuffix)),
+					resource.TestCheckNoResourceAttr("vercel_project.test", "build_command"),
+					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
+						"key":   "bar",
+						"value": "baz",
+					}),
+				),
+			},
+		},
+	})
 }
 
 func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
@@ -79,18 +68,18 @@ func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", ""),
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfigWithoutEnv(projectSuffix, ""),
+				Config: testAccProjectConfigWithoutEnv(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", ""),
+					testAccProjectExists("vercel_project.test", testTeam()),
 				),
 			},
 			{
-				Config: testAccProjectConfigUpdated(projectSuffix, ""),
+				Config: testAccProjectConfigUpdated(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", ""),
+					testAccProjectExists("vercel_project.test", testTeam()),
 				),
 			},
 		},
@@ -103,12 +92,12 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test_git", ""),
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test_git", testTeam()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfigWithGitRepo(projectSuffix),
+				Config: testAccProjectConfigWithGitRepo(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test_git", ""),
+					testAccProjectExists("vercel_project.test_git", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.type", "github"),
 					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", testGithubRepo()),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test_git", "environment.*", map[string]string{
@@ -119,9 +108,9 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccProjectConfigWithGitRepoUpdated(projectSuffix),
+				Config: testAccProjectConfigWithGitRepoUpdated(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test_git", ""),
+					testAccProjectExists("vercel_project.test_git", testTeam()),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test_git", "environment.*", map[string]string{
 						"key":        "foo",
 						"value":      "bar2",
@@ -139,7 +128,7 @@ func TestAcc_ProjectImport(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", ""),
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProjectConfig(projectSuffix, ""),
@@ -195,16 +184,16 @@ func testAccProjectDestroy(n, teamID string) resource.TestCheckFunc {
 	}
 }
 
-func testAccProjectConfigWithoutEnv(projectSuffix, extras string) string {
+func testAccProjectConfigWithoutEnv(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-two-%s"
   %s
 }
-`, projectSuffix, extras)
+`, projectSuffix, teamID)
 }
 
-func testAccProjectConfigUpdated(projectSuffix, extras string) string {
+func testAccProjectConfigUpdated(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-two-%s"
@@ -242,13 +231,14 @@ resource "vercel_project" "test" {
     }
   ]
 }
-`, projectSuffix, extras)
+`, projectSuffix, teamID)
 }
 
-func testAccProjectConfigWithGitRepo(projectSuffix string) string {
+func testAccProjectConfigWithGitRepo(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test_git" {
   name = "test-acc-two-%s"
+  %s
   git_repository = {
     type = "github"
     repo = "%s"
@@ -262,13 +252,14 @@ resource "vercel_project" "test_git" {
     }
   ]
 }
-    `, projectSuffix, testGithubRepo())
+    `, projectSuffix, teamID, testGithubRepo())
 }
 
-func testAccProjectConfigWithGitRepoUpdated(projectSuffix string) string {
+func testAccProjectConfigWithGitRepoUpdated(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test_git" {
   name = "test-acc-two-%s"
+  %s
   git_repository = {
     type = "github"
     repo = "%s"
@@ -282,10 +273,10 @@ resource "vercel_project" "test_git" {
     }
   ]
 }
-    `, projectSuffix, testGithubRepo())
+    `, projectSuffix, teamID, testGithubRepo())
 }
 
-func testAccProjectConfig(projectSuffix, extra string) string {
+func testAccProjectConfig(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-project-%s"
@@ -332,5 +323,5 @@ resource "vercel_project" "test" {
     }
   ]
 }
-`, projectSuffix, extra)
+`, projectSuffix, teamID)
 }

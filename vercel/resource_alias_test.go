@@ -46,34 +46,13 @@ func TestAcc_AliasResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckAliasDestroyed("vercel_alias.test", ""),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAliasResourceConfig(name, ""),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAliasExists("", fmt.Sprintf("test-acc-%s.vercel.app", name)),
-					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
-					resource.TestCheckResourceAttrSet("vercel_alias.test", "id"),
-					resource.TestCheckResourceAttrSet("vercel_alias.test", "deployment_id"),
-				),
-			},
-		},
-	})
-}
-
-func TestAcc_AliasResourceTeam(t *testing.T) {
-	name := acctest.RandString(16)
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckAliasDestroyed("vercel_alias.test", testTeam()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAliasResourceConfig(name, fmt.Sprintf("team_id = \"%s\"", testTeam())),
+				Config: testAccAliasResourceConfig(name, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckAliasExists(testTeam(), fmt.Sprintf("test-acc-%s.vercel.app", name)),
 					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
-					resource.TestCheckResourceAttr("vercel_alias.test", "team_id", testTeam()),
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "deployment_id"),
 				),

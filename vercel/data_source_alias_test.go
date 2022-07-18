@@ -15,25 +15,7 @@ func TestAcc_AliasDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAliasDataSourceConfig(name, ""),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
-					resource.TestCheckResourceAttrSet("data.vercel_alias.test", "id"),
-					resource.TestCheckResourceAttrSet("data.vercel_alias.test", "deployment_id"),
-				),
-			},
-		},
-	})
-}
-
-func TestAcc_AliasDataSourceTeam(t *testing.T) {
-	name := acctest.RandString(16)
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAliasDataSourceConfig(name, fmt.Sprintf("team_id = \"%s\"", testTeam())),
+				Config: testAccAliasDataSourceConfig(name, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
 					resource.TestCheckResourceAttr("data.vercel_alias.test", "team_id", testTeam()),
