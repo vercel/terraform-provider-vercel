@@ -1,6 +1,7 @@
 package vercel
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
@@ -11,6 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+func removeCRLF(content []byte) []byte {
+	bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+	return content
+}
 
 type dataSourceFileType struct{}
 
@@ -81,6 +87,7 @@ func (r dataSourceFile) Read(ctx context.Context, req tfsdk.ReadDataSourceReques
 		)
 		return
 	}
+	content = removeCRLF(content)
 
 	rawSha := sha1.Sum(content)
 	sha := hex.EncodeToString(rawSha[:])
