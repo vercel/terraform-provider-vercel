@@ -1,12 +1,13 @@
 package vercel_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestAcc_ProjectDirectoryDataSource(t *testing.T) {
+func TestAcc_DataSourceProjectDirectory(t *testing.T) {
 	t.Parallel()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -16,8 +17,8 @@ func TestAcc_ProjectDirectoryDataSource(t *testing.T) {
 				Config: testAccProjectDirectoryConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_project_directory.test", "path", "example"),
-					resource.TestCheckResourceAttr("data.vercel_project_directory.test", "files.example/index.html", "60~9d3fedcc87ac72f54e75d4be7e06d0a6f8497e68"),
-					resource.TestCheckNoResourceAttr("data.vercel_project_directory.test", "files.example/file2.html"),
+					resource.TestCheckResourceAttr("data.vercel_project_directory.test", filepath.Join("files.example", "index.html"), "60~9d3fedcc87ac72f54e75d4be7e06d0a6f8497e68"),
+					resource.TestCheckNoResourceAttr("data.vercel_project_directory.test", filepath.Join("files.example", "file2.html")),
 				),
 			},
 		},

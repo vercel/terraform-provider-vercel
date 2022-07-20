@@ -42,7 +42,6 @@ jobs:
 
   test:
     name: Matrix Test
-    needs: build
     timeout-minutes: 15
     strategy:
       max-parallel: 1
@@ -80,4 +79,4 @@ jobs:
           VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO: "dglsparsons-test/test"
           VERCEL_TERRAFORM_TESTING_DOMAIN: "dgls.dev"
         run: |
-          go test -v -cover ./...
+          go test ./...

@@ -13,9 +13,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+/*
+* To have the content hash and file sizes remain consistent between different operating systems
+* (important as this prevents spurious file-changes, and thus spurious file uploads), make sure
+* the file content handles line-endings consistently, regardless of the host platform.
+* The simplest way to achieve this is just to replace CRLF with LF.
+ */
 func removeCRLF(content []byte) []byte {
-	bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-	return content
+	return bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
 }
 
 type dataSourceFileType struct{}
