@@ -274,7 +274,7 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 			}
 
 			err = r.p.client.CreateFile(ctx, client.CreateFileRequest{
-				Filename: f.File,
+				Filename: normaliseFilename(f.File, plan.PathPrefix),
 				SHA:      f.Sha,
 				Content:  string(content),
 				TeamID:   plan.TeamID.Value,

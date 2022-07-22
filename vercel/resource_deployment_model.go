@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -100,6 +101,30 @@ func (p *ProjectSettings) fillNulls() *ProjectSettings {
 	}
 }
 
+/*
+ * The files uploaded to Vercel need to have some minor adjustments:
+ * - Legacy behaviour was that any upward navigation ("../") was stripped from the
+ * start of a file path.
+ * - Newer behaviour introduced a `path_prefix` that could be specified, that would
+ * control what part of a relative path to files should be removed prior to uploading
+ * into Vercel.
+ * - We want to support this regardless of path separator, the simplest way to do
+ * this is to ensure all paths are converted to forward slashes, and settings should
+ * be specified using forward slashes.
+ * See https://github.com/vercel/terraform-provider-vercel/issues/14#issuecomment-1103973603
+ * for additional context on the first two points.
+ */
+func normaliseFilename(filename string, pathPrefix types.String) string {
+	filename = filepath.ToSlash(filename)
+	if pathPrefix.Unknown || pathPrefix.Null {
+		for strings.HasPrefix(filename, "../") {
+			return strings.TrimPrefix(filename, "../")
+		}
+	}
+
+	return strings.TrimPrefix(filename, filepath.ToSlash(pathPrefix.Value))
+}
+
 // getFiles is a helper for turning the terraform deployment state into a set of client.DeploymentFile
 // structs, ready to hit the API with. It also returns a map of files by sha, which is used to quickly
 // look up any missing SHAs from the create deployment resposnse.
@@ -118,25 +143,19 @@ func getFiles(unparsedFiles map[string]string, pathPrefix types.String) ([]clien
 		}
 		sha := sizeSha[1]
 
-		untrimmedFilename := filename
-		if pathPrefix.Unknown || pathPrefix.Null {
-			for strings.HasPrefix(filename, "../") {
-				filename = strings.TrimPrefix(filename, "../")
-			}
-		} else {
-			filename = strings.TrimPrefix(filename, pathPrefix.Value)
-		}
 		file := client.DeploymentFile{
-			File: filename,
+			File: normaliseFilename(filename, pathPrefix),
 			Sha:  sha,
 			Size: size,
 		}
 		files = append(files, file)
 
 		/* The API can return a set of missing files. When this happens, we want the path name
-		 * complete with the original, untrimmed prefix. */
+		 * complete with the original, untrimmed prefix. This also needs to use the hosts
+		 * path separator. This is so we can read the file.
+		 */
 		filesBySha[sha] = client.DeploymentFile{
-			File: untrimmedFilename,
+			File: filename,
 			Sha:  sha,
 			Size: size,
 		}

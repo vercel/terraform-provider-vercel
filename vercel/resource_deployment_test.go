@@ -173,7 +173,6 @@ func TestAcc_DeploymentWithPathPrefix(t *testing.T) {
 }
 
 func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
-	t.Parallel()
 	projectSuffix := acctest.RandString(16)
 	extraConfig := "delete_on_destroy = true"
 	deploymentID := ""
