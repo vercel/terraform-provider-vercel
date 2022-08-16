@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -25,10 +27,9 @@ For more detailed information, please see the [Vercel documentation](https://ver
         `,
 		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
-				Optional:      true,
-				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
-				Description:   "The team ID the project exists beneath.",
+				Optional:    true,
+				Type:        types.StringType,
+				Description: "The team ID the project exists beneath.",
 			},
 			"name": {
 				Required: true,
@@ -93,7 +94,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Type:        types.StringType,
 						Computed:    true,
 					},
-				}, tfsdk.SetNestedAttributesOptions{}),
+				}),
 			},
 			"framework": {
 				Computed:    true,
@@ -148,20 +149,20 @@ For more detailed information, please see the [Vercel documentation](https://ver
 }
 
 // NewDataSource instantiates a new DataSource of this DataSourceType.
-func (r dataSourceProjectType) NewDataSource(ctx context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+func (r dataSourceProjectType) NewDataSource(ctx context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	return dataSourceProject{
-		p: *(p.(*provider)),
+		p: *(p.(*vercelProvider)),
 	}, nil
 }
 
 type dataSourceProject struct {
-	p provider
+	p vercelProvider
 }
 
 // Read will read project information by requesting it from the Vercel API, and will update terraform
 // with this information.
 // It is called by the provider whenever data source values should be read to update state.
-func (r dataSourceProject) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+func (r dataSourceProject) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config Project
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)

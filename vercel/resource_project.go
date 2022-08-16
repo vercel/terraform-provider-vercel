@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -30,7 +32,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"team_id": {
 				Optional:      true,
 				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Description:   "The team ID to add the project to.",
 			},
 			"name": {
@@ -119,10 +121,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					"id": {
 						Description:   "The ID of the environment variable",
 						Type:          types.StringType,
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
+						PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
 						Computed:      true,
 					},
-				}, tfsdk.SetNestedAttributesOptions{}),
+				}),
 			},
 			"framework": {
 				Optional:    true,
@@ -135,7 +137,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"git_repository": {
 				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"type": {
 						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
@@ -144,20 +146,20 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Validators: []tfsdk.AttributeValidator{
 							stringOneOf("github", "gitlab", "bitbucket"),
 						},
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 					},
 					"repo": {
 						Description:   "The name of the git repository. For example: `vercel/next.js`.",
 						Type:          types.StringType,
 						Required:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 					},
 				}),
 			},
 			"id": {
 				Computed:      true,
 				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
 			},
 			"install_command": {
 				Optional:    true,
@@ -184,19 +186,19 @@ For more detailed information, please see the [Vercel documentation](https://ver
 }
 
 // NewResource instantiates a new Resource of this ResourceType.
-func (r resourceProjectType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
+func (r resourceProjectType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
 	return resourceProject{
-		p: *(p.(*provider)),
+		p: *(p.(*vercelProvider)),
 	}, nil
 }
 
 type resourceProject struct {
-	p provider
+	p vercelProvider
 }
 
 // Create will create a project within Vercel by calling the Vercel API.
 // This is called automatically by the provider when a new resource should be created.
-func (r resourceProject) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r resourceProject) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	if !r.p.configured {
 		resp.Diagnostics.AddError(
 			"Provider not configured",
@@ -236,7 +238,7 @@ func (r resourceProject) Create(ctx context.Context, req tfsdk.CreateResourceReq
 
 // Read will read a project from the vercel API and provide terraform with information about it.
 // It is called by the provider whenever values should be read to update state.
-func (r resourceProject) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r resourceProject) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state Project
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -314,7 +316,7 @@ func diffEnvVars(oldVars, newVars []EnvironmentItem) (toUpsert, toRemove []Envir
 // Update will update a project and it's associated environment variables via the vercel API.
 // Environment variables are manually diffed and updated individually. Once the environment
 // variables are all updated, the project is updated too.
-func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Project
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -405,7 +407,7 @@ func (r resourceProject) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 
 // Delete a project and any associated environment variables from within terraform.
 // Environment variables do not need to be explicitly deleted, as Vercel will automatically prune them.
-func (r resourceProject) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r resourceProject) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state Project
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -452,7 +454,7 @@ func splitID(id string) (teamID, _id string, ok bool) {
 
 // ImportState takes an identifier and reads all the project information from the Vercel API.
 // Note that environment variables are also read. The results are then stored in terraform state.
-func (r resourceProject) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
+func (r resourceProject) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, projectID, ok := splitID(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(

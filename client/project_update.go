@@ -13,7 +13,7 @@ import (
 // note that the values are all pointers, with many containing `omitempty` for serialisation.
 // This is because the Vercel API behaves in the following manner:
 // - a provided field will be updated
-// - setting the field to an empty value (e.g. '') will remove the setting for that field.
+// - setting the field to an empty value (e.g. ”) will remove the setting for that field.
 // - omitting the value entirely from the request will _not_ update the field.
 type UpdateProjectRequest struct {
 	BuildCommand                *string `json:"buildCommand"`

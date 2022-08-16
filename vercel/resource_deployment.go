@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -37,7 +39,7 @@ terraform to your Deployment.
 			"domains": {
 				Description:   "A list of all the domains (default domains, staging domains and production domains) that were assigned upon deployment creation.",
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
 				Type: types.ListType{
 					ElemType: types.StringType,
 				},
@@ -45,7 +47,7 @@ terraform to your Deployment.
 			"environment": {
 				Description:   "A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Type: types.MapType{
 					ElemType: types.StringType,
 				},
@@ -53,43 +55,43 @@ terraform to your Deployment.
 			"team_id": {
 				Description:   "The team ID to add the deployment to.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Type:          types.StringType,
 			},
 			"project_id": {
 				Description:   "The project ID to add the deployment to.",
 				Required:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Type:          types.StringType,
 			},
 			"id": {
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
 				Type:          types.StringType,
 			},
 			"path_prefix": {
 				Description:   "If specified then the `path_prefix` will be stripped from the start of file paths as they are uploaded to Vercel. If this is omitted, then any leading `../`s will be stripped.",
 				Optional:      true,
 				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 			},
 			"url": {
 				Description:   "A unique URL that is automatically generated for a deployment.",
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.UseStateForUnknown()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
 				Type:          types.StringType,
 			},
 			"production": {
 				Description:   "true if the deployment is a production deployment, meaning production aliases will be assigned.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Type:          types.BoolType,
 			},
 			"files": {
 				Description:   "A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source. Required if `git_source` is not set.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Type: types.MapType{
 					ElemType: types.StringType,
 				},
@@ -100,23 +102,23 @@ terraform to your Deployment.
 			"ref": {
 				Description:   "The branch or commit hash that should be deployed. Note this will only work if the project is configured to use a Git repository. Required if `ref` is not set.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Type:          types.StringType,
 			},
 			"project_settings": {
 				Description:   "Project settings that will be applied to the deployment.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"build_command": {
 						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 						Type:          types.StringType,
 						Description:   "The build command for this deployment. If omitted, this value will be taken from the project or automatically detected.",
 					},
 					"framework": {
 						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 						Type:          types.StringType,
 						Description:   "The framework that is being used for this deployment. If omitted, no framework is selected.",
 						Validators: []tfsdk.AttributeValidator{
@@ -125,19 +127,19 @@ terraform to your Deployment.
 					},
 					"install_command": {
 						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 						Type:          types.StringType,
 						Description:   "The install command for this deployment. If omitted, this value will be taken from the project or automatically detected.",
 					},
 					"output_directory": {
 						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 						Type:          types.StringType,
 						Description:   "The output directory of the deployment. If omitted, this value will be taken from the project or automatically detected.",
 					},
 					"root_directory": {
 						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 						Type:          types.StringType,
 						Description:   "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.",
 					},
@@ -153,18 +155,18 @@ terraform to your Deployment.
 }
 
 // NewResource instantiates a new Resource of this ResourceType.
-func (r resourceDeploymentType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
+func (r resourceDeploymentType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
 	return resourceDeployment{
-		p: *(p.(*provider)),
+		p: *(p.(*vercelProvider)),
 	}, nil
 }
 
 type resourceDeployment struct {
-	p provider
+	p vercelProvider
 }
 
 // ValidateConfig allows additional validation (specifically cross-field validation) to be added.
-func (r resourceDeployment) ValidateConfig(ctx context.Context, req tfsdk.ValidateResourceConfigRequest, resp *tfsdk.ValidateResourceConfigResponse) {
+func (r resourceDeployment) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var config Deployment
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -189,7 +191,7 @@ func (r resourceDeployment) ValidateConfig(ctx context.Context, req tfsdk.Valida
 // Create will create a deployment within Vercel. This is done by first attempting to trigger a deployment, seeing what
 // files are required, uploading those files, and then attempting to create a deployment again.
 // This is called automatically by the provider when a new resource should be created.
-func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r resourceDeployment) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	if !r.p.configured {
 		resp.Diagnostics.AddError(
 			"Provider not configured",
@@ -323,7 +325,7 @@ func (r resourceDeployment) Create(ctx context.Context, req tfsdk.CreateResource
 
 // Read will read a file from the filesytem and provide terraform with information about it.
 // It is called by the provider whenever data source values should be read to update state.
-func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r resourceDeployment) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state Deployment
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -364,7 +366,7 @@ func (r resourceDeployment) Read(ctx context.Context, req tfsdk.ReadResourceRequ
 // Update updates the deployment state.
 // Note that only the `delete_on_destroy` field is updatable, and this does not affect Vercel. So it is just a case
 // of setting terraform state.
-func (r resourceDeployment) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r resourceDeployment) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Deployment
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -395,7 +397,7 @@ func (r resourceDeployment) Update(ctx context.Context, req tfsdk.UpdateResource
 // Delete conditionally deletes a Deployment.
 // Typically, Vercel users do not delete old Deployments so deployments will be deleted only if delete_on_destroy
 // parameter is set to true.
-func (r resourceDeployment) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r resourceDeployment) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state Deployment
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)

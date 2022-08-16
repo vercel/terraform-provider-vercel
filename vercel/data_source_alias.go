@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -21,10 +23,9 @@ Provides information about an existing Alias resource.
 An Alias allows a ` + "`vercel_deployment` to be accessed through a different URL.",
 		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
-				Optional:      true,
-				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
-				Description:   "The ID of the team the Alias and Deployment exist under.",
+				Optional:    true,
+				Type:        types.StringType,
+				Description: "The ID of the team the Alias and Deployment exist under.",
 			},
 			"alias": {
 				Required:    true,
@@ -45,20 +46,20 @@ An Alias allows a ` + "`vercel_deployment` to be accessed through a different UR
 }
 
 // NewDataSource instantiates a new DataSource of this DataSourceType.
-func (r dataSourceAliasType) NewDataSource(ctx context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+func (r dataSourceAliasType) NewDataSource(ctx context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	return dataSourceAlias{
-		p: *(p.(*provider)),
+		p: *(p.(*vercelProvider)),
 	}, nil
 }
 
 type dataSourceAlias struct {
-	p provider
+	p vercelProvider
 }
 
 // Read will read the alias information by requesting it from the Vercel API, and will update terraform
 // with this information.
 // It is called by the provider whenever data source values should be read to update state.
-func (r dataSourceAlias) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+func (r dataSourceAlias) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config Alias
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
