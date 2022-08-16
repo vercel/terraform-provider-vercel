@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -54,14 +56,14 @@ This will read a single file, providing metadata for use with a ` + "`vercel_dep
 }
 
 // NewDataSource instantiates a new DataSource of this DataSourceType.
-func (r dataSourceFileType) NewDataSource(ctx context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+func (r dataSourceFileType) NewDataSource(ctx context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	return dataSourceFile{
-		p: *(p.(*provider)),
+		p: *(p.(*vercelProvider)),
 	}, nil
 }
 
 type dataSourceFile struct {
-	p provider
+	p vercelProvider
 }
 
 // FileData represents the information terraform knows about a File data source
@@ -73,7 +75,7 @@ type FileData struct {
 
 // Read will read a file from the filesytem and provide terraform with information about it.
 // It is called by the provider whenever data source values should be read to update state.
-func (r dataSourceFile) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+func (r dataSourceFile) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config FileData
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)

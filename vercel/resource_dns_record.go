@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -31,12 +33,12 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"team_id": {
 				Optional:      true,
 				Description:   "The team ID that the domain and DNS records belong to.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Type:          types.StringType,
 			},
 			"domain": {
 				Description:   "The domain name, or zone, that the DNS record should be created beneath.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Required:      true,
 				Type:          types.StringType,
 			},
@@ -47,7 +49,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"type": {
 				Description:   "The type of DNS record.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Required:      true,
 				Type:          types.StringType,
 				Validators: []tfsdk.AttributeValidator{
@@ -121,18 +123,18 @@ For more detailed information, please see the [Vercel documentation](https://ver
 }
 
 // NewResource instantiates a new Resource of this ResourceType.
-func (r resourceDNSRecordType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
+func (r resourceDNSRecordType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
 	return resourceDNSRecord{
-		p: *(p.(*provider)),
+		p: *(p.(*vercelProvider)),
 	}, nil
 }
 
 type resourceDNSRecord struct {
-	p provider
+	p vercelProvider
 }
 
 // ValidateConfig validates the Resource configuration.
-func (r resourceDNSRecord) ValidateConfig(ctx context.Context, req tfsdk.ValidateResourceConfigRequest, resp *tfsdk.ValidateResourceConfigResponse) {
+func (r resourceDNSRecord) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var config DNSRecord
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -177,7 +179,7 @@ func (r resourceDNSRecord) ValidateConfig(ctx context.Context, req tfsdk.Validat
 
 // Create will create a DNS record within Vercel by calling the Vercel API.
 // This is called automatically by the provider when a new resource should be created.
-func (r resourceDNSRecord) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r resourceDNSRecord) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	if !r.p.configured {
 		resp.Diagnostics.AddError(
 			"Provider not configured",
@@ -225,7 +227,7 @@ func (r resourceDNSRecord) Create(ctx context.Context, req tfsdk.CreateResourceR
 
 // Read will read a DNS record from the vercel API and provide terraform with information about it.
 // It is called by the provider whenever values should be read to update state.
-func (r resourceDNSRecord) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r resourceDNSRecord) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state DNSRecord
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -273,7 +275,7 @@ func (r resourceDNSRecord) Read(ctx context.Context, req tfsdk.ReadResourceReque
 }
 
 // Update will update a DNS record via the vercel API.
-func (r resourceDNSRecord) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r resourceDNSRecord) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan DNSRecord
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -329,7 +331,7 @@ func (r resourceDNSRecord) Update(ctx context.Context, req tfsdk.UpdateResourceR
 }
 
 // Delete a DNS record from within terraform.
-func (r resourceDNSRecord) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r resourceDNSRecord) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state DNSRecord
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -364,7 +366,7 @@ func (r resourceDNSRecord) Delete(ctx context.Context, req tfsdk.DeleteResourceR
 }
 
 // ImportState takes an identifier and reads all the DNS Record information from the Vercel API.
-func (r resourceDNSRecord) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
+func (r resourceDNSRecord) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, recordID, ok := splitID(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(

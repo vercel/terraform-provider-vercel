@@ -6,23 +6,24 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-type provider struct {
+type vercelProvider struct {
 	configured bool
 	client     *client.Client
 }
 
 // New instantiates a new instance of a vercel terraform provider.
-func New() tfsdk.Provider {
-	return &provider{}
+func New() provider.Provider {
+	return &vercelProvider{}
 }
 
 // GetSchema returns the schema information for the provider configuration itself.
-func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (p *vercelProvider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
 The Vercel provider is used to interact with resources supported by Vercel.
@@ -42,8 +43,8 @@ Use the navigation to the left to read about the available resources.
 }
 
 // GetResources shows the available resources for the vercel provider
-func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
-	return map[string]tfsdk.ResourceType{
+func (p *vercelProvider) GetResources(_ context.Context) (map[string]provider.ResourceType, diag.Diagnostics) {
+	return map[string]provider.ResourceType{
 		"vercel_alias":          resourceAliasType{},
 		"vercel_deployment":     resourceDeploymentType{},
 		"vercel_project":        resourceProjectType{},
@@ -53,8 +54,8 @@ func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceTyp
 }
 
 // GetDataSources shows the available data sources for the vercel provider
-func (p *provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
-	return map[string]tfsdk.DataSourceType{
+func (p *vercelProvider) GetDataSources(_ context.Context) (map[string]provider.DataSourceType, diag.Diagnostics) {
+	return map[string]provider.DataSourceType{
 		"vercel_file":              dataSourceFileType{},
 		"vercel_project":           dataSourceProjectType{},
 		"vercel_project_directory": dataSourceProjectDirectoryType{},
@@ -72,7 +73,7 @@ var apiTokenRe = regexp.MustCompile("[0-9a-zA-Z]{24}")
 
 // Configure takes a provider and applies any configuration. In the context of Vercel
 // this allows us to set up an API token.
-func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
+func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var config providerData
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)

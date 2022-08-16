@@ -43,25 +43,26 @@ tasks:
   install-staticcheck:
     desc: "Install the staticheck tool"
     cmds:
-      - go install honnef.co/go/tools/cmd/staticcheck@2021.1
+      - go install honnef.co/go/tools/cmd/staticcheck@2022.1.3
     status:
       - which staticcheck
 
-  install-providerlint:
-    desc: "Install tfproviderlint tool"
-    cmds:
-      - go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@latest
-    status:
-      - which tfproviderlint
+  # Temporarily disable tfproviderlint as it doesn't support go 1.18+ syntax
+  # install-providerlint:
+  #   desc: "Install tfproviderlint tool"
+  #   cmds:
+  #     - go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@latest
+  #   status:
+  #     - which tfproviderlint
 
   lint:
     desc: "Run linters against the provider"
     deps:
       - install-staticcheck
-      - install-providerlint
+      # - install-providerlint
     cmds:
       - staticcheck -tags it ./...
-      - tfproviderlint -R018=false -R009=false ./...
+      # - tfproviderlint -R018=false -R009=false ./...
       - cmd: |
           export BADFMT=$(gofmt -s -l .)
           test -z "$BADFMT" || (echo -e "invalid gofmt: $BADFMT"; exit 1)

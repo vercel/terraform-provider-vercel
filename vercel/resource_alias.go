@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -24,19 +26,19 @@ An Alias allows a ` + "`vercel_deployment` to be accessed through a different UR
 			"alias": {
 				Description:   "The Alias we want to assign to the deployment defined in the URL.",
 				Required:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Type:          types.StringType,
 			},
 			"deployment_id": {
 				Description:   "The id of the Deployment the Alias should be associated with.",
 				Required:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Type:          types.StringType,
 			},
 			"team_id": {
 				Optional:      true,
 				Description:   "The ID of the team the Alias and Deployment exist under.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{tfsdk.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Type:          types.StringType,
 			},
 			"id": {
@@ -48,19 +50,19 @@ An Alias allows a ` + "`vercel_deployment` to be accessed through a different UR
 }
 
 // NewResource instantiates a new Resource of this ResourceType.
-func (r resourceAliasType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
+func (r resourceAliasType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
 	return resourceAlias{
-		p: *(p.(*provider)),
+		p: *(p.(*vercelProvider)),
 	}, nil
 }
 
 type resourceAlias struct {
-	p provider
+	p vercelProvider
 }
 
 // Create will create an alias within Vercel.
 // This is called automatically by the provider when a new resource should be created.
-func (r resourceAlias) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r resourceAlias) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	if !r.p.configured {
 		resp.Diagnostics.AddError(
 			"Provider not configured",
@@ -103,7 +105,7 @@ func (r resourceAlias) Create(ctx context.Context, req tfsdk.CreateResourceReque
 
 // Read will read alias information by requesting it from the Vercel API, and will update terraform
 // with this information.
-func (r resourceAlias) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r resourceAlias) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state Alias
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -142,7 +144,7 @@ func (r resourceAlias) Read(ctx context.Context, req tfsdk.ReadResourceRequest, 
 }
 
 // Update updates the Alias state.
-func (r resourceAlias) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r resourceAlias) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Alias
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -164,7 +166,7 @@ func (r resourceAlias) Update(ctx context.Context, req tfsdk.UpdateResourceReque
 }
 
 // Delete deletes an Alias.
-func (r resourceAlias) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r resourceAlias) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state Alias
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)

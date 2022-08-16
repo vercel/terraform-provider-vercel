@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -52,7 +52,7 @@ func (v validatorFramework) Validate(ctx context.Context, req tfsdk.ValidateAttr
 	}
 
 	defer apires.Body.Close()
-	responseBody, err := ioutil.ReadAll(apires.Body)
+	responseBody, err := io.ReadAll(apires.Body)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			req.AttributePath,
