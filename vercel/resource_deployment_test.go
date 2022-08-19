@@ -276,12 +276,20 @@ data "vercel_file" "index" {
     path = "example/index.html"
 }
 
+data "vercel_file" "windows_line_ending" {
+    path = "example/windows_line_ending.png"
+}
+
 resource "vercel_deployment" "test" {
   %[2]s
   %[3]s
   project_id = vercel_project.test.id
 
-  files      = data.vercel_file.index.file
+  files = merge(
+      data.vercel_file.index.file,
+      data.vercel_file.windows_line_ending.file,
+  )
+
   production = true
 }
 `, projectSuffix, teamID, deploymentExtras)
