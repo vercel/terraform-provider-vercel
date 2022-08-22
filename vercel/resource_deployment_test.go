@@ -234,7 +234,6 @@ func TestAcc_DeploymentWithGitSource(t *testing.T) {
 				Config: testAccDeployFromGitSource(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists("vercel_deployment.bitbucket", testTeam()),
-					testAccDeploymentExists("vercel_deployment.gitlab", testTeam()),
 					testAccDeploymentExists("vercel_deployment.github", testTeam()),
 				),
 			},
@@ -344,38 +343,25 @@ resource "vercel_project" "github" {
       type = "github"
       repo = "%[2]s"
   }
-  %[5]s
-}
-resource "vercel_project" "gitlab" {
-  name = "test-acc-deployment-%[1]s-gitlab"
-  git_repository = {
-      type = "gitlab"
-      repo = "%[3]s"
-  }
-  %[5]s
+  %[4]s
 }
 resource "vercel_project" "bitbucket" {
   name = "test-acc-deployment-%[1]s-bitbucket"
   git_repository = {
       type = "bitbucket"
-      repo = "%[4]s"
+      repo = "%[3]s"
   }
-  %[5]s
+  %[4]s
 }
 resource "vercel_deployment" "github" {
   project_id = vercel_project.github.id
   ref        = "main"
-  %[5]s
-}
-resource "vercel_deployment" "gitlab" {
-  project_id = vercel_project.gitlab.id
-  ref        = "main"
-  %[5]s
+  %[4]s
 }
 resource "vercel_deployment" "bitbucket" {
   project_id = vercel_project.bitbucket.id
   ref        = "main"
-  %[5]s
+  %[4]s
 }
-`, projectSuffix, testGithubRepo(), testGitlabRepo(), testBitbucketRepo(), teamID)
+`, projectSuffix, testGithubRepo(), testBitbucketRepo(), teamID)
 }

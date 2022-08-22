@@ -47,10 +47,6 @@ func testGithubRepo() string {
 	return os.Getenv("VERCEL_TERRAFORM_TESTING_GITHUB_REPO")
 }
 
-func testGitlabRepo() string {
-	return os.Getenv("VERCEL_TERRAFORM_TESTING_GITLAB_REPO")
-}
-
 func testBitbucketRepo() string {
 	return os.Getenv("VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO")
 }
