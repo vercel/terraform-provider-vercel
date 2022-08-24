@@ -214,7 +214,16 @@ func (r resourceProject) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	out, err := r.p.client.CreateProject(ctx, plan.TeamID.Value, plan.toCreateProjectRequest())
+	environment, err := plan.environment(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing project environment variables",
+			"Could not read environment variables, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	out, err := r.p.client.CreateProject(ctx, plan.TeamID.Value, plan.toCreateProjectRequest(environment))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -223,7 +232,7 @@ func (r resourceProject) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	result := convertResponseToProject(out, plan.coercedFields())
+	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
 	tflog.Trace(ctx, "created project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -246,7 +255,7 @@ func (r resourceProject) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	out, err := r.p.client.GetProject(ctx, state.ID.Value, state.TeamID.Value)
+	out, err := r.p.client.GetProject(ctx, state.ID.Value, state.TeamID.Value, !state.Environment.Null)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -263,7 +272,7 @@ func (r resourceProject) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	result := convertResponseToProject(out, state.coercedFields())
+	result := convertResponseToProject(out, state.coercedFields(), state.Environment)
 	tflog.Trace(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -332,7 +341,29 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	/* Update the environment variables first */
-	toUpsert, toRemove := diffEnvVars(state.Environment, plan.Environment)
+	planEnvs, err := plan.environment(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing project environment variables",
+			"Could not read environment variables, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	stateEnvs, err := state.environment(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing project environment variables from state",
+			"Could not read environment variables, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	tflog.Error(ctx, "planEnvs", map[string]interface{}{
+		"plan_envs":  planEnvs,
+		"state_envs": stateEnvs,
+	})
+
+	toUpsert, toRemove := diffEnvVars(stateEnvs, planEnvs)
 	for _, v := range toRemove {
 		err := r.p.client.DeleteEnvironmentVariable(ctx, state.ID.Value, state.TeamID.Value, v.ID.Value)
 		if err != nil {
@@ -392,7 +423,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	result := convertResponseToProject(out, plan.coercedFields())
+	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
 	tflog.Trace(ctx, "updated project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -463,7 +494,7 @@ func (r resourceProject) ImportState(ctx context.Context, req resource.ImportSta
 		)
 	}
 
-	out, err := r.p.client.GetProject(ctx, projectID, teamID)
+	out, err := r.p.client.GetProject(ctx, projectID, teamID, true)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
@@ -484,7 +515,7 @@ func (r resourceProject) ImportState(ctx context.Context, req resource.ImportSta
 		OutputDirectory: types.String{Null: true},
 		PublicSource:    types.Bool{Null: true},
 		TeamID:          types.String{Value: teamID, Null: teamID == ""},
-	})
+	}, types.Set{Null: true})
 	tflog.Trace(ctx, "imported project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,

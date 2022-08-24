@@ -170,7 +170,7 @@ func (r dataSourceProject) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	out, err := r.p.client.GetProject(ctx, config.Name.Value, config.TeamID.Value)
+	out, err := r.p.client.GetProject(ctx, config.Name.Value, config.TeamID.Value, true)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
@@ -183,7 +183,7 @@ func (r dataSourceProject) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	result := convertResponseToProject(out, config.coercedFields())
+	result := convertResponseToProject(out, config.coercedFields(), types.Set{Null: true})
 	tflog.Trace(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,

@@ -1,26 +1,43 @@
 package vercel
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
 // Project reflects the state terraform stores internally for a project.
 type Project struct {
-	BuildCommand             types.String      `tfsdk:"build_command"`
-	DevCommand               types.String      `tfsdk:"dev_command"`
-	Environment              []EnvironmentItem `tfsdk:"environment"`
-	Framework                types.String      `tfsdk:"framework"`
-	GitRepository            *GitRepository    `tfsdk:"git_repository"`
-	ID                       types.String      `tfsdk:"id"`
-	IgnoreCommand            types.String      `tfsdk:"ignore_command"`
-	InstallCommand           types.String      `tfsdk:"install_command"`
-	Name                     types.String      `tfsdk:"name"`
-	OutputDirectory          types.String      `tfsdk:"output_directory"`
-	PublicSource             types.Bool        `tfsdk:"public_source"`
-	RootDirectory            types.String      `tfsdk:"root_directory"`
-	ServerlessFunctionRegion types.String      `tfsdk:"serverless_function_region"`
-	TeamID                   types.String      `tfsdk:"team_id"`
+	BuildCommand             types.String   `tfsdk:"build_command"`
+	DevCommand               types.String   `tfsdk:"dev_command"`
+	Environment              types.Set      `tfsdk:"environment"`
+	Framework                types.String   `tfsdk:"framework"`
+	GitRepository            *GitRepository `tfsdk:"git_repository"`
+	ID                       types.String   `tfsdk:"id"`
+	IgnoreCommand            types.String   `tfsdk:"ignore_command"`
+	InstallCommand           types.String   `tfsdk:"install_command"`
+	Name                     types.String   `tfsdk:"name"`
+	OutputDirectory          types.String   `tfsdk:"output_directory"`
+	PublicSource             types.Bool     `tfsdk:"public_source"`
+	RootDirectory            types.String   `tfsdk:"root_directory"`
+	ServerlessFunctionRegion types.String   `tfsdk:"serverless_function_region"`
+	TeamID                   types.String   `tfsdk:"team_id"`
+}
+
+func (p *Project) environment(ctx context.Context) ([]EnvironmentItem, error) {
+	if p.Environment.Null {
+		return nil, nil
+	}
+
+	var vars []EnvironmentItem
+	err := p.Environment.ElementsAs(ctx, &vars, true)
+	if err != nil {
+		return nil, fmt.Errorf("error reading project environment variables: %s", err)
+	}
+	return vars, nil
 }
 
 func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
@@ -43,12 +60,12 @@ func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 	return out
 }
 
-func (p *Project) toCreateProjectRequest() client.CreateProjectRequest {
+func (p *Project) toCreateProjectRequest(envs []EnvironmentItem) client.CreateProjectRequest {
 	return client.CreateProjectRequest{
 		BuildCommand:                toStrPointer(p.BuildCommand),
 		CommandForIgnoringBuildStep: toStrPointer(p.IgnoreCommand),
 		DevCommand:                  toStrPointer(p.DevCommand),
-		EnvironmentVariables:        parseEnvironment(p.Environment),
+		EnvironmentVariables:        parseEnvironment(envs),
 		Framework:                   toStrPointer(p.Framework),
 		GitRepository:               p.GitRepository.toCreateProjectRequest(),
 		InstallCommand:              toStrPointer(p.InstallCommand),
@@ -167,7 +184,7 @@ func uncoerceBool(plan, res types.Bool) types.Bool {
 	return res
 }
 
-func convertResponseToProject(response client.ProjectResponse, fields projectCoercedFields) Project {
+func convertResponseToProject(response client.ProjectResponse, fields projectCoercedFields, environment types.Set) Project {
 	var gr *GitRepository
 	if repo := response.Repository(); repo != nil {
 		gr = &GitRepository{
@@ -175,25 +192,54 @@ func convertResponseToProject(response client.ProjectResponse, fields projectCoe
 			Repo: types.String{Value: repo.Repo},
 		}
 	}
-	var env []EnvironmentItem
+
+	var env []attr.Value
 	for _, e := range response.EnvironmentVariables {
-		target := []types.String{}
+		target := []attr.Value{}
 		for _, t := range e.Target {
 			target = append(target, types.String{Value: t})
 		}
-		env = append(env, EnvironmentItem{
-			Key:       types.String{Value: e.Key},
-			Value:     types.String{Value: e.Value},
-			Target:    target,
-			GitBranch: fromStringPointer(e.GitBranch),
-			ID:        types.String{Value: e.ID},
+		env = append(env, types.Object{
+			Attrs: map[string]attr.Value{
+				"key":   types.String{Value: e.Key},
+				"value": types.String{Value: e.Value},
+				"target": types.Set{
+					Elems:    target,
+					ElemType: types.StringType,
+				},
+				"git_branch": fromStringPointer(e.GitBranch),
+				"id":         types.String{Value: e.ID},
+			},
+			AttrTypes: map[string]attr.Type{
+				"key":   types.StringType,
+				"value": types.StringType,
+				"target": types.SetType{
+					ElemType: types.StringType,
+				},
+				"git_branch": types.StringType,
+				"id":         types.StringType,
+			},
 		})
 	}
 
 	return Project{
-		BuildCommand:             uncoerceString(fields.BuildCommand, fromStringPointer(response.BuildCommand)),
-		DevCommand:               uncoerceString(fields.DevCommand, fromStringPointer(response.DevCommand)),
-		Environment:              env,
+		BuildCommand: uncoerceString(fields.BuildCommand, fromStringPointer(response.BuildCommand)),
+		DevCommand:   uncoerceString(fields.DevCommand, fromStringPointer(response.DevCommand)),
+		Environment: types.Set{
+			Null:  len(response.EnvironmentVariables) == 0 && environment.Null,
+			Elems: env,
+			ElemType: types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"key":   types.StringType,
+					"value": types.StringType,
+					"target": types.SetType{
+						ElemType: types.StringType,
+					},
+					"git_branch": types.StringType,
+					"id":         types.StringType,
+				},
+			},
+		},
 		Framework:                fromStringPointer(response.Framework),
 		GitRepository:            gr,
 		ID:                       types.String{Value: response.ID},

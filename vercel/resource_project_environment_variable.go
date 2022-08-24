@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -96,6 +97,16 @@ func (r resourceProjectEnvironmentVariable) Create(ctx context.Context, req reso
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	_, err := r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
+	var apiErr client.APIError
+	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+		resp.Diagnostics.AddError(
+			"Error creating project environment variable",
+			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
+		)
 		return
 	}
 

@@ -36,5 +36,6 @@ func (c *Client) UpsertEnvironmentVariable(ctx context.Context, projectID, teamI
 		"payload": payload,
 	})
 	err = c.doRequest(req, &e)
+	e.Value = request.Value
 	return e, err
 }
