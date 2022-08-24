@@ -354,7 +354,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 		})
 	}
 	for _, v := range toUpsert {
-		err := r.p.client.UpsertEnvironmentVariable(
+		result, err := r.p.client.UpsertEnvironmentVariable(
 			ctx,
 			state.ID.Value,
 			state.TeamID.Value,
@@ -374,7 +374,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 		tflog.Trace(ctx, "upserted environment variable", map[string]interface{}{
 			"team_id":        plan.TeamID.Value,
 			"project_id":     plan.ID.Value,
-			"environment_id": v.ID.Value,
+			"environment_id": result.ID,
 		})
 	}
 

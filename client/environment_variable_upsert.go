@@ -15,7 +15,7 @@ type UpsertEnvironmentVariableRequest EnvironmentVariable
 
 // UpsertEnvironmentVariable will either create a brand new environment variable if one does not exist, or will
 // update an existing environment variable to the latest information.
-func (c *Client) UpsertEnvironmentVariable(ctx context.Context, projectID, teamID string, request UpsertEnvironmentVariableRequest) error {
+func (c *Client) UpsertEnvironmentVariable(ctx context.Context, projectID, teamID string, request UpsertEnvironmentVariableRequest) (e EnvironmentVariable, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s/env", c.baseURL, projectID)
 	if teamID != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
@@ -28,12 +28,13 @@ func (c *Client) UpsertEnvironmentVariable(ctx context.Context, projectID, teamI
 		strings.NewReader(payload),
 	)
 	if err != nil {
-		return err
+		return e, err
 	}
 
 	tflog.Trace(ctx, "upserting environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
-	return c.doRequest(req, nil)
+	err = c.doRequest(req, &e)
+	return e, err
 }
