@@ -174,7 +174,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"public_source": {
 				Optional:    true,
 				Type:        types.BoolType,
-				Description: "Specifies whether the source code and logs of the deployments for this project should be public or not.",
+				Description: "By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.",
 			},
 			"root_directory": {
 				Optional:    true,

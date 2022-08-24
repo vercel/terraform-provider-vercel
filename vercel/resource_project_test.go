@@ -260,6 +260,7 @@ func testAccProjectConfigWithGitRepoUpdated(projectSuffix, teamID string) string
 resource "vercel_project" "test_git" {
   name = "test-acc-two-%s"
   %s
+  public_source = false
   git_repository = {
     type = "github"
     repo = "%s"
