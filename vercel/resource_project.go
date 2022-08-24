@@ -174,7 +174,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"public_source": {
 				Optional:    true,
 				Type:        types.BoolType,
-				Description: "Specifies whether the source code and logs of the deployments for this project should be public or not.",
+				Description: "By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.",
 			},
 			"root_directory": {
 				Optional:    true,
@@ -223,7 +223,7 @@ func (r resourceProject) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	result := convertResponseToProject(out, plan.TeamID)
+	result := convertResponseToProject(out, plan.coercedFields())
 	tflog.Trace(ctx, "created project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -263,7 +263,7 @@ func (r resourceProject) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	result := convertResponseToProject(out, state.TeamID)
+	result := convertResponseToProject(out, state.coercedFields())
 	tflog.Trace(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -392,7 +392,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	result := convertResponseToProject(out, plan.TeamID)
+	result := convertResponseToProject(out, plan.coercedFields())
 	tflog.Trace(ctx, "updated project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -476,11 +476,15 @@ func (r resourceProject) ImportState(ctx context.Context, req resource.ImportSta
 		return
 	}
 
-	stringTypeTeamID := types.String{Value: teamID}
-	if teamID == "" {
-		stringTypeTeamID.Null = true
-	}
-	result := convertResponseToProject(out, stringTypeTeamID)
+	result := convertResponseToProject(out, projectCoercedFields{
+		/* As this is import, none of these fields are specified - so treat them all as Null */
+		BuildCommand:    types.String{Null: true},
+		DevCommand:      types.String{Null: true},
+		InstallCommand:  types.String{Null: true},
+		OutputDirectory: types.String{Null: true},
+		PublicSource:    types.Bool{Null: true},
+		TeamID:          types.String{Value: teamID, Null: teamID == ""},
+	})
 	tflog.Trace(ctx, "imported project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,

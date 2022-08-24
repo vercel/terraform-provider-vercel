@@ -119,7 +119,55 @@ func (g *GitRepository) toCreateProjectRequest() *client.GitRepository {
 	}
 }
 
-func convertResponseToProject(response client.ProjectResponse, tid types.String) Project {
+/*
+* In the Vercel API the following fields are coerced to null during project creation
+
+* This causes an issue when they are specified, but falsy, as the
+* terraform configuration explicitly sets a value for them, but the Vercel
+* API returns a different value. This causes an inconsistent plan error.
+
+* We avoid this issue by choosing to use values from the terraform state,
+* but only if they are _explicitly stated_ *and* they are _falsy_ values
+* *and* the response value was null. This is important as drift detection
+* would fail to work if the value was always selected, so this is as stringent
+* as possible to allow drift-detection in the majority of scenarios.
+
+* This is implemented in the below uncoerceString and uncoerceBool functions.
+ */
+type projectCoercedFields struct {
+	BuildCommand    types.String
+	DevCommand      types.String
+	InstallCommand  types.String
+	OutputDirectory types.String
+	PublicSource    types.Bool
+	TeamID          types.String
+}
+
+func (p *Project) coercedFields() projectCoercedFields {
+	return projectCoercedFields{
+		BuildCommand:    p.BuildCommand,
+		DevCommand:      p.DevCommand,
+		InstallCommand:  p.InstallCommand,
+		OutputDirectory: p.OutputDirectory,
+		PublicSource:    p.PublicSource,
+		TeamID:          p.TeamID,
+	}
+}
+
+func uncoerceString(plan, res types.String) types.String {
+	if plan.Value == "" && !plan.Null && res.Null {
+		return plan
+	}
+	return res
+}
+func uncoerceBool(plan, res types.Bool) types.Bool {
+	if !plan.Value && !plan.Null && res.Null {
+		return plan
+	}
+	return res
+}
+
+func convertResponseToProject(response client.ProjectResponse, fields projectCoercedFields) Project {
 	var gr *GitRepository
 	if repo := response.Repository(); repo != nil {
 		gr = &GitRepository{
@@ -141,25 +189,21 @@ func convertResponseToProject(response client.ProjectResponse, tid types.String)
 			ID:        types.String{Value: e.ID},
 		})
 	}
-	teamID := types.String{Value: tid.Value}
-	if tid.Unknown || tid.Null {
-		teamID.Null = true
-	}
 
 	return Project{
-		BuildCommand:             fromStringPointer(response.BuildCommand),
-		DevCommand:               fromStringPointer(response.DevCommand),
+		BuildCommand:             uncoerceString(fields.BuildCommand, fromStringPointer(response.BuildCommand)),
+		DevCommand:               uncoerceString(fields.DevCommand, fromStringPointer(response.DevCommand)),
 		Environment:              env,
 		Framework:                fromStringPointer(response.Framework),
 		GitRepository:            gr,
 		ID:                       types.String{Value: response.ID},
 		IgnoreCommand:            fromStringPointer(response.CommandForIgnoringBuildStep),
-		InstallCommand:           fromStringPointer(response.InstallCommand),
+		InstallCommand:           uncoerceString(fields.InstallCommand, fromStringPointer(response.InstallCommand)),
 		Name:                     types.String{Value: response.Name},
-		OutputDirectory:          fromStringPointer(response.OutputDirectory),
-		PublicSource:             fromBoolPointer(response.PublicSource),
+		OutputDirectory:          uncoerceString(fields.OutputDirectory, fromStringPointer(response.OutputDirectory)),
+		PublicSource:             uncoerceBool(fields.PublicSource, fromBoolPointer(response.PublicSource)),
 		RootDirectory:            fromStringPointer(response.RootDirectory),
 		ServerlessFunctionRegion: fromStringPointer(response.ServerlessFunctionRegion),
-		TeamID:                   teamID,
+		TeamID:                   types.String{Value: fields.TeamID.Value, Null: fields.TeamID.Null || fields.TeamID.Unknown},
 	}
 }
