@@ -110,7 +110,7 @@ func (r resourceProjectEnvironmentVariable) Create(ctx context.Context, req reso
 		return
 	}
 
-	response, err := r.p.client.UpsertEnvironmentVariable(ctx, plan.ProjectID.Value, plan.TeamID.Value, plan.toUpsertEnvironmentVariableRequest())
+	response, err := r.p.client.CreateEnvironmentVariable(ctx, plan.toCreateEnvironmentVariableRequest())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project environment variable",
@@ -185,7 +185,7 @@ func (r resourceProjectEnvironmentVariable) Update(ctx context.Context, req reso
 		return
 	}
 
-	response, err := r.p.client.UpsertEnvironmentVariable(ctx, plan.ProjectID.Value, plan.TeamID.Value, plan.toUpsertEnvironmentVariableRequest())
+	response, err := r.p.client.UpdateEnvironmentVariable(ctx, plan.toUpdateEnvironmentVariableRequest())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project environment variable",

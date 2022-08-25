@@ -16,18 +16,36 @@ type ProjectEnvironmentVariable struct {
 	ID        types.String   `tfsdk:"id"`
 }
 
-func (e *ProjectEnvironmentVariable) toUpsertEnvironmentVariableRequest() client.UpsertEnvironmentVariableRequest {
+func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client.CreateEnvironmentVariableRequest {
 	var target []string
 	for _, t := range e.Target {
 		target = append(target, t.Value)
 	}
-	return client.UpsertEnvironmentVariableRequest{
+	return client.CreateEnvironmentVariableRequest{
 		Key:       e.Key.Value,
 		Value:     e.Value.Value,
 		Target:    target,
 		GitBranch: toStrPointer(e.GitBranch),
 		Type:      "encrypted",
-		ID:        e.ID.Value,
+		ProjectID: e.ProjectID.Value,
+		TeamID:    e.TeamID.Value,
+	}
+}
+
+func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client.UpdateEnvironmentVariableRequest {
+	var target []string
+	for _, t := range e.Target {
+		target = append(target, t.Value)
+	}
+	return client.UpdateEnvironmentVariableRequest{
+		Key:       e.Key.Value,
+		Value:     e.Value.Value,
+		Target:    target,
+		GitBranch: toStrPointer(e.GitBranch),
+		Type:      "encrypted",
+		ProjectID: e.ProjectID.Value,
+		TeamID:   e.TeamID.Value,
+		EnvID:    e.ID.Value,
 	}
 }
 
