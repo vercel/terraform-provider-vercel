@@ -70,7 +70,7 @@ type ProjectResponse struct {
 }
 
 // GetProject retrieves information about an existing project from Vercel.
-func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shouldFetchEnvironment bool) (r ProjectResponse, err error) {
+func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shouldFetchEnvironmentVariables bool) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
 	if teamID != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
@@ -86,14 +86,14 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shoul
 	}
 	tflog.Trace(ctx, "getting project", map[string]interface{}{
 		"url":                    url,
-		"shouldFetchEnvironment": shouldFetchEnvironment,
+		"shouldFetchEnvironment": shouldFetchEnvironmentVariables,
 	})
 	err = c.doRequest(req, &r)
 	if err != nil {
 		return r, err
 	}
 
-	if shouldFetchEnvironment {
+	if shouldFetchEnvironmentVariables {
 		r.EnvironmentVariables, err = c.getEnvironmentVariables(ctx, projectID, teamID)
 		if err != nil {
 			return r, fmt.Errorf("error getting environment variables for project: %w", err)
