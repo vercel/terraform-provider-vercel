@@ -3,18 +3,23 @@
 page_title: "vercel_project_environment_variable Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  Provides a Project environment variable resource.
-  A Project environment variable resource defines an environment variable on a Vercel Project.
+  Provides a Project Environment Variable resource.
+  A Project Environment Variable resource defines an Environment Variable on a Vercel Project.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/environment-variables.
+  ~> Terraform currently provides both a standalone Project Environment Variable resource (a single Environment Variable), and a Project resource with Environment Variables defined in-line via the environment field.
+  At this time you cannot use a Vercel Project resource with in-line environment in conjunction with any vercel_project_environment_variable resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 ---
 
 # vercel_project_environment_variable (Resource)
 
-Provides a Project environment variable resource.
+Provides a Project Environment Variable resource.
 
-A Project environment variable resource defines an environment variable on a Vercel Project.
+A Project Environment Variable resource defines an Environment Variable on a Vercel Project.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables).
+
+~> Terraform currently provides both a standalone Project Environment Variable resource (a single Environment Variable), and a Project resource with Environment Variables defined in-line via the `environment` field.
+At this time you cannot use a Vercel Project resource with in-line `environment` in conjunction with any `vercel_project_environment_variable` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 
 ## Example Usage
 
@@ -53,18 +58,30 @@ resource "vercel_project_environment_variable" "example_git_branch" {
 
 ### Required
 
-- `key` (String) The name of the environment variable.
+- `key` (String) The name of the Environment Variable.
 - `project_id` (String) The ID of the Vercel project.
-- `target` (Set of String) The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.
-- `value` (String) The value of the environment variable.
+- `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.
+- `value` (String) The value of the Environment Variable.
 
 ### Optional
 
-- `git_branch` (String) The git branch of the environment variable.
+- `git_branch` (String) The git branch of the Environment Variable.
 - `team_id` (String) The ID of the Vercel team.
 
 ### Read-Only
 
-- `id` (String) The ID of the environment variable.
+- `id` (String) The ID of the Environment Variable.
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+# Import via the team_id, project_id and environment variable id.
+# team_id can be found in the team `settings` tab in the Vercel UI.
+# environment variable id can be taken from the network tab on the project page.
+terraform import vercel_project_environment_variable.example team_xxxxxxxxxxxxxxxxxxxxxxxx/prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx/FdT2e1E5Of6Cihmt
+
+# If importing without a team, simply use the project_id and environment variable id.
+terraform import vercel_project_environment_variable.example_git_branch prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx/FdT2e1E5Of6Cihmt
+```

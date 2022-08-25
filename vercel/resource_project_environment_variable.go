@@ -21,15 +21,19 @@ type resourceProjectEnvironmentVariableType struct{}
 func (r resourceProjectEnvironmentVariableType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
-Provides a Project environment variable resource.
+Provides a Project Environment Variable resource.
 
-A Project environment variable resource defines an environment variable on a Vercel Project.
+A Project Environment Variable resource defines an Environment Variable on a Vercel Project.
 
-For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables).`,
+For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables).
+
+~> Terraform currently provides both a standalone Project Environment Variable resource (a single Environment Variable), and a Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
+At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+`,
 		Attributes: map[string]tfsdk.Attribute{
 			"target": {
 				Required:    true,
-				Description: "The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
+				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 				Type: types.SetType{
 					ElemType: types.StringType,
 				},
@@ -37,17 +41,17 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"key": {
 				Required:      true,
 				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Description:   "The name of the environment variable.",
+				Description:   "The name of the Environment Variable.",
 				Type:          types.StringType,
 			},
 			"value": {
 				Required:    true,
-				Description: "The value of the environment variable.",
+				Description: "The value of the Environment Variable.",
 				Type:        types.StringType,
 			},
 			"git_branch": {
 				Optional:    true,
-				Description: "The git branch of the environment variable.",
+				Description: "The git branch of the Environment Variable.",
 				Type:        types.StringType,
 			},
 			"project_id": {
@@ -63,7 +67,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Type:          types.StringType,
 			},
 			"id": {
-				Description:   "The ID of the environment variable.",
+				Description:   "The ID of the Environment Variable.",
 				Type:          types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
 				Computed:      true,

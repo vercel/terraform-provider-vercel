@@ -24,6 +24,8 @@ tasks:
     desc: "Install the tfplugindocs tool"
     cmds:
       - go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.7.0
+    status:
+      - which staticcheck
 
   docs:
     desc: "Update the docs generated from description fields"
@@ -37,6 +39,7 @@ tasks:
       - "vercel/**/*.go"
       - "main.go"
       - "examples/**/*.tf"
+      - "examples/**/*.sh"
     generates:
       - docs/**/*.md
 
