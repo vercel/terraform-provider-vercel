@@ -18,8 +18,8 @@ type UpdateEnvironmentVariableRequest struct {
 	GitBranch *string  `json:"gitBranch,omitempty"`
 	Type      string   `json:"type"`
 	ProjectID string   `json:"-"`
-	TeamID   string   `json:"-"`
-	EnvID   string   `json:"-"`
+	TeamID    string   `json:"-"`
+	EnvID     string   `json:"-"`
 }
 
 // UpdateEnvironmentVariable will update an existing environment variable to the latest information.
@@ -39,7 +39,7 @@ func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEn
 		return e, err
 	}
 
-	tflog.Trace(ctx, "updating environment variable", map[string]interface{}{
+	tflog.Info(ctx, "updating environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

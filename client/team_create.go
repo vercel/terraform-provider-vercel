@@ -35,7 +35,7 @@ func (c *Client) CreateTeam(ctx context.Context, request TeamCreateRequest) (r T
 		return r, err
 	}
 
-	tflog.Trace(ctx, "creating team", map[string]interface{}{
+	tflog.Info(ctx, "creating team", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

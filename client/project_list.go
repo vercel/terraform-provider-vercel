@@ -28,7 +28,7 @@ func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectRe
 	pr := struct {
 		Projects []ProjectResponse `json:"projects"`
 	}{}
-	tflog.Trace(ctx, "listing projects", map[string]interface{}{
+	tflog.Info(ctx, "listing projects", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(req, &pr)

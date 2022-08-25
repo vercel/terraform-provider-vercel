@@ -25,7 +25,7 @@ func (c *Client) DeleteProjectDomain(ctx context.Context, projectID, domain, tea
 		return err
 	}
 
-	tflog.Trace(ctx, "deleting project domain", map[string]interface{}{
+	tflog.Info(ctx, "deleting project domain", map[string]interface{}{
 		"url": url,
 	})
 	return c.doRequest(req, nil)

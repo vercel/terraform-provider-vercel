@@ -38,7 +38,7 @@ func (c *Client) CreateProjectDomain(ctx context.Context, projectID, teamID stri
 		return r, err
 	}
 
-	tflog.Trace(ctx, "creating project domain", map[string]interface{}{
+	tflog.Info(ctx, "creating project domain", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

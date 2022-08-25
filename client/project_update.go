@@ -45,7 +45,7 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 		return r, err
 	}
 
-	tflog.Trace(ctx, "updating project", map[string]interface{}{
+	tflog.Info(ctx, "updating project", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

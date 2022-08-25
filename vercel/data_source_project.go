@@ -184,7 +184,7 @@ func (r dataSourceProject) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	result := convertResponseToProject(out, config.coercedFields(), types.Set{Null: true})
-	tflog.Trace(ctx, "read project", map[string]interface{}{
+	tflog.Info(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
 	})

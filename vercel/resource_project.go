@@ -233,7 +233,7 @@ func (r resourceProject) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
-	tflog.Trace(ctx, "created project", map[string]interface{}{
+	tflog.Info(ctx, "created project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
 	})
@@ -273,7 +273,7 @@ func (r resourceProject) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	result := convertResponseToProject(out, state.coercedFields(), state.Environment)
-	tflog.Trace(ctx, "read project", map[string]interface{}{
+	tflog.Info(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
 	})
@@ -378,7 +378,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 			)
 			return
 		}
-		tflog.Trace(ctx, "deleted environment variable", map[string]interface{}{
+		tflog.Info(ctx, "deleted environment variable", map[string]interface{}{
 			"team_id":        plan.TeamID.Value,
 			"project_id":     plan.ID.Value,
 			"environment_id": v.ID.Value,
@@ -400,7 +400,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 				),
 			)
 		}
-		tflog.Trace(ctx, "upserted environment variable", map[string]interface{}{
+		tflog.Info(ctx, "upserted environment variable", map[string]interface{}{
 			"team_id":        plan.TeamID.Value,
 			"project_id":     plan.ID.Value,
 			"environment_id": result.ID,
@@ -422,7 +422,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
-	tflog.Trace(ctx, "updated project", map[string]interface{}{
+	tflog.Info(ctx, "updated project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
 	})
@@ -462,7 +462,7 @@ func (r resourceProject) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	tflog.Trace(ctx, "deleted project", map[string]interface{}{
+	tflog.Info(ctx, "deleted project", map[string]interface{}{
 		"team_id":    state.TeamID.Value,
 		"project_id": state.ID.Value,
 	})
@@ -514,7 +514,7 @@ func (r resourceProject) ImportState(ctx context.Context, req resource.ImportSta
 		PublicSource:    types.Bool{Null: true},
 		TeamID:          types.String{Value: teamID, Null: teamID == ""},
 	}, types.Set{Null: true})
-	tflog.Trace(ctx, "imported project", map[string]interface{}{
+	tflog.Info(ctx, "imported project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
 	})

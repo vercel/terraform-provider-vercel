@@ -26,7 +26,7 @@ func (c *Client) GetTeam(ctx context.Context, teamID, slug string) (r TeamRespon
 		return r, err
 	}
 
-	tflog.Trace(ctx, "getting team", map[string]interface{}{
+	tflog.Info(ctx, "getting team", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(req, &r)

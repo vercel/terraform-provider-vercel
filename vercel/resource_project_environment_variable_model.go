@@ -44,8 +44,8 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client
 		GitBranch: toStrPointer(e.GitBranch),
 		Type:      "encrypted",
 		ProjectID: e.ProjectID.Value,
-		TeamID:   e.TeamID.Value,
-		EnvID:    e.ID.Value,
+		TeamID:    e.TeamID.Value,
+		EnvID:     e.ID.Value,
 	}
 }
 

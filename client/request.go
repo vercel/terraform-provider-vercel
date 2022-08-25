@@ -1,13 +1,10 @@
 package client
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // APIError is an error type that exposes additional information about why an API request failed.
@@ -36,28 +33,15 @@ func (c *Client) doRequest(req *http.Request, v interface{}) error {
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.token))
 	resp, err := c.http().Do(req)
-	tflog.Info(context.TODO(), "response", map[string]interface{}{
-		"status": resp.StatusCode,
-		"body": resp,
-	})
 	if err != nil {
 		return fmt.Errorf("error doing http request: %w", err)
 	}
 
 	defer resp.Body.Close()
 	responseBody, err := io.ReadAll(resp.Body)
-	tflog.Info(context.TODO(), "response 1", map[string]interface{}{
-		"status": resp.StatusCode,
-		"body": string(responseBody),
-	})
 	if err != nil {
 		return fmt.Errorf("error reading response body: %w", err)
 	}
-
-	tflog.Info(context.TODO(), "response 2", map[string]interface{}{
-		"status": resp.StatusCode,
-		"body": string(responseBody),
-	})
 
 	if resp.StatusCode >= 300 {
 		var errorResponse APIError

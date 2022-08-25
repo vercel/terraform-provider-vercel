@@ -84,13 +84,13 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shoul
 	if err != nil {
 		return r, err
 	}
-	tflog.Trace(ctx, "getting project", map[string]interface{}{
+	tflog.Info(ctx, "getting project", map[string]interface{}{
 		"url":                    url,
 		"shouldFetchEnvironment": shouldFetchEnvironmentVariables,
 	})
 	err = c.doRequest(req, &r)
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("unable to get project: %w", err)
 	}
 
 	if shouldFetchEnvironmentVariables {

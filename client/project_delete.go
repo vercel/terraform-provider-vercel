@@ -25,7 +25,7 @@ func (c *Client) DeleteProject(ctx context.Context, projectID, teamID string) er
 		return err
 	}
 
-	tflog.Trace(ctx, "deleting project", map[string]interface{}{
+	tflog.Info(ctx, "deleting project", map[string]interface{}{
 		"url": url,
 	})
 	return c.doRequest(req, nil)

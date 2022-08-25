@@ -28,7 +28,7 @@ func (c *Client) DeleteAlias(ctx context.Context, aliasUID string, teamID string
 		return r, err
 	}
 
-	tflog.Trace(ctx, "deleting alias", map[string]interface{}{
+	tflog.Info(ctx, "deleting alias", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(req, &r)

@@ -122,7 +122,7 @@ func (r resourceProjectEnvironmentVariable) Create(ctx context.Context, req reso
 
 	result := convertResponseToProjectEnvironmentVariable(response, plan.TeamID, plan.ProjectID)
 
-	tflog.Trace(ctx, "created project environment variable", map[string]interface{}{
+	tflog.Info(ctx, "created project environment variable", map[string]interface{}{
 		"id":         result.ID.Value,
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ProjectID.Value,
@@ -164,7 +164,7 @@ func (r resourceProjectEnvironmentVariable) Read(ctx context.Context, req resour
 	}
 
 	result := convertResponseToProjectEnvironmentVariable(out, state.TeamID, state.ProjectID)
-	tflog.Trace(ctx, "read project environment variable", map[string]interface{}{
+	tflog.Info(ctx, "read project environment variable", map[string]interface{}{
 		"id":         result.ID.Value,
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ProjectID.Value,
@@ -197,7 +197,7 @@ func (r resourceProjectEnvironmentVariable) Update(ctx context.Context, req reso
 
 	result := convertResponseToProjectEnvironmentVariable(response, plan.TeamID, plan.ProjectID)
 
-	tflog.Trace(ctx, "updated project environment variable", map[string]interface{}{
+	tflog.Info(ctx, "updated project environment variable", map[string]interface{}{
 		"id":         result.ID.Value,
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ProjectID.Value,
@@ -235,7 +235,7 @@ func (r resourceProjectEnvironmentVariable) Delete(ctx context.Context, req reso
 		return
 	}
 
-	tflog.Trace(ctx, "deleted project environment variable", map[string]interface{}{
+	tflog.Info(ctx, "deleted project environment variable", map[string]interface{}{
 		"id":         state.ID.Value,
 		"team_id":    state.TeamID.Value,
 		"project_id": state.ProjectID.Value,
@@ -282,10 +282,10 @@ func (r resourceProjectEnvironmentVariable) ImportState(ctx context.Context, req
 	}
 
 	result := convertResponseToProjectEnvironmentVariable(out, types.String{Value: teamID, Null: teamID == ""}, types.String{Value: projectID})
-	tflog.Trace(ctx, "imported project environment variable", map[string]interface{}{
+	tflog.Info(ctx, "imported project environment variable", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ProjectID.Value,
-		"env_id": result.ID.Value,
+		"env_id":     result.ID.Value,
 	})
 
 	diags := resp.State.Set(ctx, result)

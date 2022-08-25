@@ -18,7 +18,7 @@ type CreateEnvironmentVariableRequest struct {
 	GitBranch *string  `json:"gitBranch,omitempty"`
 	Type      string   `json:"type"`
 	ProjectID string   `json:"-"`
-	TeamID   string   `json:"-"`
+	TeamID    string   `json:"-"`
 }
 
 // CreateEnvironmentVariable will create a brand new environment variable if one does not exist.
@@ -38,7 +38,7 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		return e, err
 	}
 
-	tflog.Trace(ctx, "creating environment variable", map[string]interface{}{
+	tflog.Info(ctx, "creating environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
