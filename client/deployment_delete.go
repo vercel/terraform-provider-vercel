@@ -29,7 +29,7 @@ func (c *Client) DeleteDeployment(ctx context.Context, deploymentID string, team
 		return r, err
 	}
 
-	tflog.Info(ctx, "deleting deployment", map[string]interface{}{
+	tflog.Trace(ctx, "deleting deployment", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(req, &r)

@@ -37,7 +37,7 @@ func (c *Client) CreateAlias(ctx context.Context, request CreateAliasRequest, de
 		return r, err
 	}
 
-	tflog.Info(ctx, "creating alias", map[string]interface{}{
+	tflog.Trace(ctx, "creating alias", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

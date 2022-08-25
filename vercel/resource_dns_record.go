@@ -212,7 +212,7 @@ func (r resourceDNSRecord) Create(ctx context.Context, req resource.CreateReques
 		)
 		return
 	}
-	tflog.Info(ctx, "created DNS Record", map[string]interface{}{
+	tflog.Trace(ctx, "created DNS Record", map[string]interface{}{
 		"team_id":   result.TeamID,
 		"record_id": result.ID,
 		"domain":    result.Domain,
@@ -261,7 +261,7 @@ func (r resourceDNSRecord) Read(ctx context.Context, req resource.ReadRequest, r
 		)
 		return
 	}
-	tflog.Info(ctx, "read DNS record", map[string]interface{}{
+	tflog.Trace(ctx, "read DNS record", map[string]interface{}{
 		"team_id":   result.TeamID,
 		"record_id": result.ID,
 		"domain":    result.Domain,
@@ -317,7 +317,7 @@ func (r resourceDNSRecord) Update(ctx context.Context, req resource.UpdateReques
 		)
 		return
 	}
-	tflog.Info(ctx, "updated DNS record", map[string]interface{}{
+	tflog.Trace(ctx, "updated DNS record", map[string]interface{}{
 		"team_id":   result.TeamID,
 		"record_id": result.ID,
 		"domain":    result.Domain,
@@ -358,7 +358,7 @@ func (r resourceDNSRecord) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	tflog.Info(ctx, "delete DNS record", map[string]interface{}{
+	tflog.Trace(ctx, "delete DNS record", map[string]interface{}{
 		"domain":    state.Domain,
 		"record_id": state.ID,
 		"team_id":   state.TeamID,

@@ -210,7 +210,7 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 		return r, err
 	}
 
-	tflog.Info(ctx, "creating deployment", map[string]interface{}{
+	tflog.Trace(ctx, "creating deployment", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

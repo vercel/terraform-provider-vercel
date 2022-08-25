@@ -24,7 +24,7 @@ func (c *Client) GetDeployment(ctx context.Context, deploymentID, teamID string)
 		return r, err
 	}
 
-	tflog.Info(ctx, "getting deployment", map[string]interface{}{
+	tflog.Trace(ctx, "getting deployment", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(req, &r)

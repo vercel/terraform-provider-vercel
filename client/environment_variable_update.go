@@ -39,7 +39,7 @@ func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEn
 		return e, err
 	}
 
-	tflog.Info(ctx, "updating environment variable", map[string]interface{}{
+	tflog.Trace(ctx, "updating environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

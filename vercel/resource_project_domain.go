@@ -126,7 +126,7 @@ func (r resourceProjectDomain) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	result := convertResponseToProjectDomain(out, plan.TeamID)
-	tflog.Info(ctx, "added domain to project", map[string]interface{}{
+	tflog.Trace(ctx, "added domain to project", map[string]interface{}{
 		"project_id": result.ProjectID.Value,
 		"domain":     result.Domain.Value,
 		"team_id":    result.TeamID.Value,
@@ -167,7 +167,7 @@ func (r resourceProjectDomain) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	result := convertResponseToProjectDomain(out, state.TeamID)
-	tflog.Info(ctx, "read project domain", map[string]interface{}{
+	tflog.Trace(ctx, "read project domain", map[string]interface{}{
 		"project_id": result.ProjectID.Value,
 		"domain":     result.Domain.Value,
 		"team_id":    result.TeamID.Value,
@@ -209,7 +209,7 @@ func (r resourceProjectDomain) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	result := convertResponseToProjectDomain(out, plan.TeamID)
-	tflog.Info(ctx, "update project domain", map[string]interface{}{
+	tflog.Trace(ctx, "update project domain", map[string]interface{}{
 		"project_id": result.ProjectID.Value,
 		"domain":     result.Domain.Value,
 		"team_id":    result.TeamID.Value,
@@ -251,7 +251,7 @@ func (r resourceProjectDomain) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	tflog.Info(ctx, "delete project domain", map[string]interface{}{
+	tflog.Trace(ctx, "delete project domain", map[string]interface{}{
 		"project_id": state.ProjectID.Value,
 		"domain":     state.Domain.Value,
 		"team_id":    state.TeamID.Value,
@@ -302,7 +302,7 @@ func (r resourceProjectDomain) ImportState(ctx context.Context, req resource.Imp
 		stringTypeTeamID.Null = true
 	}
 	result := convertResponseToProjectDomain(out, stringTypeTeamID)
-	tflog.Info(ctx, "imported project domain", map[string]interface{}{
+	tflog.Trace(ctx, "imported project domain", map[string]interface{}{
 		"project_id": result.ProjectID.Value,
 		"domain":     result.Domain.Value,
 		"team_id":    result.TeamID.Value,

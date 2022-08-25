@@ -30,7 +30,7 @@ func (c *Client) GetAlias(ctx context.Context, alias, teamID string) (r AliasRes
 	if err != nil {
 		return r, fmt.Errorf("creating request: %s", err)
 	}
-	tflog.Info(ctx, "getting alias", map[string]interface{}{
+	tflog.Trace(ctx, "getting alias", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(req, &r)

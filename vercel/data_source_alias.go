@@ -81,7 +81,7 @@ func (r dataSourceAlias) Read(ctx context.Context, req datasource.ReadRequest, r
 	}
 
 	result := convertResponseToAlias(out, config)
-	tflog.Info(ctx, "read alias", map[string]interface{}{
+	tflog.Trace(ctx, "read alias", map[string]interface{}{
 		"team_id": result.TeamID.Value,
 		"alias":   result.Alias.Value,
 	})

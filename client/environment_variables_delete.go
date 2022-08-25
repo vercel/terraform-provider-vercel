@@ -24,7 +24,7 @@ func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamI
 		return err
 	}
 
-	tflog.Info(ctx, "deleting environment variable", map[string]interface{}{
+	tflog.Trace(ctx, "deleting environment variable", map[string]interface{}{
 		"url": url,
 	})
 	return c.doRequest(req, nil)

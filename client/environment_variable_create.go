@@ -38,7 +38,7 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		return e, err
 	}
 
-	tflog.Info(ctx, "creating environment variable", map[string]interface{}{
+	tflog.Trace(ctx, "creating environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

@@ -35,7 +35,7 @@ func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID
 		return r, err
 	}
 
-	tflog.Info(ctx, "getting project domain", map[string]interface{}{
+	tflog.Trace(ctx, "getting project domain", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(req, &r)
