@@ -86,7 +86,6 @@ func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
 }
 
 func TestAcc_ProjectWithGitRepository(t *testing.T) {
-
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -122,7 +121,6 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 }
 
 func TestAcc_ProjectImport(t *testing.T) {
-
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
