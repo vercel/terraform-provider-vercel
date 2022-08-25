@@ -306,9 +306,9 @@ func containsEnvVar(env []EnvironmentItem, v EnvironmentItem) bool {
 
 // diffEnvVars is used to determine the set of environment variables that need to be updated,
 // and the set of environment variables that need to be removed.
-func diffEnvVars(oldVars, newVars []EnvironmentItem) (toUpsert, toRemove []EnvironmentItem) {
+func diffEnvVars(oldVars, newVars []EnvironmentItem) (toCreate, toRemove []EnvironmentItem) {
 	toRemove = []EnvironmentItem{}
-	toUpsert = []EnvironmentItem{}
+	toCreate = []EnvironmentItem{}
 	for _, e := range oldVars {
 		if !containsEnvVar(newVars, e) {
 			toRemove = append(toRemove, e)
@@ -316,10 +316,10 @@ func diffEnvVars(oldVars, newVars []EnvironmentItem) (toUpsert, toRemove []Envir
 	}
 	for _, e := range newVars {
 		if !containsEnvVar(oldVars, e) {
-			toUpsert = append(toUpsert, e)
+			toCreate = append(toCreate, e)
 		}
 	}
-	return toUpsert, toRemove
+	return toCreate, toRemove
 }
 
 // Update will update a project and it's associated environment variables via the vercel API.
@@ -363,7 +363,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 		"state_envs": stateEnvs,
 	})
 
-	toUpsert, toRemove := diffEnvVars(stateEnvs, planEnvs)
+	toCreate, toRemove := diffEnvVars(stateEnvs, planEnvs)
 	for _, v := range toRemove {
 		err := r.p.client.DeleteEnvironmentVariable(ctx, state.ID.Value, state.TeamID.Value, v.ID.Value)
 		if err != nil {
@@ -384,12 +384,10 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 			"environment_id": v.ID.Value,
 		})
 	}
-	for _, v := range toUpsert {
-		result, err := r.p.client.UpsertEnvironmentVariable(
+	for _, v := range toCreate {
+		result, err := r.p.client.CreateEnvironmentVariable(
 			ctx,
-			state.ID.Value,
-			state.TeamID.Value,
-			v.toUpsertEnvironmentVariableRequest(),
+			v.toCreateEnvironmentVariableRequest(plan.ID.Value, plan.TeamID.Value),
 		)
 		if err != nil {
 			resp.Diagnostics.AddError(

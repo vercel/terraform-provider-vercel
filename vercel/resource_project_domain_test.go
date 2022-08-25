@@ -12,7 +12,6 @@ import (
 )
 
 func TestAcc_ProjectDomain(t *testing.T) {
-	t.Parallel()
 	testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
 	if testTeam() != "" {
 		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam())

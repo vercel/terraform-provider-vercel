@@ -63,7 +63,6 @@ func TestAcc_Project(t *testing.T) {
 }
 
 func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
-	t.Parallel()
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -87,7 +86,7 @@ func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
 }
 
 func TestAcc_ProjectWithGitRepository(t *testing.T) {
-	t.Parallel()
+
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -123,7 +122,7 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 }
 
 func TestAcc_ProjectImport(t *testing.T) {
-	t.Parallel()
+
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -156,7 +155,7 @@ func testAccProjectExists(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no projectID is set")
 		}
 
-		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID, false)
 		return err
 	}
 }
@@ -172,7 +171,7 @@ func testAccProjectDestroy(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no projectID is set")
 		}
 
-		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID, false)
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
