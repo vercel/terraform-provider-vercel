@@ -54,12 +54,38 @@ func testAccProjectEnvironmentVariableExists(n, teamID string) resource.TestChec
 	}
 }
 
+func testAccProjectEnvironmentVariablesDoNotExists(n, teamID string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("not found: %s", n)
+		}
+
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("no ID is set")
+		}
+
+		project, err := testClient().GetProject(context.TODO(), rs.Primary.Attributes["project_id"], teamID, true)
+
+		if err != nil {
+			return fmt.Errorf("could not fetch the project: %w", err)
+		}
+
+		if len(project.EnvironmentVariables) != 0 {
+			return fmt.Errorf("project environment variables not deleted, they still exist")
+		}
+
+		return nil
+	}
+}
+
 func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 	nameSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccProjectDestroy("vercel_project.example", testTeam()),
 		),
 		Steps: []resource.TestStep{
 			{
@@ -93,8 +119,44 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "git_branch", "test-pr"),
 				),
 			},
+			{
+				ResourceName:      "vercel_project_environment_variable.example",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example"),
+			},
+			{
+				ResourceName:      "vercel_project_environment_variable.example_git_branch",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example_git_branch"),
+			},
+			{
+				Config: testAccProjectEnvironmentVariablesConfigDeleted(nameSuffix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectEnvironmentVariablesDoNotExists("vercel_project.example", testTeam()),
+				),
+			},
 		},
 	})
+}
+
+func getProjectEnvironmentVariableImportID(n string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", n)
+		}
+
+		if rs.Primary.ID == "" {
+			return "", fmt.Errorf("no ID is set")
+		}
+
+		if rs.Primary.Attributes["team_id"] == "" {
+			return fmt.Sprintf("%s/%s", rs.Primary.Attributes["project_id"], rs.Primary.ID), nil
+		}
+		return fmt.Sprintf("%s/%s/%s", rs.Primary.Attributes["team_id"], rs.Primary.Attributes["project_id"], rs.Primary.ID), nil
+	}
 }
 
 func testAccProjectEnvironmentVariablesConfig(projectName string) string {
@@ -158,3 +220,19 @@ func testAccProjectEnvironmentVariablesConfigUpdated(projectName string) string 
 		}
 `, projectName, testGithubRepo(), teamIDConfig())
 }
+
+func testAccProjectEnvironmentVariablesConfigDeleted(projectName string) string {
+	return fmt.Sprintf(`
+	resource "vercel_project" "example" {
+		name = "test-acc-example-project-%[1]s"
+		%[3]s
+
+		git_repository = {
+			type = "github"
+			repo = "%[2]s"
+		}
+		}
+`, projectName, testGithubRepo(), teamIDConfig())
+}
+
+

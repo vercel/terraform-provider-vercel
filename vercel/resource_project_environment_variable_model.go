@@ -52,7 +52,7 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client
 // convertResponseToProjectEnvironmentVariable is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
-func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVariable, plan ProjectEnvironmentVariable) ProjectEnvironmentVariable {
+func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVariable, teamID, projectID types.String) ProjectEnvironmentVariable {
 	target := []types.String{}
 	for _, t := range response.Target {
 		target = append(target, types.String{Value: t})
@@ -63,8 +63,8 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 		GitBranch: fromStringPointer(response.GitBranch),
 		Key:       types.String{Value: response.Key},
 		Value:     types.String{Value: response.Value},
-		TeamID:    plan.TeamID,
-		ProjectID: plan.ProjectID,
+		TeamID:    teamID,
+		ProjectID: projectID,
 		ID:        types.String{Value: response.ID},
 	}
 }

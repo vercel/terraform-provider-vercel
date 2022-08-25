@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -119,7 +120,7 @@ func (r resourceProjectEnvironmentVariable) Create(ctx context.Context, req reso
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan)
+	result := convertResponseToProjectEnvironmentVariable(response, plan.TeamID, plan.ProjectID)
 
 	tflog.Trace(ctx, "created project environment variable", map[string]interface{}{
 		"id":         result.ID.Value,
@@ -162,7 +163,7 @@ func (r resourceProjectEnvironmentVariable) Read(ctx context.Context, req resour
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, state)
+	result := convertResponseToProjectEnvironmentVariable(out, state.TeamID, state.ProjectID)
 	tflog.Trace(ctx, "read project environment variable", map[string]interface{}{
 		"id":         result.ID.Value,
 		"team_id":    result.TeamID.Value,
@@ -194,7 +195,7 @@ func (r resourceProjectEnvironmentVariable) Update(ctx context.Context, req reso
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan)
+	result := convertResponseToProjectEnvironmentVariable(response, plan.TeamID, plan.ProjectID)
 
 	tflog.Trace(ctx, "updated project environment variable", map[string]interface{}{
 		"id":         result.ID.Value,
@@ -239,4 +240,57 @@ func (r resourceProjectEnvironmentVariable) Delete(ctx context.Context, req reso
 		"team_id":    state.TeamID.Value,
 		"project_id": state.ProjectID.Value,
 	})
+}
+
+// splitID is a helper function for splitting an import ID into the corresponding parts.
+// It also validates whether the ID is in a correct format.
+func splitProjectEnvironmentVariableID(id string) (teamID, projectID, envID string, ok bool) {
+	attributes := strings.Split(id, "/")
+	if len(attributes) == 3 {
+		return attributes[0], attributes[1], attributes[2], true
+	}
+	if len(attributes) == 2 {
+		return "", attributes[0], attributes[1], true
+	}
+
+	return "", "", "", false
+}
+
+// ImportState takes an identifier and reads all the project environment variable information from the Vercel API.
+// The results are then stored in terraform state.
+func (r resourceProjectEnvironmentVariable) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	teamID, projectID, envID, ok := splitProjectEnvironmentVariableID(req.ID)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Error importing project environment variable",
+			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id/env_id\" or \"project_id/env_id\"", req.ID),
+		)
+	}
+
+	out, err := r.p.client.GetEnvironmentVariable(ctx, projectID, teamID, envID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project environment variable",
+			fmt.Sprintf("Could not get project environment variable %s %s %s, unexpected error: %s",
+				teamID,
+				projectID,
+				envID,
+				err,
+			),
+		)
+		return
+	}
+
+	result := convertResponseToProjectEnvironmentVariable(out, types.String{Value: teamID, Null: teamID == ""}, types.String{Value: projectID})
+	tflog.Trace(ctx, "imported project environment variable", map[string]interface{}{
+		"team_id":    result.TeamID.Value,
+		"project_id": result.ProjectID.Value,
+		"env_id": result.ID.Value,
+	})
+
+	diags := resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
