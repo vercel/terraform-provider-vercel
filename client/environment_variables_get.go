@@ -26,7 +26,7 @@ func (c *Client) getEnvironmentVariables(ctx context.Context, projectID, teamID 
 	envResponse := struct {
 		Env []EnvironmentVariable `json:"envs"`
 	}{}
-	tflog.Trace(ctx, "getting environment variable", map[string]interface{}{
+	tflog.Info(ctx, "getting environment variable", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(req, &envResponse)
