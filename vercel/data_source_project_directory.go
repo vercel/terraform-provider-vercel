@@ -113,7 +113,6 @@ func (r dataSourceProjectDirectory) Read(ctx context.Context, req datasource.Rea
 			)
 			return
 		}
-		content = removeCRLF(content)
 		rawSha := sha1.Sum(content)
 		sha := hex.EncodeToString(rawSha[:])
 
