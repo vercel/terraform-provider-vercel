@@ -70,7 +70,7 @@ type ProjectResponse struct {
 }
 
 // GetProject retrieves information about an existing project from Vercel.
-func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r ProjectResponse, err error) {
+func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shouldFetchEnvironmentVariables bool) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
 	if teamID != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
@@ -85,17 +85,23 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r Pr
 		return r, err
 	}
 	tflog.Trace(ctx, "getting project", map[string]interface{}{
-		"url": url,
+		"url":                    url,
+		"shouldFetchEnvironment": shouldFetchEnvironmentVariables,
 	})
 	err = c.doRequest(req, &r)
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("unable to get project: %w", err)
 	}
 
-	env, err := c.getEnvironmentVariables(ctx, projectID, teamID)
-	if err != nil {
-		return r, fmt.Errorf("error getting environment variables for project: %w", err)
+	if shouldFetchEnvironmentVariables {
+		r.EnvironmentVariables, err = c.getEnvironmentVariables(ctx, projectID, teamID)
+		if err != nil {
+			return r, fmt.Errorf("error getting environment variables for project: %w", err)
+		}
+	} else {
+		// The get project endpoint returns environment variables, but returns them fully
+		// encrypted. This isn't useful, so we just remove them.
+		r.EnvironmentVariables = nil
 	}
-	r.EnvironmentVariables = env
 	return r, err
 }

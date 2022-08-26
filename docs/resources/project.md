@@ -6,6 +6,8 @@ description: |-
   Provides a Project resource.
   A Project groups deployments and custom domains. To deploy on Vercel, you need to create a Project.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/overview.
+  ~> Terraform currently provides both a standalone Project Environment Variable resource (a single Environment Variable), and a Project resource with Environment Variables defined in-line via the environment field.
+  At this time you cannot use a Vercel Project resource with in-line environment in conjunction with any vercel_project_environment_variable resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 ---
 
 # vercel_project (Resource)
@@ -16,6 +18,9 @@ A Project groups deployments and custom domains. To deploy on Vercel, you need t
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/overview).
 
+~> Terraform currently provides both a standalone Project Environment Variable resource (a single Environment Variable), and a Project resource with Environment Variables defined in-line via the `environment` field.
+At this time you cannot use a Vercel Project resource with in-line `environment` in conjunction with any `vercel_project_environment_variable` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+
 ## Example Usage
 
 ```terraform
@@ -25,14 +30,6 @@ For more detailed information, please see the [Vercel documentation](https://ver
 resource "vercel_project" "with_git" {
   name      = "example-project-with-git"
   framework = "nextjs"
-
-  environment = [
-    {
-      key    = "bar"
-      value  = "baz"
-      target = ["preview"]
-    }
-  ]
 
   git_repository = {
     type = "github"
@@ -46,14 +43,6 @@ resource "vercel_project" "with_git" {
 resource "vercel_project" "example" {
   name      = "example-project"
   framework = "nextjs"
-
-  environment = [
-    {
-      key    = "bar"
-      value  = "baz"
-      target = ["preview", "production"]
-    }
-  ]
 }
 ```
 
@@ -68,7 +57,7 @@ resource "vercel_project" "example" {
 
 - `build_command` (String) The build command for this project. If omitted, this value will be automatically detected.
 - `dev_command` (String) The dev command for this project. If omitted, this value will be automatically detected.
-- `environment` (Attributes Set) A set of environment variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
+- `environment` (Attributes Set) A set of Environment Variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
 - `framework` (String) The framework that is being used for this project. If omitted, no framework is selected.
 - `git_repository` (Attributes) The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed. (see [below for nested schema](#nestedatt--git_repository))
 - `ignore_command` (String) When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.
@@ -88,11 +77,11 @@ resource "vercel_project" "example" {
 
 Optional:
 
-- `git_branch` (String) The git branch of the environment variable.
-- `id` (String) The ID of the environment variable
-- `key` (String) The name of the environment variable.
-- `target` (Set of String) The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.
-- `value` (String, Sensitive) The value of the environment variable.
+- `git_branch` (String) The git branch of the Environment Variable.
+- `id` (String) The ID of the Environment Variable.
+- `key` (String) The name of the Environment Variable.
+- `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.
+- `value` (String, Sensitive) The value of the Environment Variable.
 
 
 <a id="nestedatt--git_repository"></a>

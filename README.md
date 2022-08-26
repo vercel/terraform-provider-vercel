@@ -6,7 +6,7 @@
 ## Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) 1.1 or higher
-- [Go](https://golang.org/doc/install) 1.17 (to build the provider plugin)
+- [Go](https://golang.org/doc/install) 1.19 (to build the provider plugin)
 - [Task](https://taskfile.dev) v3 (to run Taskfile commands)
 
 ## Building The Provider
@@ -19,7 +19,7 @@ $ task build
 
 ## Developing the Provider
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.17+ is _required_).
+If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.19+ is _required_).
 
 To compile the provider, run `task build`. This will build the provider and put the provider binary in the repository root.
 
@@ -41,7 +41,6 @@ The acceptance tests require a few environment variables to be set:
 * `VERCEL_API_TOKEN` - this can be generated [here](https://vercel.com/account/tokens)
 * `VERCEL_TERRAFORM_TESTING_TEAM` - a Vercel team_id where resources can be created and destroyed
 * `VERCEL_TERRAFORM_TESTING_GITHUB_REPO` - a GitHub repository in the form 'org/repo' that can be used to trigger deployments
-* `VERCEL_TERRAFORM_TESTING_GITLAB_REPO` - a GitLab repository in the form 'namespace/repo' that can be used to trigger deployments
 * `VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO` - a Bitbucket repository in the form 'project/repo' that can be used to trigger deployments
 
 ```sh
@@ -51,7 +50,7 @@ $ task test
 In order to run the tests with extra debugging context, prefix with `TF_LOG` (see the [terraform documentation](https://www.terraform.io/docs/internals/debugging.html) for details).
 
 ```sh
-$ TF_LOG=trace task test
+$ TF_LOG=INFO task test
 ```
 
 To run a specific set of tests, use the `-run` flag and specify a regex pattern matching the test names.

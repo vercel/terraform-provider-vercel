@@ -45,11 +45,12 @@ Use the navigation to the left to read about the available resources.
 // GetResources shows the available resources for the vercel provider
 func (p *vercelProvider) GetResources(_ context.Context) (map[string]provider.ResourceType, diag.Diagnostics) {
 	return map[string]provider.ResourceType{
-		"vercel_alias":          resourceAliasType{},
-		"vercel_deployment":     resourceDeploymentType{},
-		"vercel_project":        resourceProjectType{},
-		"vercel_project_domain": resourceProjectDomainType{},
-		"vercel_dns_record":     resourceDNSRecordType{},
+		"vercel_alias":                        resourceAliasType{},
+		"vercel_deployment":                   resourceDeploymentType{},
+		"vercel_project":                      resourceProjectType{},
+		"vercel_project_domain":               resourceProjectDomainType{},
+		"vercel_project_environment_variable": resourceProjectEnvironmentVariableType{},
+		"vercel_dns_record":                   resourceDNSRecordType{},
 	}, nil
 }
 

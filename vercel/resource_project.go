@@ -27,6 +27,9 @@ Provides a Project resource.
 A Project groups deployments and custom domains. To deploy on Vercel, you need to create a Project.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/overview).
+
+~> Terraform currently provides both a standalone Project Environment Variable resource (a single Environment Variable), and a Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
+At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
         `,
 		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
@@ -89,11 +92,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				},
 			},
 			"environment": {
-				Description: "A set of environment variables that should be configured for the project.",
+				Description: "A set of Environment Variables that should be configured for the project.",
 				Optional:    true,
 				Attributes: tfsdk.SetNestedAttributes(map[string]tfsdk.Attribute{
 					"target": {
-						Description: "The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
+						Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 						Type: types.SetType{
 							ElemType: types.StringType,
 						},
@@ -103,23 +106,23 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Required: true,
 					},
 					"git_branch": {
-						Description: "The git branch of the environment variable.",
+						Description: "The git branch of the Environment Variable.",
 						Type:        types.StringType,
 						Optional:    true,
 					},
 					"key": {
-						Description: "The name of the environment variable.",
+						Description: "The name of the Environment Variable.",
 						Type:        types.StringType,
 						Required:    true,
 					},
 					"value": {
-						Description: "The value of the environment variable.",
+						Description: "The value of the Environment Variable.",
 						Type:        types.StringType,
 						Required:    true,
 						Sensitive:   true,
 					},
 					"id": {
-						Description:   "The ID of the environment variable",
+						Description:   "The ID of the Environment Variable.",
 						Type:          types.StringType,
 						PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
 						Computed:      true,
@@ -214,7 +217,16 @@ func (r resourceProject) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	out, err := r.p.client.CreateProject(ctx, plan.TeamID.Value, plan.toCreateProjectRequest())
+	environment, err := plan.environment(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing project environment variables",
+			"Could not read environment variables, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	out, err := r.p.client.CreateProject(ctx, plan.TeamID.Value, plan.toCreateProjectRequest(environment))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -223,7 +235,7 @@ func (r resourceProject) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	result := convertResponseToProject(out, plan.coercedFields())
+	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
 	tflog.Trace(ctx, "created project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -246,7 +258,7 @@ func (r resourceProject) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	out, err := r.p.client.GetProject(ctx, state.ID.Value, state.TeamID.Value)
+	out, err := r.p.client.GetProject(ctx, state.ID.Value, state.TeamID.Value, !state.Environment.Null)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -263,7 +275,7 @@ func (r resourceProject) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	result := convertResponseToProject(out, state.coercedFields())
+	result := convertResponseToProject(out, state.coercedFields(), state.Environment)
 	tflog.Trace(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -297,9 +309,9 @@ func containsEnvVar(env []EnvironmentItem, v EnvironmentItem) bool {
 
 // diffEnvVars is used to determine the set of environment variables that need to be updated,
 // and the set of environment variables that need to be removed.
-func diffEnvVars(oldVars, newVars []EnvironmentItem) (toUpsert, toRemove []EnvironmentItem) {
+func diffEnvVars(oldVars, newVars []EnvironmentItem) (toCreate, toRemove []EnvironmentItem) {
 	toRemove = []EnvironmentItem{}
-	toUpsert = []EnvironmentItem{}
+	toCreate = []EnvironmentItem{}
 	for _, e := range oldVars {
 		if !containsEnvVar(newVars, e) {
 			toRemove = append(toRemove, e)
@@ -307,10 +319,10 @@ func diffEnvVars(oldVars, newVars []EnvironmentItem) (toUpsert, toRemove []Envir
 	}
 	for _, e := range newVars {
 		if !containsEnvVar(oldVars, e) {
-			toUpsert = append(toUpsert, e)
+			toCreate = append(toCreate, e)
 		}
 	}
-	return toUpsert, toRemove
+	return toCreate, toRemove
 }
 
 // Update will update a project and it's associated environment variables via the vercel API.
@@ -332,7 +344,29 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	/* Update the environment variables first */
-	toUpsert, toRemove := diffEnvVars(state.Environment, plan.Environment)
+	planEnvs, err := plan.environment(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing project environment variables",
+			"Could not read environment variables, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	stateEnvs, err := state.environment(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing project environment variables from state",
+			"Could not read environment variables, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	tflog.Error(ctx, "planEnvs", map[string]interface{}{
+		"plan_envs":  planEnvs,
+		"state_envs": stateEnvs,
+	})
+
+	toCreate, toRemove := diffEnvVars(stateEnvs, planEnvs)
 	for _, v := range toRemove {
 		err := r.p.client.DeleteEnvironmentVariable(ctx, state.ID.Value, state.TeamID.Value, v.ID.Value)
 		if err != nil {
@@ -353,12 +387,10 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 			"environment_id": v.ID.Value,
 		})
 	}
-	for _, v := range toUpsert {
-		err := r.p.client.UpsertEnvironmentVariable(
+	for _, v := range toCreate {
+		result, err := r.p.client.CreateEnvironmentVariable(
 			ctx,
-			state.ID.Value,
-			state.TeamID.Value,
-			v.toUpsertEnvironmentVariableRequest(),
+			v.toCreateEnvironmentVariableRequest(plan.ID.Value, plan.TeamID.Value),
 		)
 		if err != nil {
 			resp.Diagnostics.AddError(
@@ -374,7 +406,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 		tflog.Trace(ctx, "upserted environment variable", map[string]interface{}{
 			"team_id":        plan.TeamID.Value,
 			"project_id":     plan.ID.Value,
-			"environment_id": v.ID.Value,
+			"environment_id": result.ID,
 		})
 	}
 
@@ -392,7 +424,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	result := convertResponseToProject(out, plan.coercedFields())
+	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
 	tflog.Trace(ctx, "updated project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,
@@ -463,7 +495,7 @@ func (r resourceProject) ImportState(ctx context.Context, req resource.ImportSta
 		)
 	}
 
-	out, err := r.p.client.GetProject(ctx, projectID, teamID)
+	out, err := r.p.client.GetProject(ctx, projectID, teamID, true)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
@@ -484,7 +516,7 @@ func (r resourceProject) ImportState(ctx context.Context, req resource.ImportSta
 		OutputDirectory: types.String{Null: true},
 		PublicSource:    types.Bool{Null: true},
 		TeamID:          types.String{Value: teamID, Null: teamID == ""},
-	})
+	}, types.Set{Null: true})
 	tflog.Trace(ctx, "imported project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ID.Value,

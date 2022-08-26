@@ -5,14 +5,6 @@ resource "vercel_project" "with_git" {
   name      = "example-project-with-git"
   framework = "nextjs"
 
-  environment = [
-    {
-      key    = "bar"
-      value  = "baz"
-      target = ["preview"]
-    }
-  ]
-
   git_repository = {
     type = "github"
     repo = "vercel/some-repo"
@@ -25,12 +17,4 @@ resource "vercel_project" "with_git" {
 resource "vercel_project" "example" {
   name      = "example-project"
   framework = "nextjs"
-
-  environment = [
-    {
-      key    = "bar"
-      value  = "baz"
-      target = ["preview", "production"]
-    }
-  ]
 }

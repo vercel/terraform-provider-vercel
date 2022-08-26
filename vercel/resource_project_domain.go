@@ -101,7 +101,7 @@ func (r resourceProjectDomain) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	_, err := r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value)
+	_, err := r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
 	var apiErr client.APIError
 	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
 		resp.Diagnostics.AddError(

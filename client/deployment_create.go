@@ -150,7 +150,7 @@ func (e MissingFilesError) Error() string {
 }
 
 func (c *Client) getGitSource(ctx context.Context, projectID, ref, teamID string) (gs gitSource, err error) {
-	project, err := c.GetProject(ctx, projectID, teamID)
+	project, err := c.GetProject(ctx, projectID, teamID, false)
 	if err != nil {
 		return gs, fmt.Errorf("error getting project: %w", err)
 	}
