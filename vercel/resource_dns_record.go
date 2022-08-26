@@ -23,6 +23,8 @@ Provides a DNS Record resource.
 
 DNS records are instructions that live in authoritative DNS servers and provide information about a domain.
 
+~> The ` + "`value` field" + ` must be specified on all DNS record types except ` + "`SRV`" + `. When using ` + "`SRV`" + ` DNS records, the ` + "`srv`" + ` field must be specified.
+
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/custom-domains#dns-records)
         `,
 		Attributes: map[string]tfsdk.Attribute{
@@ -48,7 +50,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Type:        types.StringType,
 			},
 			"type": {
-				Description:   "The type of DNS record.",
+				Description:   "The type of DNS record. Available types: " + "`A`" + ", " + "`AAAA`" + ", " + "`ALIAS`" + ", " + "`CAA`" + ", " + "`CNAME`" + ", " + "`MX`" + ", " + "`NS`" + ", " + "`SRV`" + ", " + "`TXT`" + ".",
 				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
 				Required:      true,
 				Type:          types.StringType,
@@ -65,6 +67,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"ttl": {
 				Description: "The TTL value in seconds. Must be a number between 60 and 2147483647. If unspecified, it will default to 60 seconds.",
 				Optional:    true,
+				Computed:    true,
 				Type:        types.Int64Type,
 				Validators: []tfsdk.AttributeValidator{
 					int64GreaterThan(60),
@@ -141,10 +144,18 @@ func (r resourceDNSRecord) ValidateConfig(ctx context.Context, req resource.Vali
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	if config.Type.Value == "SRV" && config.SRV == nil {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"A DNS Record type of 'SRV' requires the `srv` attribute to be set",
+		)
+	}
+
+	if config.Type.Value != "SRV" && config.Value.Null {
+		resp.Diagnostics.AddError(
+			"DNS Record Invalid",
+			fmt.Sprintf("The `value` attribute must be set on records of `type` '%s'", config.Type.Value),
 		)
 	}
 

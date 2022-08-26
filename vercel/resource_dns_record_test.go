@@ -63,6 +63,7 @@ func TestAcc_DNSRecord(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccDNSRecordDestroy("vercel_dns_record.a_without_ttl", ""),
 			testAccDNSRecordDestroy("vercel_dns_record.a", ""),
 			testAccDNSRecordDestroy("vercel_dns_record.aaaa", ""),
 			testAccDNSRecordDestroy("vercel_dns_record.alias", ""),
@@ -76,6 +77,11 @@ func TestAcc_DNSRecord(t *testing.T) {
 			{
 				Config: testAccDNSRecordConfig(testDomain(), nameSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDNSRecordExists("vercel_dns_record.a_without_ttl", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.a", "domain", testDomain()),
+					resource.TestCheckResourceAttr("vercel_dns_record.a", "type", "A"),
+					resource.TestCheckResourceAttr("vercel_dns_record.a", "ttl", "60"),
+					resource.TestCheckResourceAttr("vercel_dns_record.a", "value", "127.0.0.1"),
 					testAccDNSRecordExists("vercel_dns_record.a", ""),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "type", "A"),
@@ -137,6 +143,11 @@ func TestAcc_DNSRecord(t *testing.T) {
 			{
 				Config: testAccDNSRecordConfigUpdated(testDomain(), nameSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDNSRecordExists("vercel_dns_record.a_without_ttl", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.a", "domain", testDomain()),
+					resource.TestCheckResourceAttr("vercel_dns_record.a", "type", "A"),
+					resource.TestCheckResourceAttr("vercel_dns_record.a", "ttl", "120"),
+					resource.TestCheckResourceAttr("vercel_dns_record.a", "value", "127.0.0.1"),
 					testAccDNSRecordExists("vercel_dns_record.a", ""),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "type", "A"),
@@ -234,6 +245,12 @@ func TestAcc_DNSRecord(t *testing.T) {
 
 func testAccDNSRecordConfig(testDomain, nameSuffix string) string {
 	return fmt.Sprintf(`
+resource "vercel_dns_record" "a_without_ttl" {
+  domain = "%[1]s"
+  name  = "test-acc-%[2]s-a-without-ttl-record"
+  type  = "A"
+  value = "127.0.0.1"
+}
 resource "vercel_dns_record" "a" {
   domain = "%[1]s"
   name  = "test-acc-%[2]s-a-record"
@@ -320,6 +337,13 @@ resource "vercel_dns_record" "ns" {
 
 func testAccDNSRecordConfigUpdated(testDomain, nameSuffix string) string {
 	return fmt.Sprintf(`
+resource "vercel_dns_record" "a_without_ttl" {
+  domain = "%[1]s"
+  name  = "test-acc-%[2]s-a-without-ttl-record"
+  type  = "A"
+  ttl   = 120
+  value = "127.0.0.1"
+}
 resource "vercel_dns_record" "a" {
   domain = "%[1]s"
   name  = "test-acc-%[2]s-a-record-updated"
