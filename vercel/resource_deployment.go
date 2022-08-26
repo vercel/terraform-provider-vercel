@@ -274,7 +274,6 @@ func (r resourceDeployment) Create(ctx context.Context, req resource.CreateReque
 				)
 				return
 			}
-			content = removeCRLF(content)
 
 			err = r.p.client.CreateFile(ctx, client.CreateFileRequest{
 				Filename: normaliseFilename(f.File, plan.PathPrefix),
