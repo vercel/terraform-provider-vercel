@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/vercel/terraform-provider-vercel/glob"
+	"github.com/vercel/terraform-provider-vercel/file"
 )
 
 type dataSourceProjectDirectoryType struct{}
@@ -77,7 +77,7 @@ func (r dataSourceProjectDirectory) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	ignoreRules, err := glob.GetIgnores(config.Path.Value)
+	ignoreRules, err := file.GetIgnores(config.Path.Value)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading .vercelignore file",
@@ -88,7 +88,7 @@ func (r dataSourceProjectDirectory) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	paths, err := glob.GetPaths(config.Path.Value, ignoreRules)
+	paths, err := file.GetPaths(config.Path.Value, ignoreRules)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading directory",

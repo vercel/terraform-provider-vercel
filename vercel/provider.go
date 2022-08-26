@@ -47,20 +47,21 @@ func (p *vercelProvider) GetResources(_ context.Context) (map[string]provider.Re
 	return map[string]provider.ResourceType{
 		"vercel_alias":                        resourceAliasType{},
 		"vercel_deployment":                   resourceDeploymentType{},
+		"vercel_dns_record":                   resourceDNSRecordType{},
 		"vercel_project":                      resourceProjectType{},
 		"vercel_project_domain":               resourceProjectDomainType{},
 		"vercel_project_environment_variable": resourceProjectEnvironmentVariableType{},
-		"vercel_dns_record":                   resourceDNSRecordType{},
 	}, nil
 }
 
 // GetDataSources shows the available data sources for the vercel provider
 func (p *vercelProvider) GetDataSources(_ context.Context) (map[string]provider.DataSourceType, diag.Diagnostics) {
 	return map[string]provider.DataSourceType{
+		"vercel_alias":             dataSourceAliasType{},
 		"vercel_file":              dataSourceFileType{},
+		"vercel_prebuilt_project":  dataSourcePrebuiltProjectType{},
 		"vercel_project":           dataSourceProjectType{},
 		"vercel_project_directory": dataSourceProjectDirectoryType{},
-		"vercel_alias":             dataSourceAliasType{},
 	}, nil
 }
 
