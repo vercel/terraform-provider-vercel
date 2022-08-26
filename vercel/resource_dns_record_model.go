@@ -40,6 +40,7 @@ func (d DNSRecord) toCreateDNSRecordRequest() client.CreateDNSRecordRequest {
 			Weight:   d.SRV.Weight.Value,
 		}
 	}
+
 	return client.CreateDNSRecordRequest{
 		Domain:     d.Domain.Value,
 		MXPriority: d.MXPriority.Value,

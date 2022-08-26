@@ -5,6 +5,7 @@ subcategory: ""
 description: |-
   Provides a DNS Record resource.
   DNS records are instructions that live in authoritative DNS servers and provide information about a domain.
+  ~> The value field must be specified on all DNS record types except SRV. When using SRV DNS records, the srv field must be specified.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/custom-domains#dns-records
 ---
 
@@ -13,6 +14,8 @@ description: |-
 Provides a DNS Record resource.
 
 DNS records are instructions that live in authoritative DNS servers and provide information about a domain.
+
+~> The `value` field must be specified on all DNS record types except `SRV`. When using `SRV` DNS records, the `srv` field must be specified.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/custom-domains#dns-records)
 
@@ -97,7 +100,7 @@ resource "vercel_dns_record" "txt" {
 
 - `domain` (String) The domain name, or zone, that the DNS record should be created beneath.
 - `name` (String) The subdomain name of the record. This should be an empty string if the rercord is for the root domain.
-- `type` (String) The type of DNS record.
+- `type` (String) The type of DNS record. Available types: `A`, `AAAA`, `ALIAS`, `CAA`, `CNAME`, `MX`, `NS`, `SRV`, `TXT`.
 
 ### Optional
 
