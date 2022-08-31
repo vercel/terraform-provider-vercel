@@ -87,6 +87,7 @@ func (r dataSourcePrebuiltProject) ValidateConfig(ctx context.Context, req datas
 	validatePrebuiltOutput(&resp.Diagnostics, config.Path.Value)
 }
 
+// AddErrorer defines an interface that contains the AddError method. Most commonly used with Diagnostics.
 type AddErrorer interface {
 	AddError(summary string, detail string)
 }

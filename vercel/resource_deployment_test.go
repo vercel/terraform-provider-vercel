@@ -183,7 +183,7 @@ func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	extraConfig := "delete_on_destroy = true"
 	deploymentID := ""
-	storeDeploymentId := func(n string, did *string) resource.TestCheckFunc {
+	storeDeploymentID := func(n string, did *string) resource.TestCheckFunc {
 		return func(s *terraform.State) error {
 			rs, ok := s.RootModule().Resources[n]
 			if !ok {
@@ -217,7 +217,7 @@ func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
 				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(), extraConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists("vercel_deployment.test", ""),
-					storeDeploymentId("vercel_deployment.test", &deploymentID),
+					storeDeploymentID("vercel_deployment.test", &deploymentID),
 				),
 			},
 			{

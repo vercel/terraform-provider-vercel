@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
+// CreateFileRequest defines the information needed to upload a file to Vercel.
 type CreateFileRequest struct {
 	Filename string
 	SHA      string

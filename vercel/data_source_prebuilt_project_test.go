@@ -35,7 +35,7 @@ func TestAcc_DataSourcePrebuiltProject(t *testing.T) {
 						filepath.Join("output.examples", "two", ".vercel", "output", "config.json"),
 						Checksums{
 							unix:    "19~e963e8b508fbae85b362afd1cd388c251fa24eee",
-							windows: "19~e963e8b508fbae85b362afd1cd388c251fa24eee",
+							windows: "22~e18f9a96e9911f5cc7f9d0aa3948fd1e82cdd700",
 						},
 					),
 				),

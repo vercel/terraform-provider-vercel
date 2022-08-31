@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+// Builds defines some of the information that can be contained within a builds.json file
+// as part of the Build API output.
 type Builds struct {
 	Target string    `json:"target"`
 	Error  *struct{} `json:"error"`
@@ -14,6 +16,7 @@ type Builds struct {
 	} `json:"builds"`
 }
 
+// ReadBuildsJSON will read a builds.json file and return the parsed content as a Builds struct.
 func ReadBuildsJSON(path string) (builds Builds, err error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
