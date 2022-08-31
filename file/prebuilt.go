@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 )
 
 type Builds struct {
@@ -27,12 +26,4 @@ func ReadBuildsJSON(path string) (builds Builds, err error) {
 	}
 
 	return builds, err
-}
-
-func OutputDir(path string) string {
-	return filepath.Join(path, ".vercel", "output")
-}
-
-func BuildsPath(path string) string {
-	return filepath.Join(path, ".vercel", "output", "builds.json")
 }

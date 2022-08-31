@@ -39,8 +39,6 @@ var defaultIgnores = []string{
 	".terraform*",
 	"*.tfstate",
 	"*.tfstate.backup",
-	// Make sure it's impossible to upload build-output as part of a deployment
-	".vercel/output",
 }
 
 // GetIgnores is used to parse a .vercelignore file from a given directory, and

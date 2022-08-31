@@ -44,3 +44,18 @@ resource "vercel_deployment" "git_example" {
   project_id = vercel_project.git_example.id
   ref        = "d92f10e" # or a git branch
 }
+
+## Or deploying a prebuilt project 
+data "vercel_project" "prebuilt_example" {
+  name = "my-prebuilt-project"
+}
+
+data "vercel_prebuilt_project" "prebuilt_example" {
+  path = "../ui"
+}
+
+resource "vercel_deployment" "prebuilt_example" {
+  project_id  = data.vercel_project.prebuilt_example.id
+  files       = data.vercel_prebuilt_project.prebuilt_example.output
+  path_prefix = data.vercel_prebuilt_project.prebuilt_example.path
+}

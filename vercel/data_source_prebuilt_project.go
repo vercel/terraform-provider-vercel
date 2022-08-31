@@ -23,10 +23,16 @@ type dataSourcePrebuiltProjectType struct{}
 func (r dataSourcePrebuiltProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
-Provides the output of a project built via ` + "`vercel build`" + ` and provides metadata for use with a ` + "`vercel_deployment`",
+Provides the output of a project built via ` + "`vercel build`" + ` and provides metadata for use with a ` + "`vercel_deployment`" + `
+
+The [build command](https://vercel.com/docs/cli#commands/build) can be used to build a project locally or in your own CI environment. 
+Build artifacts are placed into the ` + "`.vercel/output`" + ` directory according to the [Build Output API](https://vercel.com/docs/build-output-api/v3).
+
+This allows a Vercel Deployment to be created without sharing the Project's source code with Vercel.
+`,
 		Attributes: map[string]tfsdk.Attribute{
 			"path": {
-				Description: "The path to the project. Note that this path is relative to the root of your terraform files.",
+				Description: "The path to the project. Note that this path is relative to the root of your terraform files. This should be the directory that contains the `.vercel/output` directory.",
 				Required:    true,
 				Type:        types.StringType,
 			},
@@ -85,20 +91,19 @@ type AddErrorer interface {
 	AddError(summary string, detail string)
 }
 
-func isPrebuilt(path string) (bool, error) {
-	_, err := os.Stat(file.OutputDir(path))
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("unable to read .vercel/output: %w", err)
-	}
-	return true, nil
-}
-
 func validatePrebuiltOutput(diags AddErrorer, path string) {
-	outputDir := file.OutputDir(path)
-	isPrebuilt, err := isPrebuilt(path)
+	outputDir := filepath.Join(path, ".vercel", "output")
+	_, err := os.Stat(outputDir)
+	if os.IsNotExist(err) {
+		diags.AddError(
+			"Error reading prebuilt output",
+			fmt.Sprintf(
+				"A prebuilt project data source was used, but no prebuilt output was found in `%s`. Run `vercel build` to generate a local build",
+				path,
+			),
+		)
+		return
+	}
 	if err != nil {
 		diags.AddError(
 			"Error reading prebuilt project",
@@ -109,20 +114,10 @@ func validatePrebuiltOutput(diags AddErrorer, path string) {
 		)
 		return
 	}
-	if !isPrebuilt {
-		diags.AddError(
-			"Error reading prebuilt output",
-			fmt.Sprintf(
-				"A prebuilt project data source was used, but no prebuilt output was found in %s. Run `vercel build` to generate a local build",
-				outputDir,
-			),
-		)
-		return
-	}
 
 	// The .vercel/output/builds.json file may exist, and can contain information about failed builds.
 	// But it does not _have_ to exist, so we do not rely on its presence.
-	builds, err := file.ReadBuildsJSON(file.BuildsPath(path))
+	builds, err := file.ReadBuildsJSON(filepath.Join(outputDir, "builds.json"))
 	if os.IsNotExist(err) {
 		// It's okay to not have a builds.json file. So allow this.
 		return
@@ -168,6 +163,7 @@ func (r dataSourcePrebuiltProject) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
+	outputDir := filepath.Join(config.Path.Value, ".vercel", "output")
 	validatePrebuiltOutput(&resp.Diagnostics, config.Path.Value)
 	if resp.Diagnostics.HasError() {
 		return
@@ -175,7 +171,7 @@ func (r dataSourcePrebuiltProject) Read(ctx context.Context, req datasource.Read
 
 	config.Output = map[string]string{}
 	err := filepath.WalkDir(
-		filepath.Join(config.Path.Value, ".vercel", "output"),
+		outputDir,
 		func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err

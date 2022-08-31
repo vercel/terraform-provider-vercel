@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "BUILD_FAILED",
+    "message": "Build failed because of webpack errors"
+  }
+}
