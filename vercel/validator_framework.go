@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func validateFramework() validatorFramework {
@@ -15,21 +17,21 @@ func validateFramework() validatorFramework {
 }
 
 type validatorFramework struct {
-	frameworks []string
+	frameworks map[string]struct{}
 }
 
 func (v validatorFramework) Description(ctx context.Context) string {
 	if v.frameworks == nil {
 		return "The framework provided is not supported on Vercel"
 	}
-	return stringOneOf(v.frameworks...).Description(ctx)
+	return fmt.Sprintf("The framework provided is not supported on Vercel. Must be one of %s.", strings.Join(keys(v.frameworks), ", "))
 }
 
 func (v validatorFramework) MarkdownDescription(ctx context.Context) string {
 	if v.frameworks == nil {
 		return "The framework provided is not supported on Vercel"
 	}
-	return stringOneOf(v.frameworks...).MarkdownDescription(ctx)
+	return fmt.Sprintf("The framework provided is not supported on Vercel. Must be one of `%s`.", strings.Join(keys(v.frameworks), "`, `"))
 }
 
 func (v validatorFramework) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
@@ -74,8 +76,28 @@ func (v validatorFramework) Validate(ctx context.Context, req tfsdk.ValidateAttr
 		return
 	}
 	for _, fw := range fwList {
-		v.frameworks = append(v.frameworks, fw.Slug)
+		if v.frameworks == nil {
+			v.frameworks = map[string]struct{}{}
+		}
+		v.frameworks[fw.Slug] = struct{}{}
 	}
 
-	stringOneOf(v.frameworks...).Validate(ctx, req, resp)
+	var item types.String
+	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &item)
+	resp.Diagnostics.Append(diags...)
+	if diags.HasError() {
+		return
+	}
+	if item.Unknown || item.Null {
+		return
+	}
+
+	if _, ok := v.frameworks[item.Value]; !ok {
+		resp.Diagnostics.AddAttributeError(
+			req.AttributePath,
+			"Invalid Framework",
+			fmt.Sprintf("The framework %s is not supported on Vercel. Must be one of %s.", item.Value, strings.Join(keys(v.frameworks), ", ")),
+		)
+		return
+	}
 }

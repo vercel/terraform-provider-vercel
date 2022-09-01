@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -23,6 +24,25 @@ func TestAcc_Project(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
 		Steps: []resource.TestStep{
+			// Ensure we get nice framework / serverless_function_region errors
+			{
+				Config: `
+                    resource "vercel_project" "test" {
+                        name = "foo"
+                        serverless_function_region = "notexist"
+                    }
+                `,
+				ExpectError: regexp.MustCompile("Invalid Serverless Function Region"),
+			},
+			{
+				Config: `
+                    resource "vercel_project" "test" {
+                        name = "foo"
+                        framework = "notexist"
+                    }
+                `,
+				ExpectError: regexp.MustCompile("Invalid Framework"),
+			},
 			// Create and Read testing
 			{
 				Config: testAccProjectConfig(projectSuffix, teamIDConfig()),
