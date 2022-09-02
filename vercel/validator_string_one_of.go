@@ -52,7 +52,7 @@ func (v validatorStringOneOf) Validate(ctx context.Context, req tfsdk.ValidateAt
 		resp.Diagnostics.AddAttributeError(
 			req.AttributePath,
 			"Invalid value provided",
-			fmt.Sprintf("Item must be one of %s, got: %s.", strings.Join(v.keys(), " "), item.Value),
+			fmt.Sprintf("Item must be one of %s, got: %s.", strings.Join(v.keys(), ", "), item.Value),
 		)
 		return
 	}
