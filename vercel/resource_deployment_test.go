@@ -88,6 +88,13 @@ func TestAcc_Deployment(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
 				),
 			},
+			{
+				Config: deploymentWithPrebuiltProject(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testTeamID,
+					testAccDeploymentExists("vercel_deployment.test", ""),
+				),
+			},
 		},
 	})
 }
@@ -176,7 +183,7 @@ func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	extraConfig := "delete_on_destroy = true"
 	deploymentID := ""
-	storeDeploymentId := func(n string, did *string) resource.TestCheckFunc {
+	storeDeploymentID := func(n string, did *string) resource.TestCheckFunc {
 		return func(s *terraform.State) error {
 			rs, ok := s.RootModule().Resources[n]
 			if !ok {
@@ -210,7 +217,7 @@ func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
 				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(), extraConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists("vercel_deployment.test", ""),
-					storeDeploymentId("vercel_deployment.test", &deploymentID),
+					storeDeploymentID("vercel_deployment.test", &deploymentID),
 				),
 			},
 			{
@@ -257,6 +264,34 @@ resource "vercel_project" "test" {
 `, projectSuffix, teamID)
 }
 
+func deploymentWithPrebuiltProject(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-deployment-%[1]s"
+  %[2]s
+  environment = [
+    {
+      key    = "bar"
+      value  = "baz"
+      target = ["preview"]
+    }
+  ]
+}
+
+data "vercel_prebuilt_project" "test" {
+    path = "examples/two"
+}
+
+resource "vercel_deployment" "test" {
+  project_id = vercel_project.test.id
+  %[2]s
+
+  files       = data.vercel_prebuilt_project.test.output 
+  path_prefix = data.vercel_prebuilt_project.test.path
+}
+`, projectSuffix, teamID)
+}
+
 func testAccDeploymentConfig(projectSuffix, teamID, deploymentExtras string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
@@ -272,11 +307,11 @@ resource "vercel_project" "test" {
 }
 
 data "vercel_file" "index" {
-    path = "example/index.html"
+    path = "examples/one/index.html"
 }
 
 data "vercel_file" "windows_line_ending" {
-    path = "example/windows_line_ending.png"
+    path = "examples/one/windows_line_ending.png"
 }
 
 resource "vercel_deployment" "test" {
@@ -302,7 +337,7 @@ resource "vercel_project" "test" {
 }
 
 data "vercel_file" "index" {
-    path = "../vercel/example/index.html"
+    path = "../vercel/examples/one/index.html"
 }
 
 resource "vercel_deployment" "test" {
@@ -324,7 +359,7 @@ resource "vercel_project" "test" {
 }
 
 data "vercel_file" "index" {
-  path = "../vercel/example/index.html"
+  path = "../vercel/examples/one/index.html"
 }
 
 resource "vercel_deployment" "test" {

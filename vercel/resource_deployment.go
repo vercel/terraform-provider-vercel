@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -13,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
+	"github.com/vercel/terraform-provider-vercel/file"
 )
 
 type resourceDeploymentType struct{}
@@ -179,13 +182,64 @@ func (r resourceDeployment) ValidateConfig(ctx context.Context, req resource.Val
 			"Deployment Invalid",
 			"A Deployment cannot have both `ref` and `files` specified",
 		)
+		return
 	}
 	if config.Ref.Null && config.Files.Null {
 		resp.Diagnostics.AddError(
 			"Deployment Invalid",
 			"A Deployment must have either `ref` or `files` specified",
 		)
+		return
 	}
+}
+
+func validatePrebuiltBuilds(diags AddErrorer, config Deployment, files []client.DeploymentFile) {
+	buildsFilePath, ok := getPrebuiltBuildsFile(files)
+	if !ok {
+		// It's okay to not have a builds.json file. So allow this.
+		return
+	}
+
+	builds, err := file.ReadBuildsJSON(buildsFilePath)
+	if err != nil {
+		diags.AddError(
+			"Error reading prebuilt output",
+			fmt.Sprintf(
+				"An unexpected error occurred reading the prebuilt output builds.json: %s",
+				err,
+			),
+		)
+		return
+	}
+
+	target := "preview"
+	if config.Production.Value {
+		target = "production"
+	}
+
+	// Verify that the target matches what we hope the target is for the deployment.
+	if (builds.Target != "production" && target == "production") ||
+		(builds.Target == "production" && target != "production") {
+		diags.AddError(
+			"Prebuilt deployment cannot be used",
+			fmt.Sprintf(
+				"The prebuilt deployment at `%s` was built with the target environment %s, but the deployment targets environment %s",
+				buildsFilePath,
+				builds.Target,
+				target,
+			),
+		)
+		return
+	}
+}
+
+func getPrebuiltBuildsFile(files []client.DeploymentFile) (string, bool) {
+	for _, f := range files {
+		if strings.HasSuffix(f.File, filepath.Join(".vercel", "output", "builds.json")) {
+			return f.File, true
+		}
+	}
+	return "", false
 }
 
 // Create will create a deployment within Vercel. This is done by first attempting to trigger a deployment, seeing what
@@ -226,10 +280,11 @@ func (r resourceDeployment) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	target := ""
-	if plan.Production.Value {
-		target = "production"
+	validatePrebuiltBuilds(&resp.Diagnostics, plan, files)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+
 	var environment map[string]string
 	diags = plan.Environment.ElementsAs(ctx, &environment, false)
 	resp.Diagnostics.Append(diags...)
@@ -237,6 +292,10 @@ func (r resourceDeployment) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	target := ""
+	if plan.Production.Value {
+		target = "production"
+	}
 	cdr := client.CreateDeploymentRequest{
 		Files:           files,
 		Environment:     environment,

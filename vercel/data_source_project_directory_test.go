@@ -16,14 +16,18 @@ func TestAcc_DataSourceProjectDirectory(t *testing.T) {
 			{
 				Config: testAccProjectDirectoryConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vercel_project_directory.test", "path", "example"),
-					testChecksum("data.vercel_project_directory.test", filepath.Join("files.example", "index.html"), Checksums{
+					resource.TestCheckResourceAttr("data.vercel_project_directory.test", "path", "examples/one"),
+					testChecksum("data.vercel_project_directory.test", filepath.Join("files.examples", "one", "index.html"), Checksums{
 						unix:    "60~9d3fedcc87ac72f54e75d4be7e06d0a6f8497e68",
 						windows: "65~c0b8b91602dc7a394354cd9a21460ce2070b9a13",
 					}),
 					resource.TestCheckNoResourceAttr(
 						"data.vercel_project_directory.test",
 						filepath.Join("files.example", "file2.html"),
+					),
+					resource.TestCheckNoResourceAttr(
+						"data.vercel_project_directory.test",
+						filepath.Join("files.example", ".vercel", "output", "builds.json"),
 					),
 				),
 			},
@@ -34,7 +38,7 @@ func TestAcc_DataSourceProjectDirectory(t *testing.T) {
 func testAccProjectDirectoryConfig() string {
 	return `
 data "vercel_project_directory" "test" {
-    path = "example"
+    path = "examples/one"
 }
 `
 }

@@ -47,9 +47,9 @@ func TestAcc_DataSourceFile(t *testing.T) {
 			{
 				Config: testAccFileConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vercel_file.test", "path", "example/index.html"),
-					resource.TestCheckResourceAttr("data.vercel_file.test", "id", "example/index.html"),
-					testChecksum("data.vercel_file.test", "file.example/index.html", Checksums{
+					resource.TestCheckResourceAttr("data.vercel_file.test", "path", "examples/one/index.html"),
+					resource.TestCheckResourceAttr("data.vercel_file.test", "id", "examples/one/index.html"),
+					testChecksum("data.vercel_file.test", "file.examples/one/index.html", Checksums{
 						unix:    "60~9d3fedcc87ac72f54e75d4be7e06d0a6f8497e68",
 						windows: "65~c0b8b91602dc7a394354cd9a21460ce2070b9a13",
 					}),
@@ -62,7 +62,7 @@ func TestAcc_DataSourceFile(t *testing.T) {
 func testAccFileConfig() string {
 	return `
 data "vercel_file" "test" {
-    path = "example/index.html"
+    path = "examples/one/index.html"
 }
 `
 }

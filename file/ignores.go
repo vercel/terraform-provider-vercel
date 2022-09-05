@@ -1,4 +1,4 @@
-package glob
+package file
 
 import (
 	"bufio"
