@@ -140,6 +140,24 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 	})
 }
 
+func getProjectImportID(n string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", n)
+		}
+
+		if rs.Primary.ID == "" {
+			return "", fmt.Errorf("no ID is set")
+		}
+
+		if rs.Primary.Attributes["team_id"] == "" {
+			return rs.Primary.ID, nil
+		}
+		return fmt.Sprintf("%s/%s", rs.Primary.Attributes["team_id"], rs.Primary.ID), nil
+	}
+}
+
 func TestAcc_ProjectImport(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
@@ -148,15 +166,16 @@ func TestAcc_ProjectImport(t *testing.T) {
 		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfig(projectSuffix, ""),
+				Config: projectConfigWithoutEnv(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", ""),
+					testAccProjectExists("vercel_project.test", testTeam()),
 				),
 			},
 			{
 				ResourceName:      "vercel_project.test",
 				ImportState:       true,
 				ImportStateVerify: true,
+				ImportStateIdFunc: getProjectImportID("vercel_project.test"),
 			},
 		},
 	})
@@ -292,6 +311,24 @@ resource "vercel_project" "test_git" {
   ]
 }
     `, projectSuffix, teamID, testGithubRepo())
+}
+
+func projectConfigWithoutEnv(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-project-%s"
+  %s
+  build_command = "npm run build"
+  dev_command = "npm run serve"
+  ignore_command = "echo 'wat'"
+  serverless_function_region = "syd1"
+  framework = "nextjs"
+  install_command = "npm install"
+  output_directory = ".output"
+  public_source = true
+  root_directory = "ui/src"
+}
+`, projectSuffix, teamID)
 }
 
 func testAccProjectConfig(projectSuffix, teamID string) string {

@@ -478,7 +478,7 @@ func (r resourceProject) ImportState(ctx context.Context, req resource.ImportSta
 		)
 	}
 
-	out, err := r.p.client.GetProject(ctx, projectID, teamID, true)
+	out, err := r.p.client.GetProject(ctx, projectID, teamID, false)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
