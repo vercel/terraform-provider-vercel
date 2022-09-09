@@ -48,6 +48,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Required:    true,
 				Description: "The value of the Environment Variable.",
 				Type:        types.StringType,
+				Sensitive:   true,
 			},
 			"git_branch": {
 				Optional:    true,
