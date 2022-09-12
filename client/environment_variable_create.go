@@ -24,8 +24,8 @@ type CreateEnvironmentVariableRequest struct {
 // CreateEnvironmentVariable will create a brand new environment variable if one does not exist.
 func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEnvironmentVariableRequest) (e EnvironmentVariable, err error) {
 	url := fmt.Sprintf("%s/v9/projects/%s/env", c.baseURL, request.ProjectID)
-	if request.TeamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, request.TeamID)
+	if c.teamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	req, err := http.NewRequestWithContext(
@@ -45,5 +45,6 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 	err = c.doRequest(req, &e)
 	// The API response returns an encrypted environment variable, but we want to return the decrypted version.
 	e.Value = request.Value
+	e.TeamID = c.teamID(request.TeamID)
 	return e, err
 }

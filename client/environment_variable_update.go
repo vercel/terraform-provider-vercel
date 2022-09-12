@@ -25,8 +25,8 @@ type UpdateEnvironmentVariableRequest struct {
 // UpdateEnvironmentVariable will update an existing environment variable to the latest information.
 func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEnvironmentVariableRequest) (e EnvironmentVariable, err error) {
 	url := fmt.Sprintf("%s/v9/projects/%s/env/%s", c.baseURL, request.ProjectID, request.EnvID)
-	if request.TeamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, request.TeamID)
+	if c.teamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	req, err := http.NewRequestWithContext(
@@ -46,5 +46,6 @@ func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEn
 	err = c.doRequest(req, &e)
 	// The API response returns an encrypted environment variable, but we want to return the decrypted version.
 	e.Value = request.Value
+	e.TeamID = c.teamID(request.TeamID)
 	return e, err
 }

@@ -11,8 +11,8 @@ import (
 // GetDeployment retrieves information from Vercel about an existing Deployment.
 func (c *Client) GetDeployment(ctx context.Context, deploymentID, teamID string) (r DeploymentResponse, err error) {
 	url := fmt.Sprintf("%s/v13/deployments/%s", c.baseURL, deploymentID)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -28,5 +28,6 @@ func (c *Client) GetDeployment(ctx context.Context, deploymentID, teamID string)
 		"url": url,
 	})
 	err = c.doRequest(req, &r)
+	r.TeamID = c.teamID(teamID)
 	return r, err
 }

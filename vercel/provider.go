@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"regexp"
 
@@ -38,6 +39,11 @@ Use the navigation to the left to read about the available resources.
 				Description: "The Vercel API Token to use. This can also be specified with the `VERCEL_API_TOKEN` shell environment variable. Tokens can be created from your [Vercel settings](https://vercel.com/account/tokens).",
 				Sensitive:   true,
 			},
+			"team": {
+				Type:        types.StringType,
+				Optional:    true,
+				Description: "The default Vercel Team to use when creating resources. This can be provided as either a team slug, or team ID. The slug and ID are both available from the Team Settings page in the Vercel dashboard.",
+			},
 		},
 	}, nil
 }
@@ -67,6 +73,7 @@ func (p *vercelProvider) GetDataSources(_ context.Context) (map[string]provider.
 
 type providerData struct {
 	APIToken types.String `tfsdk:"api_token"`
+	Team     types.String `tfsdk:"team"`
 }
 
 // apiTokenRe is a regex for an API access token. We use this to validate that the
@@ -116,5 +123,23 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	}
 
 	p.client = client.New(apiToken)
+	if config.Team.Value != "" {
+		res, err := p.client.GetTeam(ctx, config.Team.Value)
+		if client.NotFound(err) {
+			resp.Diagnostics.AddError(
+				"Vercel Team not found",
+				"You provided a `team` field on the Vercel provider, but the team could not be found. Please check the team slug or ID is correct and that your api_token has access to the team.",
+			)
+			return
+		}
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unexpected error reading Vercel Team",
+				fmt.Sprintf("Could not read Vercel Team %s, unexpected error: %s", config.Team.Value, err),
+			)
+			return
+		}
+		p.client = p.client.WithTeamID(res.ID)
+	}
 	p.configured = true
 }

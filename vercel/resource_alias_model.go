@@ -21,6 +21,6 @@ func convertResponseToAlias(response client.AliasResponse, plan Alias) Alias {
 		Alias:        plan.Alias,
 		ID:           types.String{Value: response.UID},
 		DeploymentID: types.String{Value: response.DeploymentID},
-		TeamID:       plan.TeamID,
+		TeamID:       toTeamID(response.TeamID),
 	}
 }

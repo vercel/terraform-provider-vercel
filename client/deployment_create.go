@@ -77,6 +77,7 @@ type DeploymentResponse struct {
 	ErrorMessage     string    `json:"errorMessage"`
 	ID               string    `json:"id"`
 	ProjectID        string    `json:"projectId"`
+	TeamID           string    `json:"-"`
 	ReadyState       string    `json:"readyState"`
 	Target           *string   `json:"target"`
 	URL              string    `json:"url"`
@@ -196,8 +197,8 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 		request.GitSource = &gitSource
 	}
 	url := fmt.Sprintf("%s/v12/now/deployments?skipAutoDetectionConfirmation=1", c.baseURL)
-	if teamID != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(teamID))
 	}
 	payload := string(mustMarshal(request))
 	req, err := http.NewRequestWithContext(

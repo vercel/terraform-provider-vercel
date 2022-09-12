@@ -28,6 +28,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
 				Optional:    true,
+				Computed:    true,
 				Type:        types.StringType,
 				Description: "The team ID the project exists beneath.",
 			},

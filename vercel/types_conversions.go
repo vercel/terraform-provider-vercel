@@ -43,3 +43,7 @@ func fromInt64Pointer(v *int64) types.Int64 {
 	}
 	return types.Int64{Value: *v}
 }
+
+func toTeamID(v string) types.String {
+	return types.String{Value: v, Null: v == ""}
+}

@@ -2,7 +2,6 @@ package vercel
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -34,8 +33,9 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"team_id": {
 				Optional:      true,
+				Computed:      true,
 				Description:   "The team ID that the domain and DNS records belong to.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
 				Type:          types.StringType,
 			},
 			"domain": {
@@ -215,7 +215,7 @@ func (r resourceDNSRecord) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	result, err := convertResponseToDNSRecord(out, plan.TeamID, plan.Value, plan.SRV)
+	result, err := convertResponseToDNSRecord(out, plan.Value, plan.SRV)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing DNS Record response",
@@ -247,8 +247,7 @@ func (r resourceDNSRecord) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	out, err := r.p.client.GetDNSRecord(ctx, state.ID.Value, state.TeamID.Value)
-	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -264,7 +263,7 @@ func (r resourceDNSRecord) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	result, err := convertResponseToDNSRecord(out, state.TeamID, state.Value, state.SRV)
+	result, err := convertResponseToDNSRecord(out, state.Value, state.SRV)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing DNS Record response",
@@ -320,7 +319,7 @@ func (r resourceDNSRecord) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	result, err := convertResponseToDNSRecord(out, plan.TeamID, plan.Value, plan.SRV)
+	result, err := convertResponseToDNSRecord(out, plan.Value, plan.SRV)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing DNS Record response",
@@ -351,8 +350,7 @@ func (r resourceDNSRecord) Delete(ctx context.Context, req resource.DeleteReques
 	}
 
 	err := r.p.client.DeleteDNSRecord(ctx, state.Domain.Value, state.ID.Value, state.TeamID.Value)
-	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if client.NotFound(err) {
 		// The DNS Record is already gone - do nothing.
 		return
 	}
@@ -398,12 +396,8 @@ func (r resourceDNSRecord) ImportState(ctx context.Context, req resource.ImportS
 		)
 		return
 	}
-	stringTypeTeamID := types.String{Value: teamID}
-	if teamID == "" {
-		stringTypeTeamID.Null = true
-	}
 
-	result, err := convertResponseToDNSRecord(out, stringTypeTeamID, types.String{}, nil)
+	result, err := convertResponseToDNSRecord(out, types.String{}, nil)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error processing DNS Record response",

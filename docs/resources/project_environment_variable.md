@@ -61,7 +61,7 @@ resource "vercel_project_environment_variable" "example_git_branch" {
 - `key` (String) The name of the Environment Variable.
 - `project_id` (String) The ID of the Vercel project.
 - `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.
-- `value` (String) The value of the Environment Variable.
+- `value` (String, Sensitive) The value of the Environment Variable.
 
 ### Optional
 

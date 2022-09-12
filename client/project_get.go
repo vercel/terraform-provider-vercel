@@ -48,6 +48,7 @@ type ProjectResponse struct {
 	EnvironmentVariables        []EnvironmentVariable `json:"env"`
 	Framework                   *string               `json:"framework"`
 	ID                          string                `json:"id"`
+	TeamID                      string                `json:"-"`
 	InstallCommand              *string               `json:"installCommand"`
 	Link                        *struct {
 		Type string `json:"type"`
@@ -72,8 +73,8 @@ type ProjectResponse struct {
 // GetProject retrieves information about an existing project from Vercel.
 func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shouldFetchEnvironmentVariables bool) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -103,5 +104,6 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shoul
 		// encrypted. This isn't useful, so we just remove them.
 		r.EnvironmentVariables = nil
 	}
+	r.TeamID = c.teamID(teamID)
 	return r, err
 }

@@ -37,8 +37,9 @@ An Alias allows a ` + "`vercel_deployment` to be accessed through a different UR
 			},
 			"team_id": {
 				Optional:      true,
+				Computed:      true,
 				Description:   "The ID of the team the Alias and Deployment exist under.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
 				Type:          types.StringType,
 			},
 			"id": {

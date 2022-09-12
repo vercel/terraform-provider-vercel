@@ -29,10 +29,10 @@ type UpdateProjectRequest struct {
 }
 
 // UpdateProject updates an existing projects configuration within Vercel.
-func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, request UpdateProjectRequest) (r ProjectResponse, err error) {
+func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, request UpdateProjectRequest, shouldFetchEnvironmentVariables bool) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	payload := string(mustMarshal(request))
 	req, err := http.NewRequestWithContext(
@@ -46,17 +46,23 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 	}
 
 	tflog.Trace(ctx, "updating project", map[string]interface{}{
-		"url":     url,
-		"payload": payload,
+		"url":                             url,
+		"payload":                         payload,
+		"shouldFetchEnvironmentVariables": shouldFetchEnvironmentVariables,
 	})
 	err = c.doRequest(req, &r)
 	if err != nil {
 		return r, err
 	}
-	env, err := c.getEnvironmentVariables(ctx, r.ID, teamID)
-	if err != nil {
-		return r, fmt.Errorf("error getting environment variables for project: %w", err)
+	if shouldFetchEnvironmentVariables {
+		r.EnvironmentVariables, err = c.getEnvironmentVariables(ctx, r.ID, teamID)
+		if err != nil {
+			return r, fmt.Errorf("error getting environment variables for project: %w", err)
+		}
+	} else {
+		r.EnvironmentVariables = nil
 	}
-	r.EnvironmentVariables = env
+
+	r.TeamID = c.teamID(teamID)
 	return r, err
 }

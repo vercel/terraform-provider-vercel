@@ -158,7 +158,6 @@ type projectCoercedFields struct {
 	InstallCommand  types.String
 	OutputDirectory types.String
 	PublicSource    types.Bool
-	TeamID          types.String
 }
 
 func (p *Project) coercedFields() projectCoercedFields {
@@ -168,7 +167,6 @@ func (p *Project) coercedFields() projectCoercedFields {
 		InstallCommand:  p.InstallCommand,
 		OutputDirectory: p.OutputDirectory,
 		PublicSource:    p.PublicSource,
-		TeamID:          p.TeamID,
 	}
 }
 
@@ -251,6 +249,6 @@ func convertResponseToProject(response client.ProjectResponse, fields projectCoe
 		PublicSource:             uncoerceBool(fields.PublicSource, fromBoolPointer(response.PublicSource)),
 		RootDirectory:            fromStringPointer(response.RootDirectory),
 		ServerlessFunctionRegion: fromStringPointer(response.ServerlessFunctionRegion),
-		TeamID:                   types.String{Value: fields.TeamID.Value, Null: fields.TeamID.Null || fields.TeamID.Unknown},
+		TeamID:                   toTeamID(response.TeamID),
 	}
 }

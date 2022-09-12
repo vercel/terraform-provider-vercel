@@ -21,7 +21,7 @@ type CreateFileRequest struct {
 func (c *Client) CreateFile(ctx context.Context, request CreateFileRequest) error {
 	url := fmt.Sprintf("%s/v2/now/files", c.baseURL)
 	if request.TeamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, request.TeamID)
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,

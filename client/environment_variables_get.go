@@ -10,8 +10,8 @@ import (
 
 func (c *Client) getEnvironmentVariables(ctx context.Context, projectID, teamID string) ([]EnvironmentVariable, error) {
 	url := fmt.Sprintf("%s/v8/projects/%s/env?decrypt=true", c.baseURL, projectID)
-	if teamID != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(teamID))
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -30,14 +30,17 @@ func (c *Client) getEnvironmentVariables(ctx context.Context, projectID, teamID 
 		"url": url,
 	})
 	err = c.doRequest(req, &envResponse)
+	for _, env := range envResponse.Env {
+		env.TeamID = c.teamID(teamID)
+	}
 	return envResponse.Env, err
 }
 
 // GetEnvironmentVariable gets a singluar environment variable from Vercel based on its ID.
 func (c *Client) GetEnvironmentVariable(ctx context.Context, projectID, teamID, envID string) (e EnvironmentVariable, err error) {
 	url := fmt.Sprintf("%s/v1/projects/%s/env/%s", c.baseURL, projectID, envID)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -53,5 +56,6 @@ func (c *Client) GetEnvironmentVariable(ctx context.Context, projectID, teamID, 
 		"url": url,
 	})
 	err = c.doRequest(req, &e)
+	e.TeamID = c.teamID(teamID)
 	return e, err
 }
