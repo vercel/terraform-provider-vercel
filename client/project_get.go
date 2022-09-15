@@ -15,8 +15,8 @@ type Repository struct {
 	Repo string
 }
 
-// getRepoNameFromURL is a helper method to extract the repo name from a gitlab URL.
-// This is necessary as Gitlab doesn't return the repository slug in the API response,
+// getRepoNameFromURL is a helper method to extract the repo name from a GitLab URL.
+// This is necessary as GitLab doesn't return the repository slug in the API response,
 // Because this information isn't present, the only way to obtain it is to parse the URL.
 func getRepoNameFromURL(url string) string {
 	url = strings.TrimSuffix(url, ".git")
