@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -12,6 +13,16 @@ import (
 type Repository struct {
 	Type string
 	Repo string
+}
+
+// getRepoNameFromURL is a helper method to extract the repo name from a GitLab URL.
+// This is necessary as GitLab doesn't return the repository slug in the API response,
+// Because this information isn't present, the only way to obtain it is to parse the URL.
+func getRepoNameFromURL(url string) string {
+	url = strings.TrimSuffix(url, ".git")
+	urlParts := strings.Split(url, "/")
+
+	return urlParts[len(urlParts)-1]
 }
 
 // Repository is a helper method to convert the ProjectResponse Repository information into a more
@@ -29,7 +40,7 @@ func (r *ProjectResponse) Repository() *Repository {
 	case "gitlab":
 		return &Repository{
 			Type: "gitlab",
-			Repo: fmt.Sprintf("%s/%s", r.Link.ProjectNamespace, r.Link.ProjectName),
+			Repo: fmt.Sprintf("%s/%s", r.Link.ProjectNamespace, getRepoNameFromURL(r.Link.ProjectURL)),
 		}
 	case "bitbucket":
 		return &Repository{
@@ -60,7 +71,7 @@ type ProjectResponse struct {
 		Slug  string `json:"slug"`
 		// gitlab
 		ProjectNamespace string `json:"projectNamespace"`
-		ProjectName      string `json:"projectName"`
+		ProjectURL       string `json:"projectUrl"`
 		ProjectID        int64  `json:"projectId,string"`
 	} `json:"link"`
 	Name                     string  `json:"name"`
