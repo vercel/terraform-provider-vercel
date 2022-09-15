@@ -203,7 +203,7 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 			ElemType: types.StringType,
 			Elems:    domains,
 		},
-		TeamID:          plan.TeamID,
+		TeamID:          toTeamID(response.TeamID),
 		Environment:     plan.Environment,
 		ProjectID:       types.String{Value: response.ProjectID},
 		ID:              types.String{Value: response.ID},

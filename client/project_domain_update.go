@@ -19,8 +19,8 @@ type UpdateProjectDomainRequest struct {
 // UpdateProjectDomain updates an existing project domain within Vercel.
 func (c *Client) UpdateProjectDomain(ctx context.Context, projectID, domain, teamID string, request UpdateProjectDomainRequest) (r ProjectDomainResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s/domains/%s", c.baseURL, projectID, domain)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
 	payload := string(mustMarshal(request))
@@ -39,5 +39,6 @@ func (c *Client) UpdateProjectDomain(ctx context.Context, projectID, domain, tea
 		"payload": payload,
 	})
 	err = c.doRequest(req, &r)
+	r.TeamID = c.teamID(teamID)
 	return r, err
 }

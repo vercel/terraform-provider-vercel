@@ -71,19 +71,14 @@ func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 	}
 }
 
-func convertResponseToDNSRecord(r client.DNSRecord, tid types.String, value types.String, srv *SRV) (record DNSRecord, err error) {
-	teamID := types.String{Value: tid.Value}
-	if tid.Unknown || tid.Null {
-		teamID.Null = true
-	}
-
+func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srv *SRV) (record DNSRecord, err error) {
 	record = DNSRecord{
 		Domain:     types.String{Value: r.Domain},
 		ID:         types.String{Value: r.ID},
 		MXPriority: types.Int64{Null: true},
 		Name:       types.String{Value: r.Name},
 		TTL:        types.Int64{Value: r.TTL},
-		TeamID:     teamID,
+		TeamID:     toTeamID(r.TeamID),
 		Type:       types.String{Value: r.RecordType},
 	}
 

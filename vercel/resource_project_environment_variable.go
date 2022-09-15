@@ -2,7 +2,6 @@ package vercel
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -63,8 +62,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			},
 			"team_id": {
 				Optional:      true,
+				Computed:      true,
 				Description:   "The ID of the Vercel team.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
 				Type:          types.StringType,
 			},
 			"id": {
@@ -107,8 +107,7 @@ func (r resourceProjectEnvironmentVariable) Create(ctx context.Context, req reso
 	}
 
 	_, err := r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
-	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating project environment variable",
 			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
@@ -125,7 +124,7 @@ func (r resourceProjectEnvironmentVariable) Create(ctx context.Context, req reso
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan.TeamID, plan.ProjectID)
+	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID)
 
 	tflog.Trace(ctx, "created project environment variable", map[string]interface{}{
 		"id":         result.ID.Value,
@@ -168,7 +167,7 @@ func (r resourceProjectEnvironmentVariable) Read(ctx context.Context, req resour
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, state.TeamID, state.ProjectID)
+	result := convertResponseToProjectEnvironmentVariable(out, state.ProjectID)
 	tflog.Trace(ctx, "read project environment variable", map[string]interface{}{
 		"id":         result.ID.Value,
 		"team_id":    result.TeamID.Value,
@@ -200,7 +199,7 @@ func (r resourceProjectEnvironmentVariable) Update(ctx context.Context, req reso
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan.TeamID, plan.ProjectID)
+	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID)
 
 	tflog.Trace(ctx, "updated project environment variable", map[string]interface{}{
 		"id":         result.ID.Value,
@@ -286,7 +285,7 @@ func (r resourceProjectEnvironmentVariable) ImportState(ctx context.Context, req
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, types.String{Value: teamID, Null: teamID == ""}, types.String{Value: projectID})
+	result := convertResponseToProjectEnvironmentVariable(out, types.String{Value: projectID})
 	tflog.Trace(ctx, "imported project environment variable", map[string]interface{}{
 		"team_id":    result.TeamID.Value,
 		"project_id": result.ProjectID.Value,

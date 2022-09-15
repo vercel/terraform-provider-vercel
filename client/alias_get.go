@@ -13,13 +13,14 @@ type AliasResponse struct {
 	UID          string `json:"uid"`
 	Alias        string `json:"alias"`
 	DeploymentID string `json:"deploymentId"`
+	TeamID       string `json:"-"`
 }
 
 // GetAlias retrieves information about an existing alias from vercel.
 func (c *Client) GetAlias(ctx context.Context, alias, teamID string) (r AliasResponse, err error) {
 	url := fmt.Sprintf("%s/v4/aliases/%s", c.baseURL, alias)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -34,5 +35,6 @@ func (c *Client) GetAlias(ctx context.Context, alias, teamID string) (r AliasRes
 		"url": url,
 	})
 	err = c.doRequest(req, &r)
+	r.TeamID = c.teamID(teamID)
 	return r, err
 }

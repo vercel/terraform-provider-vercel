@@ -10,8 +10,8 @@ import (
 // DeleteDNSRecord removes a DNS domain from Vercel.
 func (c *Client) DeleteDNSRecord(ctx context.Context, domain, recordID, teamID string) error {
 	url := fmt.Sprintf("%s/v2/domains/%s/records/%s", c.baseURL, domain, recordID)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
 	req, err := http.NewRequestWithContext(

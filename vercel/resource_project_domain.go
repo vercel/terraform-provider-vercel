@@ -2,7 +2,6 @@ package vercel
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -35,7 +34,8 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 			},
 			"team_id": {
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				Computed:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
 				Type:          types.StringType,
 				Description:   "The ID of the team the project exists under.",
 			},
@@ -102,8 +102,7 @@ func (r resourceProjectDomain) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	_, err := r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
-	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating project domain",
 			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
@@ -125,7 +124,7 @@ func (r resourceProjectDomain) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	result := convertResponseToProjectDomain(out, plan.TeamID)
+	result := convertResponseToProjectDomain(out)
 	tflog.Trace(ctx, "added domain to project", map[string]interface{}{
 		"project_id": result.ProjectID.Value,
 		"domain":     result.Domain.Value,
@@ -166,7 +165,7 @@ func (r resourceProjectDomain) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	result := convertResponseToProjectDomain(out, state.TeamID)
+	result := convertResponseToProjectDomain(out)
 	tflog.Trace(ctx, "read project domain", map[string]interface{}{
 		"project_id": result.ProjectID.Value,
 		"domain":     result.Domain.Value,
@@ -208,7 +207,7 @@ func (r resourceProjectDomain) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	result := convertResponseToProjectDomain(out, plan.TeamID)
+	result := convertResponseToProjectDomain(out)
 	tflog.Trace(ctx, "update project domain", map[string]interface{}{
 		"project_id": result.ProjectID.Value,
 		"domain":     result.Domain.Value,
@@ -232,8 +231,7 @@ func (r resourceProjectDomain) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	err := r.p.client.DeleteProjectDomain(ctx, state.ProjectID.Value, state.Domain.Value, state.TeamID.Value)
-	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if client.NotFound(err) {
 		// The domain is already gone - do nothing.
 		resp.State.RemoveResource(ctx)
 		return
@@ -297,11 +295,7 @@ func (r resourceProjectDomain) ImportState(ctx context.Context, req resource.Imp
 		return
 	}
 
-	stringTypeTeamID := types.String{Value: teamID}
-	if teamID == "" {
-		stringTypeTeamID.Null = true
-	}
-	result := convertResponseToProjectDomain(out, stringTypeTeamID)
+	result := convertResponseToProjectDomain(out)
 	tflog.Trace(ctx, "imported project domain", map[string]interface{}{
 		"project_id": result.ProjectID.Value,
 		"domain":     result.Domain.Value,

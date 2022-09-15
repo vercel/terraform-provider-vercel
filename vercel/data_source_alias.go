@@ -24,6 +24,7 @@ An Alias allows a ` + "`vercel_deployment` to be accessed through a different UR
 		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
 				Optional:    true,
+				Computed:    true,
 				Type:        types.StringType,
 				Description: "The ID of the team the Alias and Deployment exist under.",
 			},

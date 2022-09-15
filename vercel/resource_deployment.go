@@ -58,7 +58,8 @@ terraform to your Deployment.
 			"team_id": {
 				Description:   "The team ID to add the deployment to.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				Computed:      true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
 				Type:          types.StringType,
 			},
 			"project_id": {
@@ -306,8 +307,7 @@ func (r resourceDeployment) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	_, err = r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
-	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating deployment",
 			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",

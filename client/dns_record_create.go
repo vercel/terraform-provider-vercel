@@ -29,8 +29,8 @@ type CreateDNSRecordRequest struct {
 // CreateDNSRecord creates a DNS record for a specified domain name within Vercel.
 func (c *Client) CreateDNSRecord(ctx context.Context, teamID string, request CreateDNSRecordRequest) (r DNSRecord, err error) {
 	url := fmt.Sprintf("%s/v4/domains/%s/records", c.baseURL, request.Domain)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
 	req, err := http.NewRequestWithContext(

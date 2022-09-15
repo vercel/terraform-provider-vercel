@@ -9,13 +9,8 @@ import (
 )
 
 // GetTeam returns information about an existing team within vercel.
-func (c *Client) GetTeam(ctx context.Context, teamID, slug string) (r TeamResponse, err error) {
-	url := c.baseURL + "/v1/teams"
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
-	} else if slug != "" {
-		url = fmt.Sprintf("%s?slug=%s", url, slug)
-	}
+func (c *Client) GetTeam(ctx context.Context, idOrSlug string) (r TeamResponse, err error) {
+	url := fmt.Sprintf("%s/v2/teams/%s", c.baseURL, idOrSlug)
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"GET",

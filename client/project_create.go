@@ -25,6 +25,7 @@ type EnvironmentVariable struct {
 	GitBranch *string  `json:"gitBranch,omitempty"`
 	Type      string   `json:"type"`
 	ID        string   `json:"id,omitempty"`
+	TeamID    string   `json:"-"`
 }
 
 // CreateProjectRequest defines the information necessary to create a project.
@@ -46,8 +47,8 @@ type CreateProjectRequest struct {
 // CreateProject will create a project within Vercel.
 func (c *Client) CreateProject(ctx context.Context, teamID string, request CreateProjectRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects", c.baseURL)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -72,5 +73,6 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 		return r, fmt.Errorf("error getting environment variables: %w", err)
 	}
 	r.EnvironmentVariables = env
+	r.TeamID = c.teamID(teamID)
 	return r, err
 }

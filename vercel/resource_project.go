@@ -2,7 +2,6 @@ package vercel
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -34,8 +33,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 		Attributes: map[string]tfsdk.Attribute{
 			"team_id": {
 				Optional:      true,
+				Computed:      true,
 				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
 				Description:   "The team ID to add the project to.",
 			},
 			"name": {
@@ -393,7 +393,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 		})
 	}
 
-	out, err := r.p.client.UpdateProject(ctx, state.ID.Value, state.TeamID.Value, plan.toUpdateProjectRequest(state.Name.Value))
+	out, err := r.p.client.UpdateProject(ctx, state.ID.Value, state.TeamID.Value, plan.toUpdateProjectRequest(state.Name.Value), !plan.Environment.Null)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -431,8 +431,7 @@ func (r resourceProject) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	err := r.p.client.DeleteProject(ctx, state.ID.Value, state.TeamID.Value)
-	var apiErr client.APIError
-	if err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+	if client.NotFound(err) {
 		return
 	}
 	if err != nil {
@@ -498,7 +497,6 @@ func (r resourceProject) ImportState(ctx context.Context, req resource.ImportSta
 		InstallCommand:  types.String{Null: true},
 		OutputDirectory: types.String{Null: true},
 		PublicSource:    types.Bool{Null: true},
-		TeamID:          types.String{Value: teamID, Null: teamID == ""},
 	}, types.Set{Null: true})
 	tflog.Trace(ctx, "imported project", map[string]interface{}{
 		"team_id":    result.TeamID.Value,

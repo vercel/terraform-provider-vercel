@@ -13,6 +13,7 @@ import (
 type ProjectDomainResponse struct {
 	Name               string  `json:"name"`
 	ProjectID          string  `json:"projectId"`
+	TeamID             string  `json:"-"`
 	Redirect           *string `json:"redirect"`
 	RedirectStatusCode *int64  `json:"redirectStatusCode"`
 	GitBranch          *string `json:"gitBranch"`
@@ -21,8 +22,8 @@ type ProjectDomainResponse struct {
 // GetProjectDomain retrieves information about a project domain from Vercel.
 func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID string) (r ProjectDomainResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s/domains/%s", c.baseURL, projectID, domain)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
 	req, err := http.NewRequestWithContext(
@@ -39,5 +40,6 @@ func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID
 		"url": url,
 	})
 	err = c.doRequest(req, &r)
+	r.TeamID = c.teamID(teamID)
 	return r, err
 }

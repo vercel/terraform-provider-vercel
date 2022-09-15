@@ -16,11 +16,7 @@ type ProjectDomain struct {
 	TeamID             types.String `tfsdk:"team_id"`
 }
 
-func convertResponseToProjectDomain(response client.ProjectDomainResponse, tid types.String) ProjectDomain {
-	teamID := types.String{Value: tid.Value}
-	if tid.Unknown || tid.Null {
-		teamID.Null = true
-	}
+func convertResponseToProjectDomain(response client.ProjectDomainResponse) ProjectDomain {
 	return ProjectDomain{
 		Domain:             types.String{Value: response.Name},
 		GitBranch:          fromStringPointer(response.GitBranch),
@@ -28,7 +24,7 @@ func convertResponseToProjectDomain(response client.ProjectDomainResponse, tid t
 		ProjectID:          types.String{Value: response.ProjectID},
 		Redirect:           fromStringPointer(response.Redirect),
 		RedirectStatusCode: fromInt64Pointer(response.RedirectStatusCode),
-		TeamID:             teamID,
+		TeamID:             toTeamID(response.TeamID),
 	}
 }
 

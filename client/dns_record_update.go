@@ -29,8 +29,8 @@ type UpdateDNSRecordRequest struct {
 // UpdateDNSRecord updates a DNS record for a specified domain name within Vercel.
 func (c *Client) UpdateDNSRecord(ctx context.Context, teamID, recordID string, request UpdateDNSRecordRequest) (r DNSRecord, err error) {
 	url := fmt.Sprintf("%s/v4/domains/records/%s", c.baseURL, recordID)
-	if teamID != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
 	payload := string(mustMarshal(request))
@@ -49,5 +49,6 @@ func (c *Client) UpdateDNSRecord(ctx context.Context, teamID, recordID string, r
 		"payload": payload,
 	})
 	err = c.doRequest(req, &r)
+	r.TeamID = c.teamID(teamID)
 	return r, err
 }
