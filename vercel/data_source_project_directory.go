@@ -9,16 +9,44 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vercel/terraform-provider-vercel/client"
 	"github.com/vercel/terraform-provider-vercel/file"
 )
 
-type dataSourceProjectDirectoryType struct{}
+func newProjectDirectoryDataSource() datasource.DataSource {
+	return &projectDirectoryDataSource{}
+}
+
+type projectDirectoryDataSource struct {
+	client *client.Client
+}
+
+func (d *projectDirectoryDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project_directory"
+}
+
+func (d *projectDirectoryDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	d.client = client
+}
 
 // GetSchema returns the schema information for a project directory data source
-func (r dataSourceProjectDirectoryType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (d projectDirectoryDataSource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
 Provides information about files within a directory on disk.
@@ -48,17 +76,6 @@ This will recursively read files, providing metadata for use with a ` + "`vercel
 	}, nil
 }
 
-// NewDataSource instantiates a new DataSource of this DataSourceType.
-func (r dataSourceProjectDirectoryType) NewDataSource(ctx context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
-	return dataSourceProjectDirectory{
-		p: *(p.(*vercelProvider)),
-	}, nil
-}
-
-type dataSourceProjectDirectory struct {
-	p vercelProvider
-}
-
 // ProjectDirectoryData represents the information terraform knows about a project directory data source
 type ProjectDirectoryData struct {
 	Path  types.String      `tfsdk:"path"`
@@ -69,7 +86,7 @@ type ProjectDirectoryData struct {
 // Read will recursively scan a directory looking for any files that do not match a .vercelignore file (if a
 // .vercelignore is present). Metadata about all these files will then be made available to terraform.
 // It is called by the provider whenever data source values should be read to update state.
-func (r dataSourceProjectDirectory) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *projectDirectoryDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config ProjectDirectoryData
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)

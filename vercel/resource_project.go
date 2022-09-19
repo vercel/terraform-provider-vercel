@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -15,10 +14,38 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-type resourceProjectType struct{}
+func newProjectResource() resource.Resource {
+	return &projectResource{}
+}
+
+type projectResource struct {
+	client *client.Client
+}
+
+func (r *projectResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project"
+}
+
+func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	r.client = client
+}
 
 // GetSchema returns the schema information for a deployment resource.
-func (r resourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (r *projectResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
 Provides a Project resource.
@@ -105,10 +132,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Sensitive:   true,
 					},
 					"id": {
-						Description:   "The ID of the Environment Variable.",
-						Type:          types.StringType,
-						PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
-						Computed:      true,
+						Description: "The ID of the Environment Variable.",
+						Type:        types.StringType,
+						Computed:    true,
 					},
 				}),
 			},
@@ -171,28 +197,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 	}, nil
 }
 
-// NewResource instantiates a new Resource of this ResourceType.
-func (r resourceProjectType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
-	return resourceProject{
-		p: *(p.(*vercelProvider)),
-	}, nil
-}
-
-type resourceProject struct {
-	p vercelProvider
-}
-
 // Create will create a project within Vercel by calling the Vercel API.
 // This is called automatically by the provider when a new resource should be created.
-func (r resourceProject) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	if !r.p.configured {
-		resp.Diagnostics.AddError(
-			"Provider not configured",
-			"The provider hasn't been configured before apply. This leads to weird stuff happening, so we'd prefer if you didn't do that. Thanks!",
-		)
-		return
-	}
-
+func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan Project
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -209,7 +216,7 @@ func (r resourceProject) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	out, err := r.p.client.CreateProject(ctx, plan.TeamID.Value, plan.toCreateProjectRequest(environment))
+	out, err := r.client.CreateProject(ctx, plan.TeamID.Value, plan.toCreateProjectRequest(environment))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -233,7 +240,7 @@ func (r resourceProject) Create(ctx context.Context, req resource.CreateRequest,
 
 // Read will read a project from the vercel API and provide terraform with information about it.
 // It is called by the provider whenever values should be read to update state.
-func (r resourceProject) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state Project
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -241,7 +248,7 @@ func (r resourceProject) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	out, err := r.p.client.GetProject(ctx, state.ID.Value, state.TeamID.Value, !state.Environment.Null)
+	out, err := r.client.GetProject(ctx, state.ID.Value, state.TeamID.Value, !state.Environment.Null)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -311,7 +318,7 @@ func diffEnvVars(oldVars, newVars []EnvironmentItem) (toCreate, toRemove []Envir
 // Update will update a project and it's associated environment variables via the vercel API.
 // Environment variables are manually diffed and updated individually. Once the environment
 // variables are all updated, the project is updated too.
-func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Project
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -351,7 +358,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 
 	toCreate, toRemove := diffEnvVars(stateEnvs, planEnvs)
 	for _, v := range toRemove {
-		err := r.p.client.DeleteEnvironmentVariable(ctx, state.ID.Value, state.TeamID.Value, v.ID.Value)
+		err := r.client.DeleteEnvironmentVariable(ctx, state.ID.Value, state.TeamID.Value, v.ID.Value)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating project",
@@ -371,7 +378,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 		})
 	}
 	for _, v := range toCreate {
-		result, err := r.p.client.CreateEnvironmentVariable(
+		result, err := r.client.CreateEnvironmentVariable(
 			ctx,
 			v.toCreateEnvironmentVariableRequest(plan.ID.Value, plan.TeamID.Value),
 		)
@@ -393,7 +400,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 		})
 	}
 
-	out, err := r.p.client.UpdateProject(ctx, state.ID.Value, state.TeamID.Value, plan.toUpdateProjectRequest(state.Name.Value), !plan.Environment.Null)
+	out, err := r.client.UpdateProject(ctx, state.ID.Value, state.TeamID.Value, plan.toUpdateProjectRequest(state.Name.Value), !plan.Environment.Null)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -422,7 +429,7 @@ func (r resourceProject) Update(ctx context.Context, req resource.UpdateRequest,
 
 // Delete a project and any associated environment variables from within terraform.
 // Environment variables do not need to be explicitly deleted, as Vercel will automatically prune them.
-func (r resourceProject) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state Project
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -430,7 +437,7 @@ func (r resourceProject) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.p.client.DeleteProject(ctx, state.ID.Value, state.TeamID.Value)
+	err := r.client.DeleteProject(ctx, state.ID.Value, state.TeamID.Value)
 	if client.NotFound(err) {
 		return
 	}
@@ -468,7 +475,7 @@ func splitID(id string) (teamID, _id string, ok bool) {
 
 // ImportState takes an identifier and reads all the project information from the Vercel API.
 // Note that environment variables are also read. The results are then stored in terraform state.
-func (r resourceProject) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, projectID, ok := splitID(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -477,7 +484,7 @@ func (r resourceProject) ImportState(ctx context.Context, req resource.ImportSta
 		)
 	}
 
-	out, err := r.p.client.GetProject(ctx, projectID, teamID, false)
+	out, err := r.client.GetProject(ctx, projectID, teamID, false)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",

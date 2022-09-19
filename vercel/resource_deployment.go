@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -18,10 +17,38 @@ import (
 	"github.com/vercel/terraform-provider-vercel/file"
 )
 
-type resourceDeploymentType struct{}
+func newDeploymentResource() resource.Resource {
+	return &deploymentResource{}
+}
+
+type deploymentResource struct {
+	client *client.Client
+}
+
+func (r *deploymentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_deployment"
+}
+
+func (r *deploymentResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	r.client = client
+}
 
 // GetSchema returns the schema information for a deployment resource.
-func (r resourceDeploymentType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (r *deploymentResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
 Provides a Deployment resource.
@@ -158,19 +185,8 @@ terraform to your Deployment.
 	}, nil
 }
 
-// NewResource instantiates a new Resource of this ResourceType.
-func (r resourceDeploymentType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
-	return resourceDeployment{
-		p: *(p.(*vercelProvider)),
-	}, nil
-}
-
-type resourceDeployment struct {
-	p vercelProvider
-}
-
 // ValidateConfig allows additional validation (specifically cross-field validation) to be added.
-func (r resourceDeployment) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+func (r *deploymentResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var config Deployment
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -246,15 +262,7 @@ func getPrebuiltBuildsFile(files []client.DeploymentFile) (string, bool) {
 // Create will create a deployment within Vercel. This is done by first attempting to trigger a deployment, seeing what
 // files are required, uploading those files, and then attempting to create a deployment again.
 // This is called automatically by the provider when a new resource should be created.
-func (r resourceDeployment) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	if !r.p.configured {
-		resp.Diagnostics.AddError(
-			"Provider not configured",
-			"The provider hasn't been configured before apply. This leads to weird stuff happening, so we'd prefer if you didn't do that. Thanks!",
-		)
-		return
-	}
-
+func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan Deployment
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -306,7 +314,7 @@ func (r resourceDeployment) Create(ctx context.Context, req resource.CreateReque
 		Ref:             plan.Ref.Value,
 	}
 
-	_, err = r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
+	_, err = r.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating deployment",
@@ -315,7 +323,7 @@ func (r resourceDeployment) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	out, err := r.p.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
+	out, err := r.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
 	var mfErr client.MissingFilesError
 	if errors.As(err, &mfErr) {
 		// Then we need to upload the files, and create the deployment again.
@@ -334,7 +342,7 @@ func (r resourceDeployment) Create(ctx context.Context, req resource.CreateReque
 				return
 			}
 
-			err = r.p.client.CreateFile(ctx, client.CreateFileRequest{
+			err = r.client.CreateFile(ctx, client.CreateFileRequest{
 				Filename: normaliseFilename(f.File, plan.PathPrefix),
 				SHA:      f.Sha,
 				Content:  string(content),
@@ -353,7 +361,7 @@ func (r resourceDeployment) Create(ctx context.Context, req resource.CreateReque
 			}
 		}
 
-		out, err = r.p.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
+		out, err = r.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error creating deployment",
@@ -384,7 +392,7 @@ func (r resourceDeployment) Create(ctx context.Context, req resource.CreateReque
 
 // Read will read a file from the filesytem and provide terraform with information about it.
 // It is called by the provider whenever data source values should be read to update state.
-func (r resourceDeployment) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *deploymentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state Deployment
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -392,7 +400,7 @@ func (r resourceDeployment) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	out, err := r.p.client.GetDeployment(ctx, state.ID.Value, state.TeamID.Value)
+	out, err := r.client.GetDeployment(ctx, state.ID.Value, state.TeamID.Value)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -425,7 +433,7 @@ func (r resourceDeployment) Read(ctx context.Context, req resource.ReadRequest, 
 // Update updates the deployment state.
 // Note that only the `delete_on_destroy` field is updatable, and this does not affect Vercel. So it is just a case
 // of setting terraform state.
-func (r resourceDeployment) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *deploymentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Deployment
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -456,7 +464,7 @@ func (r resourceDeployment) Update(ctx context.Context, req resource.UpdateReque
 // Delete conditionally deletes a Deployment.
 // Typically, Vercel users do not delete old Deployments so deployments will be deleted only if delete_on_destroy
 // parameter is set to true.
-func (r resourceDeployment) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *deploymentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state Deployment
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -465,7 +473,7 @@ func (r resourceDeployment) Delete(ctx context.Context, req resource.DeleteReque
 	}
 
 	if state.DeleteOnDestroy.Value {
-		dResp, err := r.p.client.DeleteDeployment(ctx, state.ID.Value, state.TeamID.Value)
+		dResp, err := r.client.DeleteDeployment(ctx, state.ID.Value, state.TeamID.Value)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error deleting deployment",

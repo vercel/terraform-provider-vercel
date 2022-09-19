@@ -11,21 +11,49 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vercel/terraform-provider-vercel/client"
 	"github.com/vercel/terraform-provider-vercel/file"
 )
 
-type dataSourcePrebuiltProjectType struct{}
+func newPrebuiltProjectDataSource() datasource.DataSource {
+	return &prebuiltProjectDataSource{}
+}
+
+type prebuiltProjectDataSource struct {
+	client *client.Client
+}
+
+func (d *prebuiltProjectDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_prebuilt_project"
+}
+
+func (d *prebuiltProjectDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	d.client = client
+}
 
 // GetSchema returns the schema information for a project directory data source
-func (r dataSourcePrebuiltProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (d *prebuiltProjectDataSource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
 Provides the output of a project built via ` + "`vercel build`" + ` and provides metadata for use with a ` + "`vercel_deployment`" + `
 
-The [build command](https://vercel.com/docs/cli#commands/build) can be used to build a project locally or in your own CI environment. 
+The [build command](https://vercel.com/docs/cli#commands/build) can be used to build a project locally or in your own CI environment.
 Build artifacts are placed into the ` + "`.vercel/output`" + ` directory according to the [Build Output API](https://vercel.com/docs/build-output-api/v3).
 
 This allows a Vercel Deployment to be created without sharing the Project's source code with Vercel.
@@ -51,17 +79,6 @@ This allows a Vercel Deployment to be created without sharing the Project's sour
 	}, nil
 }
 
-// NewDataSource instantiates a new DataSource of this DataSourceType.
-func (r dataSourcePrebuiltProjectType) NewDataSource(ctx context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
-	return dataSourcePrebuiltProject{
-		p: *(p.(*vercelProvider)),
-	}, nil
-}
-
-type dataSourcePrebuiltProject struct {
-	p vercelProvider
-}
-
 // PrebuiltProjectData represents the information terraform knows about a project directory data source
 type PrebuiltProjectData struct {
 	Path   types.String      `tfsdk:"path"`
@@ -69,7 +86,7 @@ type PrebuiltProjectData struct {
 	Output map[string]string `tfsdk:"output"`
 }
 
-func (r dataSourcePrebuiltProject) ValidateConfig(ctx context.Context, req datasource.ValidateConfigRequest, resp *datasource.ValidateConfigResponse) {
+func (d *prebuiltProjectDataSource) ValidateConfig(ctx context.Context, req datasource.ValidateConfigRequest, resp *datasource.ValidateConfigResponse) {
 	var config PrebuiltProjectData
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -156,7 +173,7 @@ func validatePrebuiltOutput(diags AddErrorer, path string) {
 
 // Read will recursively read files from a .vercel/output directory. Metadata about all these files will then be made
 // available to terraform.
-func (r dataSourcePrebuiltProject) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *prebuiltProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config PrebuiltProjectData
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)

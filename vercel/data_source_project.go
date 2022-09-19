@@ -7,16 +7,44 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-type dataSourceProjectType struct{}
+func newProjectDataSource() datasource.DataSource {
+	return &projectDataSource{}
+}
+
+type projectDataSource struct {
+	client *client.Client
+}
+
+func (d *projectDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project"
+}
+
+func (d *projectDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	d.client = client
+}
 
 // GetSchema returns the schema information for a project data source
-func (r dataSourceProjectType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (d *projectDataSource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
 Provides information about an existing project within Vercel.
@@ -149,21 +177,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 	}, nil
 }
 
-// NewDataSource instantiates a new DataSource of this DataSourceType.
-func (r dataSourceProjectType) NewDataSource(ctx context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
-	return dataSourceProject{
-		p: *(p.(*vercelProvider)),
-	}, nil
-}
-
-type dataSourceProject struct {
-	p vercelProvider
-}
-
 // Read will read project information by requesting it from the Vercel API, and will update terraform
 // with this information.
 // It is called by the provider whenever data source values should be read to update state.
-func (r dataSourceProject) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config Project
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -171,7 +188,7 @@ func (r dataSourceProject) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	out, err := r.p.client.GetProject(ctx, config.Name.Value, config.TeamID.Value, true)
+	out, err := d.client.GetProject(ctx, config.Name.Value, config.TeamID.Value, true)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",

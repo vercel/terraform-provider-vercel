@@ -13,7 +13,7 @@ description: |-
 
 Provides the output of a project built via `vercel build` and provides metadata for use with a `vercel_deployment`
 
-The [build command](https://vercel.com/docs/cli#commands/build) can be used to build a project locally or in your own CI environment. 
+The [build command](https://vercel.com/docs/cli#commands/build) can be used to build a project locally or in your own CI environment.
 Build artifacts are placed into the `.vercel/output` directory according to the [Build Output API](https://vercel.com/docs/build-output-api/v3).
 
 This allows a Vercel Deployment to be created without sharing the Project's source code with Vercel.
