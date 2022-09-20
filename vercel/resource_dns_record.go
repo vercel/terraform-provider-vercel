@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -13,9 +12,37 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-type resourceDNSRecordType struct{}
+func newDNSRecordResource() resource.Resource {
+	return &dnsRecordResource{}
+}
 
-func (r resourceDNSRecordType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+type dnsRecordResource struct {
+	client *client.Client
+}
+
+func (r *dnsRecordResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_dns_record"
+}
+
+func (r *dnsRecordResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	r.client = client
+}
+
+func (r *dnsRecordResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
 Provides a DNS Record resource.
@@ -125,19 +152,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 	}, nil
 }
 
-// NewResource instantiates a new Resource of this ResourceType.
-func (r resourceDNSRecordType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
-	return resourceDNSRecord{
-		p: *(p.(*vercelProvider)),
-	}, nil
-}
-
-type resourceDNSRecord struct {
-	p vercelProvider
-}
-
 // ValidateConfig validates the Resource configuration.
-func (r resourceDNSRecord) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+func (r *dnsRecordResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var config DNSRecord
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -190,15 +206,7 @@ func (r resourceDNSRecord) ValidateConfig(ctx context.Context, req resource.Vali
 
 // Create will create a DNS record within Vercel by calling the Vercel API.
 // This is called automatically by the provider when a new resource should be created.
-func (r resourceDNSRecord) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	if !r.p.configured {
-		resp.Diagnostics.AddError(
-			"Provider not configured",
-			"The provider hasn't been configured before apply. This leads to weird stuff happening, so we'd prefer if you didn't do that. Thanks!",
-		)
-		return
-	}
-
+func (r *dnsRecordResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan DNSRecord
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -206,7 +214,7 @@ func (r resourceDNSRecord) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	out, err := r.p.client.CreateDNSRecord(ctx, plan.TeamID.Value, plan.toCreateDNSRecordRequest())
+	out, err := r.client.CreateDNSRecord(ctx, plan.TeamID.Value, plan.toCreateDNSRecordRequest())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating DNS Record",
@@ -238,7 +246,7 @@ func (r resourceDNSRecord) Create(ctx context.Context, req resource.CreateReques
 
 // Read will read a DNS record from the vercel API and provide terraform with information about it.
 // It is called by the provider whenever values should be read to update state.
-func (r resourceDNSRecord) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *dnsRecordResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state DNSRecord
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -246,7 +254,7 @@ func (r resourceDNSRecord) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	out, err := r.p.client.GetDNSRecord(ctx, state.ID.Value, state.TeamID.Value)
+	out, err := r.client.GetDNSRecord(ctx, state.ID.Value, state.TeamID.Value)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -285,7 +293,7 @@ func (r resourceDNSRecord) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 // Update will update a DNS record via the vercel API.
-func (r resourceDNSRecord) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *dnsRecordResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan DNSRecord
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -300,7 +308,7 @@ func (r resourceDNSRecord) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	out, err := r.p.client.UpdateDNSRecord(
+	out, err := r.client.UpdateDNSRecord(
 		ctx,
 		plan.TeamID.Value,
 		state.ID.Value,
@@ -341,7 +349,7 @@ func (r resourceDNSRecord) Update(ctx context.Context, req resource.UpdateReques
 }
 
 // Delete a DNS record from within terraform.
-func (r resourceDNSRecord) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *dnsRecordResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state DNSRecord
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -349,7 +357,7 @@ func (r resourceDNSRecord) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	err := r.p.client.DeleteDNSRecord(ctx, state.Domain.Value, state.ID.Value, state.TeamID.Value)
+	err := r.client.DeleteDNSRecord(ctx, state.Domain.Value, state.ID.Value, state.TeamID.Value)
 	if client.NotFound(err) {
 		// The DNS Record is already gone - do nothing.
 		return
@@ -375,7 +383,7 @@ func (r resourceDNSRecord) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 // ImportState takes an identifier and reads all the DNS Record information from the Vercel API.
-func (r resourceDNSRecord) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *dnsRecordResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, recordID, ok := splitID(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -384,7 +392,7 @@ func (r resourceDNSRecord) ImportState(ctx context.Context, req resource.ImportS
 		)
 	}
 
-	out, err := r.p.client.GetDNSRecord(ctx, recordID, teamID)
+	out, err := r.client.GetDNSRecord(ctx, recordID, teamID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading DNS Record",

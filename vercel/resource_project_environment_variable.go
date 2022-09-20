@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -14,10 +13,38 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-type resourceProjectEnvironmentVariableType struct{}
+func newProjectEnvironmentVariableResource() resource.Resource {
+	return &projectEnvironmentVariableResource{}
+}
+
+type projectEnvironmentVariableResource struct {
+	client *client.Client
+}
+
+func (r *projectEnvironmentVariableResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project_environment_variable"
+}
+
+func (r *projectEnvironmentVariableResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	r.client = client
+}
 
 // GetSchema returns the schema information for a project environment variable resource.
-func (r resourceProjectEnvironmentVariableType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (r *projectEnvironmentVariableResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
 Provides a Project Environment Variable resource.
@@ -77,28 +104,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 	}, nil
 }
 
-// NewResource instantiates a new Resource of this ResourceType.
-func (r resourceProjectEnvironmentVariableType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
-	return resourceProjectEnvironmentVariable{
-		p: *(p.(*vercelProvider)),
-	}, nil
-}
-
-type resourceProjectEnvironmentVariable struct {
-	p vercelProvider
-}
-
 // Create will create a new project environment variable for a Vercel project.
 // This is called automatically by the provider when a new resource should be created.
-func (r resourceProjectEnvironmentVariable) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	if !r.p.configured {
-		resp.Diagnostics.AddError(
-			"Provider not configured",
-			"The provider hasn't been configured before apply. This leads to weird stuff happening, so we'd prefer if you didn't do that. Thanks!",
-		)
-		return
-	}
-
+func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan ProjectEnvironmentVariable
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -106,7 +114,7 @@ func (r resourceProjectEnvironmentVariable) Create(ctx context.Context, req reso
 		return
 	}
 
-	_, err := r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
+	_, err := r.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating project environment variable",
@@ -115,7 +123,7 @@ func (r resourceProjectEnvironmentVariable) Create(ctx context.Context, req reso
 		return
 	}
 
-	response, err := r.p.client.CreateEnvironmentVariable(ctx, plan.toCreateEnvironmentVariableRequest())
+	response, err := r.client.CreateEnvironmentVariable(ctx, plan.toCreateEnvironmentVariableRequest())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project environment variable",
@@ -141,7 +149,7 @@ func (r resourceProjectEnvironmentVariable) Create(ctx context.Context, req reso
 
 // Read will read an environment variable of a Vercel project by requesting it from the Vercel API, and will update terraform
 // with this information.
-func (r resourceProjectEnvironmentVariable) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state ProjectEnvironmentVariable
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -149,7 +157,7 @@ func (r resourceProjectEnvironmentVariable) Read(ctx context.Context, req resour
 		return
 	}
 
-	out, err := r.p.client.GetEnvironmentVariable(ctx, state.ProjectID.Value, state.TeamID.Value, state.ID.Value)
+	out, err := r.client.GetEnvironmentVariable(ctx, state.ProjectID.Value, state.TeamID.Value, state.ID.Value)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -182,7 +190,7 @@ func (r resourceProjectEnvironmentVariable) Read(ctx context.Context, req resour
 }
 
 // Update updates the project environment variable of a Vercel project state.
-func (r resourceProjectEnvironmentVariable) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan ProjectEnvironmentVariable
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -190,7 +198,7 @@ func (r resourceProjectEnvironmentVariable) Update(ctx context.Context, req reso
 		return
 	}
 
-	response, err := r.p.client.UpdateEnvironmentVariable(ctx, plan.toUpdateEnvironmentVariableRequest())
+	response, err := r.client.UpdateEnvironmentVariable(ctx, plan.toUpdateEnvironmentVariableRequest())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project environment variable",
@@ -215,7 +223,7 @@ func (r resourceProjectEnvironmentVariable) Update(ctx context.Context, req reso
 }
 
 // Delete deletes a Vercel project environment variable.
-func (r resourceProjectEnvironmentVariable) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *projectEnvironmentVariableResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state ProjectEnvironmentVariable
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -223,7 +231,7 @@ func (r resourceProjectEnvironmentVariable) Delete(ctx context.Context, req reso
 		return
 	}
 
-	err := r.p.client.DeleteEnvironmentVariable(ctx, state.ProjectID.Value, state.TeamID.Value, state.ID.Value)
+	err := r.client.DeleteEnvironmentVariable(ctx, state.ProjectID.Value, state.TeamID.Value, state.ID.Value)
 	if client.NotFound(err) {
 		return
 	}
@@ -262,7 +270,7 @@ func splitProjectEnvironmentVariableID(id string) (teamID, projectID, envID stri
 
 // ImportState takes an identifier and reads all the project environment variable information from the Vercel API.
 // The results are then stored in terraform state.
-func (r resourceProjectEnvironmentVariable) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, projectID, envID, ok := splitProjectEnvironmentVariableID(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -271,7 +279,7 @@ func (r resourceProjectEnvironmentVariable) ImportState(ctx context.Context, req
 		)
 	}
 
-	out, err := r.p.client.GetEnvironmentVariable(ctx, projectID, teamID, envID)
+	out, err := r.client.GetEnvironmentVariable(ctx, projectID, teamID, envID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project environment variable",

@@ -6,21 +6,26 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
 type vercelProvider struct {
-	configured bool
-	client     *client.Client
+	client *client.Client
 }
 
 // New instantiates a new instance of a vercel terraform provider.
 func New() provider.Provider {
 	return &vercelProvider{}
+}
+
+func (p *vercelProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "vercel"
 }
 
 // GetSchema returns the schema information for the provider configuration itself.
@@ -48,27 +53,25 @@ Use the navigation to the left to read about the available resources.
 	}, nil
 }
 
-// GetResources shows the available resources for the vercel provider
-func (p *vercelProvider) GetResources(_ context.Context) (map[string]provider.ResourceType, diag.Diagnostics) {
-	return map[string]provider.ResourceType{
-		"vercel_alias":                        resourceAliasType{},
-		"vercel_deployment":                   resourceDeploymentType{},
-		"vercel_dns_record":                   resourceDNSRecordType{},
-		"vercel_project":                      resourceProjectType{},
-		"vercel_project_domain":               resourceProjectDomainType{},
-		"vercel_project_environment_variable": resourceProjectEnvironmentVariableType{},
-	}, nil
+func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource {
+	return []func() resource.Resource{
+		newAliasResource,
+		newDeploymentResource,
+		newDNSRecordResource,
+		newProjectResource,
+		newProjectDomainResource,
+		newProjectEnvironmentVariableResource,
+	}
 }
 
-// GetDataSources shows the available data sources for the vercel provider
-func (p *vercelProvider) GetDataSources(_ context.Context) (map[string]provider.DataSourceType, diag.Diagnostics) {
-	return map[string]provider.DataSourceType{
-		"vercel_alias":             dataSourceAliasType{},
-		"vercel_file":              dataSourceFileType{},
-		"vercel_prebuilt_project":  dataSourcePrebuiltProjectType{},
-		"vercel_project":           dataSourceProjectType{},
-		"vercel_project_directory": dataSourceProjectDirectoryType{},
-	}, nil
+func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{
+		newAliasDataSource,
+		newFileDataSource,
+		newPrebuiltProjectDataSource,
+		newProjectDataSource,
+		newProjectDirectoryDataSource,
+	}
 }
 
 type providerData struct {
@@ -122,7 +125,7 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
-	p.client = client.New(apiToken)
+	vercelClient := client.New(apiToken)
 	if config.Team.Value != "" {
 		res, err := p.client.GetTeam(ctx, config.Team.Value)
 		if client.NotFound(err) {
@@ -141,5 +144,7 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		}
 		p.client = p.client.WithTeamID(res.ID)
 	}
-	p.configured = true
+
+	resp.DataSourceData = vercelClient
+	resp.ResourceData = vercelClient
 }

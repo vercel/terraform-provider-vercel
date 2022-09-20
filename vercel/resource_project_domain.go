@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -14,10 +13,38 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-type resourceProjectDomainType struct{}
+func newProjectDomainResource() resource.Resource {
+	return &projectDomainResource{}
+}
+
+type projectDomainResource struct {
+	client *client.Client
+}
+
+func (r *projectDomainResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project_domain"
+}
+
+func (r *projectDomainResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	r.client = client
+}
 
 // GetSchema returns the schema information for a deployment resource.
-func (r resourceProjectDomainType) GetSchema(context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (r *projectDomainResource) GetSchema(context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
 Provides a Project Domain resource.
@@ -72,28 +99,9 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 	}, nil
 }
 
-// NewResource instantiates a new Resource of this ResourceType.
-func (r resourceProjectDomainType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
-	return resourceProjectDomain{
-		p: *(p.(*vercelProvider)),
-	}, nil
-}
-
-type resourceProjectDomain struct {
-	p vercelProvider
-}
-
 // Create will create a project domain within Vercel.
 // This is called automatically by the provider when a new resource should be created.
-func (r resourceProjectDomain) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	if !r.p.configured {
-		resp.Diagnostics.AddError(
-			"Provider not configured",
-			"The provider hasn't been configured before apply. This leads to weird stuff happening, so we'd prefer if you didn't do that. Thanks!",
-		)
-		return
-	}
-
+func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan ProjectDomain
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -101,7 +109,7 @@ func (r resourceProjectDomain) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	_, err := r.p.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
+	_, err := r.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating project domain",
@@ -110,7 +118,7 @@ func (r resourceProjectDomain) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	out, err := r.p.client.CreateProjectDomain(ctx, plan.ProjectID.Value, plan.TeamID.Value, plan.toCreateRequest())
+	out, err := r.client.CreateProjectDomain(ctx, plan.ProjectID.Value, plan.TeamID.Value, plan.toCreateRequest())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error adding domain to project",
@@ -140,7 +148,7 @@ func (r resourceProjectDomain) Create(ctx context.Context, req resource.CreateRe
 
 // Read will read a project domain from the vercel API and provide terraform with information about it.
 // It is called by the provider whenever data source values should be read to update state.
-func (r resourceProjectDomain) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *projectDomainResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state ProjectDomain
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -148,7 +156,7 @@ func (r resourceProjectDomain) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	out, err := r.p.client.GetProjectDomain(ctx, state.ProjectID.Value, state.Domain.Value, state.TeamID.Value)
+	out, err := r.client.GetProjectDomain(ctx, state.ProjectID.Value, state.Domain.Value, state.TeamID.Value)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -180,7 +188,7 @@ func (r resourceProjectDomain) Read(ctx context.Context, req resource.ReadReques
 }
 
 // Update will update a project domain via the vercel API.
-func (r resourceProjectDomain) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *projectDomainResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan ProjectDomain
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -188,7 +196,7 @@ func (r resourceProjectDomain) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	out, err := r.p.client.UpdateProjectDomain(
+	out, err := r.client.UpdateProjectDomain(
 		ctx,
 		plan.ProjectID.Value,
 		plan.Domain.Value,
@@ -222,7 +230,7 @@ func (r resourceProjectDomain) Update(ctx context.Context, req resource.UpdateRe
 }
 
 // Delete will remove a project domain via the Vercel API.
-func (r resourceProjectDomain) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *projectDomainResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state ProjectDomain
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -230,7 +238,7 @@ func (r resourceProjectDomain) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	err := r.p.client.DeleteProjectDomain(ctx, state.ProjectID.Value, state.Domain.Value, state.TeamID.Value)
+	err := r.client.DeleteProjectDomain(ctx, state.ProjectID.Value, state.Domain.Value, state.TeamID.Value)
 	if client.NotFound(err) {
 		// The domain is already gone - do nothing.
 		resp.State.RemoveResource(ctx)
@@ -273,7 +281,7 @@ func splitProjectDomainID(id string) (teamID, projectID, domain string, ok bool)
 
 // ImportState takes an identifier and reads all the project domain information from the Vercel API.
 // Note that environment variables are also read. The results are then stored in terraform state.
-func (r resourceProjectDomain) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *projectDomainResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, projectID, domain, ok := splitProjectDomainID(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -282,7 +290,7 @@ func (r resourceProjectDomain) ImportState(ctx context.Context, req resource.Imp
 		)
 	}
 
-	out, err := r.p.client.GetProjectDomain(ctx, projectID, domain, teamID)
+	out, err := r.client.GetProjectDomain(ctx, projectID, domain, teamID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project domain",

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -13,10 +12,38 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-type resourceAliasType struct{}
+func newAliasResource() resource.Resource {
+	return &aliasResource{}
+}
+
+type aliasResource struct {
+	client *client.Client
+}
+
+func (r *aliasResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_alias"
+}
+
+func (r *aliasResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	r.client = client
+}
 
 // GetSchema returns the schema information for an alias resource.
-func (r resourceAliasType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (r *aliasResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
 Provides an Alias resource.
@@ -50,28 +77,9 @@ An Alias allows a ` + "`vercel_deployment` to be accessed through a different UR
 	}, nil
 }
 
-// NewResource instantiates a new Resource of this ResourceType.
-func (r resourceAliasType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
-	return resourceAlias{
-		p: *(p.(*vercelProvider)),
-	}, nil
-}
-
-type resourceAlias struct {
-	p vercelProvider
-}
-
 // Create will create an alias within Vercel.
 // This is called automatically by the provider when a new resource should be created.
-func (r resourceAlias) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	if !r.p.configured {
-		resp.Diagnostics.AddError(
-			"Provider not configured",
-			"The provider hasn't been configured before apply. This leads to weird stuff happening, so we'd prefer if you didn't do that. Thanks!",
-		)
-		return
-	}
-
+func (r *aliasResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan Alias
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -79,7 +87,7 @@ func (r resourceAlias) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	out, err := r.p.client.CreateAlias(ctx, client.CreateAliasRequest{
+	out, err := r.client.CreateAlias(ctx, client.CreateAliasRequest{
 		Alias: plan.Alias.Value,
 	}, plan.DeploymentID.Value, plan.TeamID.Value)
 	if err != nil {
@@ -106,7 +114,7 @@ func (r resourceAlias) Create(ctx context.Context, req resource.CreateRequest, r
 
 // Read will read alias information by requesting it from the Vercel API, and will update terraform
 // with this information.
-func (r resourceAlias) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state Alias
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -114,7 +122,7 @@ func (r resourceAlias) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	out, err := r.p.client.GetAlias(ctx, state.ID.Value, state.TeamID.Value)
+	out, err := r.client.GetAlias(ctx, state.ID.Value, state.TeamID.Value)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -145,7 +153,7 @@ func (r resourceAlias) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 // Update updates the Alias state.
-func (r resourceAlias) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *aliasResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Alias
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -167,7 +175,7 @@ func (r resourceAlias) Update(ctx context.Context, req resource.UpdateRequest, r
 }
 
 // Delete deletes an Alias.
-func (r resourceAlias) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *aliasResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state Alias
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -175,7 +183,7 @@ func (r resourceAlias) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	_, err := r.p.client.DeleteAlias(ctx, state.ID.Value, state.TeamID.Value)
+	_, err := r.client.DeleteAlias(ctx, state.ID.Value, state.TeamID.Value)
 	if client.NotFound(err) {
 		return
 	}
