@@ -15,9 +15,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
-type vercelProvider struct {
-	client *client.Client
-}
+type vercelProvider struct{}
 
 // New instantiates a new instance of a vercel terraform provider.
 func New() provider.Provider {
@@ -127,7 +125,7 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 
 	vercelClient := client.New(apiToken)
 	if config.Team.Value != "" {
-		res, err := p.client.GetTeam(ctx, config.Team.Value)
+		res, err := vercelClient.GetTeam(ctx, config.Team.Value)
 		if client.NotFound(err) {
 			resp.Diagnostics.AddError(
 				"Vercel Team not found",
@@ -142,7 +140,7 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 			)
 			return
 		}
-		p.client = p.client.WithTeamID(res.ID)
+		vercelClient = vercelClient.WithTeamID(res.ID)
 	}
 
 	resp.DataSourceData = vercelClient
