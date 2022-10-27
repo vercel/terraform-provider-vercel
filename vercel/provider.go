@@ -93,7 +93,7 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 
 	// User must provide an api_token to the provider
 	var apiToken string
-	if config.APIToken.Unknown {
+	if config.APIToken.IsUnknown() {
 		resp.Diagnostics.AddWarning(
 			"Unable to create client",
 			"Cannot use unknown value as api_token",
@@ -101,10 +101,10 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
-	if config.APIToken.Null {
+	if config.APIToken.IsNull() {
 		apiToken = os.Getenv("VERCEL_API_TOKEN")
 	} else {
-		apiToken = config.APIToken.Value
+		apiToken = config.APIToken.ValueString()
 	}
 
 	if apiToken == "" {
@@ -124,8 +124,8 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	}
 
 	vercelClient := client.New(apiToken)
-	if config.Team.Value != "" {
-		res, err := vercelClient.GetTeam(ctx, config.Team.Value)
+	if config.Team.ValueString() != "" {
+		res, err := vercelClient.GetTeam(ctx, config.Team.ValueString())
 		if client.NotFound(err) {
 			resp.Diagnostics.AddError(
 				"Vercel Team not found",
@@ -136,7 +136,7 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Unexpected error reading Vercel Team",
-				fmt.Sprintf("Could not read Vercel Team %s, unexpected error: %s", config.Team.Value, err),
+				fmt.Sprintf("Could not read Vercel Team %s, unexpected error: %s", config.Team.ValueString(), err),
 			)
 			return
 		}

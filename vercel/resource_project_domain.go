@@ -109,7 +109,7 @@ func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	_, err := r.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
+	_, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString(), false)
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating project domain",
@@ -118,14 +118,14 @@ func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	out, err := r.client.CreateProjectDomain(ctx, plan.ProjectID.Value, plan.TeamID.Value, plan.toCreateRequest())
+	out, err := r.client.CreateProjectDomain(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString(), plan.toCreateRequest())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error adding domain to project",
 			fmt.Sprintf(
 				"Could not add domain %s to project %s, unexpected error: %s",
-				plan.Domain.Value,
-				plan.ProjectID.Value,
+				plan.Domain.ValueString(),
+				plan.ProjectID.ValueString(),
 				err,
 			),
 		)
@@ -134,9 +134,9 @@ func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateR
 
 	result := convertResponseToProjectDomain(out)
 	tflog.Trace(ctx, "added domain to project", map[string]interface{}{
-		"project_id": result.ProjectID.Value,
-		"domain":     result.Domain.Value,
-		"team_id":    result.TeamID.Value,
+		"project_id": result.ProjectID.ValueString(),
+		"domain":     result.Domain.ValueString(),
+		"team_id":    result.TeamID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -156,7 +156,7 @@ func (r *projectDomainResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	out, err := r.client.GetProjectDomain(ctx, state.ProjectID.Value, state.Domain.Value, state.TeamID.Value)
+	out, err := r.client.GetProjectDomain(ctx, state.ProjectID.ValueString(), state.Domain.ValueString(), state.TeamID.ValueString())
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -165,8 +165,8 @@ func (r *projectDomainResource) Read(ctx context.Context, req resource.ReadReque
 		resp.Diagnostics.AddError(
 			"Error reading project domain",
 			fmt.Sprintf("Could not get domain %s for project %s, unexpected error: %s",
-				state.Domain.Value,
-				state.ProjectID.Value,
+				state.Domain.ValueString(),
+				state.ProjectID.ValueString(),
 				err,
 			),
 		)
@@ -175,9 +175,9 @@ func (r *projectDomainResource) Read(ctx context.Context, req resource.ReadReque
 
 	result := convertResponseToProjectDomain(out)
 	tflog.Trace(ctx, "read project domain", map[string]interface{}{
-		"project_id": result.ProjectID.Value,
-		"domain":     result.Domain.Value,
-		"team_id":    result.TeamID.Value,
+		"project_id": result.ProjectID.ValueString(),
+		"domain":     result.Domain.ValueString(),
+		"team_id":    result.TeamID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -198,17 +198,17 @@ func (r *projectDomainResource) Update(ctx context.Context, req resource.UpdateR
 
 	out, err := r.client.UpdateProjectDomain(
 		ctx,
-		plan.ProjectID.Value,
-		plan.Domain.Value,
-		plan.TeamID.Value,
+		plan.ProjectID.ValueString(),
+		plan.Domain.ValueString(),
+		plan.TeamID.ValueString(),
 		plan.toUpdateRequest(),
 	)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project domain",
 			fmt.Sprintf("Could not update domain %s for project %s, unexpected error: %s",
-				plan.Domain.Value,
-				plan.ProjectID.Value,
+				plan.Domain.ValueString(),
+				plan.ProjectID.ValueString(),
 				err,
 			),
 		)
@@ -217,9 +217,9 @@ func (r *projectDomainResource) Update(ctx context.Context, req resource.UpdateR
 
 	result := convertResponseToProjectDomain(out)
 	tflog.Trace(ctx, "update project domain", map[string]interface{}{
-		"project_id": result.ProjectID.Value,
-		"domain":     result.Domain.Value,
-		"team_id":    result.TeamID.Value,
+		"project_id": result.ProjectID.ValueString(),
+		"domain":     result.Domain.ValueString(),
+		"team_id":    result.TeamID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -238,7 +238,7 @@ func (r *projectDomainResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	err := r.client.DeleteProjectDomain(ctx, state.ProjectID.Value, state.Domain.Value, state.TeamID.Value)
+	err := r.client.DeleteProjectDomain(ctx, state.ProjectID.ValueString(), state.Domain.ValueString(), state.TeamID.ValueString())
 	if client.NotFound(err) {
 		// The domain is already gone - do nothing.
 		resp.State.RemoveResource(ctx)
@@ -249,8 +249,8 @@ func (r *projectDomainResource) Delete(ctx context.Context, req resource.DeleteR
 			"Error deleting project",
 			fmt.Sprintf(
 				"Could not delete domain %s for project %s, unexpected error: %s",
-				state.Domain.Value,
-				state.ProjectID.Value,
+				state.Domain.ValueString(),
+				state.ProjectID.ValueString(),
 				err,
 			),
 		)
@@ -258,9 +258,9 @@ func (r *projectDomainResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 
 	tflog.Trace(ctx, "delete project domain", map[string]interface{}{
-		"project_id": state.ProjectID.Value,
-		"domain":     state.Domain.Value,
-		"team_id":    state.TeamID.Value,
+		"project_id": state.ProjectID.ValueString(),
+		"domain":     state.Domain.ValueString(),
+		"team_id":    state.TeamID.ValueString(),
 	})
 }
 
@@ -305,9 +305,9 @@ func (r *projectDomainResource) ImportState(ctx context.Context, req resource.Im
 
 	result := convertResponseToProjectDomain(out)
 	tflog.Trace(ctx, "imported project domain", map[string]interface{}{
-		"project_id": result.ProjectID.Value,
-		"domain":     result.Domain.Value,
-		"team_id":    result.TeamID.Value,
+		"project_id": result.ProjectID.ValueString(),
+		"domain":     result.Domain.ValueString(),
+		"team_id":    result.TeamID.ValueString(),
 	})
 
 	diags := resp.State.Set(ctx, result)

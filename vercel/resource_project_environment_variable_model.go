@@ -19,33 +19,33 @@ type ProjectEnvironmentVariable struct {
 func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client.CreateEnvironmentVariableRequest {
 	var target []string
 	for _, t := range e.Target {
-		target = append(target, t.Value)
+		target = append(target, t.ValueString())
 	}
 	return client.CreateEnvironmentVariableRequest{
-		Key:       e.Key.Value,
-		Value:     e.Value.Value,
+		Key:       e.Key.ValueString(),
+		Value:     e.Value.ValueString(),
 		Target:    target,
 		GitBranch: toStrPointer(e.GitBranch),
 		Type:      "encrypted",
-		ProjectID: e.ProjectID.Value,
-		TeamID:    e.TeamID.Value,
+		ProjectID: e.ProjectID.ValueString(),
+		TeamID:    e.TeamID.ValueString(),
 	}
 }
 
 func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client.UpdateEnvironmentVariableRequest {
 	var target []string
 	for _, t := range e.Target {
-		target = append(target, t.Value)
+		target = append(target, t.ValueString())
 	}
 	return client.UpdateEnvironmentVariableRequest{
-		Key:       e.Key.Value,
-		Value:     e.Value.Value,
+		Key:       e.Key.ValueString(),
+		Value:     e.Value.ValueString(),
 		Target:    target,
 		GitBranch: toStrPointer(e.GitBranch),
 		Type:      "encrypted",
-		ProjectID: e.ProjectID.Value,
-		TeamID:    e.TeamID.Value,
-		EnvID:     e.ID.Value,
+		ProjectID: e.ProjectID.ValueString(),
+		TeamID:    e.TeamID.ValueString(),
+		EnvID:     e.ID.ValueString(),
 	}
 }
 
@@ -55,16 +55,16 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client
 func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVariable, projectID types.String) ProjectEnvironmentVariable {
 	target := []types.String{}
 	for _, t := range response.Target {
-		target = append(target, types.String{Value: t})
+		target = append(target, types.StringValue(t))
 	}
 
 	return ProjectEnvironmentVariable{
 		Target:    target,
 		GitBranch: fromStringPointer(response.GitBranch),
-		Key:       types.String{Value: response.Key},
-		Value:     types.String{Value: response.Value},
+		Key:       types.StringValue(response.Key),
+		Value:     types.StringValue(response.Value),
 		TeamID:    toTeamID(response.TeamID),
 		ProjectID: projectID,
-		ID:        types.String{Value: response.ID},
+		ID:        types.StringValue(response.ID),
 	}
 }

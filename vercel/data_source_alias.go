@@ -85,13 +85,13 @@ func (d *aliasDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return
 	}
 
-	out, err := d.client.GetAlias(ctx, config.Alias.Value, config.TeamID.Value)
+	out, err := d.client.GetAlias(ctx, config.Alias.ValueString(), config.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading alias",
 			fmt.Sprintf("Could not read alias %s %s, unexpected error: %s",
-				config.TeamID.Value,
-				config.Alias.Value,
+				config.TeamID.ValueString(),
+				config.Alias.ValueString(),
 				err,
 			),
 		)
@@ -100,8 +100,8 @@ func (d *aliasDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	result := convertResponseToAlias(out, config)
 	tflog.Trace(ctx, "read alias", map[string]interface{}{
-		"team_id": result.TeamID.Value,
-		"alias":   result.Alias.Value,
+		"team_id": result.TeamID.ValueString(),
+		"alias":   result.Alias.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)

@@ -32,15 +32,15 @@ func (v validatorInt64LessThan) Validate(ctx context.Context, req tfsdk.Validate
 	if diags.HasError() {
 		return
 	}
-	if item.Unknown || item.Null {
+	if item.IsUnknown() || item.IsNull() {
 		return
 	}
 
-	if item.Value > v.Max {
+	if item.ValueInt64() > v.Max {
 		resp.Diagnostics.AddAttributeError(
 			req.AttributePath,
 			"Invalid value provided",
-			fmt.Sprintf("Value must be less than %d, got: %d.", v.Max, item.Value),
+			fmt.Sprintf("Value must be less than %d, got: %d.", v.Max, item.ValueInt64()),
 		)
 		return
 	}

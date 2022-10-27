@@ -108,15 +108,15 @@ func (v validatorServerlessFunctionRegion) Validate(ctx context.Context, req tfs
 	if diags.HasError() {
 		return
 	}
-	if item.Unknown || item.Null {
+	if item.IsUnknown() || item.IsNull() {
 		return
 	}
 
-	if _, ok := v.regions[item.Value]; !ok {
+	if _, ok := v.regions[item.ValueString()]; !ok {
 		resp.Diagnostics.AddAttributeError(
 			req.AttributePath,
 			"Invalid Serverless Function Region",
-			fmt.Sprintf("The serverless function region %s is not supported on Vercel. Must be one of %s.", item.Value, strings.Join(keys(v.regions), ", ")),
+			fmt.Sprintf("The serverless function region %s is not supported on Vercel. Must be one of %s.", item.ValueString(), strings.Join(keys(v.regions), ", ")),
 		)
 		return
 	}

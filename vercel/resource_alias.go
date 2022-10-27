@@ -88,8 +88,8 @@ func (r *aliasResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	out, err := r.client.CreateAlias(ctx, client.CreateAliasRequest{
-		Alias: plan.Alias.Value,
-	}, plan.DeploymentID.Value, plan.TeamID.Value)
+		Alias: plan.Alias.ValueString(),
+	}, plan.DeploymentID.ValueString(), plan.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating alias",
@@ -100,9 +100,9 @@ func (r *aliasResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	result := convertResponseToAlias(out, plan)
 	tflog.Trace(ctx, "created alias", map[string]interface{}{
-		"team_id":       plan.TeamID.Value,
-		"deployment_id": plan.DeploymentID.Value,
-		"alias_id":      result.ID.Value,
+		"team_id":       plan.TeamID.ValueString(),
+		"deployment_id": plan.DeploymentID.ValueString(),
+		"alias_id":      result.ID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -122,7 +122,7 @@ func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	out, err := r.client.GetAlias(ctx, state.ID.Value, state.TeamID.Value)
+	out, err := r.client.GetAlias(ctx, state.ID.ValueString(), state.TeamID.ValueString())
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -131,8 +131,8 @@ func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.Diagnostics.AddError(
 			"Error reading alias",
 			fmt.Sprintf("Could not get alias %s %s, unexpected error: %s",
-				state.TeamID.Value,
-				state.ID.Value,
+				state.TeamID.ValueString(),
+				state.ID.ValueString(),
 				err,
 			),
 		)
@@ -141,8 +141,8 @@ func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	result := convertResponseToAlias(out, state)
 	tflog.Trace(ctx, "read alias", map[string]interface{}{
-		"team_id":  result.TeamID.Value,
-		"alias_id": result.ID.Value,
+		"team_id":  result.TeamID.ValueString(),
+		"alias_id": result.ID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -183,7 +183,7 @@ func (r *aliasResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	_, err := r.client.DeleteAlias(ctx, state.ID.Value, state.TeamID.Value)
+	_, err := r.client.DeleteAlias(ctx, state.ID.ValueString(), state.TeamID.ValueString())
 	if client.NotFound(err) {
 		return
 	}
@@ -192,7 +192,7 @@ func (r *aliasResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 			"Error deleting alias",
 			fmt.Sprintf(
 				"Could not delete alias %s, unexpected error: %s",
-				state.Alias.Value,
+				state.Alias.ValueString(),
 				err,
 			),
 		)
@@ -200,7 +200,7 @@ func (r *aliasResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 
 	tflog.Trace(ctx, "deleted alias", map[string]interface{}{
-		"team_id":  state.TeamID.Value,
-		"alias_id": state.ID.Value,
+		"team_id":  state.TeamID.ValueString(),
+		"alias_id": state.ID.ValueString(),
 	})
 }

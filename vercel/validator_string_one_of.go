@@ -44,15 +44,15 @@ func (v validatorStringOneOf) Validate(ctx context.Context, req tfsdk.ValidateAt
 	if diags.HasError() {
 		return
 	}
-	if item.Unknown || item.Null {
+	if item.IsUnknown() || item.IsNull() {
 		return
 	}
 
-	if _, ok := v.Items[item.Value]; !ok {
+	if _, ok := v.Items[item.ValueString()]; !ok {
 		resp.Diagnostics.AddAttributeError(
 			req.AttributePath,
 			"Invalid value provided",
-			fmt.Sprintf("Item must be one of %s, got: %s.", strings.Join(v.keys(), ", "), item.Value),
+			fmt.Sprintf("Item must be one of %s, got: %s.", strings.Join(v.keys(), ", "), item.ValueString()),
 		)
 		return
 	}

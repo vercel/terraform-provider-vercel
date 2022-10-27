@@ -194,14 +194,14 @@ func (r *deploymentResource) ValidateConfig(ctx context.Context, req resource.Va
 		return
 	}
 
-	if !config.Ref.Null && !config.Files.Null {
+	if !config.Ref.IsNull() && !config.Files.IsNull() {
 		resp.Diagnostics.AddError(
 			"Deployment Invalid",
 			"A Deployment cannot have both `ref` and `files` specified",
 		)
 		return
 	}
-	if config.Ref.Null && config.Files.Null {
+	if config.Ref.IsNull() && config.Files.IsNull() {
 		resp.Diagnostics.AddError(
 			"Deployment Invalid",
 			"A Deployment must have either `ref` or `files` specified",
@@ -230,7 +230,7 @@ func validatePrebuiltBuilds(diags AddErrorer, config Deployment, files []client.
 	}
 
 	target := "preview"
-	if config.Production.Value {
+	if config.Production.ValueBool() {
 		target = "production"
 	}
 
@@ -302,19 +302,19 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	target := ""
-	if plan.Production.Value {
+	if plan.Production.ValueBool() {
 		target = "production"
 	}
 	cdr := client.CreateDeploymentRequest{
 		Files:           files,
 		Environment:     environment,
-		ProjectID:       plan.ProjectID.Value,
+		ProjectID:       plan.ProjectID.ValueString(),
 		ProjectSettings: plan.ProjectSettings.toRequest(),
 		Target:          target,
-		Ref:             plan.Ref.Value,
+		Ref:             plan.Ref.ValueString(),
 	}
 
-	_, err = r.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
+	_, err = r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString(), false)
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating deployment",
@@ -323,7 +323,7 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	out, err := r.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
+	out, err := r.client.CreateDeployment(ctx, cdr, plan.TeamID.ValueString())
 	var mfErr client.MissingFilesError
 	if errors.As(err, &mfErr) {
 		// Then we need to upload the files, and create the deployment again.
@@ -346,7 +346,7 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 				Filename: normaliseFilename(f.File, plan.PathPrefix),
 				SHA:      f.Sha,
 				Content:  string(content),
-				TeamID:   plan.TeamID.Value,
+				TeamID:   plan.TeamID.ValueString(),
 			})
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -361,7 +361,7 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 			}
 		}
 
-		out, err = r.client.CreateDeployment(ctx, cdr, plan.TeamID.Value)
+		out, err = r.client.CreateDeployment(ctx, cdr, plan.TeamID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error creating deployment",
@@ -379,8 +379,8 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 
 	result := convertResponseToDeployment(out, plan)
 	tflog.Trace(ctx, "created deployment", map[string]interface{}{
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ID.Value,
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -400,7 +400,7 @@ func (r *deploymentResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	out, err := r.client.GetDeployment(ctx, state.ID.Value, state.TeamID.Value)
+	out, err := r.client.GetDeployment(ctx, state.ID.ValueString(), state.TeamID.ValueString())
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -409,8 +409,8 @@ func (r *deploymentResource) Read(ctx context.Context, req resource.ReadRequest,
 		resp.Diagnostics.AddError(
 			"Error reading deployment",
 			fmt.Sprintf("Could not get deployment %s %s, unexpected error: %s",
-				state.TeamID.Value,
-				state.ID.Value,
+				state.TeamID.ValueString(),
+				state.ID.ValueString(),
 				err,
 			),
 		)
@@ -419,8 +419,8 @@ func (r *deploymentResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	result := convertResponseToDeployment(out, state)
 	tflog.Trace(ctx, "read deployment", map[string]interface{}{
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ID.Value,
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -472,14 +472,14 @@ func (r *deploymentResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
-	if state.DeleteOnDestroy.Value {
-		dResp, err := r.client.DeleteDeployment(ctx, state.ID.Value, state.TeamID.Value)
+	if state.DeleteOnDestroy.ValueBool() {
+		dResp, err := r.client.DeleteDeployment(ctx, state.ID.ValueString(), state.TeamID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error deleting deployment",
 				fmt.Sprintf(
 					"Could not delete deployment %s, unexpected error: %s",
-					state.URL.Value,
+					state.URL.ValueString(),
 					err,
 				),
 			)

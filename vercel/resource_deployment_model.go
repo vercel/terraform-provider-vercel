@@ -40,11 +40,11 @@ type Deployment struct {
 // setIfNotUnknown is a helper function to set a value in a map if it is not unknown.
 // Null values are set as nil, and actual values are set directly.
 func setIfNotUnknown(m map[string]interface{}, v types.String, name string) {
-	if v.Null {
+	if v.IsNull() {
 		m[name] = nil
 	}
-	if v.Value != "" {
-		m[name] = &v.Value
+	if v.ValueString() != "" {
+		m[name] = toPtr(v.ValueString())
 	}
 }
 
@@ -70,7 +70,7 @@ func (p *ProjectSettings) toRequest() map[string]interface{} {
 	setIfNotUnknown(res, p.InstallCommand, "installCommand")
 	setIfNotUnknown(res, p.OutputDirectory, "outputDirectory")
 
-	if p.RootDirectory.Null {
+	if p.RootDirectory.IsNull() {
 		res["rootDirectory"] = nil
 	}
 
@@ -80,10 +80,10 @@ func (p *ProjectSettings) toRequest() map[string]interface{} {
 // fillStringNull is used to populate unknown resource values within state. Unknown values
 // are coerced into null values. Explicitly set values are left unchanged.
 func fillStringNull(t types.String) types.String {
-	return types.String{
-		Null:  t.Null || t.Unknown,
-		Value: t.Value,
+	if t.IsNull() || t.IsUnknown() {
+		return types.StringNull()
 	}
+	return types.StringValue(t.ValueString())
 }
 
 // fillNulls takes a ProjectSettings and ensures that none of the values are unknown.
@@ -116,13 +116,13 @@ func (p *ProjectSettings) fillNulls() *ProjectSettings {
  */
 func normaliseFilename(filename string, pathPrefix types.String) string {
 	filename = filepath.ToSlash(filename)
-	if pathPrefix.Unknown || pathPrefix.Null {
+	if pathPrefix.IsUnknown() || pathPrefix.IsNull() {
 		for strings.HasPrefix(filename, "../") {
 			return strings.TrimPrefix(filename, "../")
 		}
 	}
 
-	return strings.TrimPrefix(filename, filepath.ToSlash(pathPrefix.Value))
+	return strings.TrimPrefix(filename, filepath.ToSlash(pathPrefix.ValueString()))
 }
 
 // getFiles is a helper for turning the terraform deployment state into a set of client.DeploymentFile
@@ -167,7 +167,7 @@ func getFiles(unparsedFiles map[string]string, pathPrefix types.String) ([]clien
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from the existing deployment state are used.
 func convertResponseToDeployment(response client.DeploymentResponse, plan Deployment) Deployment {
-	production := types.Bool{Value: false}
+	production := types.BoolValue(false)
 	/*
 	 * TODO - the first deployment to a new project is currently _always_ a
 	 * production deployment, even if you ask it to be a preview deployment.
@@ -179,40 +179,40 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 	 * https://vercel.slack.com/archives/C01A2M9R8RZ/p1639594164360300
 	 * for more context.
 	 */
-	if response.Target != nil && *response.Target == "production" && (plan.Production.Value || plan.Production.Unknown) {
-		production.Value = true
+	if response.Target != nil && *response.Target == "production" && (plan.Production.ValueBool() || plan.Production.IsUnknown()) {
+		production = types.BoolValue(true)
 	}
 
 	var domains []attr.Value
 	for _, a := range response.Aliases {
-		domains = append(domains, types.String{Value: a})
+		domains = append(domains, types.StringValue(a))
 	}
 
-	if plan.Environment.Unknown || plan.Environment.Null {
-		plan.Environment.Unknown = false
-		plan.Environment.Null = true
+	if plan.Environment.IsUnknown() || plan.Environment.IsNull() {
+		plan.Environment = types.MapNull(types.StringType)
 	}
 
-	if plan.Files.Unknown || plan.Files.Null {
-		plan.Files.Unknown = false
-		plan.Files.Null = true
+	if plan.Files.IsUnknown() || plan.Files.IsNull() {
+		plan.Files = types.MapNull(types.StringType)
+	}
+
+	ref := types.StringNull()
+	if response.GitSource.Ref != "" {
+		ref = types.StringValue(response.GitSource.Ref)
 	}
 
 	return Deployment{
-		Domains: types.List{
-			ElemType: types.StringType,
-			Elems:    domains,
-		},
+		Domains:         types.ListValueMust(types.StringType, domains),
 		TeamID:          toTeamID(response.TeamID),
 		Environment:     plan.Environment,
-		ProjectID:       types.String{Value: response.ProjectID},
-		ID:              types.String{Value: response.ID},
-		URL:             types.String{Value: response.URL},
+		ProjectID:       types.StringValue(response.ProjectID),
+		ID:              types.StringValue(response.ID),
+		URL:             types.StringValue(response.URL),
 		Production:      production,
 		Files:           plan.Files,
 		PathPrefix:      fillStringNull(plan.PathPrefix),
 		ProjectSettings: plan.ProjectSettings.fillNulls(),
 		DeleteOnDestroy: plan.DeleteOnDestroy,
-		Ref:             types.String{Value: response.GitSource.Ref, Unknown: false, Null: response.GitSource.Ref == ""},
+		Ref:             ref,
 	}
 }

@@ -33,10 +33,10 @@ func (v validatorMapItemsMinCount) Validate(ctx context.Context, req tfsdk.Valid
 	if diags.HasError() {
 		return
 	}
-	if val.Unknown || val.Null {
+	if val.IsNull() || val.IsUnknown() {
 		return
 	}
-	count := len(val.Elems)
+	count := len(val.Elements())
 	if count < v.Min {
 		resp.Diagnostics.AddAttributeError(
 			req.AttributePath,

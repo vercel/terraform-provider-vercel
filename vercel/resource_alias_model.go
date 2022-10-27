@@ -19,8 +19,8 @@ type Alias struct {
 func convertResponseToAlias(response client.AliasResponse, plan Alias) Alias {
 	return Alias{
 		Alias:        plan.Alias,
-		ID:           types.String{Value: response.UID},
-		DeploymentID: types.String{Value: response.DeploymentID},
+		ID:           types.StringValue(response.UID),
+		DeploymentID: types.StringValue(response.DeploymentID),
 		TeamID:       toTeamID(response.TeamID),
 	}
 }

@@ -188,23 +188,23 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	out, err := d.client.GetProject(ctx, config.Name.Value, config.TeamID.Value, true)
+	out, err := d.client.GetProject(ctx, config.Name.ValueString(), config.TeamID.ValueString(), true)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
 			fmt.Sprintf("Could not read project %s %s, unexpected error: %s",
-				config.TeamID.Value,
-				config.Name.Value,
+				config.TeamID.ValueString(),
+				config.Name.ValueString(),
 				err,
 			),
 		)
 		return
 	}
 
-	result := convertResponseToProject(out, config.coercedFields(), types.Set{Null: true})
+	result := convertResponseToProject(out, config.coercedFields(), types.SetNull(envVariableElemType))
 	tflog.Trace(ctx, "read project", map[string]interface{}{
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ID.Value,
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)

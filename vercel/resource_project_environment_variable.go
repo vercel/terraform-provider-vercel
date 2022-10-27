@@ -114,7 +114,7 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 		return
 	}
 
-	_, err := r.client.GetProject(ctx, plan.ProjectID.Value, plan.TeamID.Value, false)
+	_, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString(), false)
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating project environment variable",
@@ -135,9 +135,9 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID)
 
 	tflog.Trace(ctx, "created project environment variable", map[string]interface{}{
-		"id":         result.ID.Value,
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ProjectID.Value,
+		"id":         result.ID.ValueString(),
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ProjectID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -157,7 +157,7 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	out, err := r.client.GetEnvironmentVariable(ctx, state.ProjectID.Value, state.TeamID.Value, state.ID.Value)
+	out, err := r.client.GetEnvironmentVariable(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString(), state.ID.ValueString())
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -166,9 +166,9 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 		resp.Diagnostics.AddError(
 			"Error reading project environment variable",
 			fmt.Sprintf("Could not get project environment variable %s %s %s, unexpected error: %s",
-				state.ID.Value,
-				state.ProjectID.Value,
-				state.TeamID.Value,
+				state.ID.ValueString(),
+				state.ProjectID.ValueString(),
+				state.TeamID.ValueString(),
 				err,
 			),
 		)
@@ -177,9 +177,9 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 
 	result := convertResponseToProjectEnvironmentVariable(out, state.ProjectID)
 	tflog.Trace(ctx, "read project environment variable", map[string]interface{}{
-		"id":         result.ID.Value,
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ProjectID.Value,
+		"id":         result.ID.ValueString(),
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ProjectID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -210,9 +210,9 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID)
 
 	tflog.Trace(ctx, "updated project environment variable", map[string]interface{}{
-		"id":         result.ID.Value,
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ProjectID.Value,
+		"id":         result.ID.ValueString(),
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ProjectID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -231,7 +231,7 @@ func (r *projectEnvironmentVariableResource) Delete(ctx context.Context, req res
 		return
 	}
 
-	err := r.client.DeleteEnvironmentVariable(ctx, state.ProjectID.Value, state.TeamID.Value, state.ID.Value)
+	err := r.client.DeleteEnvironmentVariable(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString(), state.ID.ValueString())
 	if client.NotFound(err) {
 		return
 	}
@@ -240,7 +240,7 @@ func (r *projectEnvironmentVariableResource) Delete(ctx context.Context, req res
 			"Error deleting project environment variable",
 			fmt.Sprintf(
 				"Could not delete project environment variable %s, unexpected error: %s",
-				state.ID.Value,
+				state.ID.ValueString(),
 				err,
 			),
 		)
@@ -248,9 +248,9 @@ func (r *projectEnvironmentVariableResource) Delete(ctx context.Context, req res
 	}
 
 	tflog.Trace(ctx, "deleted project environment variable", map[string]interface{}{
-		"id":         state.ID.Value,
-		"team_id":    state.TeamID.Value,
-		"project_id": state.ProjectID.Value,
+		"id":         state.ID.ValueString(),
+		"team_id":    state.TeamID.ValueString(),
+		"project_id": state.ProjectID.ValueString(),
 	})
 }
 
@@ -293,11 +293,11 @@ func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, re
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, types.String{Value: projectID})
+	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID))
 	tflog.Trace(ctx, "imported project environment variable", map[string]interface{}{
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ProjectID.Value,
-		"env_id":     result.ID.Value,
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ProjectID.ValueString(),
+		"env_id":     result.ID.ValueString(),
 	})
 
 	diags := resp.State.Set(ctx, result)
