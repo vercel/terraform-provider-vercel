@@ -88,15 +88,15 @@ func (v validatorFramework) Validate(ctx context.Context, req tfsdk.ValidateAttr
 	if diags.HasError() {
 		return
 	}
-	if item.Unknown || item.Null {
+	if item.IsUnknown() || item.IsNull() {
 		return
 	}
 
-	if _, ok := v.frameworks[item.Value]; !ok {
+	if _, ok := v.frameworks[item.ValueString()]; !ok {
 		resp.Diagnostics.AddAttributeError(
 			req.AttributePath,
 			"Invalid Framework",
-			fmt.Sprintf("The framework %s is not supported on Vercel. Must be one of %s.", item.Value, strings.Join(keys(v.frameworks), ", ")),
+			fmt.Sprintf("The framework %s is not supported on Vercel. Must be one of %s.", item.ValueString(), strings.Join(keys(v.frameworks), ", ")),
 		)
 		return
 	}

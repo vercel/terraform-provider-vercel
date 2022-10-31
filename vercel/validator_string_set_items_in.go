@@ -44,25 +44,25 @@ func (v validatorStringSetItemsIn) Validate(ctx context.Context, req tfsdk.Valid
 	if diags.HasError() {
 		return
 	}
-	if set.Unknown || set.Null {
+	if set.IsUnknown() || set.IsNull() {
 		return
 	}
 
-	for _, i := range set.Elems {
+	for _, i := range set.Elements() {
 		var item types.String
 		diags := tfsdk.ValueAs(ctx, i, &item)
 		resp.Diagnostics.Append(diags...)
 		if diags.HasError() {
 			return
 		}
-		if set.Unknown || set.Null {
+		if set.IsUnknown() || set.IsNull() {
 			return
 		}
-		if _, ok := v.Items[item.Value]; !ok {
+		if _, ok := v.Items[item.ValueString()]; !ok {
 			resp.Diagnostics.AddAttributeError(
 				req.AttributePath,
 				"Invalid value provided",
-				fmt.Sprintf("%s, got %s", v.Description(ctx), item.Value),
+				fmt.Sprintf("%s, got %s", v.Description(ctx), item.ValueString()),
 			)
 			return
 		}

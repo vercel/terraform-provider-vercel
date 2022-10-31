@@ -34,10 +34,10 @@ func (v validatorStringRegex) Validate(ctx context.Context, req tfsdk.ValidateAt
 	if diags.HasError() {
 		return
 	}
-	if str.Unknown || str.Null {
+	if str.IsUnknown() || str.IsNull() {
 		return
 	}
-	ok := v.Re.MatchString(str.Value)
+	ok := v.Re.MatchString(str.ValueString())
 	if !ok {
 		resp.Diagnostics.AddAttributeError(
 			req.AttributePath,

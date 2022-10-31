@@ -32,22 +32,22 @@ type DNSRecord struct {
 
 func (d DNSRecord) toCreateDNSRecordRequest() client.CreateDNSRecordRequest {
 	var srv *client.SRV = nil
-	if d.Type.Value == "SRV" {
+	if d.Type.ValueString() == "SRV" {
 		srv = &client.SRV{
-			Port:     d.SRV.Port.Value,
-			Priority: d.SRV.Priority.Value,
-			Target:   d.SRV.Target.Value,
-			Weight:   d.SRV.Weight.Value,
+			Port:     d.SRV.Port.ValueInt64(),
+			Priority: d.SRV.Priority.ValueInt64(),
+			Target:   d.SRV.Target.ValueString(),
+			Weight:   d.SRV.Weight.ValueInt64(),
 		}
 	}
 
 	return client.CreateDNSRecordRequest{
-		Domain:     d.Domain.Value,
-		MXPriority: d.MXPriority.Value,
-		Name:       d.Name.Value,
-		TTL:        d.TTL.Value,
-		Type:       d.Type.Value,
-		Value:      d.Value.Value,
+		Domain:     d.Domain.ValueString(),
+		MXPriority: d.MXPriority.ValueInt64(),
+		Name:       d.Name.ValueString(),
+		TTL:        d.TTL.ValueInt64(),
+		Type:       d.Type.ValueString(),
+		Value:      d.Value.ValueString(),
 		SRV:        srv,
 	}
 }
@@ -56,15 +56,15 @@ func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 	var srv *client.SRVUpdate = nil
 	if d.SRV != nil {
 		srv = &client.SRVUpdate{
-			Port:     &d.SRV.Port.Value,
-			Priority: &d.SRV.Priority.Value,
-			Target:   &d.SRV.Target.Value,
-			Weight:   &d.SRV.Weight.Value,
+			Port:     toPtr(d.SRV.Port.ValueInt64()),
+			Priority: toPtr(d.SRV.Priority.ValueInt64()),
+			Target:   toPtr(d.SRV.Target.ValueString()),
+			Weight:   toPtr(d.SRV.Weight.ValueInt64()),
 		}
 	}
 	return client.UpdateDNSRecordRequest{
 		MXPriority: toInt64Pointer(d.MXPriority),
-		Name:       &d.Name.Value,
+		Name:       toPtr(d.Name.ValueString()),
 		SRV:        srv,
 		TTL:        toInt64Pointer(d.TTL),
 		Value:      toStrPointer(d.Value),
@@ -73,13 +73,13 @@ func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 
 func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srv *SRV) (record DNSRecord, err error) {
 	record = DNSRecord{
-		Domain:     types.String{Value: r.Domain},
-		ID:         types.String{Value: r.ID},
-		MXPriority: types.Int64{Null: true},
-		Name:       types.String{Value: r.Name},
-		TTL:        types.Int64{Value: r.TTL},
+		Domain:     types.StringValue(r.Domain),
+		ID:         types.StringValue(r.ID),
+		MXPriority: types.Int64Null(),
+		Name:       types.StringValue(r.Name),
+		TTL:        types.Int64Value(r.TTL),
 		TeamID:     toTeamID(r.TeamID),
-		Type:       types.String{Value: r.RecordType},
+		Type:       types.StringValue(r.RecordType),
 	}
 
 	if r.RecordType == "SRV" {
@@ -106,14 +106,14 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srv *SRV
 			target = split[3]
 		}
 		record.SRV = &SRV{
-			Weight:   types.Int64{Value: int64(weight)},
-			Port:     types.Int64{Value: int64(port)},
-			Priority: types.Int64{Value: int64(priority)},
-			Target:   types.String{Value: target},
+			Weight:   types.Int64Value(int64(weight)),
+			Port:     types.Int64Value(int64(port)),
+			Priority: types.Int64Value(int64(priority)),
+			Target:   types.StringValue(target),
 		}
 		// SRV records have no value
-		record.Value = types.String{Null: true}
-		if srv != nil && fmt.Sprintf("%s.", srv.Target.Value) == record.SRV.Target.Value {
+		record.Value = types.StringNull()
+		if srv != nil && fmt.Sprintf("%s.", srv.Target.ValueString()) == record.SRV.Target.ValueString() {
 			record.SRV.Target = srv.Target
 		}
 		return record, nil
@@ -129,16 +129,16 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srv *SRV
 			return record, fmt.Errorf("expected MX priority to be an int, but got %s", split[0])
 		}
 
-		record.MXPriority = types.Int64{Value: int64(priority)}
-		record.Value = types.String{Value: split[1]}
-		if split[1] == fmt.Sprintf("%s.", value.Value) {
+		record.MXPriority = types.Int64Value(int64(priority))
+		record.Value = types.StringValue(split[1])
+		if split[1] == fmt.Sprintf("%s.", value.ValueString()) {
 			record.Value = value
 		}
 		return record, nil
 	}
 
-	record.Value = types.String{Value: r.Value}
-	if r.Value == fmt.Sprintf("%s.", value.Value) {
+	record.Value = types.StringValue(r.Value)
+	if r.Value == fmt.Sprintf("%s.", value.ValueString()) {
 		record.Value = value
 	}
 	return record, nil

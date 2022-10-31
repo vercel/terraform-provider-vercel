@@ -216,7 +216,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	out, err := r.client.CreateProject(ctx, plan.TeamID.Value, plan.toCreateProjectRequest(environment))
+	out, err := r.client.CreateProject(ctx, plan.TeamID.ValueString(), plan.toCreateProjectRequest(environment))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -227,8 +227,8 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
 	tflog.Trace(ctx, "created project", map[string]interface{}{
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ID.Value,
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -248,7 +248,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	out, err := r.client.GetProject(ctx, state.ID.Value, state.TeamID.Value, !state.Environment.Null)
+	out, err := r.client.GetProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), !state.Environment.IsNull())
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -257,8 +257,8 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		resp.Diagnostics.AddError(
 			"Error reading project",
 			fmt.Sprintf("Could not read project %s %s, unexpected error: %s",
-				state.TeamID.Value,
-				state.ID.Value,
+				state.TeamID.ValueString(),
+				state.ID.ValueString(),
 				err,
 			),
 		)
@@ -267,8 +267,8 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	result := convertResponseToProject(out, state.coercedFields(), state.Environment)
 	tflog.Trace(ctx, "read project", map[string]interface{}{
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ID.Value,
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -358,56 +358,56 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	toCreate, toRemove := diffEnvVars(stateEnvs, planEnvs)
 	for _, v := range toRemove {
-		err := r.client.DeleteEnvironmentVariable(ctx, state.ID.Value, state.TeamID.Value, v.ID.Value)
+		err := r.client.DeleteEnvironmentVariable(ctx, state.ID.ValueString(), state.TeamID.ValueString(), v.ID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating project",
 				fmt.Sprintf(
 					"Could not remove environment variable %s (%s), unexpected error: %s",
-					v.Key.Value,
-					v.ID.Value,
+					v.Key.ValueString(),
+					v.ID.ValueString(),
 					err,
 				),
 			)
 			return
 		}
 		tflog.Trace(ctx, "deleted environment variable", map[string]interface{}{
-			"team_id":        plan.TeamID.Value,
-			"project_id":     plan.ID.Value,
-			"environment_id": v.ID.Value,
+			"team_id":        plan.TeamID.ValueString(),
+			"project_id":     plan.ID.ValueString(),
+			"environment_id": v.ID.ValueString(),
 		})
 	}
 	for _, v := range toCreate {
 		result, err := r.client.CreateEnvironmentVariable(
 			ctx,
-			v.toCreateEnvironmentVariableRequest(plan.ID.Value, plan.TeamID.Value),
+			v.toCreateEnvironmentVariableRequest(plan.ID.ValueString(), plan.TeamID.ValueString()),
 		)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating project",
 				fmt.Sprintf(
 					"Could not upsert environment variable %s (%s), unexpected error: %s",
-					v.Key.Value,
-					v.ID.Value,
+					v.Key.ValueString(),
+					v.ID.ValueString(),
 					err,
 				),
 			)
 		}
 		tflog.Trace(ctx, "upserted environment variable", map[string]interface{}{
-			"team_id":        plan.TeamID.Value,
-			"project_id":     plan.ID.Value,
+			"team_id":        plan.TeamID.ValueString(),
+			"project_id":     plan.ID.ValueString(),
 			"environment_id": result.ID,
 		})
 	}
 
-	out, err := r.client.UpdateProject(ctx, state.ID.Value, state.TeamID.Value, plan.toUpdateProjectRequest(state.Name.Value), !plan.Environment.Null)
+	out, err := r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), plan.toUpdateProjectRequest(state.Name.ValueString()), !plan.Environment.IsNull())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
 			fmt.Sprintf(
 				"Could not update project %s %s, unexpected error: %s",
-				state.TeamID.Value,
-				state.ID.Value,
+				state.TeamID.ValueString(),
+				state.ID.ValueString(),
 				err,
 			),
 		)
@@ -416,8 +416,8 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
 	tflog.Trace(ctx, "updated project", map[string]interface{}{
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ID.Value,
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -437,7 +437,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	err := r.client.DeleteProject(ctx, state.ID.Value, state.TeamID.Value)
+	err := r.client.DeleteProject(ctx, state.ID.ValueString(), state.TeamID.ValueString())
 	if client.NotFound(err) {
 		return
 	}
@@ -446,8 +446,8 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 			"Error deleting project",
 			fmt.Sprintf(
 				"Could not delete project %s %s, unexpected error: %s",
-				state.TeamID.Value,
-				state.ID.Value,
+				state.TeamID.ValueString(),
+				state.ID.ValueString(),
 				err,
 			),
 		)
@@ -455,8 +455,8 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 
 	tflog.Trace(ctx, "deleted project", map[string]interface{}{
-		"team_id":    state.TeamID.Value,
-		"project_id": state.ID.Value,
+		"team_id":    state.TeamID.ValueString(),
+		"project_id": state.ID.ValueString(),
 	})
 }
 
@@ -499,15 +499,15 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 
 	result := convertResponseToProject(out, projectCoercedFields{
 		/* As this is import, none of these fields are specified - so treat them all as Null */
-		BuildCommand:    types.String{Null: true},
-		DevCommand:      types.String{Null: true},
-		InstallCommand:  types.String{Null: true},
-		OutputDirectory: types.String{Null: true},
-		PublicSource:    types.Bool{Null: true},
-	}, types.Set{Null: true})
+		BuildCommand:    types.StringNull(),
+		DevCommand:      types.StringNull(),
+		InstallCommand:  types.StringNull(),
+		OutputDirectory: types.StringNull(),
+		PublicSource:    types.BoolNull(),
+	}, types.SetNull(envVariableElemType))
 	tflog.Trace(ctx, "imported project", map[string]interface{}{
-		"team_id":    result.TeamID.Value,
-		"project_id": result.ID.Value,
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ID.ValueString(),
 	})
 
 	diags := resp.State.Set(ctx, result)

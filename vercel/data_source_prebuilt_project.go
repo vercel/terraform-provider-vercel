@@ -94,14 +94,14 @@ func (d *prebuiltProjectDataSource) ValidateConfig(ctx context.Context, req data
 		return
 	}
 
-	if config.Path.Unknown || config.Path.Null {
+	if config.Path.IsUnknown() || config.Path.IsNull() {
 		return
 	}
 
 	// if we know the path, let's do a quick check for prebuilt output valid-ness. i.e. reading the output directory
 	// and ensuring no build errors.
 	// We want to validate this both here and in the Read method in case the field is Unknown at plan time.
-	validatePrebuiltOutput(&resp.Diagnostics, config.Path.Value)
+	validatePrebuiltOutput(&resp.Diagnostics, config.Path.ValueString())
 }
 
 // AddErrorer defines an interface that contains the AddError method. Most commonly used with Diagnostics.
@@ -181,8 +181,8 @@ func (d *prebuiltProjectDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	outputDir := filepath.Join(config.Path.Value, ".vercel", "output")
-	validatePrebuiltOutput(&resp.Diagnostics, config.Path.Value)
+	outputDir := filepath.Join(config.Path.ValueString(), ".vercel", "output")
+	validatePrebuiltOutput(&resp.Diagnostics, config.Path.ValueString())
 	if resp.Diagnostics.HasError() {
 		return
 	}

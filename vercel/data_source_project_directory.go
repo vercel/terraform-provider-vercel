@@ -94,7 +94,7 @@ func (d *projectDirectoryDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	ignoreRules, err := file.GetIgnores(config.Path.Value)
+	ignoreRules, err := file.GetIgnores(config.Path.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading .vercelignore file",
@@ -105,12 +105,12 @@ func (d *projectDirectoryDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	paths, err := file.GetPaths(config.Path.Value, ignoreRules)
+	paths, err := file.GetPaths(config.Path.ValueString(), ignoreRules)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading directory",
 			fmt.Sprintf("Could not read files for directory %s, unexpected error: %s",
-				config.Path.Value,
+				config.Path.ValueString(),
 				err,
 			),
 		)
@@ -124,7 +124,7 @@ func (d *projectDirectoryDataSource) Read(ctx context.Context, req datasource.Re
 			resp.Diagnostics.AddError(
 				"Error reading file",
 				fmt.Sprintf("Could not read file %s, unexpected error: %s",
-					config.Path.Value,
+					config.Path.ValueString(),
 					err,
 				),
 			)

@@ -89,12 +89,12 @@ func (d *fileDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	content, err := os.ReadFile(config.Path.Value)
+	content, err := os.ReadFile(config.Path.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading file",
 			fmt.Sprintf("Could not read file %s, unexpected error: %s",
-				config.Path.Value,
+				config.Path.ValueString(),
 				err,
 			),
 		)
@@ -104,7 +104,7 @@ func (d *fileDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	rawSha := sha1.Sum(content)
 	sha := hex.EncodeToString(rawSha[:])
 	config.File = map[string]string{
-		config.Path.Value: fmt.Sprintf("%d~%s", len(content), sha),
+		config.Path.ValueString(): fmt.Sprintf("%d~%s", len(content), sha),
 	}
 	config.ID = config.Path
 

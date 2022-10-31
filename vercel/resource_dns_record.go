@@ -161,42 +161,42 @@ func (r *dnsRecordResource) ValidateConfig(ctx context.Context, req resource.Val
 		return
 	}
 
-	if config.Type.Value == "SRV" && config.SRV == nil {
+	if config.Type.ValueString() == "SRV" && config.SRV == nil {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"A DNS Record type of 'SRV' requires the `srv` attribute to be set",
 		)
 	}
 
-	if config.Type.Value != "SRV" && config.Value.Null {
+	if config.Type.ValueString() != "SRV" && config.Value.IsNull() {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
-			fmt.Sprintf("The `value` attribute must be set on records of `type` '%s'", config.Type.Value),
+			fmt.Sprintf("The `value` attribute must be set on records of `type` '%s'", config.Type.ValueString()),
 		)
 	}
 
-	if config.Type.Value == "SRV" && !config.Value.Null {
+	if config.Type.ValueString() == "SRV" && !config.Value.IsNull() {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"The `value` attribute should not be set on records of `type` 'SRV'",
 		)
 	}
 
-	if config.Type.Value != "SRV" && config.SRV != nil {
+	if config.Type.ValueString() != "SRV" && config.SRV != nil {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"The `srv` attribute should only be set on records of `type` 'SRV'",
 		)
 	}
 
-	if config.Type.Value != "MX" && !config.MXPriority.Null {
+	if config.Type.ValueString() != "MX" && !config.MXPriority.IsNull() {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"The `mx_priority` attribute should only be set on records of `type` 'MX'",
 		)
 	}
 
-	if config.Type.Value == "MX" && config.MXPriority.Null {
+	if config.Type.ValueString() == "MX" && config.MXPriority.IsNull() {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"A DNS Record type of 'MX' requires the `mx_priority` attribute to be set",
@@ -214,7 +214,7 @@ func (r *dnsRecordResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	out, err := r.client.CreateDNSRecord(ctx, plan.TeamID.Value, plan.toCreateDNSRecordRequest())
+	out, err := r.client.CreateDNSRecord(ctx, plan.TeamID.ValueString(), plan.toCreateDNSRecordRequest())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating DNS Record",
@@ -254,7 +254,7 @@ func (r *dnsRecordResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	out, err := r.client.GetDNSRecord(ctx, state.ID.Value, state.TeamID.Value)
+	out, err := r.client.GetDNSRecord(ctx, state.ID.ValueString(), state.TeamID.ValueString())
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -263,8 +263,8 @@ func (r *dnsRecordResource) Read(ctx context.Context, req resource.ReadRequest, 
 		resp.Diagnostics.AddError(
 			"Error reading DNS Record",
 			fmt.Sprintf("Could not read DNS Record %s %s, unexpected error: %s",
-				state.TeamID.Value,
-				state.ID.Value,
+				state.TeamID.ValueString(),
+				state.ID.ValueString(),
 				err,
 			),
 		)
@@ -310,8 +310,8 @@ func (r *dnsRecordResource) Update(ctx context.Context, req resource.UpdateReque
 
 	out, err := r.client.UpdateDNSRecord(
 		ctx,
-		plan.TeamID.Value,
-		state.ID.Value,
+		plan.TeamID.ValueString(),
+		state.ID.ValueString(),
 		plan.toUpdateRequest(),
 	)
 	if err != nil {
@@ -319,8 +319,8 @@ func (r *dnsRecordResource) Update(ctx context.Context, req resource.UpdateReque
 			"Error updating DNS Record",
 			fmt.Sprintf(
 				"Could not update DNS Record %s for domain %s, unexpected error: %s",
-				state.ID.Value,
-				state.Domain.Value,
+				state.ID.ValueString(),
+				state.Domain.ValueString(),
 				err,
 			),
 		)
@@ -357,7 +357,7 @@ func (r *dnsRecordResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	err := r.client.DeleteDNSRecord(ctx, state.Domain.Value, state.ID.Value, state.TeamID.Value)
+	err := r.client.DeleteDNSRecord(ctx, state.Domain.ValueString(), state.ID.ValueString(), state.TeamID.ValueString())
 	if client.NotFound(err) {
 		// The DNS Record is already gone - do nothing.
 		return
@@ -367,8 +367,8 @@ func (r *dnsRecordResource) Delete(ctx context.Context, req resource.DeleteReque
 			"Error deleting DNS Record",
 			fmt.Sprintf(
 				"Could not delete DNS Record %s for domain %s, unexpected error: %s",
-				state.ID.Value,
-				state.Domain.Value,
+				state.ID.ValueString(),
+				state.Domain.ValueString(),
 				err,
 			),
 		)
