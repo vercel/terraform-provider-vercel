@@ -147,9 +147,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"git_repository": {
-				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
-				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				Description: "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
+				Optional:    true,
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"type": {
 						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
@@ -165,6 +164,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Type:          types.StringType,
 						Required:      true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+					},
+					"production_branch": {
+						Description: "By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.",
+						Type:        types.StringType,
+						Optional:    true,
+						Computed:    true,
 					},
 				}),
 			},
@@ -227,6 +232,34 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
 	tflog.Trace(ctx, "created project", map[string]interface{}{
+		"team_id":    result.TeamID.ValueString(),
+		"project_id": result.ID.ValueString(),
+	})
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.GitRepository == nil || plan.GitRepository.ProductionBranch.IsNull() || plan.GitRepository.ProductionBranch.IsUnknown() {
+		return
+	}
+
+	out, err = r.client.UpdateProductionBranch(ctx, client.UpdateProductionBranchRequest{
+		ProjectID: out.ID,
+		Branch:    plan.GitRepository.ProductionBranch.ValueString(),
+		TeamID:    plan.TeamID.ValueString(),
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating project",
+			"Failed to create project, an error occurred setting the production branch: "+err.Error(),
+		)
+		return
+	}
+
+	result = convertResponseToProject(out, plan.coercedFields(), plan.Environment)
+	tflog.Trace(ctx, "updated project production branch", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})
@@ -412,6 +445,26 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			),
 		)
 		return
+	}
+
+	if plan.GitRepository != nil && !plan.GitRepository.ProductionBranch.IsNull() && (state.GitRepository == nil || state.GitRepository.ProductionBranch.ValueString() != plan.GitRepository.ProductionBranch.ValueString()) {
+		out, err = r.client.UpdateProductionBranch(ctx, client.UpdateProductionBranchRequest{
+			ProjectID: plan.ID.ValueString(),
+			TeamID:    plan.TeamID.ValueString(),
+			Branch:    plan.GitRepository.ProductionBranch.ValueString(),
+		})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project",
+				fmt.Sprintf(
+					"Could not update project %s %s, unexpected error: %s",
+					state.TeamID.ValueString(),
+					state.ID.ValueString(),
+					err,
+				),
+			)
+			return
+		}
 	}
 
 	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
