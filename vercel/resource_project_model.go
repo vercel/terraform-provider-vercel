@@ -124,8 +124,9 @@ func (e *EnvironmentItem) toCreateEnvironmentVariableRequest(projectID, teamID s
 
 // GitRepository reflects the state terraform stores internally for a nested git_repository block on a project resource.
 type GitRepository struct {
-	Type types.String `tfsdk:"type"`
-	Repo types.String `tfsdk:"repo"`
+	Type             types.String `tfsdk:"type"`
+	Repo             types.String `tfsdk:"repo"`
+	ProductionBranch types.String `tfsdk:"production_branch"`
 }
 
 func (g *GitRepository) toCreateProjectRequest() *client.GitRepository {
@@ -200,8 +201,12 @@ func convertResponseToProject(response client.ProjectResponse, fields projectCoe
 	var gr *GitRepository
 	if repo := response.Repository(); repo != nil {
 		gr = &GitRepository{
-			Type: types.StringValue(repo.Type),
-			Repo: types.StringValue(repo.Repo),
+			Type:             types.StringValue(repo.Type),
+			Repo:             types.StringValue(repo.Repo),
+			ProductionBranch: types.StringNull(),
+		}
+		if repo.ProductionBranch != nil {
+			gr.ProductionBranch = types.StringValue(*repo.ProductionBranch)
 		}
 	}
 

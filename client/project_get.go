@@ -11,8 +11,9 @@ import (
 
 // Repository defines the information about a projects git connection.
 type Repository struct {
-	Type string
-	Repo string
+	Type             string
+	Repo             string
+	ProductionBranch *string
 }
 
 // getRepoNameFromURL is a helper method to extract the repo name from a GitLab URL.
@@ -34,18 +35,21 @@ func (r *ProjectResponse) Repository() *Repository {
 	switch r.Link.Type {
 	case "github":
 		return &Repository{
-			Type: "github",
-			Repo: fmt.Sprintf("%s/%s", r.Link.Org, r.Link.Repo),
+			Type:             "github",
+			Repo:             fmt.Sprintf("%s/%s", r.Link.Org, r.Link.Repo),
+			ProductionBranch: r.Link.ProductionBranch,
 		}
 	case "gitlab":
 		return &Repository{
-			Type: "gitlab",
-			Repo: fmt.Sprintf("%s/%s", r.Link.ProjectNamespace, getRepoNameFromURL(r.Link.ProjectURL)),
+			Type:             "gitlab",
+			Repo:             fmt.Sprintf("%s/%s", r.Link.ProjectNamespace, getRepoNameFromURL(r.Link.ProjectURL)),
+			ProductionBranch: r.Link.ProductionBranch,
 		}
 	case "bitbucket":
 		return &Repository{
-			Type: "bitbucket",
-			Repo: fmt.Sprintf("%s/%s", r.Link.Owner, r.Link.Slug),
+			Type:             "bitbucket",
+			Repo:             fmt.Sprintf("%s/%s", r.Link.Owner, r.Link.Slug),
+			ProductionBranch: r.Link.ProductionBranch,
 		}
 	}
 	return nil
@@ -73,6 +77,8 @@ type ProjectResponse struct {
 		ProjectNamespace string `json:"projectNamespace"`
 		ProjectURL       string `json:"projectUrl"`
 		ProjectID        int64  `json:"projectId,string"`
+		// production branch
+		ProductionBranch *string `json:"productionBranch"`
 	} `json:"link"`
 	Name                     string  `json:"name"`
 	OutputDirectory          *string `json:"outputDirectory"`
