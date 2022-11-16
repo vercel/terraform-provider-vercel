@@ -72,6 +72,7 @@ Read-Only:
 
 Read-Only:
 
+- `production_branch` (String) By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.
 - `repo` (String) The name of the git repository. For example: `vercel/next.js`.
 - `type` (String) The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.
 
