@@ -147,6 +147,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Type:        types.StringType,
 						Computed:    true,
 					},
+					"production_branch": {
+						Description: "By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.",
+						Type:        types.StringType,
+						Computed:    true,
+					},
 				}),
 			},
 			"id": {
