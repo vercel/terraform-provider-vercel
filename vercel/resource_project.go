@@ -410,28 +410,34 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			"environment_id": v.ID.ValueString(),
 		})
 	}
+
+	var items []client.EnvironmentVariableRequest
 	for _, v := range toCreate {
-		result, err := r.client.CreateEnvironmentVariable(
-			ctx,
-			v.toCreateEnvironmentVariableRequest(plan.ID.ValueString(), plan.TeamID.ValueString()),
-		)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error updating project",
-				fmt.Sprintf(
-					"Could not upsert environment variable %s (%s), unexpected error: %s",
-					v.Key.ValueString(),
-					v.ID.ValueString(),
-					err,
-				),
-			)
-		}
-		tflog.Trace(ctx, "upserted environment variable", map[string]interface{}{
-			"team_id":        plan.TeamID.ValueString(),
-			"project_id":     plan.ID.ValueString(),
-			"environment_id": result.ID,
-		})
+		items = append(items, v.toEnvironmentVariableRequest())
 	}
+
+	err = r.client.CreateEnvironmentVariables(
+		ctx,
+		client.CreateEnvironmentVariablesRequest{
+			ProjectID:            plan.ID.ValueString(),
+			TeamID:               plan.TeamID.ValueString(),
+			EnvironmentVariables: items,
+		},
+	)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating project",
+			fmt.Sprintf(
+				"Could not upsert environment variables for project %s, unexpected error: %s",
+				plan.ID.ValueString(),
+				err,
+			),
+		)
+	}
+	tflog.Trace(ctx, "upserted environment variables", map[string]interface{}{
+		"team_id":    plan.TeamID.ValueString(),
+		"project_id": plan.ID.ValueString(),
+	})
 
 	out, err := r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), plan.toUpdateProjectRequest(state.Name.ValueString()), !plan.Environment.IsNull())
 	if err != nil {
