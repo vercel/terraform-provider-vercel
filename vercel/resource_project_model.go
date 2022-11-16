@@ -106,19 +106,17 @@ type EnvironmentItem struct {
 	ID        types.String   `tfsdk:"id"`
 }
 
-func (e *EnvironmentItem) toCreateEnvironmentVariableRequest(projectID, teamID string) client.CreateEnvironmentVariableRequest {
+func (e *EnvironmentItem) toEnvironmentVariableRequest() client.EnvironmentVariableRequest {
 	var target []string
 	for _, t := range e.Target {
 		target = append(target, t.ValueString())
 	}
-	return client.CreateEnvironmentVariableRequest{
+	return client.EnvironmentVariableRequest{
 		Key:       e.Key.ValueString(),
 		Value:     e.Value.ValueString(),
 		Target:    target,
 		GitBranch: toStrPointer(e.GitBranch),
 		Type:      "encrypted",
-		ProjectID: projectID,
-		TeamID:    teamID,
 	}
 }
 

@@ -22,11 +22,13 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client
 		target = append(target, t.ValueString())
 	}
 	return client.CreateEnvironmentVariableRequest{
-		Key:       e.Key.ValueString(),
-		Value:     e.Value.ValueString(),
-		Target:    target,
-		GitBranch: toStrPointer(e.GitBranch),
-		Type:      "encrypted",
+		EnvironmentVariable: client.EnvironmentVariableRequest{
+			Key:       e.Key.ValueString(),
+			Value:     e.Value.ValueString(),
+			Target:    target,
+			GitBranch: toStrPointer(e.GitBranch),
+			Type:      "encrypted",
+		},
 		ProjectID: e.ProjectID.ValueString(),
 		TeamID:    e.TeamID.ValueString(),
 	}
