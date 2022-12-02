@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
 func stringLengthBetween(minLength int, maxLength int) validatorStringLengthBetween {
@@ -27,20 +26,13 @@ func (v validatorStringLengthBetween) MarkdownDescription(ctx context.Context) s
 	return fmt.Sprintf("String length must be between `%d` and `%d`", v.Min, v.Max)
 }
 
-func (v validatorStringLengthBetween) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
-	var str types.String
-	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &str)
-	resp.Diagnostics.Append(diags...)
-	if diags.HasError() {
+func (v validatorStringLengthBetween) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
-	if str.IsUnknown() || str.IsNull() {
-		return
-	}
-	strLen := len(str.ValueString())
+	strLen := len(req.ConfigValue.ValueString())
 	if strLen < v.Min || strLen > v.Max {
-		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+		resp.Diagnostics.AddError(
 			"Invalid value provided",
 			fmt.Sprintf("String length must be between %d and %d, got: %d.", v.Min, v.Max, strLen),
 		)

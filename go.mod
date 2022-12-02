@@ -3,8 +3,8 @@ module github.com/vercel/terraform-provider-vercel
 go 1.19
 
 require (
-	github.com/hashicorp/terraform-plugin-framework v0.16.0
-	github.com/hashicorp/terraform-plugin-go v0.14.1
+	github.com/hashicorp/terraform-plugin-framework v0.17.0
+	github.com/hashicorp/terraform-plugin-go v0.14.2
 	github.com/hashicorp/terraform-plugin-log v0.7.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.10.1
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
@@ -53,7 +53,7 @@ require (
 	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20221114212237-e4508ebdbee1 // indirect
-	google.golang.org/grpc v1.50.1 // indirect
+	google.golang.org/genproto v0.0.0-20221130183247-a2ec334bae6f // indirect
+	google.golang.org/grpc v1.51.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )

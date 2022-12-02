@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
 func stringOneOf(items ...string) validatorStringOneOf {
@@ -37,22 +36,16 @@ func (v validatorStringOneOf) MarkdownDescription(ctx context.Context) string {
 	return fmt.Sprintf("Item must be one of `%s`", strings.Join(v.keys(), "` `"))
 }
 
-func (v validatorStringOneOf) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
-	var item types.String
-	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &item)
-	resp.Diagnostics.Append(diags...)
-	if diags.HasError() {
-		return
-	}
-	if item.IsUnknown() || item.IsNull() {
+func (v validatorStringOneOf) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
 
-	if _, ok := v.Items[item.ValueString()]; !ok {
+	if _, ok := v.Items[req.ConfigValue.ValueString()]; !ok {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Invalid value provided",
-			fmt.Sprintf("Item must be one of %s, got: %s.", strings.Join(v.keys(), ", "), item.ValueString()),
+			fmt.Sprintf("Item must be one of %s, got: %s.", strings.Join(v.keys(), ", "), req.ConfigValue.ValueString()),
 		)
 		return
 	}

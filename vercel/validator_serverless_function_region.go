@@ -8,8 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
 func validateServerlessFunctionRegion() validatorServerlessFunctionRegion {
@@ -50,11 +49,14 @@ func keys(v map[string]struct{}) (out []string) {
 	return
 }
 
-func (v validatorServerlessFunctionRegion) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
+func (v validatorServerlessFunctionRegion) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
 	apires, err := http.Get("https://dcs.vercel-infra.com")
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Unable to validate attribute",
 			fmt.Sprintf("Unable to retrieve Vercel serverless function regions: unexpected error: %s", err),
 		)
@@ -62,7 +64,7 @@ func (v validatorServerlessFunctionRegion) Validate(ctx context.Context, req tfs
 	}
 	if apires.StatusCode != 200 {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Unable to validate attribute",
 			fmt.Sprintf("Unable to retrieve Vercel serverless function regions: unexpected status code: %d", apires.StatusCode),
 		)
@@ -73,7 +75,7 @@ func (v validatorServerlessFunctionRegion) Validate(ctx context.Context, req tfs
 	responseBody, err := io.ReadAll(apires.Body)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Unable to validate attribute",
 			fmt.Sprintf("Unable to retrieve Vercel serverless function regions: error reading response body: %s", err),
 		)
@@ -86,7 +88,7 @@ func (v validatorServerlessFunctionRegion) Validate(ctx context.Context, req tfs
 	err = json.Unmarshal(responseBody, &regions)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Unable to validate attribute",
 			fmt.Sprintf("Unable to retrieve Vercel serverless function regions: error parsing serverless function regions response: %s", err),
 		)
@@ -102,21 +104,11 @@ func (v validatorServerlessFunctionRegion) Validate(ctx context.Context, req tfs
 		}
 	}
 
-	var item types.String
-	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &item)
-	resp.Diagnostics.Append(diags...)
-	if diags.HasError() {
-		return
-	}
-	if item.IsUnknown() || item.IsNull() {
-		return
-	}
-
-	if _, ok := v.regions[item.ValueString()]; !ok {
+	if _, ok := v.regions[req.ConfigValue.ValueString()]; !ok {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Invalid Serverless Function Region",
-			fmt.Sprintf("The serverless function region %s is not supported on Vercel. Must be one of %s.", item.ValueString(), strings.Join(keys(v.regions), ", ")),
+			fmt.Sprintf("The serverless function region %s is not supported on Vercel. Must be one of %s.", req.ConfigValue.ValueString(), strings.Join(keys(v.regions), ", ")),
 		)
 		return
 	}

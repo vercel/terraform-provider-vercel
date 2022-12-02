@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
@@ -42,8 +44,8 @@ func (r *dnsRecordResource) Configure(ctx context.Context, req resource.Configur
 	r.client = client
 }
 
-func (r *dnsRecordResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+func (r *dnsRecordResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 Provides a DNS Record resource.
 
@@ -53,103 +55,91 @@ DNS records are instructions that live in authoritative DNS servers and provide 
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/custom-domains#dns-records)
         `,
-		Attributes: map[string]tfsdk.Attribute{
-			"id": {
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
 				Computed: true,
-				Type:     types.StringType,
 			},
-			"team_id": {
+			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
 				Description:   "The team ID that the domain and DNS records belong to.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
-			"domain": {
+			"domain": schema.StringAttribute{
 				Description:   "The domain name, or zone, that the DNS record should be created beneath.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				Required:      true,
-				Type:          types.StringType,
 			},
-			"name": {
+			"name": schema.StringAttribute{
 				Description: "The subdomain name of the record. This should be an empty string if the rercord is for the root domain.",
 				Required:    true,
-				Type:        types.StringType,
 			},
-			"type": {
+			"type": schema.StringAttribute{
 				Description:   "The type of DNS record. Available types: " + "`A`" + ", " + "`AAAA`" + ", " + "`ALIAS`" + ", " + "`CAA`" + ", " + "`CNAME`" + ", " + "`MX`" + ", " + "`NS`" + ", " + "`SRV`" + ", " + "`TXT`" + ".",
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				Required:      true,
-				Type:          types.StringType,
-				Validators: []tfsdk.AttributeValidator{
+				Validators: []validator.String{
 					stringOneOf("A", "AAAA", "ALIAS", "CAA", "CNAME", "MX", "NS", "SRV", "TXT"),
 				},
 			},
-			"value": {
+			"value": schema.StringAttribute{
 				// required if any record type apart from SRV.
 				Description: "The value of the DNS record. The format depends on the 'type' property.\nFor an 'A' record, this should be a valid IPv4 address.\nFor an 'AAAA' record, this should be an IPv6 address.\nFor 'ALIAS' records, this should be a hostname.\nFor 'CAA' records, this should specify specify which Certificate Authorities (CAs) are allowed to issue certificates for the domain.\nFor 'CNAME' records, this should be a different domain name.\nFor 'MX' records, this should specify the mail server responsible for accepting messages on behalf of the domain name.\nFor 'TXT' records, this can contain arbitrary text.",
 				Optional:    true,
-				Type:        types.StringType,
 			},
-			"ttl": {
+			"ttl": schema.Int64Attribute{
 				Description: "The TTL value in seconds. Must be a number between 60 and 2147483647. If unspecified, it will default to 60 seconds.",
 				Optional:    true,
 				Computed:    true,
-				Type:        types.Int64Type,
-				Validators: []tfsdk.AttributeValidator{
+				Validators: []validator.Int64{
 					int64GreaterThan(60),
 					int64LessThan(2147483647),
 				},
 			},
-			"mx_priority": {
+			"mx_priority": schema.Int64Attribute{
 				Description: "The priority of the MX record. The priority specifies the sequence that an email server receives emails. A smaller value indicates a higher priority.",
 				Optional:    true, // required for MX records.
-				Type:        types.Int64Type,
-				Validators: []tfsdk.AttributeValidator{
+				Validators: []validator.Int64{
 					int64GreaterThan(0),
 					int64LessThan(65535),
 				},
 			},
-			"srv": {
+			"srv": schema.SingleNestedAttribute{
 				Description: "Settings for an SRV record.",
 				Optional:    true, // required for SRV records.
-				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-					"weight": {
+				Attributes: map[string]schema.Attribute{
+					"weight": schema.Int64Attribute{
 						Description: "A relative weight for records with the same priority, higher value means higher chance of getting picked.",
-						Type:        types.Int64Type,
 						Required:    true,
-						Validators: []tfsdk.AttributeValidator{
+						Validators: []validator.Int64{
 							int64GreaterThan(0),
 							int64LessThan(65535),
 						},
 					},
-					"port": {
+					"port": schema.Int64Attribute{
 						Description: "The TCP or UDP port on which the service is to be found.",
-						Type:        types.Int64Type,
 						Required:    true,
-						Validators: []tfsdk.AttributeValidator{
+						Validators: []validator.Int64{
 							int64GreaterThan(0),
 							int64LessThan(65535),
 						},
 					},
-					"priority": {
+					"priority": schema.Int64Attribute{
 						Description: "The priority of the target host, lower value means more preferred.",
-						Type:        types.Int64Type,
 						Required:    true,
-						Validators: []tfsdk.AttributeValidator{
+						Validators: []validator.Int64{
 							int64GreaterThan(0),
 							int64LessThan(65535),
 						},
 					},
-					"target": {
+					"target": schema.StringAttribute{
 						Description: "The canonical hostname of the machine providing the service, ending in a dot.",
-						Type:        types.StringType,
 						Required:    true,
 					},
-				}),
+				},
 			},
 		},
-	}, nil
+	}
 }
 
 // ValidateConfig validates the Resource configuration.

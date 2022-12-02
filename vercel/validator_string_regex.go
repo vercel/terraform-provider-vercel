@@ -4,8 +4,7 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
 func stringRegex(re *regexp.Regexp, errorMessage string) validatorStringRegex {
@@ -27,20 +26,14 @@ func (v validatorStringRegex) MarkdownDescription(ctx context.Context) string {
 	return v.ErrorMessage
 }
 
-func (v validatorStringRegex) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
-	var str types.String
-	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &str)
-	resp.Diagnostics.Append(diags...)
-	if diags.HasError() {
+func (v validatorStringRegex) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
-	if str.IsUnknown() || str.IsNull() {
-		return
-	}
-	ok := v.Re.MatchString(str.ValueString())
+	ok := v.Re.MatchString(req.ConfigValue.ValueString())
 	if !ok {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Invalid value provided",
 			v.ErrorMessage,
 		)

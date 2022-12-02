@@ -6,9 +6,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
@@ -44,9 +46,9 @@ func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureR
 	r.client = client
 }
 
-// GetSchema returns the schema information for a deployment resource.
-func (r *projectResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+// Schema returns the schema information for a deployment resource.
+func (r *projectResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 Provides a Project resource.
 
@@ -57,18 +59,16 @@ For more detailed information, please see the [Vercel documentation](https://ver
 ~> Terraform currently provides both a standalone Project Environment Variable resource (a single Environment Variable), and a Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
         `,
-		Attributes: map[string]tfsdk.Attribute{
-			"team_id": {
+		Attributes: map[string]schema.Attribute{
+			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 				Description:   "The team ID to add the project to.",
 			},
-			"name": {
+			"name": schema.StringAttribute{
 				Required: true,
-				Type:     types.StringType,
-				Validators: []tfsdk.AttributeValidator{
+				Validators: []validator.String{
 					stringLengthBetween(1, 52),
 					stringRegex(
 						regexp.MustCompile(`^[a-z0-9\-]{0,100}$`),
@@ -77,129 +77,112 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 				Description: "The desired name for the project.",
 			},
-			"build_command": {
+			"build_command": schema.StringAttribute{
 				Optional:    true,
-				Type:        types.StringType,
 				Description: "The build command for this project. If omitted, this value will be automatically detected.",
 			},
-			"dev_command": {
+			"dev_command": schema.StringAttribute{
 				Optional:    true,
-				Type:        types.StringType,
 				Description: "The dev command for this project. If omitted, this value will be automatically detected.",
 			},
-			"ignore_command": {
+			"ignore_command": schema.StringAttribute{
 				Optional:    true,
-				Type:        types.StringType,
 				Description: "When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.",
 			},
-			"serverless_function_region": {
+			"serverless_function_region": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Type:        types.StringType,
 				Description: "The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.",
-				Validators: []tfsdk.AttributeValidator{
+				Validators: []validator.String{
 					validateServerlessFunctionRegion(),
 				},
 			},
-			"environment": {
+			"environment": schema.SetNestedAttribute{
 				Description: "A set of Environment Variables that should be configured for the project.",
 				Optional:    true,
-				Attributes: tfsdk.SetNestedAttributes(map[string]tfsdk.Attribute{
-					"target": {
-						Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
-						Type: types.SetType{
-							ElemType: types.StringType,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"target": schema.SetAttribute{
+							Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
+							ElementType: types.StringType,
+							Validators: []validator.Set{
+								stringSetItemsIn("production", "preview", "development"),
+							},
+							Required: true,
 						},
-						Validators: []tfsdk.AttributeValidator{
-							stringSetItemsIn("production", "preview", "development"),
+						"git_branch": schema.StringAttribute{
+							Description: "The git branch of the Environment Variable.",
+							Optional:    true,
 						},
-						Required: true,
+						"key": schema.StringAttribute{
+							Description: "The name of the Environment Variable.",
+							Required:    true,
+						},
+						"value": schema.StringAttribute{
+							Description: "The value of the Environment Variable.",
+							Required:    true,
+							Sensitive:   true,
+						},
+						"id": schema.StringAttribute{
+							Description: "The ID of the Environment Variable.",
+							Computed:    true,
+						},
 					},
-					"git_branch": {
-						Description: "The git branch of the Environment Variable.",
-						Type:        types.StringType,
-						Optional:    true,
-					},
-					"key": {
-						Description: "The name of the Environment Variable.",
-						Type:        types.StringType,
-						Required:    true,
-					},
-					"value": {
-						Description: "The value of the Environment Variable.",
-						Type:        types.StringType,
-						Required:    true,
-						Sensitive:   true,
-					},
-					"id": {
-						Description: "The ID of the Environment Variable.",
-						Type:        types.StringType,
-						Computed:    true,
-					},
-				}),
+				},
 			},
-			"framework": {
+			"framework": schema.StringAttribute{
 				Optional:    true,
-				Type:        types.StringType,
 				Description: "The framework that is being used for this project. If omitted, no framework is selected.",
-				Validators: []tfsdk.AttributeValidator{
+				Validators: []validator.String{
 					validateFramework(),
 				},
 			},
-			"git_repository": {
+			"git_repository": schema.SingleNestedAttribute{
 				Description: "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
 				Optional:    true,
-				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-					"type": {
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
 						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
-						Type:        types.StringType,
 						Required:    true,
-						Validators: []tfsdk.AttributeValidator{
+						Validators: []validator.String{
 							stringOneOf("github", "gitlab", "bitbucket"),
 						},
-						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
-					"repo": {
+					"repo": schema.StringAttribute{
 						Description:   "The name of the git repository. For example: `vercel/next.js`.",
-						Type:          types.StringType,
 						Required:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
-					"production_branch": {
+					"production_branch": schema.StringAttribute{
 						Description: "By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.",
-						Type:        types.StringType,
 						Optional:    true,
 						Computed:    true,
 					},
-				}),
+				},
 			},
-			"id": {
+			"id": schema.StringAttribute{
 				Computed:      true,
-				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"install_command": {
+			"install_command": schema.StringAttribute{
 				Optional:    true,
-				Type:        types.StringType,
 				Description: "The install command for this project. If omitted, this value will be automatically detected.",
 			},
-			"output_directory": {
+			"output_directory": schema.StringAttribute{
 				Optional:    true,
-				Type:        types.StringType,
 				Description: "The output directory of the project. If omitted, this value will be automatically detected.",
 			},
-			"public_source": {
+			"public_source": schema.BoolAttribute{
 				Optional:    true,
-				Type:        types.BoolType,
 				Description: "By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.",
 			},
-			"root_directory": {
+			"root_directory": schema.StringAttribute{
 				Optional:    true,
-				Type:        types.StringType,
 				Description: "The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.",
 			},
 		},
-	}, nil
+	}
 }
 
 // Create will create a project within Vercel by calling the Vercel API.

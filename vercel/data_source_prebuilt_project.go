@@ -10,8 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/client"
 	"github.com/vercel/terraform-provider-vercel/file"
@@ -47,9 +46,9 @@ func (d *prebuiltProjectDataSource) Configure(ctx context.Context, req datasourc
 	d.client = client
 }
 
-// GetSchema returns the schema information for a project directory data source
-func (d *prebuiltProjectDataSource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+// Schema returns the schema information for a project directory data source
+func (d *prebuiltProjectDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 Provides the output of a project built via ` + "`vercel build`" + ` and provides metadata for use with a ` + "`vercel_deployment`" + `
 
@@ -58,25 +57,21 @@ Build artifacts are placed into the ` + "`.vercel/output`" + ` directory accordi
 
 This allows a Vercel Deployment to be created without sharing the Project's source code with Vercel.
 `,
-		Attributes: map[string]tfsdk.Attribute{
-			"path": {
+		Attributes: map[string]schema.Attribute{
+			"path": schema.StringAttribute{
 				Description: "The path to the project. Note that this path is relative to the root of your terraform files. This should be the directory that contains the `.vercel/output` directory.",
 				Required:    true,
-				Type:        types.StringType,
 			},
-			"id": {
+			"id": schema.StringAttribute{
 				Computed: true,
-				Type:     types.StringType,
 			},
-			"output": {
+			"output": schema.MapAttribute{
 				Description: "A map of output file to metadata about the file. The metadata contains the file size and hash, and allows a deployment to be created if the file changes.",
 				Computed:    true,
-				Type: types.MapType{
-					ElemType: types.StringType,
-				},
+				ElementType: types.StringType,
 			},
 		},
-	}, nil
+	}
 }
 
 // PrebuiltProjectData represents the information terraform knows about a project directory data source

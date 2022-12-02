@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
 func int64GreaterThan(val int64) validatorInt64GreaterThan {
@@ -25,22 +24,16 @@ func (v validatorInt64GreaterThan) MarkdownDescription(ctx context.Context) stri
 	return fmt.Sprintf("Value must be greater than `%d`", v.Min)
 }
 
-func (v validatorInt64GreaterThan) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
-	var item types.Int64
-	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &item)
-	resp.Diagnostics.Append(diags...)
-	if diags.HasError() {
-		return
-	}
-	if item.IsUnknown() || item.IsNull() {
+func (v validatorInt64GreaterThan) ValidateInt64(ctx context.Context, req validator.Int64Request, resp *validator.Int64Response) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
 
-	if item.ValueInt64() < v.Min {
+	if req.ConfigValue.ValueInt64() < v.Min {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Invalid value provided",
-			fmt.Sprintf("Value must be greater than %d, got: %d.", v.Min, item.ValueInt64()),
+			fmt.Sprintf("Value must be greater than %d, got: %d.", v.Min, req.ConfigValue.ValueInt64()),
 		)
 		return
 	}

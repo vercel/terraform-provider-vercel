@@ -7,10 +7,9 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -26,29 +25,27 @@ func (p *vercelProvider) Metadata(ctx context.Context, req provider.MetadataRequ
 	resp.TypeName = "vercel"
 }
 
-// GetSchema returns the schema information for the provider configuration itself.
-func (p *vercelProvider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+// Schema returns the schema information for the provider configuration itself.
+func (p *vercelProvider) Schema(_ context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 The Vercel provider is used to interact with resources supported by Vercel.
 The provider needs to be configured with the proper credentials before it can be used.
 
 Use the navigation to the left to read about the available resources.
         `,
-		Attributes: map[string]tfsdk.Attribute{
-			"api_token": {
-				Type:        types.StringType,
+		Attributes: map[string]schema.Attribute{
+			"api_token": schema.StringAttribute{
 				Optional:    true,
 				Description: "The Vercel API Token to use. This can also be specified with the `VERCEL_API_TOKEN` shell environment variable. Tokens can be created from your [Vercel settings](https://vercel.com/account/tokens).",
 				Sensitive:   true,
 			},
-			"team": {
-				Type:        types.StringType,
+			"team": schema.StringAttribute{
 				Optional:    true,
 				Description: "The default Vercel Team to use when creating resources. This can be provided as either a team slug, or team ID. The slug and ID are both available from the Team Settings page in the Vercel dashboard.",
 			},
 		},
-	}, nil
+	}
 }
 
 func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource {

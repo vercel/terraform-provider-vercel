@@ -8,8 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
 func validateFramework() validatorFramework {
@@ -34,11 +33,15 @@ func (v validatorFramework) MarkdownDescription(ctx context.Context) string {
 	return fmt.Sprintf("The framework provided is not supported on Vercel. Must be one of `%s`.", strings.Join(keys(v.frameworks), "`, `"))
 }
 
-func (v validatorFramework) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
+func (v validatorFramework) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+
 	apires, err := http.Get("https://api-frameworks.zeit.sh/")
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Unable to validate attribute",
 			fmt.Sprintf("Unable to retrieve Vercel frameworks: unexpected error: %s", err),
 		)
@@ -46,7 +49,7 @@ func (v validatorFramework) Validate(ctx context.Context, req tfsdk.ValidateAttr
 	}
 	if apires.StatusCode != 200 {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Unable to validate attribute",
 			fmt.Sprintf("Unable to retrieve Vercel frameworks: unexpected status code: %d", apires.StatusCode),
 		)
@@ -57,7 +60,7 @@ func (v validatorFramework) Validate(ctx context.Context, req tfsdk.ValidateAttr
 	responseBody, err := io.ReadAll(apires.Body)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Unable to validate attribute",
 			fmt.Sprintf("Unable to retrieve Vercel frameworks: error reading response body: %s", err),
 		)
@@ -69,7 +72,7 @@ func (v validatorFramework) Validate(ctx context.Context, req tfsdk.ValidateAttr
 	err = json.Unmarshal(responseBody, &fwList)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Unable to validate attribute",
 			fmt.Sprintf("Unable to retrieve Vercel frameworks: error parsing frameworks response: %s", err),
 		)
@@ -82,21 +85,15 @@ func (v validatorFramework) Validate(ctx context.Context, req tfsdk.ValidateAttr
 		v.frameworks[fw.Slug] = struct{}{}
 	}
 
-	var item types.String
-	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &item)
-	resp.Diagnostics.Append(diags...)
-	if diags.HasError() {
-		return
-	}
-	if item.IsUnknown() || item.IsNull() {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
 
-	if _, ok := v.frameworks[item.ValueString()]; !ok {
+	if _, ok := v.frameworks[req.ConfigValue.ValueString()]; !ok {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Invalid Framework",
-			fmt.Sprintf("The framework %s is not supported on Vercel. Must be one of %s.", item.ValueString(), strings.Join(keys(v.frameworks), ", ")),
+			fmt.Sprintf("The framework %s is not supported on Vercel. Must be one of %s.", req.ConfigValue.ValueString(), strings.Join(keys(v.frameworks), ", ")),
 		)
 		return
 	}

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
@@ -43,9 +44,9 @@ func (r *projectEnvironmentVariableResource) Configure(ctx context.Context, req 
 	r.client = client
 }
 
-// GetSchema returns the schema information for a project environment variable resource.
-func (r *projectEnvironmentVariableResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+// Schema returns the schema information for a project environment variable resource.
+func (r *projectEnvironmentVariableResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 Provides a Project Environment Variable resource.
 
@@ -56,52 +57,44 @@ For more detailed information, please see the [Vercel documentation](https://ver
 ~> Terraform currently provides both a standalone Project Environment Variable resource (a single Environment Variable), and a Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 `,
-		Attributes: map[string]tfsdk.Attribute{
-			"target": {
+		Attributes: map[string]schema.Attribute{
+			"target": schema.SetAttribute{
 				Required:    true,
 				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
-				Type: types.SetType{
-					ElemType: types.StringType,
-				},
+				ElementType: types.StringType,
 			},
-			"key": {
+			"key": schema.StringAttribute{
 				Required:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				Description:   "The name of the Environment Variable.",
-				Type:          types.StringType,
 			},
-			"value": {
+			"value": schema.StringAttribute{
 				Required:    true,
 				Description: "The value of the Environment Variable.",
-				Type:        types.StringType,
 				Sensitive:   true,
 			},
-			"git_branch": {
+			"git_branch": schema.StringAttribute{
 				Optional:    true,
 				Description: "The git branch of the Environment Variable.",
-				Type:        types.StringType,
 			},
-			"project_id": {
+			"project_id": schema.StringAttribute{
 				Required:      true,
 				Description:   "The ID of the Vercel project.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"team_id": {
+			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the Vercel team.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
-			"id": {
+			"id": schema.StringAttribute{
 				Description:   "The ID of the Environment Variable.",
-				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 				Computed:      true,
 			},
 		},
-	}, nil
+	}
 }
 
 // Create will create a new project environment variable for a Vercel project.

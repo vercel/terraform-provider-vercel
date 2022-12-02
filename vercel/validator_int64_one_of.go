@@ -6,8 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
 func int64OneOf(items ...int64) validatorInt64OneOf {
@@ -38,22 +37,16 @@ func (v validatorInt64OneOf) MarkdownDescription(ctx context.Context) string {
 	return fmt.Sprintf("Item must be one of `%s`", strings.Join(v.keys(), "` `"))
 }
 
-func (v validatorInt64OneOf) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
-	var item types.Int64
-	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &item)
-	resp.Diagnostics.Append(diags...)
-	if diags.HasError() {
-		return
-	}
-	if item.IsUnknown() || item.IsNull() {
+func (v validatorInt64OneOf) ValidateInt64(ctx context.Context, req validator.Int64Request, resp *validator.Int64Response) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
 
-	if _, ok := v.Items[item.ValueInt64()]; !ok {
+	if _, ok := v.Items[req.ConfigValue.ValueInt64()]; !ok {
 		resp.Diagnostics.AddAttributeError(
-			req.AttributePath,
+			req.Path,
 			"Invalid value provided",
-			fmt.Sprintf("Item must be one of %s, got: %d.", strings.Join(v.keys(), " "), item.ValueInt64()),
+			fmt.Sprintf("Item must be one of %s, got: %d.", strings.Join(v.keys(), " "), req.ConfigValue.ValueInt64()),
 		)
 		return
 	}
