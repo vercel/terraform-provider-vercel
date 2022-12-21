@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -43,60 +44,53 @@ func (r *projectDomainResource) Configure(ctx context.Context, req resource.Conf
 	r.client = client
 }
 
-// GetSchema returns the schema information for a deployment resource.
-func (r *projectDomainResource) GetSchema(context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+// Schema returns the schema information for a deployment resource.
+func (r *projectDomainResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 Provides a Project Domain resource.
 
 A Project Domain is used to associate a domain name with a ` + "`vercel_project`." + `
 
 By default, Project Domains will be automatically applied to any ` + "`production` deployments.",
-		Attributes: map[string]tfsdk.Attribute{
-			"project_id": {
+		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{
 				Description:   "The project ID to add the deployment to.",
 				Required:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"team_id": {
+			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 				Description:   "The ID of the team the project exists under.",
 			},
-			"id": {
+			"id": schema.StringAttribute{
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"domain": {
+			"domain": schema.StringAttribute{
 				Description:   "The domain name to associate with the project.",
 				Required:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"redirect": {
+			"redirect": schema.StringAttribute{
 				Description: "The domain name that serves as a target destination for redirects.",
 				Optional:    true,
-				Type:        types.StringType,
 			},
-			"redirect_status_code": {
+			"redirect_status_code": schema.Int64Attribute{
 				Description: "The HTTP status code to use when serving as a redirect.",
 				Optional:    true,
-				Type:        types.Int64Type,
-				Validators: []tfsdk.AttributeValidator{
+				Validators: []validator.Int64{
 					int64OneOf(301, 302, 307, 308),
 				},
 			},
-			"git_branch": {
+			"git_branch": schema.StringAttribute{
 				Description: "Git branch to link to the project domain. Deployments from this git branch will be assigned the domain name.",
 				Optional:    true,
-				Type:        types.StringType,
 			},
 		},
-	}, nil
+	}
 }
 
 // Create will create a project domain within Vercel.

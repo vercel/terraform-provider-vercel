@@ -5,9 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -42,36 +40,32 @@ func (d *aliasDataSource) Configure(ctx context.Context, req datasource.Configur
 	d.client = client
 }
 
-// GetSchema returns the schema information for an alias data source
-func (r *aliasDataSource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+// Schema returns the schema information for an alias data source
+func (r *aliasDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 Provides information about an existing Alias resource.
 
 An Alias allows a ` + "`vercel_deployment` to be accessed through a different URL.",
-		Attributes: map[string]tfsdk.Attribute{
-			"team_id": {
+		Attributes: map[string]schema.Attribute{
+			"team_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Type:        types.StringType,
 				Description: "The ID of the team the Alias and Deployment exist under.",
 			},
-			"alias": {
+			"alias": schema.StringAttribute{
 				Required:    true,
-				Type:        types.StringType,
 				Description: "The Alias or Alias ID to be retrieved.",
 			},
-			"deployment_id": {
+			"deployment_id": schema.StringAttribute{
 				Computed:    true,
-				Type:        types.StringType,
 				Description: "The ID of the Deployment the Alias is associated with.",
 			},
-			"id": {
+			"id": schema.StringAttribute{
 				Computed: true,
-				Type:     types.StringType,
 			},
 		},
-	}, nil
+	}
 }
 
 // Read will read the alias information by requesting it from the Vercel API, and will update terraform

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -42,39 +42,35 @@ func (r *aliasResource) Configure(ctx context.Context, req resource.ConfigureReq
 	r.client = client
 }
 
-// GetSchema returns the schema information for an alias resource.
-func (r *aliasResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+// Schema returns the schema information for an alias resource.
+func (r *aliasResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 Provides an Alias resource.
 
 An Alias allows a ` + "`vercel_deployment` to be accessed through a different URL.",
-		Attributes: map[string]tfsdk.Attribute{
-			"alias": {
+		Attributes: map[string]schema.Attribute{
+			"alias": schema.StringAttribute{
 				Description:   "The Alias we want to assign to the deployment defined in the URL.",
 				Required:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"deployment_id": {
+			"deployment_id": schema.StringAttribute{
 				Description:   "The id of the Deployment the Alias should be associated with.",
 				Required:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"team_id": {
+			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Alias and Deployment exist under.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"id": {
+			"id": schema.StringAttribute{
 				Computed: true,
-				Type:     types.StringType,
 			},
 		},
-	}, nil
+	}
 }
 
 // Create will create an alias within Vercel.

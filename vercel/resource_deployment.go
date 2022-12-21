@@ -8,9 +8,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
@@ -47,9 +53,9 @@ func (r *deploymentResource) Configure(ctx context.Context, req resource.Configu
 	r.client = client
 }
 
-// GetSchema returns the schema information for a deployment resource.
-func (r *deploymentResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+// Schema returns the schema information for a deployment resource.
+func (r *deploymentResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 Provides a Deployment resource.
 
@@ -65,124 +71,105 @@ Once the build step has completed successfully, a new, immutable deployment will
 deployments, you may wish to 'layer' your terraform, creating the Project with a different set of
 terraform to your Deployment.
 `,
-		Attributes: map[string]tfsdk.Attribute{
-			"domains": {
+		Attributes: map[string]schema.Attribute{
+			"domains": schema.ListAttribute{
 				Description:   "A list of all the domains (default domains, staging domains and production domains) that were assigned upon deployment creation.",
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
-				Type: types.ListType{
-					ElemType: types.StringType,
-				},
+				PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplace()},
+				ElementType:   types.StringType,
 			},
-			"environment": {
+			"environment": schema.MapAttribute{
 				Description:   "A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Type: types.MapType{
-					ElemType: types.StringType,
-				},
+				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+				ElementType:   types.StringType,
 			},
-			"team_id": {
+			"team_id": schema.StringAttribute{
 				Description:   "The team ID to add the deployment to.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace(), resource.UseStateForUnknown()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
-			"project_id": {
+			"project_id": schema.StringAttribute{
 				Description:   "The project ID to add the deployment to.",
 				Required:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"id": {
+			"id": schema.StringAttribute{
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"path_prefix": {
+			"path_prefix": schema.StringAttribute{
 				Description:   "If specified then the `path_prefix` will be stripped from the start of file paths as they are uploaded to Vercel. If this is omitted, then any leading `../`s will be stripped.",
 				Optional:      true,
-				Type:          types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"url": {
+			"url": schema.StringAttribute{
 				Description:   "A unique URL that is automatically generated for a deployment.",
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.UseStateForUnknown()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"production": {
+			"production": schema.BoolAttribute{
 				Description:   "true if the deployment is a production deployment, meaning production aliases will be assigned.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Type:          types.BoolType,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
-			"files": {
+			"files": schema.MapAttribute{
 				Description:   "A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source. Required if `git_source` is not set.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Type: types.MapType{
-					ElemType: types.StringType,
-				},
-				Validators: []tfsdk.AttributeValidator{
+				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+				ElementType:   types.StringType,
+				Validators: []validator.Map{
 					mapItemsMinCount(1),
 				},
 			},
-			"ref": {
+			"ref": schema.StringAttribute{
 				Description:   "The branch or commit hash that should be deployed. Note this will only work if the project is configured to use a Git repository. Required if `ref` is not set.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Type:          types.StringType,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"project_settings": {
+			"project_settings": schema.SingleNestedAttribute{
 				Description:   "Project settings that will be applied to the deployment.",
 				Optional:      true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-					"build_command": {
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
+				Attributes: map[string]schema.Attribute{
+					"build_command": schema.StringAttribute{
 						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-						Type:          types.StringType,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 						Description:   "The build command for this deployment. If omitted, this value will be taken from the project or automatically detected.",
 					},
-					"framework": {
+					"framework": schema.StringAttribute{
 						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-						Type:          types.StringType,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 						Description:   "The framework that is being used for this deployment. If omitted, no framework is selected.",
-						Validators: []tfsdk.AttributeValidator{
+						Validators: []validator.String{
 							validateFramework(),
 						},
 					},
-					"install_command": {
+					"install_command": schema.StringAttribute{
 						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-						Type:          types.StringType,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 						Description:   "The install command for this deployment. If omitted, this value will be taken from the project or automatically detected.",
 					},
-					"output_directory": {
+					"output_directory": schema.StringAttribute{
 						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-						Type:          types.StringType,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 						Description:   "The output directory of the deployment. If omitted, this value will be taken from the project or automatically detected.",
 					},
-					"root_directory": {
+					"root_directory": schema.StringAttribute{
 						Optional:      true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{resource.RequiresReplace()},
-						Type:          types.StringType,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 						Description:   "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.",
 					},
-				}),
+				},
 			},
-			"delete_on_destroy": {
+			"delete_on_destroy": schema.BoolAttribute{
 				Description: "Set to true to hard delete the Vercel deployment when destroying the Terraform resource. If unspecified, deployments are retained indefinitely. Note that deleted deployments are not recoverable.",
 				Optional:    true,
-				Type:        types.BoolType,
 			},
 		},
-	}, nil
+	}
 }
 
 // ValidateConfig allows additional validation (specifically cross-field validation) to be added.

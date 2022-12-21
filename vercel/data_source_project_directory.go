@@ -8,8 +8,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/client"
 	"github.com/vercel/terraform-provider-vercel/file"
@@ -45,9 +44,9 @@ func (d *projectDirectoryDataSource) Configure(ctx context.Context, req datasour
 	d.client = client
 }
 
-// GetSchema returns the schema information for a project directory data source
-func (d projectDirectoryDataSource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+// Schema returns the schema information for a project directory data source
+func (d projectDirectoryDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 Provides information about files within a directory on disk.
 
@@ -55,25 +54,21 @@ This will recursively read files, providing metadata for use with a ` + "`vercel
 
 -> If you want to prevent files from being included, this can be done with a [vercelignore file](https://vercel.com/guides/prevent-uploading-sourcepaths-with-vercelignore).
         `,
-		Attributes: map[string]tfsdk.Attribute{
-			"path": {
+		Attributes: map[string]schema.Attribute{
+			"path": schema.StringAttribute{
 				Description: "The path to the directory on your filesystem. Note that the path is relative to the root of the terraform files.",
 				Required:    true,
-				Type:        types.StringType,
 			},
-			"id": {
+			"id": schema.StringAttribute{
 				Computed: true,
-				Type:     types.StringType,
 			},
-			"files": {
+			"files": schema.MapAttribute{
 				Description: "A map of filename to metadata about the file. The metadata contains the file size and hash, and allows a deployment to be created if the file changes.",
 				Computed:    true,
-				Type: types.MapType{
-					ElemType: types.StringType,
-				},
+				ElementType: types.StringType,
 			},
 		},
-	}, nil
+	}
 }
 
 // ProjectDirectoryData represents the information terraform knows about a project directory data source

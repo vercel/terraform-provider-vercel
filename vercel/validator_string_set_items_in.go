@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -37,30 +38,21 @@ func (v validatorStringSetItemsIn) MarkdownDescription(ctx context.Context) stri
 	return fmt.Sprintf("Set item must be one of `%s`", strings.Join(v.keys(), ",` `"))
 }
 
-func (v validatorStringSetItemsIn) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
-	var set types.Set
-	diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &set)
-	resp.Diagnostics.Append(diags...)
-	if diags.HasError() {
-		return
-	}
-	if set.IsUnknown() || set.IsNull() {
+func (v validatorStringSetItemsIn) ValidateSet(ctx context.Context, req validator.SetRequest, resp *validator.SetResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
 
-	for _, i := range set.Elements() {
+	for _, i := range req.ConfigValue.Elements() {
 		var item types.String
 		diags := tfsdk.ValueAs(ctx, i, &item)
 		resp.Diagnostics.Append(diags...)
 		if diags.HasError() {
 			return
 		}
-		if set.IsUnknown() || set.IsNull() {
-			return
-		}
 		if _, ok := v.Items[item.ValueString()]; !ok {
 			resp.Diagnostics.AddAttributeError(
-				req.AttributePath,
+				req.Path,
 				"Invalid value provided",
 				fmt.Sprintf("%s, got %s", v.Description(ctx), item.ValueString()),
 			)
