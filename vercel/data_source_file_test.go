@@ -39,7 +39,6 @@ func testChecksum(n, attribute string, checksums Checksums) resource.TestCheckFu
 }
 
 func TestAcc_DataSourceFile(t *testing.T) {
-	t.Parallel()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,

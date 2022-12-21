@@ -52,7 +52,6 @@ func testAccDNSRecordExists(n, teamID string) resource.TestCheckFunc {
 }
 
 func TestAcc_DNSRecord(t *testing.T) {
-	t.Parallel()
 	nameSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },

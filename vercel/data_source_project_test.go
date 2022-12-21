@@ -9,7 +9,6 @@ import (
 )
 
 func TestAcc_ProjectDataSource(t *testing.T) {
-	t.Parallel()
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
