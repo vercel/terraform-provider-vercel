@@ -109,7 +109,8 @@ func TestAcc_DeploymentWithEnvironment(t *testing.T) {
 			{
 				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(), `environment = {
                     FOO = "baz",
-                    BAR = "qux"
+                    BAR = "qux",
+                    BAZ = null
                 }`),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists("vercel_deployment.test", ""),
@@ -286,7 +287,7 @@ resource "vercel_deployment" "test" {
   project_id = vercel_project.test.id
   %[2]s
 
-  files       = data.vercel_prebuilt_project.test.output 
+  files       = data.vercel_prebuilt_project.test.output
   path_prefix = data.vercel_prebuilt_project.test.path
 }
 `, projectSuffix, teamID)

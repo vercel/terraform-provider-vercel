@@ -246,6 +246,16 @@ func getPrebuiltBuildsFile(files []client.DeploymentFile) (string, bool) {
 	return "", false
 }
 
+func filterNullFromMap(m map[string]types.String) map[string]string {
+	out := map[string]string{}
+	for k, v := range m {
+		if !v.IsNull() {
+			out[k] = v.ValueString()
+		}
+	}
+	return out
+}
+
 // Create will create a deployment within Vercel. This is done by first attempting to trigger a deployment, seeing what
 // files are required, uploading those files, and then attempting to create a deployment again.
 // This is called automatically by the provider when a new resource should be created.
@@ -281,7 +291,7 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	var environment map[string]string
+	var environment map[string]types.String
 	diags = plan.Environment.ElementsAs(ctx, &environment, false)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -294,7 +304,7 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 	cdr := client.CreateDeploymentRequest{
 		Files:           files,
-		Environment:     environment,
+		Environment:     filterNullFromMap(environment),
 		ProjectID:       plan.ProjectID.ValueString(),
 		ProjectSettings: plan.ProjectSettings.toRequest(),
 		Target:          target,
