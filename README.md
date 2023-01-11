@@ -1,7 +1,7 @@
 # Vercel Terraform Provider
 
 - Website: https://www.terraform.io
-- Documentation: https://registry.terraform.io/providers/vercel/vercel/latest
+- Documentation: https://registry.terraform.io/providers/vercel/vercel/latest/docs
 
 ## Requirements
 
