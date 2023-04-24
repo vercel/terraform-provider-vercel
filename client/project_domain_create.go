@@ -22,7 +22,7 @@ type CreateProjectDomainRequest struct {
 
 // CreateProjectDomain creates a project domain within Vercel.
 func (c *Client) CreateProjectDomain(ctx context.Context, projectID, teamID string, request CreateProjectDomainRequest) (r ProjectDomainResponse, err error) {
-	url := fmt.Sprintf("%s/v8/projects/%s/domains", c.baseURL, projectID)
+	url := fmt.Sprintf("%s/v10/projects/%s/domains", c.baseURL, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
