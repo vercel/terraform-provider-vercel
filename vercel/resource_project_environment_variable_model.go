@@ -17,7 +17,7 @@ type ProjectEnvironmentVariable struct {
 }
 
 func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client.CreateEnvironmentVariableRequest {
-	var target []string
+	target := []string{}
 	for _, t := range e.Target {
 		target = append(target, t.ValueString())
 	}
@@ -35,7 +35,7 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client
 }
 
 func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client.UpdateEnvironmentVariableRequest {
-	var target []string
+	target := []string{}
 	for _, t := range e.Target {
 		target = append(target, t.ValueString())
 	}

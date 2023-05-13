@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
@@ -62,6 +63,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Required:    true,
 				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 				ElementType: types.StringType,
+				Validators: []validator.Set{
+					stringSetItemsIn("production", "preview", "development"),
+					stringSetMinCount(1),
+				},
 			},
 			"key": schema.StringAttribute{
 				Required:      true,
