@@ -52,6 +52,7 @@ func testAccDNSRecordExists(n, teamID string) resource.TestCheckFunc {
 }
 
 func TestAcc_DNSRecord(t *testing.T) {
+	t.Skip("Skipping until i have a domain in a suitable location to test with")
 	nameSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
