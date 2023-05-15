@@ -7,7 +7,7 @@ resource "vercel_project" "example" {
   }
 }
 
-# An environment variable that will be created
+# A shared environment variable that will be created
 # and associated with the "example" project.
 resource "vercel_shared_environment_variable" "example" {
   key    = "EXAMPLE"

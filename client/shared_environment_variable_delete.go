@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// DeleteEnvironmentVariable will remove an environment variable from Vercel.
+// DeleteSharedEnvironmentVariable will remove a shared environment variable from Vercel.
 func (c *Client) DeleteSharedEnvironmentVariable(ctx context.Context, teamID, variableID string) error {
 	url := fmt.Sprintf("%s/v1/env", c.baseURL)
 	if c.teamID(teamID) != "" {
