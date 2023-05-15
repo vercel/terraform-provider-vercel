@@ -150,5 +150,15 @@ resource "vercel_shared_environment_variable" "example" {
 }
 
 func testAccSharedEnvironmentVariablesConfigDeleted(projectName string) string {
-	return ""
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+	%[2]s
+}
+
+resource "vercel_project" "example2" {
+	name = "test-acc-example-project-2-%[1]s"
+	%[2]s
+}
+    `, projectName, teamIDConfig())
 }
