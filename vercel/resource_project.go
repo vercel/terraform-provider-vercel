@@ -107,6 +107,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							ElementType: types.StringType,
 							Validators: []validator.Set{
 								stringSetItemsIn("production", "preview", "development"),
+								stringSetMinCount(1),
 							},
 							Required: true,
 						},

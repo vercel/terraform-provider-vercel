@@ -43,7 +43,7 @@ func (p *Project) environment(ctx context.Context) ([]EnvironmentItem, error) {
 func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 	out := []client.EnvironmentVariable{}
 	for _, e := range vars {
-		var target []string
+		target := []string{}
 		for _, t := range e.Target {
 			target = append(target, t.ValueString())
 		}
@@ -107,7 +107,7 @@ type EnvironmentItem struct {
 }
 
 func (e *EnvironmentItem) toEnvironmentVariableRequest() client.EnvironmentVariableRequest {
-	var target []string
+	target := []string{}
 	for _, t := range e.Target {
 		target = append(target, t.ValueString())
 	}
