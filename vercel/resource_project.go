@@ -185,7 +185,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"password": schema.StringAttribute{
-						Description: "The password that visitors must enter to gain access to your Preview Deployments.",
+						Description: "The password that visitors must enter to gain access to your Preview Deployments. Drift detection is not possible for this field.",
 						Required:    true,
 						Sensitive:   true,
 						Validators: []validator.String{

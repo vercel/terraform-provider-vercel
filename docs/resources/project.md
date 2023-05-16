@@ -110,7 +110,7 @@ Optional:
 
 Required:
 
-- `password` (String, Sensitive) The password that visitors must enter to gain access to your Preview Deployments.
+- `password` (String, Sensitive) The password that visitors must enter to gain access to your Preview Deployments. Drift detection is not possible for this field.
 
 Optional:
 
