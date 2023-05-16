@@ -273,7 +273,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			return
 		}
 
-		result := convertResponseToProject(out, result)
+		result := convertResponseToProject(out, plan)
 		tflog.Trace(ctx, "updated newly created project", map[string]interface{}{
 			"team_id":    result.TeamID.ValueString(),
 			"project_id": result.ID.ValueString(),
@@ -428,7 +428,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	tflog.Error(ctx, "planEnvs", map[string]interface{}{
+	tflog.Trace(ctx, "planEnvs", map[string]interface{}{
 		"plan_envs":  planEnvs,
 		"state_envs": stateEnvs,
 	})
@@ -460,28 +460,30 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		items = append(items, v.toEnvironmentVariableRequest())
 	}
 
-	err = r.client.CreateEnvironmentVariables(
-		ctx,
-		client.CreateEnvironmentVariablesRequest{
-			ProjectID:            plan.ID.ValueString(),
-			TeamID:               plan.TeamID.ValueString(),
-			EnvironmentVariables: items,
-		},
-	)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error updating project",
-			fmt.Sprintf(
-				"Could not upsert environment variables for project %s, unexpected error: %s",
-				plan.ID.ValueString(),
-				err,
-			),
+	if items != nil {
+		err = r.client.CreateEnvironmentVariables(
+			ctx,
+			client.CreateEnvironmentVariablesRequest{
+				ProjectID:            plan.ID.ValueString(),
+				TeamID:               plan.TeamID.ValueString(),
+				EnvironmentVariables: items,
+			},
 		)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project",
+				fmt.Sprintf(
+					"Could not upsert environment variables for project %s, unexpected error: %s",
+					plan.ID.ValueString(),
+					err,
+				),
+			)
+		}
+		tflog.Trace(ctx, "upserted environment variables", map[string]interface{}{
+			"team_id":    plan.TeamID.ValueString(),
+			"project_id": plan.ID.ValueString(),
+		})
 	}
-	tflog.Trace(ctx, "upserted environment variables", map[string]interface{}{
-		"team_id":    plan.TeamID.ValueString(),
-		"project_id": plan.ID.ValueString(),
-	})
 
 	out, err := r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), plan.toUpdateProjectRequest(state.Name.ValueString()), !plan.Environment.IsNull())
 	if err != nil {

@@ -75,7 +75,7 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		return err
 	}
 
-	tflog.Trace(ctx, "creating environment variable", map[string]interface{}{
+	tflog.Trace(ctx, "creating environment variables", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
