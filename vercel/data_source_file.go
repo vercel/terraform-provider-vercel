@@ -13,6 +13,11 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ datasource.DataSource = &fileDataSource{}
+)
+
 func newFileDataSource() datasource.DataSource {
 	return &fileDataSource{}
 }

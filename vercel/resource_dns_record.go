@@ -14,6 +14,11 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+var (
+	_ resource.Resource              = &dnsRecordResource{}
+	_ resource.ResourceWithConfigure = &dnsRecordResource{}
+)
+
 func newDNSRecordResource() resource.Resource {
 	return &dnsRecordResource{}
 }

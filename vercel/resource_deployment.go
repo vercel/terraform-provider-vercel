@@ -23,6 +23,11 @@ import (
 	"github.com/vercel/terraform-provider-vercel/file"
 )
 
+var (
+	_ resource.Resource              = &deploymentResource{}
+	_ resource.ResourceWithConfigure = &deploymentResource{}
+)
+
 func newDeploymentResource() resource.Resource {
 	return &deploymentResource{}
 }

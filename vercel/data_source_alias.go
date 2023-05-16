@@ -10,6 +10,11 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ datasource.DataSource = &aliasDataSource{}
+)
+
 func newAliasDataSource() datasource.DataSource {
 	return &aliasDataSource{}
 }

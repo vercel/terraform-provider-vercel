@@ -25,6 +25,8 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "output_directory", ".output"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "public_source", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "root_directory", "ui/src"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "vercel_authentication.protect_production", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "password_protection.protect_production", "true"),
 					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "environment.*", map[string]string{
 						"key":   "foo",
 						"value": "bar",
@@ -47,6 +49,13 @@ resource "vercel_project" "test" {
   output_directory = ".output"
   public_source = true
   root_directory = "ui/src"
+  vercel_authentication = {
+    protect_production = true
+  }
+  password_protection = {
+    password = "foo"
+    protect_production = true
+  }
   %s
   environment = [
     {
