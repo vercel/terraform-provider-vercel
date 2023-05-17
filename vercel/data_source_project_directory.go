@@ -14,6 +14,11 @@ import (
 	"github.com/vercel/terraform-provider-vercel/file"
 )
 
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ datasource.DataSource = &projectDirectoryDataSource{}
+)
+
 func newProjectDirectoryDataSource() datasource.DataSource {
 	return &projectDirectoryDataSource{}
 }

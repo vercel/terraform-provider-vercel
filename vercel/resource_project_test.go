@@ -139,6 +139,48 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectWithSSOAndPasswordProtection(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.enabled_to_start", testTeam()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectConfigWithSSOAndPassword(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.enabled_to_start", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.protect_production", "true"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "password_protection.protect_production", "true"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "password_protection.password", "password"),
+					testAccProjectExists("vercel_project.disabled_to_start", testTeam()),
+					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "vercel_authentication"),
+					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "password_protection"),
+					testAccProjectExists("vercel_project.enabled_to_update", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "vercel_authentication.protect_production", "false"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.protect_production", "false"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.password", "password"),
+				),
+			},
+			{
+				Config: testAccProjectConfigWithSSOAndPasswordUpdated(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "vercel_authentication"),
+					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "password_protection"),
+
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "vercel_authentication.protect_production", "true"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "password_protection.protect_production", "true"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "password_protection.password", "password"),
+
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "vercel_authentication.protect_production", "true"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.protect_production", "true"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.password", "password2"),
+				),
+			},
+		},
+	})
+}
+
 func getProjectImportID(n string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[n]
@@ -267,6 +309,72 @@ resource "vercel_project" "test" {
   ]
 }
 `, projectSuffix, teamID)
+}
+
+func testAccProjectConfigWithSSOAndPassword(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "enabled_to_start" {
+  name = "test-acc-protection-one-%[1]s"
+  %[2]s
+  vercel_authentication = {
+    protect_production = true
+  }
+  password_protection = {
+    protect_production = true
+    password           = "password"
+  }
+}
+
+resource "vercel_project" "disabled_to_start" {
+  name = "test-acc-protection-two-%[1]s"
+  %[2]s
+}
+
+resource "vercel_project" "enabled_to_update" {
+  name = "test-acc-protection-three-%[1]s"
+  %[2]s
+  vercel_authentication = {
+    protect_production = false
+  }
+  password_protection = {
+    protect_production = false
+    password           = "password"
+  }
+}
+    `, projectSuffix, teamID)
+}
+
+func testAccProjectConfigWithSSOAndPasswordUpdated(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "enabled_to_start" {
+  name = "test-acc-protection-one-%[1]s"
+  %[2]s
+}
+
+resource "vercel_project" "disabled_to_start" {
+  name = "test-acc-protection-two-%[1]s"
+  %[2]s
+  vercel_authentication = {
+    protect_production = true
+  }
+  password_protection = {
+    protect_production = true
+    password           = "password"
+  }
+}
+
+resource "vercel_project" "enabled_to_update" {
+  name = "test-acc-protection-three-%[1]s"
+  %[2]s
+  vercel_authentication = {
+    protect_production = true
+  }
+  password_protection = {
+    protect_production = true
+    password           = "password2"
+  }
+}
+    `, projectSuffix, teamID)
 }
 
 func testAccProjectConfigWithGitRepo(projectSuffix, teamID string) string {

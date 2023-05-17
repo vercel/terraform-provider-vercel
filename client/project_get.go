@@ -55,6 +55,10 @@ func (r *ProjectResponse) Repository() *Repository {
 	return nil
 }
 
+type Protection struct {
+	DeploymentType string `json:"deploymentType"`
+}
+
 // ProjectResponse defines the information Vercel returns about a project.
 type ProjectResponse struct {
 	BuildCommand                *string               `json:"buildCommand"`
@@ -80,11 +84,13 @@ type ProjectResponse struct {
 		// production branch
 		ProductionBranch *string `json:"productionBranch"`
 	} `json:"link"`
-	Name                     string  `json:"name"`
-	OutputDirectory          *string `json:"outputDirectory"`
-	PublicSource             *bool   `json:"publicSource"`
-	RootDirectory            *string `json:"rootDirectory"`
-	ServerlessFunctionRegion *string `json:"serverlessFunctionRegion"`
+	Name                     string      `json:"name"`
+	OutputDirectory          *string     `json:"outputDirectory"`
+	PublicSource             *bool       `json:"publicSource"`
+	RootDirectory            *string     `json:"rootDirectory"`
+	ServerlessFunctionRegion *string     `json:"serverlessFunctionRegion"`
+	SSOProtection            *Protection `json:"ssoProtection"`
+	PasswordProtection       *Protection `json:"passwordProtection"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.

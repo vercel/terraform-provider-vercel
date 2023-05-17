@@ -15,6 +15,11 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+var (
+	_ resource.Resource              = &projectEnvironmentVariableResource{}
+	_ resource.ResourceWithConfigure = &projectEnvironmentVariableResource{}
+)
+
 func newProjectEnvironmentVariableResource() resource.Resource {
 	return &projectEnvironmentVariableResource{}
 }

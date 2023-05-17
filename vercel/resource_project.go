@@ -8,12 +8,18 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
+)
+
+var (
+	_ resource.Resource              = &projectResource{}
+	_ resource.ResourceWithConfigure = &projectResource{}
 )
 
 func newProjectResource() resource.Resource {
@@ -162,6 +168,38 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
+			"vercel_authentication": schema.SingleNestedAttribute{
+				Description: "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"protect_production": schema.BoolAttribute{
+						Description: "If true, production deployments will also be protected",
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(false),
+					},
+				},
+			},
+			"password_protection": schema.SingleNestedAttribute{
+				Description: "Ensures visitors of your Preview Deployments must enter a password in order to gain access.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"password": schema.StringAttribute{
+						Description: "The password that visitors must enter to gain access to your Preview Deployments. Drift detection is not possible for this field.",
+						Required:    true,
+						Sensitive:   true,
+						Validators: []validator.String{
+							stringLengthBetween(1, 72),
+						},
+					},
+					"protect_production": schema.BoolAttribute{
+						Description: "If true, production deployments will also be protected",
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(false),
+					},
+				},
+			},
 			"id": schema.StringAttribute{
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -214,7 +252,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
+	result := convertResponseToProject(out, plan)
 	tflog.Trace(ctx, "created project", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
@@ -223,6 +261,28 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	if plan.PasswordProtection != nil || plan.VercelAuthentication != nil {
+		out, err = r.client.UpdateProject(ctx, result.ID.ValueString(), plan.TeamID.ValueString(), plan.toUpdateProjectRequest(plan.Name.ValueString()), !plan.Environment.IsNull())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project as part of creating project",
+				"Could not update project, unexpected error: "+err.Error(),
+			)
+			return
+		}
+
+		result := convertResponseToProject(out, plan)
+		tflog.Trace(ctx, "updated newly created project", map[string]interface{}{
+			"team_id":    result.TeamID.ValueString(),
+			"project_id": result.ID.ValueString(),
+		})
+		diags = resp.State.Set(ctx, result)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	if plan.GitRepository == nil || plan.GitRepository.ProductionBranch.IsNull() || plan.GitRepository.ProductionBranch.IsUnknown() {
@@ -242,7 +302,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	result = convertResponseToProject(out, plan.coercedFields(), plan.Environment)
+	result = convertResponseToProject(out, plan)
 	tflog.Trace(ctx, "updated project production branch", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
@@ -282,7 +342,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	result := convertResponseToProject(out, state.coercedFields(), state.Environment)
+	result := convertResponseToProject(out, state)
 	tflog.Trace(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
@@ -368,7 +428,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	tflog.Error(ctx, "planEnvs", map[string]interface{}{
+	tflog.Trace(ctx, "planEnvs", map[string]interface{}{
 		"plan_envs":  planEnvs,
 		"state_envs": stateEnvs,
 	})
@@ -400,28 +460,30 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		items = append(items, v.toEnvironmentVariableRequest())
 	}
 
-	err = r.client.CreateEnvironmentVariables(
-		ctx,
-		client.CreateEnvironmentVariablesRequest{
-			ProjectID:            plan.ID.ValueString(),
-			TeamID:               plan.TeamID.ValueString(),
-			EnvironmentVariables: items,
-		},
-	)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error updating project",
-			fmt.Sprintf(
-				"Could not upsert environment variables for project %s, unexpected error: %s",
-				plan.ID.ValueString(),
-				err,
-			),
+	if items != nil {
+		err = r.client.CreateEnvironmentVariables(
+			ctx,
+			client.CreateEnvironmentVariablesRequest{
+				ProjectID:            plan.ID.ValueString(),
+				TeamID:               plan.TeamID.ValueString(),
+				EnvironmentVariables: items,
+			},
 		)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project",
+				fmt.Sprintf(
+					"Could not upsert environment variables for project %s, unexpected error: %s",
+					plan.ID.ValueString(),
+					err,
+				),
+			)
+		}
+		tflog.Trace(ctx, "upserted environment variables", map[string]interface{}{
+			"team_id":    plan.TeamID.ValueString(),
+			"project_id": plan.ID.ValueString(),
+		})
 	}
-	tflog.Trace(ctx, "upserted environment variables", map[string]interface{}{
-		"team_id":    plan.TeamID.ValueString(),
-		"project_id": plan.ID.ValueString(),
-	})
 
 	out, err := r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), plan.toUpdateProjectRequest(state.Name.ValueString()), !plan.Environment.IsNull())
 	if err != nil {
@@ -457,7 +519,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	result := convertResponseToProject(out, plan.coercedFields(), plan.Environment)
+	result := convertResponseToProject(out, plan)
 	tflog.Trace(ctx, "updated project", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
@@ -540,14 +602,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	result := convertResponseToProject(out, projectCoercedFields{
-		/* As this is import, none of these fields are specified - so treat them all as Null */
-		BuildCommand:    types.StringNull(),
-		DevCommand:      types.StringNull(),
-		InstallCommand:  types.StringNull(),
-		OutputDirectory: types.StringNull(),
-		PublicSource:    types.BoolNull(),
-	}, types.SetNull(envVariableElemType))
+	result := convertResponseToProject(out, nullProject)
 	tflog.Trace(ctx, "imported project", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),

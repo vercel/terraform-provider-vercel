@@ -14,6 +14,11 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+var (
+	_ resource.Resource              = &projectDomainResource{}
+	_ resource.ResourceWithConfigure = &projectDomainResource{}
+)
+
 func newProjectDomainResource() resource.Resource {
 	return &projectDomainResource{}
 }

@@ -15,6 +15,11 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+var (
+	_ resource.Resource              = &sharedEnvironmentVariableResource{}
+	_ resource.ResourceWithConfigure = &sharedEnvironmentVariableResource{}
+)
+
 func newSharedEnvironmentVariableResource() resource.Resource {
 	return &sharedEnvironmentVariableResource{}
 }

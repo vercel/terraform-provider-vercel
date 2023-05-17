@@ -13,6 +13,11 @@ import (
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ datasource.DataSource = &projectDataSource{}
+)
+
 func newProjectDataSource() datasource.DataSource {
 	return &projectDataSource{}
 }
@@ -140,6 +145,26 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					},
 				},
 			},
+			"vercel_authentication": schema.SingleNestedAttribute{
+				Description: "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"protect_production": schema.BoolAttribute{
+						Description: "If true, production deployments will also be protected",
+						Computed:    true,
+					},
+				},
+			},
+			"password_protection": schema.SingleNestedAttribute{
+				Description: "Ensures visitors of your Preview Deployments must enter a password in order to gain access.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"protect_production": schema.BoolAttribute{
+						Description: "If true, production deployments will also be protected",
+						Computed:    true,
+					},
+				},
+			},
 			"id": schema.StringAttribute{
 				Computed: true,
 			},
@@ -167,7 +192,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 // with this information.
 // It is called by the provider whenever data source values should be read to update state.
 func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config Project
+	var config ProjectDataSource
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -187,7 +212,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	result := convertResponseToProject(out, config.coercedFields(), types.SetNull(envVariableElemType))
+	result := convertResponseToProjectDataSource(out, nullProject)
 	tflog.Trace(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
