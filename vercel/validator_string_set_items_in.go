@@ -45,6 +45,9 @@ func (v validatorStringSetItemsIn) ValidateSet(ctx context.Context, req validato
 
 	for _, i := range req.ConfigValue.Elements() {
 		var item types.String
+		if item.IsUnknown() || item.IsNull() {
+			continue
+		}
 		diags := tfsdk.ValueAs(ctx, i, &item)
 		resp.Diagnostics.Append(diags...)
 		if diags.HasError() {
