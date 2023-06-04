@@ -359,15 +359,9 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 // is present within a slice. It ensures that all properties of the environment variable match.
 func containsEnvVar(env []EnvironmentItem, v EnvironmentItem) bool {
 	for _, e := range env {
-		if e.Key == v.Key &&
-			e.Value == v.Value &&
-			e.GitBranch == v.GitBranch &&
-			len(e.Target) == len(v.Target) {
-			for i, t := range e.Target {
-				if t != v.Target[i] {
-					continue
-				}
-			}
+		if e.ID == v.ID {
+			// we can rely on this because we use a known ID from state.
+			// and new env vars have no ID
 			return true
 		}
 	}
