@@ -38,7 +38,7 @@ output "project_id" {
 
 ### Optional
 
-- `team_id` (String) The team ID the project exists beneath. Required when configuring a team resource.
+- `team_id` (String) The team ID the project exists beneath. Required when configuring a team resource if [team](/providers/vercel/vercel/latest/docs#team) has not been set in the provider.
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
 
 ### Read-Only

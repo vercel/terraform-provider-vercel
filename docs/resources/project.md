@@ -55,7 +55,7 @@ resource "vercel_project" "example" {
 
 ### Optional
 
-- `team_id` (String) The team ID to add the project to. Required when configuring a team resource.
+- `team_id` (String) The team ID to add the project to. Required when configuring a team resource if [team](/providers/vercel/vercel/latest/docs#team) has not been set in the provider.
 - `build_command` (String) The build command for this project. If omitted, this value will be automatically detected.
 - `dev_command` (String) The dev command for this project. If omitted, this value will be automatically detected.
 - `environment` (Attributes Set) A set of Environment Variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))

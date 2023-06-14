@@ -65,7 +65,7 @@ resource "vercel_project_environment_variable" "example_git_branch" {
 
 ### Optional
 
-- `team_id` (String) The ID of the Vercel team. Required when configuring a team resource.
+- `team_id` (String) The ID of the Vercel team. Required when configuring a team resource if [team](/providers/vercel/vercel/latest/docs#team) has not been set in the provider.
 - `git_branch` (String) The git branch of the Environment Variable.
 
 ### Read-Only
