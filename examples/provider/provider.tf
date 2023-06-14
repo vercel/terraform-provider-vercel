@@ -16,5 +16,5 @@ provider "vercel" {
   api_token = var.vercel_api_token
 
   # Optional default team ID for all resources
-  team = "your_team_id"
+  team = "your_team_slug_or_id"
 }
