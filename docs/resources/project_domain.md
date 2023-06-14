@@ -51,7 +51,7 @@ resource "vercel_project_domain" "example_redirect" {
 
 ### Optional
 
-- `team_id` (String) The ID of the team the project exists under. Required when configuring a team resource if [team](/providers/vercel/vercel/latest/docs#team) has not been set in the provider.
+- `team_id` (String) The ID of the team the project exists under. Required when configuring a team resource if a default [team](/providers/vercel/vercel/latest/docs#team) has not been set in the provider.
 - `git_branch` (String) Git branch to link to the project domain. Deployments from this git branch will be assigned the domain name.
 - `redirect` (String) The domain name that serves as a target destination for redirects.
 - `redirect_status_code` (Number) The HTTP status code to use when serving as a redirect.
