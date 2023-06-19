@@ -104,7 +104,6 @@ resource "vercel_deployment" "prebuilt_example" {
 
 ### Optional
 
-- `team_id` (String) The team ID to add the deployment to. Required when configuring a team resource if a default [team](/providers/vercel/vercel/latest/docs#team) has not been set in the provider.
 - `delete_on_destroy` (Boolean) Set to true to hard delete the Vercel deployment when destroying the Terraform resource. If unspecified, deployments are retained indefinitely. Note that deleted deployments are not recoverable.
 - `environment` (Map of String) A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.
 - `files` (Map of String) A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source. Required if `git_source` is not set.
@@ -112,6 +111,7 @@ resource "vercel_deployment" "prebuilt_example" {
 - `production` (Boolean) true if the deployment is a production deployment, meaning production aliases will be assigned.
 - `project_settings` (Attributes) Project settings that will be applied to the deployment. (see [below for nested schema](#nestedatt--project_settings))
 - `ref` (String) The branch or commit hash that should be deployed. Note this will only work if the project is configured to use a Git repository. Required if `ref` is not set.
+- `team_id` (String) The team ID to add the deployment to. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
 

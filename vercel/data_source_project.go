@@ -62,7 +62,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"team_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The team ID the project exists beneath.",
+				Description: "The team ID the project exists beneath. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
 			"name": schema.StringAttribute{
 				Required: true,
