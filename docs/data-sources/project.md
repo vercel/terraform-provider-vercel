@@ -39,7 +39,7 @@ output "project_id" {
 ### Optional
 
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
-- `team_id` (String) The team ID the project exists beneath.
+- `team_id` (String) The team ID the project exists beneath. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
 

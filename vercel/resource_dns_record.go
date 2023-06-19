@@ -67,7 +67,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				Description:   "The team ID that the domain and DNS records belong to.",
+				Description:   "The team ID that the domain and DNS records belong to. Required when configuring a team resource if a default team has not been set in the provider.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"domain": schema.StringAttribute{

@@ -106,7 +106,7 @@ resource "vercel_dns_record" "txt" {
 
 - `mx_priority` (Number) The priority of the MX record. The priority specifies the sequence that an email server receives emails. A smaller value indicates a higher priority.
 - `srv` (Attributes) Settings for an SRV record. (see [below for nested schema](#nestedatt--srv))
-- `team_id` (String) The team ID that the domain and DNS records belong to.
+- `team_id` (String) The team ID that the domain and DNS records belong to. Required when configuring a team resource if a default team has not been set in the provider.
 - `ttl` (Number) The TTL value in seconds. Must be a number between 60 and 2147483647. If unspecified, it will default to 60 seconds.
 - `value` (String) The value of the DNS record. The format depends on the 'type' property.
 For an 'A' record, this should be a valid IPv4 address.

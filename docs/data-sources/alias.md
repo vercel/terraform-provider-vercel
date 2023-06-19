@@ -24,7 +24,7 @@ An Alias allows a `vercel_deployment` to be accessed through a different URL.
 
 ### Optional
 
-- `team_id` (String) The ID of the team the Alias and Deployment exist under.
+- `team_id` (String) The ID of the team the Alias and Deployment exist under. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
 

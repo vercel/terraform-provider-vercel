@@ -67,7 +67,7 @@ resource "vercel_project" "example" {
 - `public_source` (Boolean) By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.
 - `serverless_function_region` (String) The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.
-- `team_id` (String) The team ID to add the project to.
+- `team_id` (String) The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
 
 ### Read-Only

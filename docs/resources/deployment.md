@@ -111,7 +111,7 @@ resource "vercel_deployment" "prebuilt_example" {
 - `production` (Boolean) true if the deployment is a production deployment, meaning production aliases will be assigned.
 - `project_settings` (Attributes) Project settings that will be applied to the deployment. (see [below for nested schema](#nestedatt--project_settings))
 - `ref` (String) The branch or commit hash that should be deployed. Note this will only work if the project is configured to use a Git repository. Required if `ref` is not set.
-- `team_id` (String) The team ID to add the deployment to.
+- `team_id` (String) The team ID to add the deployment to. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
 
