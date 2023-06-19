@@ -124,7 +124,7 @@ For 'TXT' records, this can contain arbitrary text.
 <a id="nestedatt--srv"></a>
 ### Nested Schema for `srv`
 
-Required:
+Optional:
 
 - `port` (Number) The TCP or UDP port on which the service is to be found.
 - `priority` (Number) The priority of the target host, lower value means more preferred.
