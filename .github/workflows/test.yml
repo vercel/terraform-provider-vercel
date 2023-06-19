@@ -42,6 +42,7 @@ jobs:
       - name: Check if docs are up-to-date
         run: |
           task docs
+          git diff --no-pager
           test 0 -eq `git status --porcelain | wc -l` && echo "Docs are up-to-date"
 
   test:
