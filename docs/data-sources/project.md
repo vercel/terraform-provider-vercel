@@ -60,7 +60,7 @@ output "project_id" {
 <a id="nestedatt--password_protection"></a>
 ### Nested Schema for `password_protection`
 
-Read-Only:
+Optional:
 
 - `protect_production` (Boolean) If true, production deployments will also be protected
 

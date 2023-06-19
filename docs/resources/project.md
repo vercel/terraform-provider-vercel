@@ -77,43 +77,31 @@ resource "vercel_project" "example" {
 <a id="nestedatt--environment"></a>
 ### Nested Schema for `environment`
 
-Required:
-
-- `key` (String) The name of the Environment Variable.
-- `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.
-- `value` (String, Sensitive) The value of the Environment Variable.
-
 Optional:
 
 - `git_branch` (String) The git branch of the Environment Variable.
-
-Read-Only:
-
 - `id` (String) The ID of the Environment Variable.
+- `key` (String) The name of the Environment Variable.
+- `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.
+- `value` (String, Sensitive) The value of the Environment Variable.
 
 
 <a id="nestedatt--git_repository"></a>
 ### Nested Schema for `git_repository`
 
-Required:
-
-- `repo` (String) The name of the git repository. For example: `vercel/next.js`.
-- `type` (String) The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.
-
 Optional:
 
 - `production_branch` (String) By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.
+- `repo` (String) The name of the git repository. For example: `vercel/next.js`.
+- `type` (String) The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.
 
 
 <a id="nestedatt--password_protection"></a>
 ### Nested Schema for `password_protection`
 
-Required:
-
-- `password` (String, Sensitive) The password that visitors must enter to gain access to your Preview Deployments. Drift detection is not possible for this field.
-
 Optional:
 
+- `password` (String, Sensitive) The password that visitors must enter to gain access to your Preview Deployments. Drift detection is not possible for this field.
 - `protect_production` (Boolean) If true, production deployments will also be protected
 
 
