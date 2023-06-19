@@ -42,8 +42,9 @@ jobs:
       - name: Check if docs are up-to-date
         run: |
           task docs
-          git diff --no-pager
-          test 0 -eq `git status --porcelain | wc -l` && echo "Docs are up-to-date"
+          git diff
+          BADDOCS=$(git status --porcelain)
+          test -z "$BADDOCS" || (echo -e "documentation needs regenerating using task docs: $BADDOCS"; exit 1)
 
   test:
     name: Matrix Test
