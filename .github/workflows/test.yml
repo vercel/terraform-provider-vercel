@@ -39,6 +39,10 @@ jobs:
         run: task build
       - name: Format
         run: task lint
+      - name: Check if docs are up-to-date
+        run: |
+          task docs
+          test 0 -eq `git status --porcelain | wc -l` && echo "Docs are up-to-date"
 
   test:
     name: Matrix Test
