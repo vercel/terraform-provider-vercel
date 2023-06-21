@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -25,20 +23,15 @@ func (c *Client) CreateTeam(ctx context.Context, request TeamCreateRequest) (r T
 	url := fmt.Sprintf("%s/v1/teams", c.baseURL)
 
 	payload := string(mustMarshal(request))
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		url,
-		strings.NewReader(payload),
-	)
-	if err != nil {
-		return r, err
-	}
-
 	tflog.Trace(ctx, "creating team", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
-	err = c.doRequest(req, &r)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "POST",
+		url:    url,
+		body:   payload,
+	}, &r)
 	return r, err
 }

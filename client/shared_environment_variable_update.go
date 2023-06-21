@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -31,15 +29,6 @@ func (c *Client) UpdateSharedEnvironmentVariable(ctx context.Context, request Up
 			request.EnvID: request,
 		},
 	}))
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"PATCH",
-		url,
-		strings.NewReader(payload),
-	)
-	if err != nil {
-		return e, err
-	}
 
 	tflog.Trace(ctx, "updating shared environment variable", map[string]interface{}{
 		"url":     url,
@@ -48,7 +37,12 @@ func (c *Client) UpdateSharedEnvironmentVariable(ctx context.Context, request Up
 	var response struct {
 		Updated []SharedEnvironmentVariableResponse `json:"updated"`
 	}
-	err = c.doRequest(req, &response)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PATCH",
+		url:    url,
+		body:   payload,
+	}, &response)
 	if err != nil {
 		return e, err
 	}

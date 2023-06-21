@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 )
 
 // ListDNSRecords is a test helper for listing DNS records that exist for a given domain.
@@ -17,20 +15,15 @@ func (c *Client) ListDNSRecords(ctx context.Context, domain, teamID string) (r [
 		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(teamID))
 	}
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		url,
-		strings.NewReader(""),
-	)
-	if err != nil {
-		return r, err
-	}
-
 	dr := struct {
 		Records []DNSRecord `json:"records"`
 	}{}
-	err = c.doRequest(req, &dr)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "GET",
+		url:    url,
+		body:   "",
+	}, &dr)
 	for _, record := range dr.Records {
 		record.TeamID = c.teamID(teamID)
 	}

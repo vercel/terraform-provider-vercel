@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -15,18 +14,13 @@ func (c *Client) DeleteProject(ctx context.Context, projectID, teamID string) er
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"DELETE",
-		url,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
 	tflog.Trace(ctx, "deleting project", map[string]interface{}{
 		"url": url,
 	})
-	return c.doRequest(req, nil)
+	return c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "DELETE",
+		url:    url,
+		body:   "",
+	}, nil)
 }

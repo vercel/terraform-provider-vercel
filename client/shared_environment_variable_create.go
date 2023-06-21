@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -43,15 +41,6 @@ func (c *Client) CreateSharedEnvironmentVariable(ctx context.Context, request Cr
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariable))
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		url,
-		strings.NewReader(payload),
-	)
-	if err != nil {
-		return e, err
-	}
 	tflog.Trace(ctx, "creating shared environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
@@ -59,7 +48,12 @@ func (c *Client) CreateSharedEnvironmentVariable(ctx context.Context, request Cr
 	var response struct {
 		Created []SharedEnvironmentVariableResponse `json:"created"`
 	}
-	err = c.doRequest(req, &response)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "POST",
+		url:    url,
+		body:   payload,
+	}, &response)
 	if err != nil {
 		return e, err
 	}

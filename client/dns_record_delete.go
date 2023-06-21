@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 )
 
 // DeleteDNSRecord removes a DNS domain from Vercel.
@@ -14,15 +12,10 @@ func (c *Client) DeleteDNSRecord(ctx context.Context, domain, recordID, teamID s
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"DELETE",
-		url,
-		strings.NewReader(""),
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.doRequest(req, nil)
+	return c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "DELETE",
+		url:    url,
+		body:   "",
+	}, nil)
 }

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 
@@ -201,21 +200,17 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(teamID))
 	}
 	payload := string(mustMarshal(request))
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		url,
-		strings.NewReader(payload),
-	)
-	if err != nil {
-		return r, err
-	}
 
 	tflog.Trace(ctx, "creating deployment", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
-	err = c.doRequest(req, &r)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "POST",
+		url:    url,
+		body:   payload,
+	}, &r)
 	var apiErr APIError
 	if errors.As(err, &apiErr) && apiErr.Code == "missing_files" {
 		var missingFilesError MissingFilesError

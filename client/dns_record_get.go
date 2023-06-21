@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 )
 
 // DNSRecord is the information Vercel surfaces about a DNS record associated with a particular domain.
@@ -27,17 +25,12 @@ func (c *Client) GetDNSRecord(ctx context.Context, recordID, teamID string) (r D
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		url,
-		strings.NewReader(""),
-	)
-	if err != nil {
-		return r, err
-	}
-
-	err = c.doRequest(req, &r)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "GET",
+		url:    url,
+		body:   "",
+	}, &r)
 	r.TeamID = c.teamID(teamID)
 	return r, err
 }
