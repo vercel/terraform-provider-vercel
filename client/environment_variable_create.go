@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -32,21 +30,17 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariable))
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		url,
-		strings.NewReader(payload),
-	)
-	if err != nil {
-		return e, err
-	}
 
 	tflog.Trace(ctx, "creating environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
-	err = c.doRequest(req, &e)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "POST",
+		url:    url,
+		body:   payload,
+	}, &e)
 	// The API response returns an encrypted environment variable, but we want to return the decrypted version.
 	e.Value = request.EnvironmentVariable.Value
 	e.TeamID = c.teamID(request.TeamID)
@@ -65,20 +59,14 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariables))
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		url,
-		strings.NewReader(payload),
-	)
-	if err != nil {
-		return err
-	}
-
 	tflog.Trace(ctx, "creating environment variables", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
-	err = c.doRequest(req, nil)
-	return err
+	return c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "POST",
+		url:    url,
+		body:   payload,
+	}, nil)
 }

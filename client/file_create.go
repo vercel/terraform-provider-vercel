@@ -40,6 +40,6 @@ func (c *Client) CreateFile(ctx context.Context, request CreateFileRequest) erro
 		"url": url,
 		"sha": request.SHA,
 	})
-	err = c.doRequest(req, nil)
+	err = c._doRequest(req, nil)
 	return err
 }

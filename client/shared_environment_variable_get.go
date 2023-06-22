@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -13,19 +12,16 @@ func (c *Client) GetSharedEnvironmentVariable(ctx context.Context, teamID, envID
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		url,
-		nil,
-	)
-	if err != nil {
-		return e, err
-	}
+
 	tflog.Trace(ctx, "getting shared environment variable", map[string]interface{}{
 		"url": url,
 	})
-	err = c.doRequest(req, &e)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "GET",
+		url:    url,
+		body:   "",
+	}, &e)
 	e.TeamID = c.teamID(teamID)
 	return e, err
 }

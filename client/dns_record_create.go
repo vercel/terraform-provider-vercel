@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 )
 
 // SRV defines the metata required for creating an SRV type DNS Record.
@@ -33,20 +31,15 @@ func (c *Client) CreateDNSRecord(ctx context.Context, teamID string, request Cre
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		url,
-		strings.NewReader(string(mustMarshal(request))),
-	)
-	if err != nil {
-		return r, err
-	}
-
 	var response struct {
 		RecordID string `json:"uid"`
 	}
-	err = c.doRequest(req, &response)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "POST",
+		url:    url,
+		body:   string(mustMarshal(request)),
+	}, &response)
 	if err != nil {
 		return r, err
 	}

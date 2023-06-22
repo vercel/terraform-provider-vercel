@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -29,21 +27,16 @@ func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEn
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"PATCH",
-		url,
-		strings.NewReader(payload),
-	)
-	if err != nil {
-		return e, err
-	}
-
 	tflog.Trace(ctx, "updating environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
-	err = c.doRequest(req, &e)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PATCH",
+		url:    url,
+		body:   payload,
+	}, &e)
 	// The API response returns an encrypted environment variable, but we want to return the decrypted version.
 	e.Value = request.Value
 	e.TeamID = c.teamID(request.TeamID)

@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -24,21 +22,16 @@ func (c *Client) UpdateProjectDomain(ctx context.Context, projectID, domain, tea
 	}
 
 	payload := string(mustMarshal(request))
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"PATCH",
-		url,
-		strings.NewReader(payload),
-	)
-	if err != nil {
-		return r, err
-	}
-
 	tflog.Trace(ctx, "updating project domain", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
-	err = c.doRequest(req, &r)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PATCH",
+		url:    url,
+		body:   payload,
+	}, &r)
 	r.TeamID = c.teamID(teamID)
 	return r, err
 }

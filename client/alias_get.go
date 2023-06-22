@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -22,19 +21,15 @@ func (c *Client) GetAlias(ctx context.Context, alias, teamID string) (r AliasRes
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		url,
-		nil,
-	)
-	if err != nil {
-		return r, fmt.Errorf("creating request: %s", err)
-	}
 	tflog.Trace(ctx, "getting alias", map[string]interface{}{
 		"url": url,
 	})
-	err = c.doRequest(req, &r)
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "GET",
+		url:    url,
+		body:   "",
+	}, &r)
 	r.TeamID = c.teamID(teamID)
 	return r, err
 }
