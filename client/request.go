@@ -80,7 +80,13 @@ func (c *Client) doRequest(req clientRequest, v interface{}) error {
 			if err != nil {
 				return err
 			}
-			return c._doRequest(r, v)
+			err = c._doRequest(r, v)
+			if err != nil {
+				continue
+			}
+			return nil
+		} else {
+			break
 		}
 	}
 
