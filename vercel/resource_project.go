@@ -220,6 +220,14 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:    true,
 				Description: "The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.",
 			},
+			"protection_bypass_for_automation": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Allow automation services to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `password_protection_for_automation_secret` field.",
+			},
+			"protection_bypass_for_automation_secret": schema.StringAttribute{
+				Computed:    true,
+				Description: "If `protection_bypass_for_automation` is enabled, use this value in the `x-vercel-protection-bypass` header to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments.",
+			},
 		},
 	}
 }
@@ -278,6 +286,28 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			"team_id":    result.TeamID.ValueString(),
 			"project_id": result.ID.ValueString(),
 		})
+		diags = resp.State.Set(ctx, result)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	if plan.ProtectionBypassForAutomation.ValueBool() {
+		protectionBypassSecret, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
+			ProjectID: result.ID.ValueString(),
+			TeamID:    result.TeamID.ValueString(),
+			NewValue:  true,
+		})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error adding protection bypass for automation",
+				"Failed to create project, an error occurred adding Protection Bypass For Automation: "+err.Error(),
+			)
+			return
+		}
+		result.ProtectionBypassForAutomationSecret = types.StringValue(protectionBypassSecret)
+		result.ProtectionBypassForAutomation = types.BoolValue(true)
 		diags = resp.State.Set(ctx, result)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -477,6 +507,27 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			"team_id":    plan.TeamID.ValueString(),
 			"project_id": plan.ID.ValueString(),
 		})
+	}
+
+	if state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation {
+		_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
+			ProjectID: plan.ID.ValueString(),
+			TeamID:    plan.TeamID.ValueString(),
+			NewValue:  plan.ProtectionBypassForAutomation.ValueBool(),
+			Secret:    plan.ProtectionBypassForAutomationSecret.ValueString(),
+		})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project",
+				fmt.Sprintf(
+					"Could not update project %s %s, unexpected error setting Protection Bypass For Automation: %s",
+					state.TeamID.ValueString(),
+					state.ID.ValueString(),
+					err,
+				),
+			)
+			return
+		}
 	}
 
 	out, err := r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), plan.toUpdateProjectRequest(state.Name.ValueString()), !plan.Environment.IsNull())

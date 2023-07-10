@@ -153,13 +153,19 @@ func TestAcc_ProjectWithSSOAndPasswordProtection(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.protect_production", "true"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "password_protection.protect_production", "true"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "password_protection.password", "password"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret"),
 					testAccProjectExists("vercel_project.disabled_to_start", testTeam()),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "vercel_authentication"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "password_protection"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation", "false"),
+					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation_secret"),
 					testAccProjectExists("vercel_project.enabled_to_update", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "vercel_authentication.protect_production", "false"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.protect_production", "false"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.password", "password"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project.enabled_to_update", "protection_bypass_for_automation_secret"),
 				),
 			},
 			{
@@ -167,14 +173,20 @@ func TestAcc_ProjectWithSSOAndPasswordProtection(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "vercel_authentication"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "password_protection"),
+					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation"),
+					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret"),
 
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "vercel_authentication.protect_production", "true"),
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "password_protection.protect_production", "true"),
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "password_protection.password", "password"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project.disabled_to_start", "protection_bypass_for_automation_secret"),
 
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "vercel_authentication.protect_production", "true"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.protect_production", "true"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.password", "password2"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation", "false"),
+					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation_secret"),
 				),
 			},
 		},
@@ -323,6 +335,7 @@ resource "vercel_project" "enabled_to_start" {
     protect_production = true
     password           = "password"
   }
+  protection_bypass_for_automation = true
 }
 
 resource "vercel_project" "disabled_to_start" {
@@ -340,6 +353,7 @@ resource "vercel_project" "enabled_to_update" {
     protect_production = false
     password           = "password"
   }
+  protection_bypass_for_automation = true
 }
     `, projectSuffix, teamID)
 }
@@ -361,6 +375,7 @@ resource "vercel_project" "disabled_to_start" {
     protect_production = true
     password           = "password"
   }
+  protection_bypass_for_automation = true
 }
 
 resource "vercel_project" "enabled_to_update" {
@@ -373,6 +388,7 @@ resource "vercel_project" "enabled_to_update" {
     protect_production = true
     password           = "password2"
   }
+  protection_bypass_for_automation = false
 }
     `, projectSuffix, teamID)
 }

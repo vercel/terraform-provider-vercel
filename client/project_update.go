@@ -35,7 +35,7 @@ type UpdateProjectRequest struct {
 
 // UpdateProject updates an existing projects configuration within Vercel.
 func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, request UpdateProjectRequest, shouldFetchEnvironmentVariables bool) (r ProjectResponse, err error) {
-	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
+	url := fmt.Sprintf("%s/v9/projects/%s", c.baseURL, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
