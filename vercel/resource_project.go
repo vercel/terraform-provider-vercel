@@ -281,7 +281,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			return
 		}
 
-		result := convertResponseToProject(out, plan)
+		result = convertResponseToProject(out, plan)
 		tflog.Trace(ctx, "updated newly created project", map[string]interface{}{
 			"team_id":    result.TeamID.ValueString(),
 			"project_id": result.ID.ValueString(),
@@ -514,7 +514,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			ProjectID: plan.ID.ValueString(),
 			TeamID:    plan.TeamID.ValueString(),
 			NewValue:  plan.ProtectionBypassForAutomation.ValueBool(),
-			Secret:    plan.ProtectionBypassForAutomationSecret.ValueString(),
+			Secret:    state.ProtectionBypassForAutomationSecret.ValueString(),
 		})
 		if err != nil {
 			resp.Diagnostics.AddError(

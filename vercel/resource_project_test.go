@@ -158,7 +158,7 @@ func TestAcc_ProjectWithSSOAndPasswordProtection(t *testing.T) {
 					testAccProjectExists("vercel_project.disabled_to_start", testTeam()),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "vercel_authentication"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "password_protection"),
-					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation", "false"),
+					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation_secret"),
 					testAccProjectExists("vercel_project.enabled_to_update", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "vercel_authentication.protect_production", "false"),

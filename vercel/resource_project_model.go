@@ -320,6 +320,9 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 			break
 		}
 	}
+	if !plan.ProtectionBypassForAutomation.IsNull() && !plan.ProtectionBypassForAutomation.ValueBool() {
+		protectionBypass = types.BoolValue(false)
+	}
 
 	environmentEntry := types.SetValueMust(envVariableElemType, env)
 	if len(response.EnvironmentVariables) == 0 && plan.Environment.IsNull() {

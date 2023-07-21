@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -46,22 +47,28 @@ func (c *Client) UpdateProtectionBypassForAutomation(ctx context.Context, reques
 	}
 
 	payload := getUpdateBypassProtectionRequestBody(request.NewValue, request.Secret)
-	tflog.Error(ctx, "creating project domain", map[string]interface{}{
-		"url":     url,
-		"payload": payload,
+	tflog.Info(ctx, "updating protection bypass", map[string]interface{}{
+		"url":      url,
+		"payload":  payload,
+		"newValue": request.NewValue,
 	})
 	response := struct {
 		ProtectionBypass map[string]ProtectionBypass `json:"protectionBypass"`
 	}{}
+	time.Sleep(1 * time.Second)
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
-		method: "POST",
+		method: "PATCH",
 		url:    url,
 		body:   payload,
 	}, &response)
 
 	if err != nil {
 		return s, fmt.Errorf("unable to add protection bypass for automation: %w", err)
+	}
+
+	if !request.NewValue {
+		return
 	}
 
 	if len(response.ProtectionBypass) != 1 {
