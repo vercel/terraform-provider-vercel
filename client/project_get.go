@@ -58,6 +58,10 @@ type Protection struct {
 	DeploymentType string `json:"deploymentType"`
 }
 
+type ProtectionBypass struct {
+	Scope string `json:"scope"`
+}
+
 // ProjectResponse defines the information Vercel returns about a project.
 type ProjectResponse struct {
 	BuildCommand                *string               `json:"buildCommand"`
@@ -83,18 +87,19 @@ type ProjectResponse struct {
 		// production branch
 		ProductionBranch *string `json:"productionBranch"`
 	} `json:"link"`
-	Name                     string      `json:"name"`
-	OutputDirectory          *string     `json:"outputDirectory"`
-	PublicSource             *bool       `json:"publicSource"`
-	RootDirectory            *string     `json:"rootDirectory"`
-	ServerlessFunctionRegion *string     `json:"serverlessFunctionRegion"`
-	SSOProtection            *Protection `json:"ssoProtection"`
-	PasswordProtection       *Protection `json:"passwordProtection"`
+	Name                     string                      `json:"name"`
+	OutputDirectory          *string                     `json:"outputDirectory"`
+	PublicSource             *bool                       `json:"publicSource"`
+	RootDirectory            *string                     `json:"rootDirectory"`
+	ServerlessFunctionRegion *string                     `json:"serverlessFunctionRegion"`
+	SSOProtection            *Protection                 `json:"ssoProtection"`
+	PasswordProtection       *Protection                 `json:"passwordProtection"`
+	ProtectionBypass         map[string]ProtectionBypass `json:"protectionBypass"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.
 func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shouldFetchEnvironmentVariables bool) (r ProjectResponse, err error) {
-	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
+	url := fmt.Sprintf("%s/v10/projects/%s", c.baseURL, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}

@@ -11,22 +11,24 @@ import (
 
 // Project reflects the state terraform stores internally for a project.
 type Project struct {
-	BuildCommand             types.String          `tfsdk:"build_command"`
-	DevCommand               types.String          `tfsdk:"dev_command"`
-	Environment              types.Set             `tfsdk:"environment"`
-	Framework                types.String          `tfsdk:"framework"`
-	GitRepository            *GitRepository        `tfsdk:"git_repository"`
-	ID                       types.String          `tfsdk:"id"`
-	IgnoreCommand            types.String          `tfsdk:"ignore_command"`
-	InstallCommand           types.String          `tfsdk:"install_command"`
-	Name                     types.String          `tfsdk:"name"`
-	OutputDirectory          types.String          `tfsdk:"output_directory"`
-	PublicSource             types.Bool            `tfsdk:"public_source"`
-	RootDirectory            types.String          `tfsdk:"root_directory"`
-	ServerlessFunctionRegion types.String          `tfsdk:"serverless_function_region"`
-	TeamID                   types.String          `tfsdk:"team_id"`
-	VercelAuthentication     *VercelAuthentication `tfsdk:"vercel_authentication"`
-	PasswordProtection       *PasswordProtection   `tfsdk:"password_protection"`
+	BuildCommand                        types.String          `tfsdk:"build_command"`
+	DevCommand                          types.String          `tfsdk:"dev_command"`
+	Environment                         types.Set             `tfsdk:"environment"`
+	Framework                           types.String          `tfsdk:"framework"`
+	GitRepository                       *GitRepository        `tfsdk:"git_repository"`
+	ID                                  types.String          `tfsdk:"id"`
+	IgnoreCommand                       types.String          `tfsdk:"ignore_command"`
+	InstallCommand                      types.String          `tfsdk:"install_command"`
+	Name                                types.String          `tfsdk:"name"`
+	OutputDirectory                     types.String          `tfsdk:"output_directory"`
+	PublicSource                        types.Bool            `tfsdk:"public_source"`
+	RootDirectory                       types.String          `tfsdk:"root_directory"`
+	ServerlessFunctionRegion            types.String          `tfsdk:"serverless_function_region"`
+	TeamID                              types.String          `tfsdk:"team_id"`
+	VercelAuthentication                *VercelAuthentication `tfsdk:"vercel_authentication"`
+	PasswordProtection                  *PasswordProtection   `tfsdk:"password_protection"`
+	ProtectionBypassForAutomation       types.Bool            `tfsdk:"protection_bypass_for_automation"`
+	ProtectionBypassForAutomationSecret types.String          `tfsdk:"protection_bypass_for_automation_secret"`
 }
 
 var nullProject = Project{
@@ -309,27 +311,42 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 		))
 	}
 
+	protectionBypassSecret := types.StringNull()
+	protectionBypass := types.BoolNull()
+	for k, v := range response.ProtectionBypass {
+		if v.Scope == "automation-bypass" {
+			protectionBypass = types.BoolValue(true)
+			protectionBypassSecret = types.StringValue(k)
+			break
+		}
+	}
+	if !plan.ProtectionBypassForAutomation.IsNull() && !plan.ProtectionBypassForAutomation.ValueBool() {
+		protectionBypass = types.BoolValue(false)
+	}
+
 	environmentEntry := types.SetValueMust(envVariableElemType, env)
 	if len(response.EnvironmentVariables) == 0 && plan.Environment.IsNull() {
 		environmentEntry = types.SetNull(envVariableElemType)
 	}
 
 	return Project{
-		BuildCommand:             uncoerceString(fields.BuildCommand, fromStringPointer(response.BuildCommand)),
-		DevCommand:               uncoerceString(fields.DevCommand, fromStringPointer(response.DevCommand)),
-		Environment:              environmentEntry,
-		Framework:                fromStringPointer(response.Framework),
-		GitRepository:            gr,
-		ID:                       types.StringValue(response.ID),
-		IgnoreCommand:            fromStringPointer(response.CommandForIgnoringBuildStep),
-		InstallCommand:           uncoerceString(fields.InstallCommand, fromStringPointer(response.InstallCommand)),
-		Name:                     types.StringValue(response.Name),
-		OutputDirectory:          uncoerceString(fields.OutputDirectory, fromStringPointer(response.OutputDirectory)),
-		PublicSource:             uncoerceBool(fields.PublicSource, fromBoolPointer(response.PublicSource)),
-		RootDirectory:            fromStringPointer(response.RootDirectory),
-		ServerlessFunctionRegion: fromStringPointer(response.ServerlessFunctionRegion),
-		TeamID:                   toTeamID(response.TeamID),
-		PasswordProtection:       pp,
-		VercelAuthentication:     va,
+		BuildCommand:                        uncoerceString(fields.BuildCommand, fromStringPointer(response.BuildCommand)),
+		DevCommand:                          uncoerceString(fields.DevCommand, fromStringPointer(response.DevCommand)),
+		Environment:                         environmentEntry,
+		Framework:                           fromStringPointer(response.Framework),
+		GitRepository:                       gr,
+		ID:                                  types.StringValue(response.ID),
+		IgnoreCommand:                       fromStringPointer(response.CommandForIgnoringBuildStep),
+		InstallCommand:                      uncoerceString(fields.InstallCommand, fromStringPointer(response.InstallCommand)),
+		Name:                                types.StringValue(response.Name),
+		OutputDirectory:                     uncoerceString(fields.OutputDirectory, fromStringPointer(response.OutputDirectory)),
+		PublicSource:                        uncoerceBool(fields.PublicSource, fromBoolPointer(response.PublicSource)),
+		RootDirectory:                       fromStringPointer(response.RootDirectory),
+		ServerlessFunctionRegion:            fromStringPointer(response.ServerlessFunctionRegion),
+		TeamID:                              toTeamID(response.TeamID),
+		PasswordProtection:                  pp,
+		VercelAuthentication:                va,
+		ProtectionBypassForAutomation:       protectionBypass,
+		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 	}
 }
