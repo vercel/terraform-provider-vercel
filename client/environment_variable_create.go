@@ -54,7 +54,7 @@ type CreateEnvironmentVariablesRequest struct {
 }
 
 func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateEnvironmentVariablesRequest) error {
-	url := fmt.Sprintf("%s/v9/projects/%s/env", c.baseURL, request.ProjectID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, request.ProjectID)
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
