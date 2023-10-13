@@ -135,6 +135,13 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 					}),
 				),
 			},
+			{
+				Config: testAccProjectConfigWithGitRepoRemoved(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test_git", testTeam()),
+					resource.TestCheckNoResourceAttr("vercel_project.test_git", "git_repository"),
+				),
+			},
 		},
 	})
 }
@@ -434,6 +441,23 @@ resource "vercel_project" "test_git" {
   ]
 }
     `, projectSuffix, teamID, testGithubRepo())
+}
+
+func testAccProjectConfigWithGitRepoRemoved(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test_git" {
+  name = "test-acc-two-%s"
+  %s
+  public_source = false
+  environment = [
+    {
+      key        = "foo"
+      value      = "bar2"
+      target     = ["preview"]
+    }
+  ]
+}
+    `, projectSuffix, teamID)
 }
 
 func projectConfigWithoutEnv(projectSuffix, teamID string) string {
