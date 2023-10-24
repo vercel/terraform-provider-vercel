@@ -87,8 +87,9 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"team_id": schema.StringAttribute{
 				Optional:      true,
+				Computed:      true,
 				Description:   "The ID of the Vercel team. Shared environment variables require a team.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
 				Description:   "The ID of the Environment Variable.",
