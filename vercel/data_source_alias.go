@@ -55,7 +55,6 @@ An Alias allows a ` + "`vercel_deployment` to be accessed through a different UR
 		Attributes: map[string]schema.Attribute{
 			"team_id": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "The ID of the team the Alias and Deployment exist under. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
 			"alias": schema.StringAttribute{
