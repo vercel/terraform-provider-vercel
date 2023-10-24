@@ -92,7 +92,6 @@ terraform to your Deployment.
 			"team_id": schema.StringAttribute{
 				Description:   "The team ID to add the deployment to. Required when configuring a team resource if a default team has not been set in the provider.",
 				Optional:      true,
-				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
