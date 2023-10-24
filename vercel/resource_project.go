@@ -70,7 +70,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 				Description:   "The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
 			"name": schema.StringAttribute{

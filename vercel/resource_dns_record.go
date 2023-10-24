@@ -68,7 +68,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Optional:      true,
 				Computed:      true,
 				Description:   "The team ID that the domain and DNS records belong to. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"domain": schema.StringAttribute{
 				Description:   "The domain name, or zone, that the DNS record should be created beneath.",

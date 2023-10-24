@@ -96,7 +96,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the Vercel team.Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
 				Description:   "The ID of the Environment Variable.",
