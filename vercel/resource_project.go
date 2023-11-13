@@ -6,9 +6,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -174,6 +176,15 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"vercel_authentication": schema.SingleNestedAttribute{
 				Description: "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
 				Optional:    true,
+				Computed:    true,
+				Default: objectdefault.StaticValue(types.ObjectValueMust(
+					map[string]attr.Type{
+						"protect_production": types.BoolType,
+					},
+					map[string]attr.Value{
+						"protect_production": types.BoolValue(false),
+					},
+				)),
 				Attributes: map[string]schema.Attribute{
 					"protect_production": schema.BoolAttribute{
 						Description: "If true, production deployments will also be protected",
