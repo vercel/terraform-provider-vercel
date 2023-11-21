@@ -64,12 +64,13 @@ resource "vercel_project" "example" {
 - `install_command` (String) The install command for this project. If omitted, this value will be automatically detected.
 - `output_directory` (String) The output directory of the project. If omitted, this value will be automatically detected.
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
+- `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
+- `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `protection_bypass_for_automation` (Boolean) Allow automation services to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `password_protection_for_automation_secret` field.
 - `public_source` (Boolean) By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.
 - `serverless_function_region` (String) The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.
 - `team_id` (String) The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.
-- `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
 
 ### Read-Only
 
@@ -97,22 +98,32 @@ Optional:
 - `repo` (String) The name of the git repository. For example: `vercel/next.js`.
 - `type` (String) The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.
 
-
 <a id="nestedatt--password_protection"></a>
 ### Nested Schema for `password_protection`
 
-Optional:
+Required:
 
 - `password` (String, Sensitive) The password that visitors must enter to gain access to your Preview Deployments. Drift detection is not possible for this field.
-- `protect_production` (Boolean) If true, production deployments will also be protected
-
+- `deployment_type` (String) Must be one one `standard_protection`, `all_deployments`, or `only_preview_deployments`. See [Understanding Deployment Protection by environment](https://vercel.com/docs/security/deployment-protection#understanding-deployment-protection-by-environment).
 
 <a id="nestedatt--vercel_authentication"></a>
 ### Nested Schema for `vercel_authentication`
 
+Required:
+
+- `deployment_type` (String) Must be one one `standard_protection`, `all_deployments`, or `only_preview_deployments`. See [Understanding Deployment Protection by environment](https://vercel.com/docs/security/deployment-protection#understanding-deployment-protection-by-environment).
+
+<a id="nestedatt--trusted_ips"></a>
+### Nested Schema for `trusted_ips`
+
+Required:
+
+- `addresses` (List) The allowed IP addressses and CIDR ranges with optional descriptions.
+- `deployment_type` (String) Must be one one `standard_protection`, `all_deployments`, `only_production_deployments` or `only_preview_deployments`. See [Understanding Deployment Protection by environment](https://vercel.com/docs/security/deployment-protection#understanding-deployment-protection-by-environment).
+
 Optional:
 
-- `protect_production` (Boolean) If true, production deployments will also be protected
+- `protection_mode` (String) Whether or not Trusted IPs is optional to access a deployment. Must be either `additional` or `exclusive`. `exclusive` is only availible with Standalone Trusted IPs.
 
 ## Import
 

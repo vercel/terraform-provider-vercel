@@ -27,6 +27,7 @@ type Project struct {
 	TeamID                              types.String          `tfsdk:"team_id"`
 	VercelAuthentication                *VercelAuthentication `tfsdk:"vercel_authentication"`
 	PasswordProtection                  *PasswordProtection   `tfsdk:"password_protection"`
+	TrustedIps                          *TrustedIps           `tfsdk:"trusted_ips"`
 	ProtectionBypassForAutomation       types.Bool            `tfsdk:"protection_bypass_for_automation"`
 	ProtectionBypassForAutomationSecret types.String          `tfsdk:"protection_bypass_for_automation_secret"`
 }
@@ -109,7 +110,8 @@ func (p *Project) toUpdateProjectRequest(oldName string) client.UpdateProjectReq
 		RootDirectory:               toStrPointer(p.RootDirectory),
 		ServerlessFunctionRegion:    toStrPointer(p.ServerlessFunctionRegion),
 		PasswordProtection:          p.PasswordProtection.toUpdateProjectRequest(),
-		SSOProtection:               p.VercelAuthentication.toUpdateProjectRequest(),
+		VercelAuthentication:        p.VercelAuthentication.toUpdateProjectRequest(),
+		TrustedIps:                  p.TrustedIps.toUpdateProjectRequest(),
 	}
 }
 
@@ -154,27 +156,22 @@ func (g *GitRepository) toCreateProjectRequest() *client.GitRepository {
 }
 
 type VercelAuthentication struct {
-	ProtectProduction types.Bool `tfsdk:"protect_production"`
+	DeploymentType types.String `tfsdk:"deployment_type"`
 }
 
-func (v *VercelAuthentication) toUpdateProjectRequest() *client.Protection {
+func (v *VercelAuthentication) toUpdateProjectRequest() *client.VercelAuthenticationRequest {
 	if v == nil {
 		return nil
 	}
 
-	deploymentType := "preview"
-	if v.ProtectProduction.ValueBool() {
-		deploymentType = "all"
-	}
-
-	return &client.Protection{
-		DeploymentType: deploymentType,
+	return &client.VercelAuthenticationRequest{
+		DeploymentType: v.DeploymentType.ValueString(),
 	}
 }
 
 type PasswordProtection struct {
-	Password          types.String `tfsdk:"password"`
-	ProtectProduction types.Bool   `tfsdk:"protect_production"`
+	Password       types.String `tfsdk:"password"`
+	DeploymentType types.String `tfsdk:"deployment_type"`
 }
 
 func (p *PasswordProtection) toUpdateProjectRequest() *client.PasswordProtectionRequest {
@@ -182,14 +179,27 @@ func (p *PasswordProtection) toUpdateProjectRequest() *client.PasswordProtection
 		return nil
 	}
 
-	deploymentType := "preview"
-	if p.ProtectProduction.ValueBool() {
-		deploymentType = "all"
+	return &client.PasswordProtectionRequest{
+		DeploymentType: p.DeploymentType.ValueString(),
+		Password:       p.Password.ValueString(),
+	}
+}
+
+type TrustedIps struct {
+	Addresses      []client.TrustedIpAddress `tfsdk:"addresses"`
+	DeploymentType types.String              `tfsdk:"deployment_type"`
+	ProtectionMode types.String              `tfsdk:"protection_mode"`
+}
+
+func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIpsRequest {
+	if t == nil {
+		return nil
 	}
 
-	return &client.PasswordProtectionRequest{
-		DeploymentType: deploymentType,
-		Password:       p.Password.ValueString(),
+	return &client.TrustedIpsRequest{
+		Addresses:      t.Addresses,
+		DeploymentType: t.DeploymentType.ValueString(),
+		ProtectionMode: t.ProtectionMode.ValueString(),
 	}
 }
 
@@ -273,15 +283,24 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 			pass = plan.PasswordProtection.Password
 		}
 		pp = &PasswordProtection{
-			Password:          pass,
-			ProtectProduction: types.BoolValue(response.PasswordProtection.DeploymentType == "all"),
+			Password:       pass,
+			DeploymentType: types.StringValue(response.PasswordProtection.DeploymentType),
 		}
 	}
 
 	var va *VercelAuthentication
-	if response.SSOProtection != nil {
+	if response.VercelAuthentication != nil {
 		va = &VercelAuthentication{
-			ProtectProduction: types.BoolValue(response.SSOProtection.DeploymentType == "all"),
+			DeploymentType: types.StringValue(response.VercelAuthentication.DeploymentType),
+		}
+	}
+
+	var tip *TrustedIps
+	if response.TrustedIps != nil {
+		tip = &TrustedIps{
+			DeploymentType: types.StringValue(response.TrustedIps.DeploymentType),
+			Addresses:      response.TrustedIps.Addresses,
+			ProtectionMode: types.StringValue(response.TrustedIps.ProtectionMode),
 		}
 	}
 
@@ -346,6 +365,7 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 		TeamID:                              toTeamID(response.TeamID),
 		PasswordProtection:                  pp,
 		VercelAuthentication:                va,
+		TrustedIps:                          tip,
 		ProtectionBypassForAutomation:       protectionBypass,
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 	}

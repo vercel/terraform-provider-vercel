@@ -9,10 +9,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -176,21 +175,14 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"vercel_authentication": schema.SingleNestedAttribute{
 				Description: "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
 				Optional:    true,
-				Computed:    true,
-				Default: objectdefault.StaticValue(types.ObjectValueMust(
-					map[string]attr.Type{
-						"protect_production": types.BoolType,
-					},
-					map[string]attr.Value{
-						"protect_production": types.BoolValue(false),
-					},
-				)),
 				Attributes: map[string]schema.Attribute{
-					"protect_production": schema.BoolAttribute{
-						Description: "If true, production deployments will also be protected",
-						Optional:    true,
-						Computed:    true,
-						Default:     booldefault.StaticBool(false),
+					"deployment_type": schema.StringAttribute{
+						Required:      true,
+						Description:   "The deployment environment to protect. Must be one one `standard_protection`, `all_deployments`, or `only_preview_deployments`.",
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Validators: []validator.String{
+							stringOneOf("standard_protection", "all_deployments", "only_preview_deployments"),
+						},
 					},
 				},
 			},
@@ -206,11 +198,46 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							stringLengthBetween(1, 72),
 						},
 					},
-					"protect_production": schema.BoolAttribute{
-						Description: "If true, production deployments will also be protected",
-						Optional:    true,
-						Computed:    true,
-						Default:     booldefault.StaticBool(false),
+					"deployment_type": schema.StringAttribute{
+						Required:      true,
+						Description:   "The deployment environment to protect. Must be one one `standard_protection`, `all_deployments`, or `only_preview_deployments`.",
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Validators: []validator.String{
+							stringOneOf("standard_protection", "all_deployments", "only_preview_deployments"),
+						},
+					},
+				},
+			},
+			"trusted_ips": schema.SingleNestedAttribute{
+				Description: "Ensures only visitors from an allowed IP address can access your deployment.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"addresses": schema.SetAttribute{
+						Description: "The allowed IP addressses and CIDR ranges with optional descriptions.",
+						Required:    true,
+						ElementType: types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"value": types.StringType,
+								"note":  types.StringType,
+							},
+						},
+					},
+					"deployment_type": schema.StringAttribute{
+						Required:      true,
+						Description:   "The deployment environment to protect. Must be one one `standard_protection`, `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.",
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Validators: []validator.String{
+							stringOneOf("standard_protection", "all_deployments", "only_production_deployments", "only_preview_deployments"),
+						},
+					},
+					"protection_mode": schema.StringAttribute{
+						Optional:      true,
+						Description:   "Whether or not Trusted IPs is optional to access a deployment. Must be either `additional` or `exclusive`. `exclusive` is only availible with Standalone Trusted IPs.",
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Validators: []validator.String{
+							stringOneOf("additional", "exclusive"),
+						},
+						Default: stringdefault.StaticString("additional"),
 					},
 				},
 			},
@@ -285,7 +312,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	if plan.PasswordProtection != nil || plan.VercelAuthentication != nil {
+	if plan.PasswordProtection != nil || plan.VercelAuthentication != nil || plan.TrustedIps != nil {
 		out, err = r.client.UpdateProject(ctx, result.ID.ValueString(), plan.TeamID.ValueString(), plan.toUpdateProjectRequest(plan.Name.ValueString()), !plan.Environment.IsNull())
 		if err != nil {
 			resp.Diagnostics.AddError(

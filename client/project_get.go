@@ -58,6 +58,12 @@ type Protection struct {
 	DeploymentType string `json:"deploymentType"`
 }
 
+type TrustedIps struct {
+	DeploymentType string             `json:"deploymentType"`
+	Addresses      []TrustedIpAddress `json:"addresses"`
+	ProtectionMode string             `json:"protectionMode"`
+}
+
 type ProtectionBypass struct {
 	Scope string `json:"scope"`
 }
@@ -92,8 +98,9 @@ type ProjectResponse struct {
 	PublicSource             *bool                       `json:"publicSource"`
 	RootDirectory            *string                     `json:"rootDirectory"`
 	ServerlessFunctionRegion *string                     `json:"serverlessFunctionRegion"`
-	SSOProtection            *Protection                 `json:"ssoProtection"`
+	VercelAuthentication     *Protection                 `json:"ssoProtection"`
 	PasswordProtection       *Protection                 `json:"passwordProtection"`
+	TrustedIps               *TrustedIps                 `json:"trustedIps"`
 	ProtectionBypass         map[string]ProtectionBypass `json:"protectionBypass"`
 }
 
