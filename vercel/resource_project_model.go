@@ -274,15 +274,6 @@ var envVariableElemType = types.ObjectType{
 	},
 }
 
-var trustedIpsAddressesVariableElemType = types.SetType{
-	ElemType: types.ObjectType{
-		AttrTypes: map[string]attr.Type{
-			"value": types.StringType,
-			"note":  types.StringType,
-		},
-	},
-}
-
 func convertResponseToProject(response client.ProjectResponse, plan Project) Project {
 	fields := plan.coercedFields()
 
