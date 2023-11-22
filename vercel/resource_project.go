@@ -9,9 +9,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -173,15 +175,25 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"vercel_authentication": schema.SingleNestedAttribute{
-				Description: "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
-				Optional:    true,
+				Description:   "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Default: objectdefault.StaticValue(types.ObjectValueMust(
+					map[string]attr.Type{
+						"deployment_type": types.StringType,
+					},
+					map[string]attr.Value{
+						"deployment_type": types.StringValue("standard_protection"),
+					},
+				)),
 				Attributes: map[string]schema.Attribute{
 					"deployment_type": schema.StringAttribute{
 						Required:      true,
-						Description:   "The deployment environment to protect. Must be one one `standard_protection`, `all_deployments`, or `only_preview_deployments`.",
+						Description:   "The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_preview_deployments`, or `none`.",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
-							stringOneOf("standard_protection", "all_deployments", "only_preview_deployments"),
+							stringOneOf("standard_protection", "all_deployments", "only_preview_deployments", "none"),
 						},
 					},
 				},
@@ -200,7 +212,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 					"deployment_type": schema.StringAttribute{
 						Required:      true,
-						Description:   "The deployment environment to protect. Must be one one `standard_protection`, `all_deployments`, or `only_preview_deployments`.",
+						Description:   "The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, or `only_preview_deployments`.",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
 							stringOneOf("standard_protection", "all_deployments", "only_preview_deployments"),
@@ -212,20 +224,27 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "Ensures only visitors from an allowed IP address can access your deployment.",
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
-					"addresses": schema.SetAttribute{
+					"addresses": schema.SetNestedAttribute{
 						Description:   "The allowed IP addressses and CIDR ranges with optional descriptions.",
 						Required:      true,
 						PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
-						ElementType: types.ObjectType{
-							AttrTypes: map[string]attr.Type{
-								"value": types.StringType,
-								"note":  types.StringType,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"value": schema.StringAttribute{
+									Description: "The address or CIDR range that can access deployments.",
+									Required:    true,
+									Sensitive:   true,
+								},
+								"note": schema.StringAttribute{
+									Description: "A description for the value",
+									Optional:    true,
+								},
 							},
 						},
 					},
 					"deployment_type": schema.StringAttribute{
 						Required:      true,
-						Description:   "The deployment environment to protect. Must be one one `standard_protection`, `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.",
+						Description:   "The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
 							stringOneOf("standard_protection", "all_deployments", "only_production_deployments", "only_preview_deployments"),
@@ -233,10 +252,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 					"protection_mode": schema.StringAttribute{
 						Optional:      true,
-						Description:   "Whether or not Trusted IPs is optional to access a deployment. Must be either `additional` or `exclusive`. `exclusive` is only availible with Standalone Trusted IPs.",
+						Computed:      true,
+						Default:       stringdefault.StaticString("trusted_ip_required"),
+						Description:   "Whether or not Trusted IPs is optional to access a deployment. Must be either `trusted_ip_required` or `trusted_ip_optional`. `trusted_ip_optional` is only available with Standalone Trusted IPs.",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
-							stringOneOf("additional", "exclusive"),
+							stringOneOf("trusted_ip_required", "trusted_ip_optional"),
 						},
 					},
 				},

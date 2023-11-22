@@ -42,6 +42,8 @@ The acceptance tests require a few environment variables to be set:
 * `VERCEL_TERRAFORM_TESTING_TEAM` - a Vercel team_id where resources can be created and destroyed
 * `VERCEL_TERRAFORM_TESTING_GITHUB_REPO` - a GitHub repository in the form 'org/repo' that can be used to trigger deployments
 * `VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO` - a Bitbucket repository in the form 'project/repo' that can be used to trigger deployments
+* `VERCEL_TERRAFORM_TESTING_GITLAB_REPO` - a GitLab repository in the form 'project/repo' that can be used to trigger deployments
+* `VERCEL_TERRAFORM_TESTING_DOMAIN` - a Vercel testing domain that can be used for testing
 
 ```sh
 $ task test
@@ -58,6 +60,22 @@ To run a specific set of tests, use the `-run` flag and specify a regex pattern 
 ```sh
 $ task test -- -run 'TestAcc_Project*'
 ```
+
+## Running the provider locally
+
+Set up a local override on your machine
+
+```sh
+$ task install
+```
+
+Build the provider
+
+```sh
+$ task build
+```
+
+Create a `main.tf` file on your machine and use the [terraform cli](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli#install-terraform) to test
 
 ## Building The Documentation
 

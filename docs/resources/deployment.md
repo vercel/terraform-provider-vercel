@@ -129,5 +129,3 @@ Optional:
 - `install_command` (String) The install command for this deployment. If omitted, this value will be taken from the project or automatically detected.
 - `output_directory` (String) The output directory of the deployment. If omitted, this value will be taken from the project or automatically detected.
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.
-
-

@@ -158,7 +158,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"password_protection": schema.SingleNestedAttribute{
 				Description: "Ensures visitors of your Preview Deployments must enter a password in order to gain access.",
-				Optional:    true,
+				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"deployment_type": schema.StringAttribute{
 						Description: "The deployment environment that will be protected.",
@@ -168,7 +168,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"trusted_ips": schema.SingleNestedAttribute{
 				Description: "Ensures only visitors from an allowed IP address can access your deployment.",
-				Optional:    true,
+				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"deployment_type": schema.StringAttribute{
 						Description: "The deployment environment that will be protected.",

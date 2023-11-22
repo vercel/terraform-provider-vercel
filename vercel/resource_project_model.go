@@ -11,25 +11,25 @@ import (
 
 // Project reflects the state terraform stores internally for a project.
 type Project struct {
-	BuildCommand                        types.String          `tfsdk:"build_command"`
-	DevCommand                          types.String          `tfsdk:"dev_command"`
-	Environment                         types.Set             `tfsdk:"environment"`
-	Framework                           types.String          `tfsdk:"framework"`
-	GitRepository                       *GitRepository        `tfsdk:"git_repository"`
-	ID                                  types.String          `tfsdk:"id"`
-	IgnoreCommand                       types.String          `tfsdk:"ignore_command"`
-	InstallCommand                      types.String          `tfsdk:"install_command"`
-	Name                                types.String          `tfsdk:"name"`
-	OutputDirectory                     types.String          `tfsdk:"output_directory"`
-	PublicSource                        types.Bool            `tfsdk:"public_source"`
-	RootDirectory                       types.String          `tfsdk:"root_directory"`
-	ServerlessFunctionRegion            types.String          `tfsdk:"serverless_function_region"`
-	TeamID                              types.String          `tfsdk:"team_id"`
-	VercelAuthentication                *VercelAuthentication `tfsdk:"vercel_authentication"`
-	PasswordProtection                  *PasswordProtection   `tfsdk:"password_protection"`
-	TrustedIps                          *TrustedIps           `tfsdk:"trusted_ips"`
-	ProtectionBypassForAutomation       types.Bool            `tfsdk:"protection_bypass_for_automation"`
-	ProtectionBypassForAutomationSecret types.String          `tfsdk:"protection_bypass_for_automation_secret"`
+	BuildCommand                        types.String                    `tfsdk:"build_command"`
+	DevCommand                          types.String                    `tfsdk:"dev_command"`
+	Environment                         types.Set                       `tfsdk:"environment"`
+	Framework                           types.String                    `tfsdk:"framework"`
+	GitRepository                       *GitRepository                  `tfsdk:"git_repository"`
+	ID                                  types.String                    `tfsdk:"id"`
+	IgnoreCommand                       types.String                    `tfsdk:"ignore_command"`
+	InstallCommand                      types.String                    `tfsdk:"install_command"`
+	Name                                types.String                    `tfsdk:"name"`
+	OutputDirectory                     types.String                    `tfsdk:"output_directory"`
+	PublicSource                        types.Bool                      `tfsdk:"public_source"`
+	RootDirectory                       types.String                    `tfsdk:"root_directory"`
+	ServerlessFunctionRegion            types.String                    `tfsdk:"serverless_function_region"`
+	TeamID                              types.String                    `tfsdk:"team_id"`
+	VercelAuthentication                *VercelAuthentication           `tfsdk:"vercel_authentication"`
+	PasswordProtection                  *PasswordProtectionWithPassword `tfsdk:"password_protection"`
+	TrustedIps                          *TrustedIps                     `tfsdk:"trusted_ips"`
+	ProtectionBypassForAutomation       types.Bool                      `tfsdk:"protection_bypass_for_automation"`
+	ProtectionBypassForAutomationSecret types.String                    `tfsdk:"protection_bypass_for_automation_secret"`
 }
 
 var nullProject = Project{
@@ -155,48 +155,80 @@ func (g *GitRepository) toCreateProjectRequest() *client.GitRepository {
 	}
 }
 
-type VercelAuthentication struct {
-	DeploymentType types.String `tfsdk:"deployment_type"`
+func toApiDeploymentProtectionType(dt types.String) string {
+	switch dt {
+	case types.StringValue("standard_protection"):
+		return "prod_deployment_urls_and_all_previews"
+	case types.StringValue("all_deployments"):
+		return "all"
+	case types.StringValue("only_preview_deployments"):
+		return "preview"
+	case types.StringValue("only_production_deployments"):
+		return "production"
+	default:
+		return dt.ValueString()
+	}
 }
 
-func (v *VercelAuthentication) toUpdateProjectRequest() *client.VercelAuthenticationRequest {
+func fromApiDeploymentProtectionType(dt string) types.String {
+	switch dt {
+	case "prod_deployment_urls_and_all_previews":
+		return types.StringValue("standard_protection")
+	case "all":
+		return types.StringValue("all_deployments")
+	case "preview":
+		return types.StringValue("only_preview_deployments")
+	case "production":
+		return types.StringValue("only_production_deployments")
+	default:
+		return types.StringValue(dt)
+	}
+}
+
+func (v *VercelAuthentication) toUpdateProjectRequest() *client.VercelAuthentication {
 	if v == nil {
 		return nil
 	}
 
-	return &client.VercelAuthenticationRequest{
-		DeploymentType: v.DeploymentType.ValueString(),
+	return &client.VercelAuthentication{
+		DeploymentType: toApiDeploymentProtectionType(v.DeploymentType),
 	}
 }
 
-type PasswordProtection struct {
-	Password       types.String `tfsdk:"password"`
-	DeploymentType types.String `tfsdk:"deployment_type"`
-}
-
-func (p *PasswordProtection) toUpdateProjectRequest() *client.PasswordProtectionRequest {
+func (p *PasswordProtectionWithPassword) toUpdateProjectRequest() *client.PasswordProtectionWithPassword {
 	if p == nil {
 		return nil
 	}
 
-	return &client.PasswordProtectionRequest{
-		DeploymentType: p.DeploymentType.ValueString(),
+	return &client.PasswordProtectionWithPassword{
+		DeploymentType: toApiDeploymentProtectionType(p.DeploymentType),
 		Password:       p.Password.ValueString(),
 	}
 }
 
-type TrustedIpsAddress struct {
-	Value types.String `tfsdk:"value"`
-	Note  types.String `tfsdk:"note"`
+func toApiTrustedIpProtectionMode(dt types.String) string {
+	switch dt {
+	case types.StringValue("trusted_ip_required"):
+		return "additional"
+	case types.StringValue("trusted_ip_optional"):
+		return "exclusive"
+	default:
+		return dt.ValueString()
+	}
 }
 
-type TrustedIps struct {
-	Addresses      []TrustedIpsAddress `tfsdk:"addresses"`
-	DeploymentType types.String        `tfsdk:"deployment_type"`
-	ProtectionMode types.String        `tfsdk:"protection_mode"`
+func fromApiTrustedIpProtectionMode(dt string) types.String {
+	switch dt {
+	case "additional":
+		return types.StringValue("trusted_ip_required")
+	case "exclusive":
+		return types.StringValue("trusted_ip_optional")
+	default:
+		return types.StringValue(dt)
+	}
 }
 
-func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIpsRequest {
+func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 	if t == nil {
 		return nil
 	}
@@ -209,10 +241,10 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIpsRequest {
 		})
 	}
 
-	return &client.TrustedIpsRequest{
+	return &client.TrustedIps{
 		Addresses:      addresses,
-		DeploymentType: t.DeploymentType.ValueString(),
-		ProtectionMode: t.ProtectionMode.ValueString(),
+		DeploymentType: toApiDeploymentProtectionType(t.DeploymentType),
+		ProtectionMode: toApiTrustedIpProtectionMode(t.ProtectionMode),
 	}
 }
 
@@ -289,38 +321,40 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 		}
 	}
 
-	var pp *PasswordProtection
+	var pp *PasswordProtectionWithPassword
 	if response.PasswordProtection != nil {
 		pass := types.StringValue("")
 		if plan.PasswordProtection != nil {
 			pass = plan.PasswordProtection.Password
 		}
-		pp = &PasswordProtection{
+		pp = &PasswordProtectionWithPassword{
 			Password:       pass,
-			DeploymentType: types.StringValue(response.PasswordProtection.DeploymentType),
+			DeploymentType: fromApiDeploymentProtectionType(response.PasswordProtection.DeploymentType),
 		}
 	}
 
-	var va *VercelAuthentication
+	var va *VercelAuthentication = &VercelAuthentication{
+		DeploymentType: types.StringValue("none"),
+	}
 	if response.VercelAuthentication != nil {
 		va = &VercelAuthentication{
-			DeploymentType: types.StringValue(response.VercelAuthentication.DeploymentType),
+			DeploymentType: fromApiDeploymentProtectionType(response.VercelAuthentication.DeploymentType),
 		}
 	}
 
 	var tip *TrustedIps
 	if response.TrustedIps != nil {
-		var addresses []TrustedIpsAddress
+		var addresses []TrustedIpAddress
 		for _, address := range response.TrustedIps.Addresses {
-			addresses = append(addresses, TrustedIpsAddress{
+			addresses = append(addresses, TrustedIpAddress{
 				Value: types.StringValue(address.Value),
 				Note:  types.StringValue(address.Note),
 			})
 		}
 		tip = &TrustedIps{
-			DeploymentType: types.StringValue(response.TrustedIps.DeploymentType),
+			DeploymentType: fromApiDeploymentProtectionType(response.TrustedIps.DeploymentType),
 			Addresses:      addresses,
-			ProtectionMode: types.StringValue(response.TrustedIps.ProtectionMode),
+			ProtectionMode: fromApiTrustedIpProtectionMode(response.TrustedIps.ProtectionMode),
 		}
 	}
 

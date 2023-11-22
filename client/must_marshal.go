@@ -1,6 +1,20 @@
 package client
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
+
+func (v *VercelAuthentication) MarshalJSON() ([]byte, error) {
+	if v.DeploymentType == "none" {
+		return []byte(`null`), nil
+	}
+
+	return json.Marshal(&struct {
+		DeploymentType string `json:"deploymentType"`
+	}{
+		DeploymentType: v.DeploymentType,
+	})
+}
 
 // mustMarshal is a helper to remove unnecessary error checking when marshaling a Go
 // struct to json. There are only a few instances where marshaling can fail, and they

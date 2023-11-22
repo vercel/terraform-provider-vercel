@@ -29,6 +29,12 @@ type ProjectDataSource struct {
 func convertResponseToProjectDataSource(response client.ProjectResponse, plan Project) ProjectDataSource {
 	project := convertResponseToProject(response, plan)
 
+	var pp *PasswordProtection
+	if project.PasswordProtection != nil {
+		pp = &PasswordProtection{
+			DeploymentType: project.PasswordProtection.DeploymentType,
+		}
+	}
 	return ProjectDataSource{
 		BuildCommand:             project.BuildCommand,
 		DevCommand:               project.DevCommand,
@@ -45,7 +51,7 @@ func convertResponseToProjectDataSource(response client.ProjectResponse, plan Pr
 		ServerlessFunctionRegion: project.ServerlessFunctionRegion,
 		TeamID:                   project.TeamID,
 		VercelAuthentication:     project.VercelAuthentication,
-		PasswordProtection:       project.PasswordProtection,
+		PasswordProtection:       pp,
 		TrustedIps:               project.TrustedIps,
 	}
 }

@@ -146,7 +146,7 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 	})
 }
 
-func TestAcc_ProjectWithSSOAndPasswordProtection(t *testing.T) {
+func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -154,44 +154,74 @@ func TestAcc_ProjectWithSSOAndPasswordProtection(t *testing.T) {
 		CheckDestroy:             testAccProjectDestroy("vercel_project.enabled_to_start", testTeam()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfigWithSSOAndPassword(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIps(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists("vercel_project.enabled_to_start", testTeam()),
-					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.protect_production", "true"),
-					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "password_protection.protect_production", "true"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.deployment_type", "all_deployments"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "password_protection.deployment_type", "all_deployments"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "password_protection.password", "password"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "trusted_ips.addresses.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.enabled_to_start", "trusted_ips.addresses.*", map[string]string{
+						"value": "1.1.1.1",
+						"note":  "notey note",
+					}),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "trusted_ips.deployment_type", "all_deployments"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "trusted_ips.protection_mode", "exclusive"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret"),
 					testAccProjectExists("vercel_project.disabled_to_start", testTeam()),
-					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "vercel_authentication"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "vercel_authentication.deployment_type", "standard_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "password_protection"),
+					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "trusted_ips"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation_secret"),
 					testAccProjectExists("vercel_project.enabled_to_update", testTeam()),
-					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "vercel_authentication.protect_production", "false"),
-					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.protect_production", "false"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "vercel_authentication.deployment_type", "only_preview_deployments"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.deployment_type", "only_preview_deployments"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.password", "password"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.addresses.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.enabled_to_update", "trusted_ips.addresses.*", map[string]string{
+						"value": "1.1.1.3",
+						"note":  "notey notey note",
+					}),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.deployment_type", "only_production_deployments"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.protection_mode", "additional"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.enabled_to_update", "protection_bypass_for_automation_secret"),
 				),
 			},
 			{
-				Config: testAccProjectConfigWithSSOAndPasswordUpdated(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsUpdated(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "vercel_authentication"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.deployment_type", "standard_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "password_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation"),
+					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "trusted_ips"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret"),
 
-					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "vercel_authentication.protect_production", "true"),
-					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "password_protection.protect_production", "true"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "vercel_authentication.deployment_type", "standard_protection"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "password_protection.deployment_type", "standard_protection"),
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "password_protection.password", "password"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "trusted_ips.addresses.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.disabled_to_start", "trusted_ips.addresses.*", map[string]string{
+						"value": "1.1.1.1",
+						"note":  "notey note",
+					}),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "trusted_ips.deployment_type", "standard_protection"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "trusted_ips.protection_mode", "additional"),
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.disabled_to_start", "protection_bypass_for_automation_secret"),
 
-					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "vercel_authentication.protect_production", "true"),
-					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.protect_production", "true"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "vercel_authentication.deployment_type", "standard_protection"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.deployment_type", "standard_protection"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.password", "password2"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.addresses.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.enabled_to_update", "trusted_ips.addresses.*", map[string]string{
+						"value": "1.1.1.3",
+						"note":  "notey notey",
+					}),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.deployment_type", "all_deployments"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.protection_mode", "exclusive"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation", "false"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation_secret"),
 				),
@@ -330,17 +360,27 @@ resource "vercel_project" "test" {
 `, projectSuffix, teamID)
 }
 
-func testAccProjectConfigWithSSOAndPassword(projectSuffix, teamID string) string {
+func testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIps(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "enabled_to_start" {
   name = "test-acc-protection-one-%[1]s"
   %[2]s
   vercel_authentication = {
-    protect_production = true
+    deployment_type = "all_deployments"
   }
   password_protection = {
-    protect_production = true
+    deployment_type = "all_deployments"
     password           = "password"
+  }
+  trusted_ips = {
+	addresses = [
+		{
+			value = "1.1.1.1"
+			note = "notey note"
+		}
+	]
+	deployment_type = "all_deployments"
+	protection_mode = "exclusive"
   }
   protection_bypass_for_automation = true
 }
@@ -354,18 +394,31 @@ resource "vercel_project" "enabled_to_update" {
   name = "test-acc-protection-three-%[1]s"
   %[2]s
   vercel_authentication = {
-    protect_production = false
+    deployment_type = "only_preview_deployments"
   }
   password_protection = {
-    protect_production = false
+    deployment_type = "only_preview_deployments"
     password           = "password"
+  }
+  trusted_ips = {
+	addresses = [
+		{
+			value = "1.1.1.1"
+			note = "notey notey"
+		},
+		{
+			value = "1.1.1.3"
+			note = "notey notey note"
+		}
+	]
+	deployment_type = "only_production_deployments"
   }
   protection_bypass_for_automation = true
 }
     `, projectSuffix, teamID)
 }
 
-func testAccProjectConfigWithSSOAndPasswordUpdated(projectSuffix, teamID string) string {
+func testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsUpdated(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "enabled_to_start" {
   name = "test-acc-protection-one-%[1]s"
@@ -376,11 +429,20 @@ resource "vercel_project" "disabled_to_start" {
   name = "test-acc-protection-two-%[1]s"
   %[2]s
   vercel_authentication = {
-    protect_production = true
+    deployment_type = "standard_protection"
   }
   password_protection = {
-    protect_production = true
+    deployment_type = "standard_protection"
     password           = "password"
+  }
+  trusted_ips = {
+	addresses = [
+		{
+			value = "1.1.1.1"
+			note = "notey note"
+		}
+	]
+	deployment_type = "standard_protection"
   }
   protection_bypass_for_automation = true
 }
@@ -389,11 +451,21 @@ resource "vercel_project" "enabled_to_update" {
   name = "test-acc-protection-three-%[1]s"
   %[2]s
   vercel_authentication = {
-    protect_production = true
+    deployment_type = "standard_protection"
   }
   password_protection = {
-    protect_production = true
+    deployment_type = "standard_protection"
     password           = "password2"
+  }
+  trusted_ips = {
+	addresses = [
+		{
+			value = "1.1.1.3"
+			note = "notey notey"
+		}
+	]
+	deployment_type = "all_deployments"
+	protection_mode = "exclusive"
   }
   protection_bypass_for_automation = false
 }

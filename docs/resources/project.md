@@ -113,7 +113,7 @@ Optional:
 
 Required:
 
-- `deployment_type` (String) The deployment environment to protect. Must be one one `standard_protection`, `all_deployments`, or `only_preview_deployments`.
+- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, or `only_preview_deployments`.
 - `password` (String, Sensitive) The password that visitors must enter to gain access to your Preview Deployments. Drift detection is not possible for this field.
 
 
@@ -122,20 +122,23 @@ Required:
 
 Required:
 
-- `addresses` (Set of Object) The allowed IP addressses and CIDR ranges with optional descriptions. (see [below for nested schema](#nestedatt--trusted_ips--addresses))
-- `deployment_type` (String) The deployment environment to protect. Must be one one `standard_protection`, `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.
+- `addresses` (Attributes Set) The allowed IP addressses and CIDR ranges with optional descriptions. (see [below for nested schema](#nestedatt--trusted_ips--addresses))
+- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.
 
 Optional:
 
-- `protection_mode` (String) Whether or not Trusted IPs is optional to access a deployment. Must be either `additional` or `exclusive`. `exclusive` is only availible with Standalone Trusted IPs.
+- `protection_mode` (String) Whether or not Trusted IPs is optional to access a deployment. Must be either `trusted_ip_required` or `trusted_ip_optional`. `trusted_ip_optional` is only available with Standalone Trusted IPs.
 
 <a id="nestedatt--trusted_ips--addresses"></a>
 ### Nested Schema for `trusted_ips.addresses`
 
+Required:
+
+- `value` (String, Sensitive) The address or CIDR range that can access deployments.
+
 Optional:
 
-- `note` (String)
-- `value` (String)
+- `note` (String) A description for the value
 
 
 
@@ -144,7 +147,7 @@ Optional:
 
 Required:
 
-- `deployment_type` (String) The deployment environment to protect. Must be one one `standard_protection`, `all_deployments`, or `only_preview_deployments`.
+- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_preview_deployments`, or `none`.
 
 ## Import
 

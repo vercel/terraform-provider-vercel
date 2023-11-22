@@ -25,8 +25,16 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "output_directory", ".output"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "public_source", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "root_directory", "ui/src"),
-					resource.TestCheckResourceAttr("data.vercel_project.test", "vercel_authentication.protect_production", "true"),
-					resource.TestCheckResourceAttr("data.vercel_project.test", "password_protection.protect_production", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "vercel_authentication.deployment_type", "standard_protection"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "password_protection.deployment_type", "standard_protection"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.addresses.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "trusted_ips.addresses.*", map[string]string{
+						"value": "1.1.1.1",
+						"note":  "notey note",
+					}),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.deployment_type", "only_production_deployments"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.protection_mode", "additional"),
+
 					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "environment.*", map[string]string{
 						"key":   "foo",
 						"value": "bar",
@@ -50,11 +58,21 @@ resource "vercel_project" "test" {
   public_source = true
   root_directory = "ui/src"
   vercel_authentication = {
-    protect_production = true
+    deployment_type = "standard_protection"
   }
   password_protection = {
     password = "foo"
-    protect_production = true
+    deployment_type = "standard_protection"
+  }
+  trusted_ips = {
+	addresses = [
+		{
+			value = "1.1.1.1"
+			note = "notey note"
+		}
+	]
+	deployment_type = "only_production_deployments"
+	protection_mode = "additional"
   }
   %s
   environment = [
