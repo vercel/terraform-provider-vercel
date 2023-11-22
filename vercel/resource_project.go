@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -212,8 +213,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"addresses": schema.SetAttribute{
-						Description: "The allowed IP addressses and CIDR ranges with optional descriptions.",
-						Required:    true,
+						Description:   "The allowed IP addressses and CIDR ranges with optional descriptions.",
+						Required:      true,
+						PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 						ElementType: types.ObjectType{
 							AttrTypes: map[string]attr.Type{
 								"value": types.StringType,

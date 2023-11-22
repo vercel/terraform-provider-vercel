@@ -185,10 +185,15 @@ func (p *PasswordProtection) toUpdateProjectRequest() *client.PasswordProtection
 	}
 }
 
+type TrustedIpsAddress struct {
+	Value types.String `tfsdk:"value"`
+	Note  types.String `tfsdk:"note"`
+}
+
 type TrustedIps struct {
-	Addresses      []client.TrustedIpAddress `tfsdk:"addresses"`
-	DeploymentType types.String              `tfsdk:"deployment_type"`
-	ProtectionMode types.String              `tfsdk:"protection_mode"`
+	Addresses      []TrustedIpsAddress `tfsdk:"addresses"`
+	DeploymentType types.String        `tfsdk:"deployment_type"`
+	ProtectionMode types.String        `tfsdk:"protection_mode"`
 }
 
 func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIpsRequest {
@@ -196,8 +201,16 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIpsRequest {
 		return nil
 	}
 
+	var addresses = []client.TrustedIpAddress{}
+	for _, address := range t.Addresses {
+		addresses = append(addresses, client.TrustedIpAddress{
+			Value: address.Value.ValueString(),
+			Note:  address.Note.ValueString(),
+		})
+	}
+
 	return &client.TrustedIpsRequest{
-		Addresses:      t.Addresses,
+		Addresses:      addresses,
 		DeploymentType: t.DeploymentType.ValueString(),
 		ProtectionMode: t.ProtectionMode.ValueString(),
 	}
@@ -261,6 +274,15 @@ var envVariableElemType = types.ObjectType{
 	},
 }
 
+var trustedIpsAddressesVariableElemType = types.SetType{
+	ElemType: types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"value": types.StringType,
+			"note":  types.StringType,
+		},
+	},
+}
+
 func convertResponseToProject(response client.ProjectResponse, plan Project) Project {
 	fields := plan.coercedFields()
 
@@ -297,9 +319,16 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 
 	var tip *TrustedIps
 	if response.TrustedIps != nil {
+		var addresses []TrustedIpsAddress
+		for _, address := range response.TrustedIps.Addresses {
+			addresses = append(addresses, TrustedIpsAddress{
+				Value: types.StringValue(address.Value),
+				Note:  types.StringValue(address.Note),
+			})
+		}
 		tip = &TrustedIps{
 			DeploymentType: types.StringValue(response.TrustedIps.DeploymentType),
-			Addresses:      response.TrustedIps.Addresses,
+			Addresses:      addresses,
 			ProtectionMode: types.StringValue(response.TrustedIps.ProtectionMode),
 		}
 	}
