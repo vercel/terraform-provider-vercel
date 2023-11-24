@@ -241,6 +241,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 								},
 							},
 						},
+						Validators: []validator.Set{
+							stringSetMinCount(1),
+						},
 					},
 					"deployment_type": schema.StringAttribute{
 						Required:      true,
