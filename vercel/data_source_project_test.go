@@ -33,7 +33,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 						"note":  "notey note",
 					}),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.deployment_type", "only_production_deployments"),
-					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.protection_mode", "additional"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.protection_mode", "trusted_ip_required"),
 
 					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "environment.*", map[string]string{
 						"key":   "foo",
@@ -72,7 +72,7 @@ resource "vercel_project" "test" {
 		}
 	]
 	deployment_type = "only_production_deployments"
-	protection_mode = "additional"
+	protection_mode = "trusted_ip_required"
   }
   %s
   environment = [
