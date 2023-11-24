@@ -23,11 +23,29 @@ If you wish to work on the provider, you'll first need [Go](http://www.golang.or
 
 To compile the provider, run `task build`. This will build the provider and put the provider binary in the repository root.
 
-In addition, you can run `task install` to set up a developer overrides in your ~/.terraformrc. This will then allow you
-to use your locally built provider binary.
+```sh
+$ task build
+```
+
+In addition, you can run `task install` to set up a developer overrides in your ~/.terraformrc. This will then allow you to use your locally built provider binary.
+
+```sh
+$ task install
+```
+
+Create a `main.tf` file on your machine and use the [terraform cli](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli#install-terraform) to test
+
+```sh
+$ terraform plan
+$ terraform apply
+```
 
 When you are finished using a local version of the provider, running `task uninstall` will remove _all_ developer
 overrides.
+
+```sh
+$ task uninstall
+```
 
 - HashiCorp - [Development Overrides for Provider developers](https://www.terraform.io/docs/cli/config/config-file.html#development-overrides-for-provider-developers).
 
@@ -42,6 +60,8 @@ The acceptance tests require a few environment variables to be set:
 * `VERCEL_TERRAFORM_TESTING_TEAM` - a Vercel team_id where resources can be created and destroyed
 * `VERCEL_TERRAFORM_TESTING_GITHUB_REPO` - a GitHub repository in the form 'org/repo' that can be used to trigger deployments
 * `VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO` - a Bitbucket repository in the form 'project/repo' that can be used to trigger deployments
+* `VERCEL_TERRAFORM_TESTING_GITLAB_REPO` - a GitLab repository in the form 'project/repo' that can be used to trigger deployments
+* `VERCEL_TERRAFORM_TESTING_DOMAIN` - a Vercel testing domain that can be used for testing
 
 ```sh
 $ task test
@@ -58,6 +78,7 @@ To run a specific set of tests, use the `-run` flag and specify a regex pattern 
 ```sh
 $ task test -- -run 'TestAcc_Project*'
 ```
+
 
 ## Building The Documentation
 

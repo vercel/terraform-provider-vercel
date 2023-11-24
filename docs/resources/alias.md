@@ -30,5 +30,3 @@ An Alias allows a `vercel_deployment` to be accessed through a different URL.
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

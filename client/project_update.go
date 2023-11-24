@@ -7,11 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type PasswordProtectionRequest struct {
-	DeploymentType string `json:"deploymentType"`
-	Password       string `json:"password"`
-}
-
 // UpdateProjectRequest defines the possible fields that can be updated within a vercel project.
 // note that the values are all pointers, with many containing `omitempty` for serialisation.
 // This is because the Vercel API behaves in the following manner:
@@ -19,18 +14,19 @@ type PasswordProtectionRequest struct {
 // - setting the field to an empty value (e.g. "") will remove the setting for that field.
 // - omitting the value entirely from the request will _not_ update the field.
 type UpdateProjectRequest struct {
-	BuildCommand                *string                    `json:"buildCommand"`
-	CommandForIgnoringBuildStep *string                    `json:"commandForIgnoringBuildStep"`
-	DevCommand                  *string                    `json:"devCommand"`
-	Framework                   *string                    `json:"framework"`
-	InstallCommand              *string                    `json:"installCommand"`
-	Name                        *string                    `json:"name,omitempty"`
-	OutputDirectory             *string                    `json:"outputDirectory"`
-	PublicSource                *bool                      `json:"publicSource"`
-	RootDirectory               *string                    `json:"rootDirectory"`
-	ServerlessFunctionRegion    *string                    `json:"serverlessFunctionRegion"`
-	SSOProtection               *Protection                `json:"ssoProtection"`
-	PasswordProtection          *PasswordProtectionRequest `json:"passwordProtection"`
+	BuildCommand                *string                         `json:"buildCommand"`
+	CommandForIgnoringBuildStep *string                         `json:"commandForIgnoringBuildStep"`
+	DevCommand                  *string                         `json:"devCommand"`
+	Framework                   *string                         `json:"framework"`
+	InstallCommand              *string                         `json:"installCommand"`
+	Name                        *string                         `json:"name,omitempty"`
+	OutputDirectory             *string                         `json:"outputDirectory"`
+	PublicSource                *bool                           `json:"publicSource"`
+	RootDirectory               *string                         `json:"rootDirectory"`
+	ServerlessFunctionRegion    *string                         `json:"serverlessFunctionRegion"`
+	VercelAuthentication        *VercelAuthentication           `json:"ssoProtection"`
+	PasswordProtection          *PasswordProtectionWithPassword `json:"passwordProtection"`
+	TrustedIps                  *TrustedIps                     `json:"trustedIps"`
 }
 
 // UpdateProject updates an existing projects configuration within Vercel.

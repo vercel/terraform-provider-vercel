@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -149,18 +150,42 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
-					"protect_production": schema.BoolAttribute{
-						Description: "If true, production deployments will also be protected",
+					"deployment_type": schema.StringAttribute{
+						Description: "The deployment environment that will be protected.",
 						Computed:    true,
 					},
 				},
 			},
 			"password_protection": schema.SingleNestedAttribute{
 				Description: "Ensures visitors of your Preview Deployments must enter a password in order to gain access.",
-				Optional:    true,
+				Computed:    true,
 				Attributes: map[string]schema.Attribute{
-					"protect_production": schema.BoolAttribute{
-						Description: "If true, production deployments will also be protected",
+					"deployment_type": schema.StringAttribute{
+						Description: "The deployment environment that will be protected.",
+						Computed:    true,
+					},
+				},
+			},
+			"trusted_ips": schema.SingleNestedAttribute{
+				Description: "Ensures only visitors from an allowed IP address can access your deployment.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"deployment_type": schema.StringAttribute{
+						Description: "The deployment environment that will be protected.",
+						Computed:    true,
+					},
+					"addresses": schema.ListAttribute{
+						Description: "The allowed IP addressses and CIDR ranges with optional descriptions.",
+						Computed:    true,
+						ElementType: types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"value": types.StringType,
+								"note":  types.StringType,
+							},
+						},
+					},
+					"protection_mode": schema.StringAttribute{
+						Description: "Whether or not Trusted IPs is required or optional to access a deployment.",
 						Computed:    true,
 					},
 				},

@@ -38,7 +38,6 @@ output "project_id" {
 
 ### Optional
 
-- `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
 - `team_id` (String) The team ID the project exists beneath. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
@@ -52,18 +51,12 @@ output "project_id" {
 - `ignore_command` (String) When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.
 - `install_command` (String) The install command for this project. If omitted, this value will be automatically detected.
 - `output_directory` (String) The output directory of the project. When null is used this value will be automatically detected.
+- `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
 - `public_source` (Boolean) Specifies whether the source code and logs of the deployments for this project should be public or not.
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.
 - `serverless_function_region` (String) The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.
+- `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
-
-<a id="nestedatt--password_protection"></a>
-### Nested Schema for `password_protection`
-
-Optional:
-
-- `protect_production` (Boolean) If true, production deployments will also be protected
-
 
 <a id="nestedatt--environment"></a>
 ### Nested Schema for `environment`
@@ -87,11 +80,36 @@ Read-Only:
 - `type` (String) The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.
 
 
+<a id="nestedatt--password_protection"></a>
+### Nested Schema for `password_protection`
+
+Read-Only:
+
+- `deployment_type` (String) The deployment environment that will be protected.
+
+
+<a id="nestedatt--trusted_ips"></a>
+### Nested Schema for `trusted_ips`
+
+Read-Only:
+
+- `addresses` (List of Object) The allowed IP addressses and CIDR ranges with optional descriptions. (see [below for nested schema](#nestedatt--trusted_ips--addresses))
+- `deployment_type` (String) The deployment environment that will be protected.
+- `protection_mode` (String) Whether or not Trusted IPs is required or optional to access a deployment.
+
+<a id="nestedatt--trusted_ips--addresses"></a>
+### Nested Schema for `trusted_ips.addresses`
+
+Read-Only:
+
+- `note` (String)
+- `value` (String)
+
+
+
 <a id="nestedatt--vercel_authentication"></a>
 ### Nested Schema for `vercel_authentication`
 
 Read-Only:
 
-- `protect_production` (Boolean) If true, production deployments will also be protected
-
-
+- `deployment_type` (String) The deployment environment that will be protected.

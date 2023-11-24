@@ -69,6 +69,7 @@ resource "vercel_project" "example" {
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.
 - `serverless_function_region` (String) The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.
 - `team_id` (String) The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.
+- `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
 
 ### Read-Only
@@ -79,40 +80,74 @@ resource "vercel_project" "example" {
 <a id="nestedatt--environment"></a>
 ### Nested Schema for `environment`
 
-Optional:
+Required:
 
-- `git_branch` (String) The git branch of the Environment Variable.
-- `id` (String) The ID of the Environment Variable.
 - `key` (String) The name of the Environment Variable.
 - `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.
 - `value` (String, Sensitive) The value of the Environment Variable.
+
+Optional:
+
+- `git_branch` (String) The git branch of the Environment Variable.
+
+Read-Only:
+
+- `id` (String) The ID of the Environment Variable.
 
 
 <a id="nestedatt--git_repository"></a>
 ### Nested Schema for `git_repository`
 
+Required:
+
+- `repo` (String) The name of the git repository. For example: `vercel/next.js`.
+- `type` (String) The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.
+
 Optional:
 
 - `production_branch` (String) By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.
-- `repo` (String) The name of the git repository. For example: `vercel/next.js`.
-- `type` (String) The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.
 
 
 <a id="nestedatt--password_protection"></a>
 ### Nested Schema for `password_protection`
 
+Required:
+
+- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, or `only_preview_deployments`.
+- `password` (String, Sensitive) The password that visitors must enter to gain access to your Preview Deployments. Drift detection is not possible for this field.
+
+
+<a id="nestedatt--trusted_ips"></a>
+### Nested Schema for `trusted_ips`
+
+Required:
+
+- `addresses` (Attributes Set) The allowed IP addressses and CIDR ranges with optional descriptions. (see [below for nested schema](#nestedatt--trusted_ips--addresses))
+- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.
+
 Optional:
 
-- `password` (String, Sensitive) The password that visitors must enter to gain access to your Preview Deployments. Drift detection is not possible for this field.
-- `protect_production` (Boolean) If true, production deployments will also be protected
+- `protection_mode` (String) Whether or not Trusted IPs is optional to access a deployment. Must be either `trusted_ip_required` or `trusted_ip_optional`. `trusted_ip_optional` is only available with Standalone Trusted IPs.
+
+<a id="nestedatt--trusted_ips--addresses"></a>
+### Nested Schema for `trusted_ips.addresses`
+
+Required:
+
+- `value` (String, Sensitive) The address or CIDR range that can access deployments.
+
+Optional:
+
+- `note` (String) A description for the value
+
 
 
 <a id="nestedatt--vercel_authentication"></a>
 ### Nested Schema for `vercel_authentication`
 
-Optional:
+Required:
 
-- `protect_production` (Boolean) If true, production deployments will also be protected
+- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_preview_deployments`, or `none`.
 
 ## Import
 

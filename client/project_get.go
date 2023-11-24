@@ -54,14 +54,6 @@ func (r *ProjectResponse) Repository() *Repository {
 	return nil
 }
 
-type Protection struct {
-	DeploymentType string `json:"deploymentType"`
-}
-
-type ProtectionBypass struct {
-	Scope string `json:"scope"`
-}
-
 // ProjectResponse defines the information Vercel returns about a project.
 type ProjectResponse struct {
 	BuildCommand                *string               `json:"buildCommand"`
@@ -92,8 +84,9 @@ type ProjectResponse struct {
 	PublicSource             *bool                       `json:"publicSource"`
 	RootDirectory            *string                     `json:"rootDirectory"`
 	ServerlessFunctionRegion *string                     `json:"serverlessFunctionRegion"`
-	SSOProtection            *Protection                 `json:"ssoProtection"`
-	PasswordProtection       *Protection                 `json:"passwordProtection"`
+	VercelAuthentication     *VercelAuthentication       `json:"ssoProtection"`
+	PasswordProtection       *PasswordProtection         `json:"passwordProtection"`
+	TrustedIps               *TrustedIps                 `json:"trustedIps"`
 	ProtectionBypass         map[string]ProtectionBypass `json:"protectionBypass"`
 }
 

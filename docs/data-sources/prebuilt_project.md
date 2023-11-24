@@ -65,5 +65,3 @@ resource "vercel_deployment" "example" {
 
 - `id` (String) The ID of this resource.
 - `output` (Map of String) A map of output file to metadata about the file. The metadata contains the file size and hash, and allows a deployment to be created if the file changes.
-
-
