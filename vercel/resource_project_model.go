@@ -63,12 +63,20 @@ func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 			target = append(target, t.ValueString())
 		}
 
+		var envVariableType string
+
+		if e.Sensitive.ValueBool() {
+			envVariableType = "sensitive"
+		} else {
+			envVariableType = "encrypted"
+		}
+
 		out = append(out, client.EnvironmentVariable{
 			Key:       e.Key.ValueString(),
 			Value:     e.Value.ValueString(),
 			Target:    target,
 			GitBranch: toStrPointer(e.GitBranch),
-			Type:      "encrypted",
+			Type:      envVariableType,
 			ID:        e.ID.ValueString(),
 		})
 	}
@@ -122,6 +130,7 @@ type EnvironmentItem struct {
 	Key       types.String   `tfsdk:"key"`
 	Value     types.String   `tfsdk:"value"`
 	ID        types.String   `tfsdk:"id"`
+	Sensitive types.Bool     `tfsdk:"sensitive"`
 }
 
 func (e *EnvironmentItem) toEnvironmentVariableRequest() client.EnvironmentVariableRequest {
@@ -129,12 +138,21 @@ func (e *EnvironmentItem) toEnvironmentVariableRequest() client.EnvironmentVaria
 	for _, t := range e.Target {
 		target = append(target, t.ValueString())
 	}
+
+	var envVariableType string
+
+	if e.Sensitive.ValueBool() {
+		envVariableType = "sensitive"
+	} else {
+		envVariableType = "encrypted"
+	}
+
 	return client.EnvironmentVariableRequest{
 		Key:       e.Key.ValueString(),
 		Value:     e.Value.ValueString(),
 		Target:    target,
 		GitBranch: toStrPointer(e.GitBranch),
-		Type:      "encrypted",
+		Type:      envVariableType,
 	}
 }
 

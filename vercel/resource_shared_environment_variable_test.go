@@ -75,10 +75,26 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 				),
 			},
 			{
+				Config: testAccSharedEnvironmentVariablesConfigUpdated(nameSuffix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_sensitive", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "key", "foo"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "value", "bar-production"),
+					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_sensitive", "target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "sensitive", "true"),
+				),
+			},
+			{
 				ResourceName:      "vercel_shared_environment_variable.example",
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: getSharedEnvironmentVariableImportID("vercel_shared_environment_variable.example"),
+			},
+			{
+				ResourceName:      "vercel_project_environment_variable.example_sensitive",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example_sensitive"),
 			},
 			{
 				Config: testAccSharedEnvironmentVariablesConfigDeleted(nameSuffix),

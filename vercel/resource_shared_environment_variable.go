@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -95,6 +96,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description:   "The ID of the Environment Variable.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 				Computed:      true,
+			},
+			"sensitive": schema.BoolAttribute{
+				Description:   "Whether the Environment Variable is sensitive or not.",
+				Optional:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
 		},
 	}

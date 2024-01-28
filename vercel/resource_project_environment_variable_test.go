@@ -72,6 +72,12 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "value", "bar-staging"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_git_branch", "target.*", "preview"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "git_branch", "production"),
+
+					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_sensitive", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "key", "foo"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "value", "bar-production"),
+					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_sensitive", "target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "sensitive", "true"),
 				),
 			},
 			{
@@ -101,6 +107,12 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example_git_branch"),
+			},
+			{
+				ResourceName:      "vercel_project_environment_variable.example_sensitive",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example_sensitive"),
 			},
 			{
 				Config: testAccProjectEnvironmentVariablesConfigDeleted(nameSuffix),
@@ -158,6 +170,15 @@ resource "vercel_project_environment_variable" "example_git_branch" {
 	target     = ["preview"]
     git_branch = "production"
 }
+
+resource "vercel_project_environment_variable" "example_sensitive" {
+	project_id = vercel_project.example.id
+	%[3]s
+	key        = "foo"
+	value      = "bar-production"
+	target     = ["production"]
+	sensitive  = true
+}
 `, projectName, testGithubRepo(), teamIDConfig())
 }
 
@@ -188,6 +209,15 @@ resource "vercel_project_environment_variable" "example_git_branch" {
     value      = "bar-staging"
     target     = ["preview"]
     git_branch = "test"
+}
+
+resource "vercel_project_environment_variable" "example_sensitive" {
+	project_id = vercel_project.example.id
+	%[3]s
+	key        = "foo-2"
+	value      = "bar-production-2"
+	target     = ["production"]
+	sensitive  = true
 }
 `, projectName, testGithubRepo(), teamIDConfig())
 }

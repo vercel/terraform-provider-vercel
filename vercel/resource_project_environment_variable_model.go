@@ -14,6 +14,7 @@ type ProjectEnvironmentVariable struct {
 	TeamID    types.String   `tfsdk:"team_id"`
 	ProjectID types.String   `tfsdk:"project_id"`
 	ID        types.String   `tfsdk:"id"`
+	Sensitive types.Bool     `tfsdk:"sensitive"`
 }
 
 func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client.CreateEnvironmentVariableRequest {
@@ -21,13 +22,21 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client
 	for _, t := range e.Target {
 		target = append(target, t.ValueString())
 	}
+	var envVariableType string
+
+	if e.Sensitive.ValueBool() {
+		envVariableType = "sensitive"
+	} else {
+		envVariableType = "encrypted"
+	}
+
 	return client.CreateEnvironmentVariableRequest{
 		EnvironmentVariable: client.EnvironmentVariableRequest{
 			Key:       e.Key.ValueString(),
 			Value:     e.Value.ValueString(),
 			Target:    target,
 			GitBranch: toStrPointer(e.GitBranch),
-			Type:      "encrypted",
+			Type:      envVariableType,
 		},
 		ProjectID: e.ProjectID.ValueString(),
 		TeamID:    e.TeamID.ValueString(),
@@ -39,12 +48,21 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client
 	for _, t := range e.Target {
 		target = append(target, t.ValueString())
 	}
+
+	var envVariableType string
+
+	if e.Sensitive.ValueBool() {
+		envVariableType = "sensitive"
+	} else {
+		envVariableType = "encrypted"
+	}
+
 	return client.UpdateEnvironmentVariableRequest{
 		Key:       e.Key.ValueString(),
 		Value:     e.Value.ValueString(),
 		Target:    target,
 		GitBranch: toStrPointer(e.GitBranch),
-		Type:      "encrypted",
+		Type:      envVariableType,
 		ProjectID: e.ProjectID.ValueString(),
 		TeamID:    e.TeamID.ValueString(),
 		EnvID:     e.ID.ValueString(),
