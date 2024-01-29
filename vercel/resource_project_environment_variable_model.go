@@ -86,5 +86,6 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 		TeamID:    toTeamID(response.TeamID),
 		ProjectID: projectID,
 		ID:        types.StringValue(response.ID),
+		Sensitive: types.BoolValue(response.Type == "sensitive"),
 	}
 }

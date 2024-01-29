@@ -100,6 +100,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"sensitive": schema.BoolAttribute{
 				Description:   "Whether the Environment Variable is sensitive or not.",
 				Optional:      true,
+				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
 		},

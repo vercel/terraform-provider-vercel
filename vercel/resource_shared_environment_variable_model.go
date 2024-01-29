@@ -98,5 +98,6 @@ func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmen
 		ProjectIDs: project_ids,
 		TeamID:     toTeamID(response.TeamID),
 		ID:         types.StringValue(response.ID),
+		Sensitive:  types.BoolValue(response.Type == "sensitive"),
 	}
 }

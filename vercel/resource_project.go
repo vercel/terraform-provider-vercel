@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -141,9 +140,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Computed:    true,
 						},
 						"sensitive": schema.BoolAttribute{
-							Description:   "Whether the Environment Variable is sensitive or not.",
-							Optional:      true,
-							PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
+							Description: "Whether the Environment Variable is sensitive or not.",
+							Optional:    true,
+							Computed:    true,
 						},
 					},
 				},

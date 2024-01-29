@@ -321,6 +321,7 @@ var envVariableElemType = types.ObjectType{
 		},
 		"git_branch": types.StringType,
 		"id":         types.StringType,
+		"sensitive":  types.BoolType,
 	},
 }
 
@@ -351,7 +352,7 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 		}
 	}
 
-	var va *VercelAuthentication = &VercelAuthentication{
+	var va = &VercelAuthentication{
 		DeploymentType: types.StringValue("none"),
 	}
 	if response.VercelAuthentication != nil {
@@ -391,6 +392,7 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 				},
 				"git_branch": types.StringType,
 				"id":         types.StringType,
+				"sensitive":  types.BoolType,
 			},
 			map[string]attr.Value{
 				"key":        types.StringValue(e.Key),
@@ -398,6 +400,7 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 				"target":     types.SetValueMust(types.StringType, target),
 				"git_branch": fromStringPointer(e.GitBranch),
 				"id":         types.StringValue(e.ID),
+				"sensitive":  types.BoolValue(e.Type == "sensitive"),
 			},
 		))
 	}

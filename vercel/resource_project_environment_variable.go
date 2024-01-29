@@ -107,6 +107,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"sensitive": schema.BoolAttribute{
 				Description:   "Whether the Environment Variable is sensitive or not.",
 				Optional:      true,
+				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
 		},
