@@ -118,6 +118,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 							Description: "The git branch of the environment variable.",
 							Computed:    true,
 						},
+						"sensitive": schema.BoolAttribute{
+							Description: "Whether the Environment Variable is sensitive or not.",
+							Computed:    true,
+						},
 					},
 				},
 			},

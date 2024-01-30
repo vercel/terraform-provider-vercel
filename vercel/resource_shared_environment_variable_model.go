@@ -67,7 +67,6 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest() c
 		envVariableType = "encrypted"
 	}
 	return client.UpdateSharedEnvironmentVariableRequest{
-		Key:        e.Key.ValueString(),
 		Value:      e.Value.ValueString(),
 		Target:     target,
 		Type:       envVariableType,

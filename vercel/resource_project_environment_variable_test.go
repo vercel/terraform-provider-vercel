@@ -74,8 +74,8 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "git_branch", "production"),
 
 					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_sensitive", testTeam()),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "key", "foo"),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "value", "bar-production"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "key", "foo_sensitive"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "value", "bar-sensitive"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_sensitive", "target.*", "production"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "sensitive", "true"),
 				),
@@ -94,6 +94,12 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "value", "bar-staging"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_git_branch", "target.*", "preview"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "git_branch", "test"),
+
+					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_sensitive", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "key", "foo_sensitive_updated"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "value", "bar-sensitive-updated"),
+					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_sensitive", "target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "sensitive", "true"),
 				),
 			},
 			{
@@ -174,8 +180,8 @@ resource "vercel_project_environment_variable" "example_git_branch" {
 resource "vercel_project_environment_variable" "example_sensitive" {
 	project_id = vercel_project.example.id
 	%[3]s
-	key        = "foo"
-	value      = "bar-production"
+	key        = "foo_sensitive"
+	value      = "bar-sensitive"
 	target     = ["production"]
 	sensitive  = true
 }
@@ -214,8 +220,8 @@ resource "vercel_project_environment_variable" "example_git_branch" {
 resource "vercel_project_environment_variable" "example_sensitive" {
 	project_id = vercel_project.example.id
 	%[3]s
-	key        = "foo-2"
-	value      = "bar-production-2"
+	key        = "foo_sensitive_updated"
+	value      = "bar-sensitive-updated"
 	target     = ["production"]
 	sensitive  = true
 }

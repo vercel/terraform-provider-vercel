@@ -31,14 +31,34 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = deleteAllProjects(ctx, c, "")
+	// err = deleteAllDNSRecords(ctx, c, domain, teamID)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	err = deleteAllSharedEnvironmentVariables(ctx, c, teamID)
 	if err != nil {
 		panic(err)
 	}
-	err = deleteAllDNSRecords(ctx, c, domain, "")
+}
+
+func deleteAllSharedEnvironmentVariables(ctx context.Context, c *client.Client, teamID string) error {
+	sharedEnvironmentVariables, err := c.ListSharedEnvironmentVariables(ctx, teamID)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("error listing shared environment variables: %w", err)
 	}
+	for _, d := range sharedEnvironmentVariables {
+		if !strings.HasPrefix(d.Key, "test_acc") {
+			// Don't delete actual shared environment variables - only testing ones
+			continue
+		}
+
+		err = c.DeleteSharedEnvironmentVariable(ctx, teamID, d.ID)
+		if err != nil {
+			return fmt.Errorf("error deleting shared env var %s: %w", d.Key, err)
+		}
+	}
+
+	return nil
 }
 
 func deleteAllDNSRecords(ctx context.Context, c *client.Client, domain, teamID string) error {

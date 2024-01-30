@@ -155,6 +155,9 @@ func (r *sharedEnvironmentVariableResource) Read(ctx context.Context, req resour
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	if client.NotDecryptable(err) {
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading shared environment variable",

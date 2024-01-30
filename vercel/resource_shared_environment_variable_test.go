@@ -48,6 +48,7 @@ func testAccSharedEnvironmentVariableDoesNotExist(n, teamID string) resource.Tes
 
 func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 	nameSuffix := acctest.RandString(16)
+	fmt.Println("NAME SUFFIX", nameSuffix)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -59,29 +60,27 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 				Config: testAccSharedEnvironmentVariablesConfig(nameSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccSharedEnvironmentVariableExists("vercel_shared_environment_variable.example", testTeam()),
-					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", "foo"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", fmt.Sprintf("test_acc_foo_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "value", "bar"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "production"),
+
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "key", fmt.Sprintf("test_acc_foo_sensitive_%s", nameSuffix)),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "value", "bar"),
+					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.sensitive_example", "target.*", "production"),
 				),
 			},
 			{
 				Config: testAccSharedEnvironmentVariablesConfigUpdated(nameSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccSharedEnvironmentVariableExists("vercel_shared_environment_variable.example", testTeam()),
-					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", "foo"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", fmt.Sprintf("test_acc_foo_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "value", "updated-bar"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "development"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "preview"),
-				),
-			},
-			{
-				Config: testAccSharedEnvironmentVariablesConfigUpdated(nameSuffix),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_sensitive", testTeam()),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "key", "foo"),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "value", "bar-production"),
-					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_sensitive", "target.*", "production"),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "sensitive", "true"),
+
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "key", fmt.Sprintf("test_acc_foo_sensitive_%s", nameSuffix)),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "value", "bar-updated"),
+					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.sensitive_example", "target.*", "production"),
 				),
 			},
 			{
@@ -91,15 +90,10 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 				ImportStateIdFunc: getSharedEnvironmentVariableImportID("vercel_shared_environment_variable.example"),
 			},
 			{
-				ResourceName:      "vercel_project_environment_variable.example_sensitive",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example_sensitive"),
-			},
-			{
 				Config: testAccSharedEnvironmentVariablesConfigDeleted(nameSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccSharedEnvironmentVariableDoesNotExist("vercel_project.example", testTeam()),
+					testAccSharedEnvironmentVariableDoesNotExist("vercel_shared_environment_variable.example", testTeam()),
+					testAccSharedEnvironmentVariableDoesNotExist("vercel_shared_environment_variable.sensitive_example", testTeam()),
 				),
 			},
 		},
@@ -130,8 +124,19 @@ resource "vercel_project" "example" {
 
 resource "vercel_shared_environment_variable" "example" {
 	%[2]s
-	key         = "foo"
+	key         = "test_acc_foo_%[1]s"
 	value       = "bar"
+	target      = ["production"]
+    project_ids = [
+        vercel_project.example.id
+    ]
+}
+
+resource "vercel_shared_environment_variable" "sensitive_example" {
+	%[2]s
+	key         = "test_acc_foo_sensitive_%[1]s"
+	value       = "bar"
+    sensitive   = true
 	target      = ["production"]
     project_ids = [
         vercel_project.example.id
@@ -154,9 +159,21 @@ resource "vercel_project" "example2" {
 
 resource "vercel_shared_environment_variable" "example" {
 	%[2]s
-	key         = "foo"
+	key         = "test_acc_foo_%[1]s"
 	value       = "updated-bar"
 	target      = ["preview", "development"]
+    project_ids = [
+        vercel_project.example.id,
+        vercel_project.example2.id
+    ]
+}
+
+resource "vercel_shared_environment_variable" "sensitive_example" {
+	%[2]s
+	key         = "test_acc_foo_sensitive_%[1]s"
+	value       = "bar-updated"
+    sensitive   = true
+	target      = ["production"]
     project_ids = [
         vercel_project.example.id,
         vercel_project.example2.id
