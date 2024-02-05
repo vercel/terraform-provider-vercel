@@ -115,12 +115,6 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example_git_branch"),
 			},
 			{
-				ResourceName:      "vercel_project_environment_variable.example_sensitive",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example_sensitive"),
-			},
-			{
 				Config: testAccProjectEnvironmentVariablesConfigDeleted(nameSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariablesDoNotExist("vercel_project.example", testTeam()),
