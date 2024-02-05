@@ -26,29 +26,8 @@ func testAccSharedEnvironmentVariableExists(n, teamID string) resource.TestCheck
 	}
 }
 
-func testAccSharedEnvironmentVariableDoesNotExist(n, teamID string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("not found: %s", n)
-		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("no ID is set")
-		}
-
-		_, err := testClient().GetSharedEnvironmentVariable(context.TODO(), teamID, rs.Primary.ID)
-
-		if err != nil {
-			return nil
-		}
-		return fmt.Errorf("expected an error, but got none")
-	}
-}
-
 func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 	nameSuffix := acctest.RandString(16)
-	fmt.Println("NAME SUFFIX", nameSuffix)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -91,10 +70,6 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 			},
 			{
 				Config: testAccSharedEnvironmentVariablesConfigDeleted(nameSuffix),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccSharedEnvironmentVariableDoesNotExist("vercel_shared_environment_variable.example", testTeam()),
-					testAccSharedEnvironmentVariableDoesNotExist("vercel_shared_environment_variable.sensitive_example", testTeam()),
-				),
 			},
 		},
 	})

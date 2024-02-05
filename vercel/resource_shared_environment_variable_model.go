@@ -79,7 +79,7 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest() c
 // convertResponseToSharedEnvironmentVariable is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
-func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmentVariableResponse) SharedEnvironmentVariable {
+func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmentVariableResponse, v types.String) SharedEnvironmentVariable {
 	target := []types.String{}
 	for _, t := range response.Target {
 		target = append(target, types.StringValue(t))
@@ -90,10 +90,15 @@ func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmen
 		project_ids = append(project_ids, types.StringValue(t))
 	}
 
+	value := types.StringValue(response.Value)
+	if response.Type == "sensitive" {
+		value = v
+	}
+
 	return SharedEnvironmentVariable{
 		Target:     target,
 		Key:        types.StringValue(response.Key),
-		Value:      types.StringValue(response.Value),
+		Value:      value,
 		ProjectIDs: project_ids,
 		TeamID:     toTeamID(response.TeamID),
 		ID:         types.StringValue(response.ID),

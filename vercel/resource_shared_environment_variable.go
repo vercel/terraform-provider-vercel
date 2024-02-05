@@ -126,7 +126,7 @@ func (r *sharedEnvironmentVariableResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(response)
+	result := convertResponseToSharedEnvironmentVariable(response, plan.Value)
 
 	tflog.Trace(ctx, "created shared environment variable", map[string]interface{}{
 		"id":      result.ID.ValueString(),
@@ -155,9 +155,6 @@ func (r *sharedEnvironmentVariableResource) Read(ctx context.Context, req resour
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	if client.NotDecryptable(err) {
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading shared environment variable",
@@ -170,7 +167,7 @@ func (r *sharedEnvironmentVariableResource) Read(ctx context.Context, req resour
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(out)
+	result := convertResponseToSharedEnvironmentVariable(out, state.Value)
 	tflog.Trace(ctx, "read shared environment variable", map[string]interface{}{
 		"id":      result.ID.ValueString(),
 		"team_id": result.TeamID.ValueString(),
@@ -201,7 +198,7 @@ func (r *sharedEnvironmentVariableResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(response)
+	result := convertResponseToSharedEnvironmentVariable(response, plan.Value)
 
 	tflog.Trace(ctx, "updated project environment variable", map[string]interface{}{
 		"id":      result.ID.ValueString(),
@@ -281,7 +278,7 @@ func (r *sharedEnvironmentVariableResource) ImportState(ctx context.Context, req
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(out)
+	result := convertResponseToSharedEnvironmentVariable(out, types.StringNull())
 	tflog.Trace(ctx, "imported shared environment variable", map[string]interface{}{
 		"team_id": result.TeamID.ValueString(),
 		"env_id":  result.ID.ValueString(),
