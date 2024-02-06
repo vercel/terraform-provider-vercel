@@ -325,7 +325,20 @@ var envVariableElemType = types.ObjectType{
 	},
 }
 
-func convertResponseToProject(response client.ProjectResponse, plan Project) Project {
+func hasSameTarget(p EnvironmentItem, target []string) bool {
+	if len(p.Target) != len(target) {
+		return false
+	}
+	for _, t := range p.Target {
+		v := t.ValueString()
+		if !contains(target, v) {
+			return false
+		}
+	}
+	return true
+}
+
+func convertResponseToProject(ctx context.Context, response client.ProjectResponse, plan Project) (Project, error) {
 	fields := plan.coercedFields()
 
 	var gr *GitRepository
@@ -383,6 +396,21 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 		for _, t := range e.Target {
 			target = append(target, types.StringValue(t))
 		}
+		value := types.StringValue(e.Value)
+		if e.Type == "sensitive" {
+			value = types.StringNull()
+			environment, err := plan.environment(ctx)
+			if err != nil {
+				return Project{}, fmt.Errorf("error reading project environment variables: %s", err)
+			}
+			for _, p := range environment {
+				if p.Sensitive.ValueBool() && p.Key.ValueString() == e.Key && hasSameTarget(p, e.Target) {
+					value = p.Value
+					break
+				}
+			}
+		}
+
 		env = append(env, types.ObjectValueMust(
 			map[string]attr.Type{
 				"key":   types.StringType,
@@ -396,7 +424,7 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 			},
 			map[string]attr.Value{
 				"key":        types.StringValue(e.Key),
-				"value":      types.StringValue(e.Value),
+				"value":      value,
 				"target":     types.SetValueMust(types.StringType, target),
 				"git_branch": fromStringPointer(e.GitBranch),
 				"id":         types.StringValue(e.ID),
@@ -443,5 +471,5 @@ func convertResponseToProject(response client.ProjectResponse, plan Project) Pro
 		TrustedIps:                          tip,
 		ProtectionBypassForAutomation:       protectionBypass,
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
-	}
+	}, nil
 }

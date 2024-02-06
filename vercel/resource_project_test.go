@@ -354,6 +354,12 @@ resource "vercel_project" "test" {
       key    = "bar"
       value  = "baz"
       target = ["production"]
+    },
+    {
+      key       = "sensitive_thing"
+      value     = "bar_updated"
+      target    = ["production"]
+      sensitive = true
     }
   ]
 }
@@ -594,6 +600,12 @@ resource "vercel_project" "test" {
       key    = "oh_no"
       value  = "bar"
       target = ["production"]
+    },
+    {
+      key       = "sensitive_thing"
+      value     = "bar"
+      target    = ["production"]
+      sensitive = true
     }
   ]
 }

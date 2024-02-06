@@ -330,7 +330,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	result := convertResponseToProject(out, plan)
+	result, err := convertResponseToProject(ctx, out, plan)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error converting project response to model",
+			"Could not create project, unexpected error: "+err.Error(),
+		)
+		return
+	}
 	tflog.Trace(ctx, "created project", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
@@ -351,7 +358,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			return
 		}
 
-		result = convertResponseToProject(out, plan)
+		result, err = convertResponseToProject(ctx, out, plan)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error converting project response to model",
+				"Could not create project, unexpected error: "+err.Error(),
+			)
+			return
+		}
 		tflog.Trace(ctx, "updated newly created project", map[string]interface{}{
 			"team_id":    result.TeamID.ValueString(),
 			"project_id": result.ID.ValueString(),
@@ -402,7 +416,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	result = convertResponseToProject(out, plan)
+	result, err = convertResponseToProject(ctx, out, plan)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error converting project response to model",
+			"Could not create project, unexpected error: "+err.Error(),
+		)
+		return
+	}
 	tflog.Trace(ctx, "updated project production branch", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
@@ -442,7 +463,14 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	result := convertResponseToProject(out, state)
+	result, err := convertResponseToProject(ctx, out, state)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error converting project response to model",
+			"Could not create project, unexpected error: "+err.Error(),
+		)
+		return
+	}
 	tflog.Trace(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
@@ -634,7 +662,14 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	result := convertResponseToProject(out, plan)
+	result, err := convertResponseToProject(ctx, out, plan)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error converting project response to model",
+			"Could not create project, unexpected error: "+err.Error(),
+		)
+		return
+	}
 	tflog.Trace(ctx, "updated project", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
@@ -717,7 +752,14 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	result := convertResponseToProject(out, nullProject)
+	result, err := convertResponseToProject(ctx, out, nullProject)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error converting project response to model",
+			"Could not create project, unexpected error: "+err.Error(),
+		)
+		return
+	}
 	tflog.Trace(ctx, "imported project", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),

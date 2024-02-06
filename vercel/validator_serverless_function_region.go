@@ -33,15 +33,6 @@ func (v validatorServerlessFunctionRegion) MarkdownDescription(ctx context.Conte
 	return fmt.Sprintf("The serverless function region provided is not supported on Vercel. Must be one of `%s`.", strings.Join(keys(v.regions), "`, `"))
 }
 
-func contains(items []string, i string) bool {
-	for _, j := range items {
-		if j == i {
-			return true
-		}
-	}
-	return false
-}
-
 func keys(v map[string]struct{}) (out []string) {
 	for k := range v {
 		out = append(out, k)

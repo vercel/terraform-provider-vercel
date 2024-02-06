@@ -31,10 +31,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// err = deleteAllDNSRecords(ctx, c, domain, teamID)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	err = deleteAllDNSRecords(ctx, c, domain, teamID)
+	if err != nil {
+		panic(err)
+	}
 	err = deleteAllSharedEnvironmentVariables(ctx, c, teamID)
 	if err != nil {
 		panic(err)
