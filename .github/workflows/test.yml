@@ -75,8 +75,8 @@ jobs:
           - "ubuntu-latest"
           - "windows-latest"
         terraform:
-          - "1.6.*"
-          - "1.0.*"
+          - "1.7.*"
+          - "1.4.*"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Go
