@@ -13,6 +13,7 @@ type SharedEnvironmentVariable struct {
 	TeamID     types.String   `tfsdk:"team_id"`
 	ProjectIDs []types.String `tfsdk:"project_ids"`
 	ID         types.String   `tfsdk:"id"`
+	Sensitive  types.Bool     `tfsdk:"sensitive"`
 }
 
 func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest() client.CreateSharedEnvironmentVariableRequest {
@@ -24,10 +25,19 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest() c
 	for _, t := range e.ProjectIDs {
 		projectIDs = append(projectIDs, t.ValueString())
 	}
+
+	var envVariableType string
+
+	if e.Sensitive.ValueBool() {
+		envVariableType = "sensitive"
+	} else {
+		envVariableType = "encrypted"
+	}
+
 	return client.CreateSharedEnvironmentVariableRequest{
 		EnvironmentVariable: client.SharedEnvironmentVariableRequest{
 			Target:     target,
-			Type:       "encrypted",
+			Type:       envVariableType,
 			ProjectIDs: projectIDs,
 			EnvironmentVariables: []client.SharedEnvVarRequest{
 				{
@@ -49,11 +59,17 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest() c
 	for _, t := range e.ProjectIDs {
 		projectIDs = append(projectIDs, t.ValueString())
 	}
+	var envVariableType string
+
+	if e.Sensitive.ValueBool() {
+		envVariableType = "sensitive"
+	} else {
+		envVariableType = "encrypted"
+	}
 	return client.UpdateSharedEnvironmentVariableRequest{
-		Key:        e.Key.ValueString(),
 		Value:      e.Value.ValueString(),
 		Target:     target,
-		Type:       "encrypted",
+		Type:       envVariableType,
 		TeamID:     e.TeamID.ValueString(),
 		EnvID:      e.ID.ValueString(),
 		ProjectIDs: projectIDs,
@@ -63,7 +79,7 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest() c
 // convertResponseToSharedEnvironmentVariable is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
-func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmentVariableResponse) SharedEnvironmentVariable {
+func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmentVariableResponse, v types.String) SharedEnvironmentVariable {
 	target := []types.String{}
 	for _, t := range response.Target {
 		target = append(target, types.StringValue(t))
@@ -74,12 +90,18 @@ func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmen
 		project_ids = append(project_ids, types.StringValue(t))
 	}
 
+	value := types.StringValue(response.Value)
+	if response.Type == "sensitive" {
+		value = v
+	}
+
 	return SharedEnvironmentVariable{
 		Target:     target,
 		Key:        types.StringValue(response.Key),
-		Value:      types.StringValue(response.Value),
+		Value:      value,
 		ProjectIDs: project_ids,
 		TeamID:     toTeamID(response.TeamID),
 		ID:         types.StringValue(response.ID),
+		Sensitive:  types.BoolValue(response.Type == "sensitive"),
 	}
 }

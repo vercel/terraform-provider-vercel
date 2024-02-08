@@ -1,6 +1,8 @@
 package vercel
 
 import (
+	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -26,8 +28,11 @@ type ProjectDataSource struct {
 	TrustedIps               *TrustedIps           `tfsdk:"trusted_ips"`
 }
 
-func convertResponseToProjectDataSource(response client.ProjectResponse, plan Project) ProjectDataSource {
-	project := convertResponseToProject(response, plan)
+func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project) (ProjectDataSource, error) {
+	project, err := convertResponseToProject(ctx, response, plan)
+	if err != nil {
+		return ProjectDataSource{}, err
+	}
 
 	var pp *PasswordProtection
 	if project.PasswordProtection != nil {
@@ -53,5 +58,5 @@ func convertResponseToProjectDataSource(response client.ProjectResponse, plan Pr
 		VercelAuthentication:     project.VercelAuthentication,
 		PasswordProtection:       pp,
 		TrustedIps:               project.TrustedIps,
-	}
+	}, nil
 }

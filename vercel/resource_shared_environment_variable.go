@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -96,6 +97,12 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 				Computed:      true,
 			},
+			"sensitive": schema.BoolAttribute{
+				Description:   "Whether the Environment Variable is sensitive or not.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
+			},
 		},
 	}
 }
@@ -119,7 +126,7 @@ func (r *sharedEnvironmentVariableResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(response)
+	result := convertResponseToSharedEnvironmentVariable(response, plan.Value)
 
 	tflog.Trace(ctx, "created shared environment variable", map[string]interface{}{
 		"id":      result.ID.ValueString(),
@@ -160,7 +167,7 @@ func (r *sharedEnvironmentVariableResource) Read(ctx context.Context, req resour
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(out)
+	result := convertResponseToSharedEnvironmentVariable(out, state.Value)
 	tflog.Trace(ctx, "read shared environment variable", map[string]interface{}{
 		"id":      result.ID.ValueString(),
 		"team_id": result.TeamID.ValueString(),
@@ -191,7 +198,7 @@ func (r *sharedEnvironmentVariableResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(response)
+	result := convertResponseToSharedEnvironmentVariable(response, plan.Value)
 
 	tflog.Trace(ctx, "updated project environment variable", map[string]interface{}{
 		"id":      result.ID.ValueString(),
@@ -271,7 +278,7 @@ func (r *sharedEnvironmentVariableResource) ImportState(ctx context.Context, req
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(out)
+	result := convertResponseToSharedEnvironmentVariable(out, types.StringNull())
 	tflog.Trace(ctx, "imported shared environment variable", map[string]interface{}{
 		"team_id": result.TeamID.ValueString(),
 		"env_id":  result.ID.ValueString(),

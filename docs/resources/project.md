@@ -89,6 +89,7 @@ Required:
 Optional:
 
 - `git_branch` (String) The git branch of the Environment Variable.
+- `sensitive` (Boolean) Whether the Environment Variable is sensitive or not.
 
 Read-Only:
 

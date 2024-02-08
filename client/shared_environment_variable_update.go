@@ -8,7 +8,6 @@ import (
 )
 
 type UpdateSharedEnvironmentVariableRequest struct {
-	Key        string   `json:"key"`
 	Value      string   `json:"value"`
 	Type       string   `json:"type"`
 	ProjectIDs []string `json:"projectId"`

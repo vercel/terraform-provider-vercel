@@ -118,6 +118,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 							Description: "The git branch of the environment variable.",
 							Computed:    true,
 						},
+						"sensitive": schema.BoolAttribute{
+							Description: "Whether the Environment Variable is sensitive or not. Note that the value will be `null` for sensitive environment variables.",
+							Computed:    true,
+						},
 					},
 				},
 			},
@@ -237,7 +241,14 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	result := convertResponseToProjectDataSource(out, nullProject)
+	result, err := convertResponseToProjectDataSource(ctx, out, nullProject)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error converting project response to model",
+			"Could not create project, unexpected error: "+err.Error(),
+		)
+		return
+	}
 	tflog.Trace(ctx, "read project", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),

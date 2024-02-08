@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -103,6 +104,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 				Computed:      true,
 			},
+			"sensitive": schema.BoolAttribute{
+				Description:   "Whether the Environment Variable is sensitive or not.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
+			},
 		},
 	}
 }
@@ -135,7 +142,7 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID)
+	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
 
 	tflog.Trace(ctx, "created project environment variable", map[string]interface{}{
 		"id":         result.ID.ValueString(),
@@ -178,7 +185,7 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, state.ProjectID)
+	result := convertResponseToProjectEnvironmentVariable(out, state.ProjectID, state.Value)
 	tflog.Trace(ctx, "read project environment variable", map[string]interface{}{
 		"id":         result.ID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
@@ -210,7 +217,7 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID)
+	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
 
 	tflog.Trace(ctx, "updated project environment variable", map[string]interface{}{
 		"id":         result.ID.ValueString(),
@@ -296,7 +303,7 @@ func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, re
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID))
+	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID), types.StringNull())
 	tflog.Trace(ctx, "imported project environment variable", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
