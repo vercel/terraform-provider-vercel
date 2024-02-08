@@ -104,3 +104,24 @@ jobs:
           VERCEL_TERRAFORM_TESTING_DOMAIN: "dgls.dev"
         run: |
           go test ./...
+
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - docs
+      - build
+    timeout-minutes: 5
+    if: ${{ always() }}
+    steps:
+      - name: Success
+        run: |-
+            for status in ${{ join(needs.*.result, ' ') }}
+            do
+              if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+              then
+                echo "Some checks failed"
+                exit 1
+              fi
+            done
