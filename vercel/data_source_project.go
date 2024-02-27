@@ -245,7 +245,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
-			"Could not create project, unexpected error: "+err.Error(),
+			"Could not read project, unexpected error: "+err.Error(),
 		)
 		return
 	}
