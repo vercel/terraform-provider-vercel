@@ -51,7 +51,7 @@ func (r *sharedEnvironmentVariableResource) Configure(ctx context.Context, req r
 	r.client = client
 }
 
-// Schema returns the schema information for a project environment variable resource.
+// Schema returns the schema information for a shared environment variable resource.
 func (r *sharedEnvironmentVariableResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: `
@@ -117,11 +117,15 @@ func (r *sharedEnvironmentVariableResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	response, err := r.client.CreateSharedEnvironmentVariable(ctx, plan.toCreateSharedEnvironmentVariableRequest())
+	request, ok := plan.toCreateSharedEnvironmentVariableRequest(ctx, resp.Diagnostics)
+	if !ok {
+		return
+	}
+	response, err := r.client.CreateSharedEnvironmentVariable(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error creating project environment variable",
-			"Could not create project environment variable, unexpected error: "+err.Error(),
+			"Error creating shared environment variable",
+			"Could not create shared environment variable, unexpected error: "+err.Error(),
 		)
 		return
 	}
@@ -180,7 +184,7 @@ func (r *sharedEnvironmentVariableResource) Read(ctx context.Context, req resour
 	}
 }
 
-// Update updates the project environment variable of a Vercel project state.
+// Update updates the shared environment variable of a Vercel project state.
 func (r *sharedEnvironmentVariableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan SharedEnvironmentVariable
 	diags := req.Plan.Get(ctx, &plan)
@@ -188,8 +192,11 @@ func (r *sharedEnvironmentVariableResource) Update(ctx context.Context, req reso
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	response, err := r.client.UpdateSharedEnvironmentVariable(ctx, plan.toUpdateSharedEnvironmentVariableRequest())
+	request, ok := plan.toUpdateSharedEnvironmentVariableRequest(ctx, resp.Diagnostics)
+	if !ok {
+		return
+	}
+	response, err := r.client.UpdateSharedEnvironmentVariable(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating shared environment variable",
@@ -200,7 +207,7 @@ func (r *sharedEnvironmentVariableResource) Update(ctx context.Context, req reso
 
 	result := convertResponseToSharedEnvironmentVariable(response, plan.Value)
 
-	tflog.Trace(ctx, "updated project environment variable", map[string]interface{}{
+	tflog.Trace(ctx, "updated shared environment variable", map[string]interface{}{
 		"id":      result.ID.ValueString(),
 		"team_id": result.TeamID.ValueString(),
 	})
@@ -212,7 +219,7 @@ func (r *sharedEnvironmentVariableResource) Update(ctx context.Context, req reso
 	}
 }
 
-// Delete deletes a Vercel project environment variable.
+// Delete deletes a Vercel shared environment variable.
 func (r *sharedEnvironmentVariableResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state SharedEnvironmentVariable
 	diags := req.State.Get(ctx, &state)
@@ -237,7 +244,7 @@ func (r *sharedEnvironmentVariableResource) Delete(ctx context.Context, req reso
 		return
 	}
 
-	tflog.Trace(ctx, "deleted project environment variable", map[string]interface{}{
+	tflog.Trace(ctx, "deleted shared environment variable", map[string]interface{}{
 		"id":      state.ID.ValueString(),
 		"team_id": state.TeamID.ValueString(),
 	})
@@ -254,7 +261,7 @@ func splitSharedEnvironmentVariableID(id string) (teamID, envID string, ok bool)
 	return "", "", false
 }
 
-// ImportState takes an identifier and reads all the project environment variable information from the Vercel API.
+// ImportState takes an identifier and reads all the shared environment variable information from the Vercel API.
 // The results are then stored in terraform state.
 func (r *sharedEnvironmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, envID, ok := splitSharedEnvironmentVariableID(req.ID)
