@@ -10,7 +10,6 @@ import (
 // UpdateEnvironmentVariableRequest defines the information that needs to be passed to Vercel in order to
 // update an environment variable.
 type UpdateEnvironmentVariableRequest struct {
-	Key       string   `json:"key"`
 	Value     string   `json:"value"`
 	Target    []string `json:"target"`
 	GitBranch *string  `json:"gitBranch,omitempty"`

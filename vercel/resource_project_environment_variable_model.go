@@ -58,7 +58,6 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client
 	}
 
 	return client.UpdateEnvironmentVariableRequest{
-		Key:       e.Key.ValueString(),
 		Value:     e.Value.ValueString(),
 		Target:    target,
 		GitBranch: toStrPointer(e.GitBranch),
