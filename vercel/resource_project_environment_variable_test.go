@@ -96,7 +96,7 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "git_branch", "test"),
 
 					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_sensitive", testTeam()),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "key", "foo_sensitive_updated"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "key", "foo_sensitive"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "value", "bar-sensitive-updated"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_sensitive", "target.*", "production"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "sensitive", "true"),
@@ -214,7 +214,7 @@ resource "vercel_project_environment_variable" "example_git_branch" {
 resource "vercel_project_environment_variable" "example_sensitive" {
 	project_id = vercel_project.example.id
 	%[3]s
-	key        = "foo_sensitive_updated"
+	key        = "foo_sensitive"
 	value      = "bar-sensitive-updated"
 	target     = ["production"]
 	sensitive  = true
