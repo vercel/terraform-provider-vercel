@@ -16,6 +16,7 @@ type DNSRecord struct {
 	Value      string `json:"value"`
 	RecordType string `json:"recordType"`
 	Priority   int64  `json:"priority"`
+	Comment    string `json:"comment"`
 }
 
 // GetDNSRecord retrieves information about a DNS domain from Vercel.

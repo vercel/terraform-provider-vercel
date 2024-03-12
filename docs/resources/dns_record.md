@@ -104,6 +104,7 @@ resource "vercel_dns_record" "txt" {
 
 ### Optional
 
+- `comment` (String) A comment explaining what the DNS record is for.
 - `mx_priority` (Number) The priority of the MX record. The priority specifies the sequence that an email server receives emails. A smaller value indicates a higher priority.
 - `srv` (Attributes) Settings for an SRV record. (see [below for nested schema](#nestedatt--srv))
 - `team_id` (String) The team ID that the domain and DNS records belong to. Required when configuring a team resource if a default team has not been set in the provider.

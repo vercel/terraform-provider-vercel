@@ -22,6 +22,7 @@ type UpdateDNSRecordRequest struct {
 	SRV        *SRVUpdate `json:"srv,omitempty"`
 	TTL        *int64     `json:"ttl,omitempty"`
 	Value      *string    `json:"value,omitempty"`
+	Comment    string     `json:"comment"`
 }
 
 // UpdateDNSRecord updates a DNS record for a specified domain name within Vercel.

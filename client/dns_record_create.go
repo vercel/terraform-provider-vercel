@@ -22,6 +22,7 @@ type CreateDNSRecordRequest struct {
 	TTL        int64  `json:"ttl,omitempty"`
 	Type       string `json:"type"`
 	Value      string `json:"value,omitempty"`
+	Comment    string `json:"comment"`
 }
 
 // CreateDNSRecord creates a DNS record for a specified domain name within Vercel.
