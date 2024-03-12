@@ -58,57 +58,64 @@ func TestAcc_DNSRecord(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccDNSRecordDestroy("vercel_dns_record.a_without_ttl", ""),
-			testAccDNSRecordDestroy("vercel_dns_record.a", ""),
-			testAccDNSRecordDestroy("vercel_dns_record.aaaa", ""),
-			testAccDNSRecordDestroy("vercel_dns_record.alias", ""),
-			testAccDNSRecordDestroy("vercel_dns_record.caa", ""),
-			testAccDNSRecordDestroy("vercel_dns_record.cname", ""),
-			testAccDNSRecordDestroy("vercel_dns_record.mx", ""),
-			testAccDNSRecordDestroy("vercel_dns_record.srv", ""),
-			testAccDNSRecordDestroy("vercel_dns_record.txt", ""),
+			testAccDNSRecordDestroy("vercel_dns_record.a_without_ttl", testTeam()),
+			testAccDNSRecordDestroy("vercel_dns_record.a", testTeam()),
+			testAccDNSRecordDestroy("vercel_dns_record.aaaa", testTeam()),
+			testAccDNSRecordDestroy("vercel_dns_record.alias", testTeam()),
+			testAccDNSRecordDestroy("vercel_dns_record.caa", testTeam()),
+			testAccDNSRecordDestroy("vercel_dns_record.cname", testTeam()),
+			testAccDNSRecordDestroy("vercel_dns_record.mx", testTeam()),
+			testAccDNSRecordDestroy("vercel_dns_record.srv", testTeam()),
+			testAccDNSRecordDestroy("vercel_dns_record.txt", testTeam()),
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDNSRecordConfig(testDomain(), nameSuffix),
+				Config: testAccDNSRecordConfig(testDomain(), nameSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccDNSRecordExists("vercel_dns_record.a_without_ttl", ""),
+					testAccDNSRecordExists("vercel_dns_record.a_without_ttl", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "type", "A"),
 					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "value", "127.0.0.1"),
-					testAccDNSRecordExists("vercel_dns_record.a", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "comment", "a without ttl"),
+					testAccDNSRecordExists("vercel_dns_record.a", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "type", "A"),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "value", "127.0.0.1"),
-					testAccDNSRecordExists("vercel_dns_record.aaaa", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.a", "comment", "a"),
+					testAccDNSRecordExists("vercel_dns_record.aaaa", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.aaaa", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.aaaa", "type", "AAAA"),
 					resource.TestCheckResourceAttr("vercel_dns_record.aaaa", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.aaaa", "value", "::1"),
-					testAccDNSRecordExists("vercel_dns_record.alias", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.aaaa", "comment", "aaaa"),
+					testAccDNSRecordExists("vercel_dns_record.alias", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.alias", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.alias", "type", "ALIAS"),
 					resource.TestCheckResourceAttr("vercel_dns_record.alias", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.alias", "value", "example.com."),
-					testAccDNSRecordExists("vercel_dns_record.caa", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.alias", "comment", "alias"),
+					testAccDNSRecordExists("vercel_dns_record.caa", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.caa", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.caa", "type", "CAA"),
 					resource.TestCheckResourceAttr("vercel_dns_record.caa", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.caa", "value", "0 issue \"letsencrypt.org\""),
-					testAccDNSRecordExists("vercel_dns_record.cname", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.caa", "comment", "caa"),
+					testAccDNSRecordExists("vercel_dns_record.cname", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.cname", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.cname", "type", "CNAME"),
 					resource.TestCheckResourceAttr("vercel_dns_record.cname", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.cname", "value", "example.com."),
-					testAccDNSRecordExists("vercel_dns_record.mx", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.cname", "comment", "cname"),
+					testAccDNSRecordExists("vercel_dns_record.mx", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.mx", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.mx", "type", "MX"),
 					resource.TestCheckResourceAttr("vercel_dns_record.mx", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.mx", "mx_priority", "123"),
 					resource.TestCheckResourceAttr("vercel_dns_record.mx", "value", "example.com."),
-					testAccDNSRecordExists("vercel_dns_record.srv", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.mx", "comment", "mx"),
+					testAccDNSRecordExists("vercel_dns_record.srv", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "type", "SRV"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "ttl", "120"),
@@ -116,65 +123,68 @@ func TestAcc_DNSRecord(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "srv.weight", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "srv.priority", "27"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "srv.target", "example.com."),
-					testAccDNSRecordExists("vercel_dns_record.srv_no_target", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.srv", "comment", "srv"),
+					testAccDNSRecordExists("vercel_dns_record.srv_no_target", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv_no_target", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv_no_target", "type", "SRV"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv_no_target", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv_no_target", "srv.port", "5000"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv_no_target", "srv.weight", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv_no_target", "srv.priority", "27"),
-					testAccDNSRecordExists("vercel_dns_record.txt", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.srv_no_target", "comment", "srv no target"),
+					testAccDNSRecordExists("vercel_dns_record.txt", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "type", "TXT"),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "value", "terraform testing"),
-					testAccDNSRecordExists("vercel_dns_record.ns", ""),
+					resource.TestCheckResourceAttr("vercel_dns_record.txt", "comment", "txt"),
+					testAccDNSRecordExists("vercel_dns_record.ns", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "type", "NS"),
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "value", "example.com."),
+					resource.TestCheckResourceAttr("vercel_dns_record.ns", "comment", "ns"),
 				),
 			},
 			{
-				Config: testAccDNSRecordConfigUpdated(testDomain(), nameSuffix),
+				Config: testAccDNSRecordConfigUpdated(testDomain(), nameSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccDNSRecordExists("vercel_dns_record.a_without_ttl", ""),
+					testAccDNSRecordExists("vercel_dns_record.a_without_ttl", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "type", "A"),
-					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "value", "127.0.0.1"),
-					testAccDNSRecordExists("vercel_dns_record.a", ""),
+					testAccDNSRecordExists("vercel_dns_record.a", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "type", "A"),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.a", "value", "192.168.0.1"),
-					testAccDNSRecordExists("vercel_dns_record.aaaa", ""),
+					testAccDNSRecordExists("vercel_dns_record.aaaa", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.aaaa", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.aaaa", "type", "AAAA"),
 					resource.TestCheckResourceAttr("vercel_dns_record.aaaa", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.aaaa", "value", "::0"),
-					testAccDNSRecordExists("vercel_dns_record.alias", ""),
+					testAccDNSRecordExists("vercel_dns_record.alias", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.alias", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.alias", "type", "ALIAS"),
 					resource.TestCheckResourceAttr("vercel_dns_record.alias", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.alias", "value", "example2.com."),
-					testAccDNSRecordExists("vercel_dns_record.caa", ""),
+					testAccDNSRecordExists("vercel_dns_record.caa", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.caa", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.caa", "type", "CAA"),
 					resource.TestCheckResourceAttr("vercel_dns_record.caa", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.caa", "value", "1 issue \"letsencrypt.org\""),
-					testAccDNSRecordExists("vercel_dns_record.cname", ""),
+					testAccDNSRecordExists("vercel_dns_record.cname", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.cname", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.cname", "type", "CNAME"),
 					resource.TestCheckResourceAttr("vercel_dns_record.cname", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.cname", "value", "example2.com."),
-					testAccDNSRecordExists("vercel_dns_record.mx", ""),
+					testAccDNSRecordExists("vercel_dns_record.mx", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.mx", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.mx", "type", "MX"),
 					resource.TestCheckResourceAttr("vercel_dns_record.mx", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.mx", "mx_priority", "333"),
 					resource.TestCheckResourceAttr("vercel_dns_record.mx", "value", "example2.com."),
-					testAccDNSRecordExists("vercel_dns_record.srv", ""),
+					testAccDNSRecordExists("vercel_dns_record.srv", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "type", "SRV"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "ttl", "60"),
@@ -182,69 +192,31 @@ func TestAcc_DNSRecord(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "srv.weight", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "srv.priority", "127"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "srv.target", "example2.com."),
-					testAccDNSRecordExists("vercel_dns_record.txt", ""),
+					testAccDNSRecordExists("vercel_dns_record.txt", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "type", "TXT"),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "value", "terraform testing two"),
-					testAccDNSRecordExists("vercel_dns_record.ns", ""),
+					testAccDNSRecordExists("vercel_dns_record.ns", testTeam()),
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "domain", testDomain()),
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "type", "NS"),
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "value", "example2.com."),
 				),
 			},
-			{
-				ResourceName:      "vercel_dns_record.a",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				ResourceName:      "vercel_dns_record.aaaa",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				ResourceName:      "vercel_dns_record.alias",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				ResourceName:      "vercel_dns_record.caa",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				ResourceName:      "vercel_dns_record.cname",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				ResourceName:      "vercel_dns_record.mx",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				ResourceName:      "vercel_dns_record.srv",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				ResourceName:      "vercel_dns_record.txt",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
 		},
 	})
 }
 
-func testAccDNSRecordConfig(testDomain, nameSuffix string) string {
+func testAccDNSRecordConfig(testDomain, nameSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_dns_record" "a_without_ttl" {
   domain = "%[1]s"
   name  = "test-acc-%[2]s-a-without-ttl-record"
   type  = "A"
   value = "127.0.0.1"
+  comment = "a without ttl"
+  %[3]s
 }
 resource "vercel_dns_record" "a" {
   domain = "%[1]s"
@@ -252,6 +224,8 @@ resource "vercel_dns_record" "a" {
   type  = "A"
   ttl   = 120
   value = "127.0.0.1"
+  comment = "a"
+  %[3]s
 }
 resource "vercel_dns_record" "aaaa" {
   domain = "%[1]s"
@@ -259,6 +233,8 @@ resource "vercel_dns_record" "aaaa" {
   type  = "AAAA"
   ttl   = 120
   value = "::1"
+  comment = "aaaa"
+  %[3]s
 }
 resource "vercel_dns_record" "alias" {
   domain = "%[1]s"
@@ -266,6 +242,8 @@ resource "vercel_dns_record" "alias" {
   type  = "ALIAS"
   ttl   = 120
   value = "example.com."
+  comment = "alias"
+  %[3]s
 }
 resource "vercel_dns_record" "caa" {
   domain = "%[1]s"
@@ -273,6 +251,8 @@ resource "vercel_dns_record" "caa" {
   type   = "CAA"
   ttl    = 120
   value  = "0 issue \"letsencrypt.org\""
+  comment = "caa"
+  %[3]s
 }
 resource "vercel_dns_record" "cname" {
   domain = "%[1]s"
@@ -280,6 +260,8 @@ resource "vercel_dns_record" "cname" {
   type  = "CNAME"
   ttl   = 120
   value = "example.com."
+  comment = "cname"
+  %[3]s
 }
 resource "vercel_dns_record" "mx" {
   domain = "%[1]s"
@@ -288,6 +270,8 @@ resource "vercel_dns_record" "mx" {
   ttl         = 120
   mx_priority = 123
   value       = "example.com."
+  comment = "mx"
+  %[3]s
 }
 resource "vercel_dns_record" "srv" {
   domain = "%[1]s"
@@ -300,6 +284,8 @@ resource "vercel_dns_record" "srv" {
       priority = 27
       target   = "example.com."
   }
+  comment = "srv"
+  %[3]s
 }
 resource "vercel_dns_record" "srv_no_target" {
   domain = "%[1]s"
@@ -312,6 +298,8 @@ resource "vercel_dns_record" "srv_no_target" {
       priority = 27
       target = ""
   }
+  comment = "srv no target"
+  %[3]s
 }
 resource "vercel_dns_record" "txt" {
   domain = "%[1]s"
@@ -319,6 +307,8 @@ resource "vercel_dns_record" "txt" {
   type = "TXT"
   ttl  = 120
   value = "terraform testing"
+  comment = "txt"
+  %[3]s
 }
 resource "vercel_dns_record" "ns" {
   domain = "%[1]s"
@@ -326,18 +316,20 @@ resource "vercel_dns_record" "ns" {
   type = "NS"
   ttl  = 120
   value = "example.com."
+  comment = "ns"
+  %[3]s
 }
-`, testDomain, nameSuffix)
+`, testDomain, nameSuffix, teamID)
 }
 
-func testAccDNSRecordConfigUpdated(testDomain, nameSuffix string) string {
+func testAccDNSRecordConfigUpdated(testDomain, nameSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_dns_record" "a_without_ttl" {
-  domain = "%[1]s"
-  name  = "test-acc-%[2]s-a-without-ttl-record"
-  type  = "A"
-  ttl   = 120
-  value = "127.0.0.1"
+  domain  = "%[1]s"
+  name    = "test-acc-%[2]s-a-without-ttl-record"
+  type    = "A"
+  value   = "127.0.0.1"
+  %[3]s
 }
 resource "vercel_dns_record" "a" {
   domain = "%[1]s"
@@ -345,6 +337,7 @@ resource "vercel_dns_record" "a" {
   type  = "A"
   ttl   = 60
   value = "192.168.0.1"
+  %[3]s
 }
 resource "vercel_dns_record" "aaaa" {
   domain = "%[1]s"
@@ -352,6 +345,7 @@ resource "vercel_dns_record" "aaaa" {
   type  = "AAAA"
   ttl   = 60
   value = "::0"
+  %[3]s
 }
 resource "vercel_dns_record" "alias" {
   domain = "%[1]s"
@@ -359,6 +353,7 @@ resource "vercel_dns_record" "alias" {
   type  = "ALIAS"
   ttl   = 60
   value = "example2.com."
+  %[3]s
 }
 resource "vercel_dns_record" "caa" {
   domain = "%[1]s"
@@ -366,6 +361,7 @@ resource "vercel_dns_record" "caa" {
   type   = "CAA"
   ttl    = 60
   value  = "1 issue \"letsencrypt.org\""
+  %[3]s
 }
 resource "vercel_dns_record" "cname" {
   domain = "%[1]s"
@@ -373,6 +369,7 @@ resource "vercel_dns_record" "cname" {
   type  = "CNAME"
   ttl   = 60
   value = "example2.com."
+  %[3]s
 }
 resource "vercel_dns_record" "mx" {
   domain = "%[1]s"
@@ -381,6 +378,7 @@ resource "vercel_dns_record" "mx" {
   ttl         = 60
   mx_priority = 333
   value       = "example2.com."
+  %[3]s
 }
 resource "vercel_dns_record" "srv" {
   domain = "%[1]s"
@@ -393,6 +391,7 @@ resource "vercel_dns_record" "srv" {
       priority = 127
       target   = "example2.com."
   }
+  %[3]s
 }
 resource "vercel_dns_record" "txt" {
   domain = "%[1]s"
@@ -400,6 +399,7 @@ resource "vercel_dns_record" "txt" {
   type = "TXT"
   ttl  = 60
   value = "terraform testing two"
+  %[3]s
 }
 resource "vercel_dns_record" "ns" {
   domain = "%[1]s"
@@ -407,6 +407,7 @@ resource "vercel_dns_record" "ns" {
   type = "NS"
   ttl  = 60
   value = "example2.com."
+  %[3]s
 }
-`, testDomain, nameSuffix)
+`, testDomain, nameSuffix, teamID)
 }

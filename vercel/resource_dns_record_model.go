@@ -28,6 +28,7 @@ type DNSRecord struct {
 	TeamID     types.String `tfsdk:"team_id"`
 	Type       types.String `tfsdk:"type"`
 	Value      types.String `tfsdk:"value"`
+	Comment    types.String `tfsdk:"comment"`
 }
 
 func (d DNSRecord) toCreateDNSRecordRequest() client.CreateDNSRecordRequest {
@@ -49,6 +50,7 @@ func (d DNSRecord) toCreateDNSRecordRequest() client.CreateDNSRecordRequest {
 		Type:       d.Type.ValueString(),
 		Value:      d.Value.ValueString(),
 		SRV:        srv,
+		Comment:    d.Comment.ValueString(),
 	}
 }
 
@@ -68,6 +70,7 @@ func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 		SRV:        srv,
 		TTL:        toInt64Pointer(d.TTL),
 		Value:      toStrPointer(d.Value),
+		Comment:    d.Comment.ValueString(),
 	}
 }
 
@@ -80,6 +83,7 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srv *SRV
 		TTL:        types.Int64Value(r.TTL),
 		TeamID:     toTeamID(r.TeamID),
 		Type:       types.StringValue(r.RecordType),
+		Comment:    types.StringValue(r.Comment),
 	}
 
 	if r.RecordType == "SRV" {
