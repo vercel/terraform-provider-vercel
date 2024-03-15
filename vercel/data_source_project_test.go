@@ -28,6 +28,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "vercel_authentication.deployment_type", "standard_protection"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "password_protection.deployment_type", "standard_protection"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.addresses.#", "1"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "automatically_expose_system_environment_variables", "true"),
 					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "trusted_ips.addresses.*", map[string]string{
 						"value": "1.1.1.1",
 						"note":  "notey note",
@@ -82,6 +83,7 @@ resource "vercel_project" "test" {
       target = ["production"]
     }
   ]
+  automatically_expose_system_environment_variables = true
 }
 
 data "vercel_project" "test" {

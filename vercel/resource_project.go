@@ -298,6 +298,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Computed:    true,
 				Description: "If `protection_bypass_for_automation` is enabled, use this value in the `x-vercel-protection-bypass` header to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments.",
 			},
+			"automatically_expose_system_environment_variables": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
+			},
 		},
 	}
 }
@@ -348,7 +353,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	if plan.PasswordProtection != nil || plan.VercelAuthentication != nil || plan.TrustedIps != nil {
+	if plan.PasswordProtection != nil || plan.VercelAuthentication != nil || plan.TrustedIps != nil || !plan.AutoExposeSystemEnvVars.IsNull() {
 		out, err = r.client.UpdateProject(ctx, result.ID.ValueString(), plan.TeamID.ValueString(), plan.toUpdateProjectRequest(plan.Name.ValueString()), !plan.Environment.IsNull())
 		if err != nil {
 			resp.Diagnostics.AddError(

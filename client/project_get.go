@@ -88,6 +88,7 @@ type ProjectResponse struct {
 	PasswordProtection       *PasswordProtection         `json:"passwordProtection"`
 	TrustedIps               *TrustedIps                 `json:"trustedIps"`
 	ProtectionBypass         map[string]ProtectionBypass `json:"protectionBypass"`
+	AutoExposeSystemEnvVars  *bool                       `json:"autoExposeSystemEnvs"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.
