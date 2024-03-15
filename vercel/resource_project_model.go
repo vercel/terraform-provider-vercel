@@ -30,6 +30,7 @@ type Project struct {
 	TrustedIps                          *TrustedIps                     `tfsdk:"trusted_ips"`
 	ProtectionBypassForAutomation       types.Bool                      `tfsdk:"protection_bypass_for_automation"`
 	ProtectionBypassForAutomationSecret types.String                    `tfsdk:"protection_bypass_for_automation_secret"`
+	AutoExposeSystemEnvVars             types.Bool                      `tfsdk:"automatically_expose_system_environment_variables"`
 }
 
 var nullProject = Project{
@@ -120,6 +121,7 @@ func (p *Project) toUpdateProjectRequest(oldName string) client.UpdateProjectReq
 		PasswordProtection:          p.PasswordProtection.toUpdateProjectRequest(),
 		VercelAuthentication:        p.VercelAuthentication.toUpdateProjectRequest(),
 		TrustedIps:                  p.TrustedIps.toUpdateProjectRequest(),
+		AutoExposeSystemEnvVars:     toBoolPointer(p.AutoExposeSystemEnvVars),
 	}
 }
 
@@ -471,5 +473,6 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		TrustedIps:                          tip,
 		ProtectionBypassForAutomation:       protectionBypass,
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
+		AutoExposeSystemEnvVars:             fromBoolPointer(response.AutoExposeSystemEnvVars),
 	}, nil
 }

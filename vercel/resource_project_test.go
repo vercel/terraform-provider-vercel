@@ -59,6 +59,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "root_directory", "ui/src"),
 					resource.TestCheckResourceAttr("vercel_project.test", "ignore_command", "echo 'wat'"),
 					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "syd1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "automatically_expose_system_environment_variables", "true"),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
 						"key":   "foo",
 						"value": "bar",
@@ -570,6 +571,7 @@ resource "vercel_project" "test" {
   output_directory = ".output"
   public_source = true
   root_directory = "ui/src"
+  automatically_expose_system_environment_variables = true
   environment = [
     {
       key    = "foo"

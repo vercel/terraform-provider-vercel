@@ -26,6 +26,7 @@ type ProjectDataSource struct {
 	VercelAuthentication     *VercelAuthentication `tfsdk:"vercel_authentication"`
 	PasswordProtection       *PasswordProtection   `tfsdk:"password_protection"`
 	TrustedIps               *TrustedIps           `tfsdk:"trusted_ips"`
+	AutoExposeSystemEnvVars  types.Bool            `tfsdk:"automatically_expose_system_environment_variables"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project) (ProjectDataSource, error) {
@@ -58,5 +59,6 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		VercelAuthentication:     project.VercelAuthentication,
 		PasswordProtection:       pp,
 		TrustedIps:               project.TrustedIps,
+		AutoExposeSystemEnvVars:  fromBoolPointer(response.AutoExposeSystemEnvVars),
 	}, nil
 }

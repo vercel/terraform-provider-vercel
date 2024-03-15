@@ -213,6 +213,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Description: "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.",
 			},
+			"automatically_expose_system_environment_variables": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
+			},
 		},
 	}
 }

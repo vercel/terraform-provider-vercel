@@ -27,6 +27,7 @@ type UpdateProjectRequest struct {
 	VercelAuthentication        *VercelAuthentication           `json:"ssoProtection"`
 	PasswordProtection          *PasswordProtectionWithPassword `json:"passwordProtection"`
 	TrustedIps                  *TrustedIps                     `json:"trustedIps"`
+	AutoExposeSystemEnvVars     *bool                           `json:"autoExposeSystemEnvs,omitempty"`
 }
 
 // UpdateProject updates an existing projects configuration within Vercel.
