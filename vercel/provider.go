@@ -57,6 +57,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newProjectDomainResource,
 		newProjectEnvironmentVariableResource,
 		newSharedEnvironmentVariableResource,
+		newEdgeConfigResource,
 	}
 }
 
@@ -68,6 +69,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newProjectDataSource,
 		newProjectDirectoryDataSource,
 		newSharedEnvironmentVariableDataSource,
+		newEdgeConfigDataSource,
 	}
 }
 
