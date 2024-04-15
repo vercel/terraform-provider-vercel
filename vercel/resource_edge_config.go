@@ -61,9 +61,8 @@ Provides an Edge Config resource.
 An Edge Config is a global data store that enables experimentation with feature flags, A/B testing, critical redirects, and more.`,
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				Description:   "The name/slug of the Edge Config.",
-				Required:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Description: "The name/slug of the Edge Config.",
+				Required:    true,
 				Validators: []validator.String{
 					stringRegex(
 						regexp.MustCompile(`^[a-z0-9\_\-]{0,32}$`),
@@ -75,10 +74,12 @@ An Edge Config is a global data store that enables experimentation with feature 
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Edge Config should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
-				Computed: true,
+				Description:   "The ID of the Edge Config.",
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 		},
 	}
@@ -175,10 +176,45 @@ func (r *edgeConfigResource) Read(ctx context.Context, req resource.ReadRequest,
 
 // Update does nothing.
 func (r *edgeConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError(
-		"Updating an Edge Config is not supported",
-		"Updating an Edge Config is not supported",
-	)
+	var plan EdgeConfig
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	out, err := r.client.UpdateEdgeConfig(ctx, client.UpdateEdgeConfigRequest{
+		Slug:   plan.Name.ValueString(),
+		TeamID: plan.TeamID.ValueString(),
+		ID:     plan.ID.ValueString(),
+	})
+	if client.NotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating Edge Config",
+			fmt.Sprintf("Could not update Edge Config %s %s, unexpected error: %s",
+				plan.TeamID.ValueString(),
+				plan.ID.ValueString(),
+				err,
+			),
+		)
+		return
+	}
+
+	result := responseToEdgeConfig(out)
+	tflog.Trace(ctx, "update edge config", map[string]interface{}{
+		"team_id":        result.TeamID.ValueString(),
+		"edge_config_id": result.ID.ValueString(),
+	})
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Delete deletes an Edge Config.

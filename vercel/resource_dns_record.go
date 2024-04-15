@@ -2,7 +2,6 @@ package vercel
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -314,8 +313,6 @@ func (r *dnsRecordResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	thing, _ := json.Marshal(plan.toUpdateRequest())
-	tflog.Error(ctx, "UPDATE REQUEST", map[string]interface{}{"request": string(thing)})
 	out, err := r.client.UpdateDNSRecord(
 		ctx,
 		plan.TeamID.ValueString(),

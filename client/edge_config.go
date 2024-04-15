@@ -53,6 +53,32 @@ func (c *Client) GetEdgeConfig(ctx context.Context, id, teamID string) (e EdgeCo
 	return e, err
 }
 
+type UpdateEdgeConfigRequest struct {
+	Slug   string `json:"slug"`
+	TeamID string `json:"-"`
+	ID     string `json:"-"`
+}
+
+func (c *Client) UpdateEdgeConfig(ctx context.Context, request UpdateEdgeConfigRequest) (e EdgeConfig, err error) {
+	url := fmt.Sprintf("%s/v1/edge-config/%s", c.baseURL, request.ID)
+	if c.teamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	}
+
+	payload := string(mustMarshal(request))
+	tflog.Trace(ctx, "updating edge config", map[string]interface{}{
+		"url":     url,
+		"payload": payload,
+	})
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PUT",
+		url:    url,
+		body:   payload,
+	}, &e)
+	return e, err
+}
+
 func (c *Client) DeleteEdgeConfig(ctx context.Context, id, teamID string) error {
 	url := fmt.Sprintf("%s/v1/edge-config/%s", c.baseURL, id)
 	if c.teamID(teamID) != "" {
