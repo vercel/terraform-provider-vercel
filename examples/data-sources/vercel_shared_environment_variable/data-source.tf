@@ -1,5 +1,5 @@
 # Environment variables can be identified by their ID, or by their key and target.
-# The ID is hard to find, but can be taken from the network tab, inside developer tools, on the shared environment variable page.
+# The ID can be taken from the network tab inside developer tools, while you are on the project page.
 data "vercel_shared_environment_variable" "example" {
   id = "xxxxxxxxxxxxxxx"
 }
