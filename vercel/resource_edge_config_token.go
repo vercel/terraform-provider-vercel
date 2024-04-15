@@ -79,10 +79,11 @@ An Edge Config token is used to authenticate against an Edge Config's endpoint.
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Edge Config should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
-				Computed: true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				Computed:      true,
 			},
 			"token": schema.StringAttribute{
 				Description: "A read access token used for authenticating against the Edge Config's endpoint for high volume, low-latency requests.",

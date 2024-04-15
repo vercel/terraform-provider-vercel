@@ -70,7 +70,7 @@ An Alias allows a ` + "`vercel_deployment` to be accessed through a different UR
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Alias and Deployment exist under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
 				Computed: true,
@@ -156,24 +156,10 @@ func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 // Update updates the Alias state.
 func (r *aliasResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan Alias
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		resp.Diagnostics.AddError(
-			"Error getting alias plan",
-			"Error getting alias plan",
-		)
-		return
-	}
-
-	var state Alias
-	diags = req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
+	resp.Diagnostics.AddError(
+		"Updating an Alias is not supported",
+		"Updating an Alias is not supported",
+	)
 }
 
 // Delete deletes an Alias.

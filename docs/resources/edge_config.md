@@ -50,7 +50,7 @@ resource "vercel_project_environment_variable" "example" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the Edge Config.
 
 ## Import
 

@@ -65,6 +65,14 @@ func TestAcc_EdgeConfigResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_edge_config.test", "id"),
 				),
 			},
+			{
+				Config: testAccResourceEdgeConfigUpdated(name, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckEdgeConfigExists(testTeam(), "vercel_edge_config.test"),
+					resource.TestCheckResourceAttr("vercel_edge_config.test", "name", fmt.Sprintf("%s-updated", name)),
+					resource.TestCheckResourceAttrSet("vercel_edge_config.test", "id"),
+				),
+			},
 		},
 	})
 }
@@ -73,6 +81,15 @@ func testAccResourceEdgeConfig(name, team string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test" {
     name         = "%[1]s"
+    %[2]s
+}
+`, name, team)
+}
+
+func testAccResourceEdgeConfigUpdated(name, team string) string {
+	return fmt.Sprintf(`
+resource "vercel_edge_config" "test" {
+    name         = "%[1]s-updated"
     %[2]s
 }
 `, name, team)
