@@ -101,10 +101,6 @@ func (d *edgeConfigTokenDataSource) Read(ctx context.Context, req datasource.Rea
 		TeamID:       config.TeamID.ValueString(),
 		EdgeConfigID: config.EdgeConfigID.ValueString(),
 	})
-	if client.NotFound(err) {
-		resp.State.RemoveResource(ctx)
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading EdgeConfig Token",
@@ -118,7 +114,7 @@ func (d *edgeConfigTokenDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	result := responseToEdgeConfigToken(out)
-	tflog.Trace(ctx, "read edge config token", map[string]interface{}{
+	tflog.Info(ctx, "read edge config token", map[string]interface{}{
 		"team_id":        result.TeamID.ValueString(),
 		"edge_config_id": result.ID.ValueString(),
 	})

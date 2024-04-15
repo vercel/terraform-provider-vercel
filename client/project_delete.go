@@ -14,7 +14,7 @@ func (c *Client) DeleteProject(ctx context.Context, projectID, teamID string) er
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Trace(ctx, "deleting project", map[string]interface{}{
+	tflog.Info(ctx, "deleting project", map[string]interface{}{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{

@@ -50,7 +50,7 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 	}
 
 	payload := string(mustMarshal(request))
-	tflog.Trace(ctx, "creating project", map[string]interface{}{
+	tflog.Info(ctx, "creating project", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

@@ -201,7 +201,7 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 	}
 	payload := string(mustMarshal(request))
 
-	tflog.Trace(ctx, "creating deployment", map[string]interface{}{
+	tflog.Info(ctx, "creating deployment", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

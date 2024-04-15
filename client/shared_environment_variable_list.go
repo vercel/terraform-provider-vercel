@@ -13,7 +13,7 @@ func (c *Client) ListSharedEnvironmentVariables(ctx context.Context, teamID stri
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Trace(ctx, "listing shared environment variables", map[string]interface{}{
+	tflog.Info(ctx, "listing shared environment variables", map[string]interface{}{
 		"url": url,
 	})
 	res := struct {

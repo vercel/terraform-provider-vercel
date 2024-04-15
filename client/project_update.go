@@ -37,7 +37,7 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Trace(ctx, "updating project", map[string]interface{}{
+	tflog.Info(ctx, "updating project", map[string]interface{}{
 		"url":                             url,
 		"payload":                         payload,
 		"shouldFetchEnvironmentVariables": shouldFetchEnvironmentVariables,

@@ -35,7 +35,7 @@ func (c *Client) CreateEdgeConfigToken(ctx context.Context, request CreateEdgeCo
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Trace(ctx, "creating edge config token", map[string]interface{}{
+	tflog.Info(ctx, "creating edge config token", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
@@ -70,7 +70,7 @@ func (c *Client) DeleteEdgeConfigToken(ctx context.Context, request EdgeConfigTo
 		},
 	))
 
-	tflog.Trace(ctx, "deleting edge config token", map[string]interface{}{
+	tflog.Info(ctx, "deleting edge config token", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
@@ -88,7 +88,7 @@ func (c *Client) GetEdgeConfigToken(ctx context.Context, request EdgeConfigToken
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 
-	tflog.Trace(ctx, "getting edge config token", map[string]interface{}{
+	tflog.Info(ctx, "getting edge config token", map[string]interface{}{
 		"url": url,
 	})
 

@@ -19,7 +19,7 @@ func (c *Client) DeleteAlias(ctx context.Context, aliasUID string, teamID string
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Trace(ctx, "deleting alias", map[string]interface{}{
+	tflog.Info(ctx, "deleting alias", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

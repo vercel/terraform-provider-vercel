@@ -24,7 +24,7 @@ func (c *Client) CreateEdgeConfig(ctx context.Context, request CreateEdgeConfigR
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Trace(ctx, "creating edge config", map[string]interface{}{
+	tflog.Info(ctx, "creating edge config", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
@@ -42,7 +42,7 @@ func (c *Client) GetEdgeConfig(ctx context.Context, id, teamID string) (e EdgeCo
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Trace(ctx, "reading edge config", map[string]interface{}{
+	tflog.Info(ctx, "reading edge config", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -84,7 +84,7 @@ func (c *Client) DeleteEdgeConfig(ctx context.Context, id, teamID string) error 
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Trace(ctx, "deleting edge config", map[string]interface{}{
+	tflog.Info(ctx, "deleting edge config", map[string]interface{}{
 		"url": url,
 	})
 
@@ -93,4 +93,20 @@ func (c *Client) DeleteEdgeConfig(ctx context.Context, id, teamID string) error 
 		method: "DELETE",
 		url:    url,
 	}, nil)
+}
+
+func (c *Client) ListEdgeConfigs(ctx context.Context, teamID string) (e []EdgeConfig, err error) {
+	url := fmt.Sprintf("%s/v1/edge-config", c.baseURL)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	}
+	tflog.Info(ctx, "listing edge configs", map[string]interface{}{
+		"url": url,
+	})
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "GET",
+		url:    url,
+	}, &e)
+	return e, err
 }

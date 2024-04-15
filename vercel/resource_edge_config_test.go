@@ -43,7 +43,7 @@ func testCheckEdgeConfigDeleted(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
 		if !client.NotFound(err) {
-			return fmt.Errorf("Unexpected error checking for deleted project: %s", err)
+			return fmt.Errorf("Unexpected error checking for deleted edge config: %s", err)
 		}
 
 		return nil

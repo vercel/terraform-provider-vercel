@@ -380,7 +380,7 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	result := convertResponseToDeployment(out, plan)
-	tflog.Trace(ctx, "created deployment", map[string]interface{}{
+	tflog.Info(ctx, "created deployment", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})
@@ -420,7 +420,7 @@ func (r *deploymentResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	result := convertResponseToDeployment(out, state)
-	tflog.Trace(ctx, "read deployment", map[string]interface{}{
+	tflog.Info(ctx, "read deployment", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})
@@ -487,6 +487,8 @@ func (r *deploymentResource) Delete(ctx context.Context, req resource.DeleteRequ
 			)
 			return
 		}
-		tflog.Trace(ctx, fmt.Sprintf("deleted deployment %s", dResp.UID))
+		tflog.Info(ctx, "deleted deployment", map[string]any{
+			"deployment_id": dResp.UID,
+		})
 	}
 }

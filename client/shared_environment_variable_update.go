@@ -29,7 +29,7 @@ func (c *Client) UpdateSharedEnvironmentVariable(ctx context.Context, request Up
 		},
 	}))
 
-	tflog.Trace(ctx, "updating shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "updating shared environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

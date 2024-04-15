@@ -39,6 +39,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	err = deleteAllEdgeConfigs(ctx, c, teamID)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func deleteAllSharedEnvironmentVariables(ctx context.Context, c *client.Client, teamID string) error {
@@ -98,6 +102,23 @@ func deleteAllProjects(ctx context.Context, c *client.Client, teamID string) err
 			return fmt.Errorf("error deleting project: %w", err)
 		}
 		log.Printf("Deleted project %s", p.Name)
+	}
+
+	return nil
+}
+
+func deleteAllEdgeConfigs(ctx context.Context, c *client.Client, teamID string) error {
+	ecfgs, err := c.ListEdgeConfigs(ctx, teamID)
+	if err != nil {
+		return fmt.Errorf("error listing edge configs: %w", err)
+	}
+
+	for _, ecfg := range ecfgs {
+		err = c.DeleteEdgeConfig(ctx, ecfg.ID, teamID)
+		if err != nil {
+			return fmt.Errorf("error deleting edge config: %w", err)
+		}
+		log.Printf("Deleted edge config %s", ecfg.ID)
 	}
 
 	return nil

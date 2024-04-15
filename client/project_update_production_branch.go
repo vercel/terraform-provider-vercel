@@ -19,7 +19,7 @@ func (c *Client) UpdateProductionBranch(ctx context.Context, request UpdateProdu
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Trace(ctx, "updating project production branch", map[string]interface{}{
+	tflog.Info(ctx, "updating project production branch", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

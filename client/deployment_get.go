@@ -14,7 +14,7 @@ func (c *Client) GetDeployment(ctx context.Context, deploymentID, teamID string)
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Trace(ctx, "getting deployment", map[string]interface{}{
+	tflog.Info(ctx, "getting deployment", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

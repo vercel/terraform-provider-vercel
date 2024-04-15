@@ -29,10 +29,11 @@ func (e APIError) Error() string {
 }
 
 type clientRequest struct {
-	ctx    context.Context
-	method string
-	url    string
-	body   string
+	ctx              context.Context
+	method           string
+	url              string
+	body             string
+	errorOnNoContent bool
 }
 
 func (cr *clientRequest) toHTTPRequest() (*http.Request, error) {
@@ -64,7 +65,7 @@ func (c *Client) doRequest(req clientRequest, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	err = c._doRequest(r, v)
+	err = c._doRequest(r, v, req.errorOnNoContent)
 	for retries := 0; retries < 3; retries++ {
 		var apiErr APIError
 		if errors.As(err, &apiErr) && // we received an api error
@@ -80,7 +81,7 @@ func (c *Client) doRequest(req clientRequest, v interface{}) error {
 			if err != nil {
 				return err
 			}
-			err = c._doRequest(r, v)
+			err = c._doRequest(r, v, req.errorOnNoContent)
 			if err != nil {
 				continue
 			}
@@ -93,7 +94,7 @@ func (c *Client) doRequest(req clientRequest, v interface{}) error {
 	return err
 }
 
-func (c *Client) _doRequest(req *http.Request, v interface{}) error {
+func (c *Client) _doRequest(req *http.Request, v interface{}, errorOnNoContent bool) error {
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.token))
 	resp, err := c.http().Do(req)
 	if err != nil {
@@ -139,9 +140,17 @@ func (c *Client) _doRequest(req *http.Request, v interface{}) error {
 		return nil
 	}
 
+	if errorOnNoContent && resp.StatusCode == 204 {
+		return APIError{
+			StatusCode: 204,
+			Code:       "no_content",
+			Message:    "No content",
+		}
+	}
+
 	err = json.Unmarshal(responseBody, v)
 	if err != nil {
-		return fmt.Errorf("error unmarshaling response: %w", err)
+		return fmt.Errorf("error unmarshaling response %s: %w", responseBody, err)
 	}
 
 	return nil

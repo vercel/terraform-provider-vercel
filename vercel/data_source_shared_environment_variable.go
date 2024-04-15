@@ -172,7 +172,7 @@ func (d *sharedEnvironmentVariableDataSource) Read(ctx context.Context, req data
 			)
 			return
 		}
-		tflog.Trace(ctx, "list shared environment variable", map[string]interface{}{
+		tflog.Info(ctx, "list shared environment variable", map[string]interface{}{
 			"team_id": config.TeamID.ValueString(),
 		})
 		var configTarget []types.String
@@ -232,7 +232,7 @@ func (d *sharedEnvironmentVariableDataSource) Read(ctx context.Context, req data
 		)
 		return
 	}
-	tflog.Trace(ctx, "read shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "read shared environment variable", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})

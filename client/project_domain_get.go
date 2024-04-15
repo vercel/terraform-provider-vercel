@@ -25,7 +25,7 @@ func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Trace(ctx, "getting project domain", map[string]interface{}{
+	tflog.Info(ctx, "getting project domain", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

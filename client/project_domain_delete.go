@@ -14,7 +14,7 @@ func (c *Client) DeleteProjectDomain(ctx context.Context, projectID, domain, tea
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Trace(ctx, "deleting project domain", map[string]interface{}{
+	tflog.Info(ctx, "deleting project domain", map[string]interface{}{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{
