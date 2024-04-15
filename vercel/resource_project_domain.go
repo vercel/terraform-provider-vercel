@@ -3,7 +3,6 @@ package vercel
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -263,25 +262,10 @@ func (r *projectDomainResource) Delete(ctx context.Context, req resource.DeleteR
 	})
 }
 
-// splitProjectDomainID is a helper function for splitting an import ID into the corresponding parts.
-// It also validates whether the ID is in a correct format.
-func splitProjectDomainID(id string) (teamID, projectID, domain string, ok bool) {
-	attributes := strings.Split(id, "/")
-	if len(attributes) == 2 {
-		// we have project_id/domain
-		return "", attributes[0], attributes[1], true
-	}
-	if len(attributes) == 3 {
-		// we have team_id/project_id/domain
-		return attributes[0], attributes[1], attributes[2], true
-	}
-	return "", "", "", false
-}
-
 // ImportState takes an identifier and reads all the project domain information from the Vercel API.
 // Note that environment variables are also read. The results are then stored in terraform state.
 func (r *projectDomainResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, projectID, domain, ok := splitProjectDomainID(req.ID)
+	teamID, projectID, domain, ok := splitInto2Or3(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing project domain",

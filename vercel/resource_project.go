@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -720,23 +719,10 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	})
 }
 
-// splitID is a helper function for splitting an import ID into the corresponding parts.
-// It also validates whether the ID is in a correct format.
-func splitID(id string) (teamID, _id string, ok bool) {
-	if strings.Contains(id, "/") {
-		attributes := strings.Split(id, "/")
-		if len(attributes) != 2 {
-			return "", "", false
-		}
-		return attributes[0], attributes[1], true
-	}
-	return "", id, true
-}
-
 // ImportState takes an identifier and reads all the project information from the Vercel API.
 // Note that environment variables are also read. The results are then stored in terraform state.
 func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, projectID, ok := splitID(req.ID)
+	teamID, projectID, ok := splitInto1Or2(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing project",

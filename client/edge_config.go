@@ -18,7 +18,7 @@ type CreateEdgeConfigRequest struct {
 	TeamID string `json:"-"`
 }
 
-func (c *Client) CreateEdgeConfig(ctx context.Context, request CreateEdgeConfigRequest) (e *EdgeConfig, err error) {
+func (c *Client) CreateEdgeConfig(ctx context.Context, request CreateEdgeConfigRequest) (e EdgeConfig, err error) {
 	url := fmt.Sprintf("%s/v1/edge-config", c.baseURL)
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
@@ -37,7 +37,7 @@ func (c *Client) CreateEdgeConfig(ctx context.Context, request CreateEdgeConfigR
 	return e, err
 }
 
-func (c *Client) GetEdgeConfig(ctx context.Context, id, teamID string) (e *EdgeConfig, err error) {
+func (c *Client) GetEdgeConfig(ctx context.Context, id, teamID string) (e EdgeConfig, err error) {
 	url := fmt.Sprintf("%s/v1/edge-config/%s", c.baseURL, id)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
