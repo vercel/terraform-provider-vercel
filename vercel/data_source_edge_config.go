@@ -50,7 +50,7 @@ func (d *edgeConfigDataSource) Configure(ctx context.Context, req datasource.Con
 func (r *edgeConfigDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: `
-Provides information about an existing Edge Config resource.
+Provides information about an existing Edge Config.
 
 An Edge Config is a global data store that enables experimentation with feature flags, A/B testing, critical redirects, and more.`,
 		Attributes: map[string]schema.Attribute{

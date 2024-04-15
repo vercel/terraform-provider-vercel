@@ -90,7 +90,7 @@ type EdgeConfig struct {
 	TeamID types.String `tfsdk:"team_id"`
 }
 
-func responseToEdgeConfig(out *client.EdgeConfig) EdgeConfig {
+func responseToEdgeConfig(out client.EdgeConfig) EdgeConfig {
 	return EdgeConfig{
 		Name:   types.StringValue(out.Slug),
 		ID:     types.StringValue(out.ID),
@@ -150,7 +150,7 @@ func (r *edgeConfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error reading EdgeConfig",
+			"Error reading Edge Config",
 			fmt.Sprintf("Could not get Edge Config %s %s, unexpected error: %s",
 				state.TeamID.ValueString(),
 				state.ID.ValueString(),
@@ -214,10 +214,10 @@ func (r *edgeConfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 }
 
 func (r *edgeConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, id, ok := splitID(req.ID)
+	teamID, id, ok := splitInto1Or2(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
-			"Error importing edge config",
+			"Error importing Edge Config",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/edge_config_id\" or \"edge_config_id\"", req.ID),
 		)
 	}
@@ -229,7 +229,7 @@ func (r *edgeConfigResource) ImportState(ctx context.Context, req resource.Impor
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error reading EdgeConfig",
+			"Error reading Edge Config",
 			fmt.Sprintf("Could not get Edge Config %s %s, unexpected error: %s",
 				teamID,
 				id,

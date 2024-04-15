@@ -392,7 +392,7 @@ func (r *dnsRecordResource) Delete(ctx context.Context, req resource.DeleteReque
 
 // ImportState takes an identifier and reads all the DNS Record information from the Vercel API.
 func (r *dnsRecordResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, recordID, ok := splitID(req.ID)
+	teamID, recordID, ok := splitInto1Or2(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing DNS Record",
