@@ -33,7 +33,7 @@ func (c *Client) UpdateDNSRecord(ctx context.Context, teamID, recordID string, r
 	}
 
 	payload := string(mustMarshal(request))
-	tflog.Trace(ctx, "updating DNS record", map[string]interface{}{
+	tflog.Info(ctx, "updating DNS record", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

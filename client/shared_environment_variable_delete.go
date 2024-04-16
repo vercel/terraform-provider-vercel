@@ -20,7 +20,7 @@ func (c *Client) DeleteSharedEnvironmentVariable(ctx context.Context, teamID, va
 			variableID,
 		},
 	}))
-	tflog.Trace(ctx, "deleting shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "deleting shared environment variable", map[string]interface{}{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{

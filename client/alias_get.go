@@ -21,7 +21,7 @@ func (c *Client) GetAlias(ctx context.Context, alias, teamID string) (r AliasRes
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Trace(ctx, "getting alias", map[string]interface{}{
+	tflog.Info(ctx, "getting alias", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

@@ -31,7 +31,7 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 	}
 	payload := string(mustMarshal(request.EnvironmentVariable))
 
-	tflog.Trace(ctx, "creating environment variable", map[string]interface{}{
+	tflog.Info(ctx, "creating environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
@@ -59,7 +59,7 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariables))
-	tflog.Trace(ctx, "creating environment variables", map[string]interface{}{
+	tflog.Info(ctx, "creating environment variables", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

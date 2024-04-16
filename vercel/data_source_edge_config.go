@@ -83,10 +83,6 @@ func (d *edgeConfigDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 
 	out, err := d.client.GetEdgeConfig(ctx, config.ID.ValueString(), config.TeamID.ValueString())
-	if client.NotFound(err) {
-		resp.State.RemoveResource(ctx)
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading EdgeConfig",
@@ -100,7 +96,7 @@ func (d *edgeConfigDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 
 	result := responseToEdgeConfig(out)
-	tflog.Trace(ctx, "read edge config", map[string]interface{}{
+	tflog.Info(ctx, "read edge config", map[string]interface{}{
 		"team_id":        result.TeamID.ValueString(),
 		"edge_config_id": result.ID.ValueString(),
 	})

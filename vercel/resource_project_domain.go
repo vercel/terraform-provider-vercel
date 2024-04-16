@@ -131,7 +131,7 @@ func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	result := convertResponseToProjectDomain(out)
-	tflog.Trace(ctx, "added domain to project", map[string]interface{}{
+	tflog.Info(ctx, "added domain to project", map[string]interface{}{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
@@ -172,7 +172,7 @@ func (r *projectDomainResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	result := convertResponseToProjectDomain(out)
-	tflog.Trace(ctx, "read project domain", map[string]interface{}{
+	tflog.Info(ctx, "read project domain", map[string]interface{}{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
@@ -214,7 +214,7 @@ func (r *projectDomainResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	result := convertResponseToProjectDomain(out)
-	tflog.Trace(ctx, "update project domain", map[string]interface{}{
+	tflog.Info(ctx, "update project domain", map[string]interface{}{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
@@ -255,7 +255,7 @@ func (r *projectDomainResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	tflog.Trace(ctx, "delete project domain", map[string]interface{}{
+	tflog.Info(ctx, "delete project domain", map[string]interface{}{
 		"project_id": state.ProjectID.ValueString(),
 		"domain":     state.Domain.ValueString(),
 		"team_id":    state.TeamID.ValueString(),
@@ -287,7 +287,7 @@ func (r *projectDomainResource) ImportState(ctx context.Context, req resource.Im
 	}
 
 	result := convertResponseToProjectDomain(out)
-	tflog.Trace(ctx, "imported project domain", map[string]interface{}{
+	tflog.Info(ctx, "imported project domain", map[string]interface{}{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
 		"team_id":    result.TeamID.ValueString(),

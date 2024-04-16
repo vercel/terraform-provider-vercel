@@ -41,7 +41,7 @@ func (c *Client) CreateSharedEnvironmentVariable(ctx context.Context, request Cr
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariable))
-	tflog.Trace(ctx, "creating shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "creating shared environment variable", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

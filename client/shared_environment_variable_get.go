@@ -13,7 +13,7 @@ func (c *Client) GetSharedEnvironmentVariable(ctx context.Context, teamID, envID
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Trace(ctx, "getting shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "getting shared environment variable", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

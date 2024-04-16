@@ -10,7 +10,7 @@ import (
 // GetTeam returns information about an existing team within vercel.
 func (c *Client) GetTeam(ctx context.Context, idOrSlug string) (r TeamResponse, err error) {
 	url := fmt.Sprintf("%s/v2/teams/%s", c.baseURL, idOrSlug)
-	tflog.Trace(ctx, "getting team", map[string]interface{}{
+	tflog.Info(ctx, "getting team", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

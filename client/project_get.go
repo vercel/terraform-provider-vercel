@@ -97,7 +97,7 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shoul
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Trace(ctx, "getting project", map[string]interface{}{
+	tflog.Info(ctx, "getting project", map[string]interface{}{
 		"url":                    url,
 		"shouldFetchEnvironment": shouldFetchEnvironmentVariables,
 	})

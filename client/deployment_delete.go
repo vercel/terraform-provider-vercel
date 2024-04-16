@@ -20,7 +20,7 @@ func (c *Client) DeleteDeployment(ctx context.Context, deploymentID string, team
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Trace(ctx, "deleting deployment", map[string]interface{}{
+	tflog.Info(ctx, "deleting deployment", map[string]interface{}{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

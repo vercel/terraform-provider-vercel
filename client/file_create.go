@@ -36,10 +36,10 @@ func (c *Client) CreateFile(ctx context.Context, request CreateFileRequest) erro
 	req.Header.Add("x-vercel-digest", request.SHA)
 	req.Header.Set("Content-Type", "application/octet-stream")
 
-	tflog.Trace(ctx, "uploading file", map[string]interface{}{
+	tflog.Info(ctx, "uploading file", map[string]interface{}{
 		"url": url,
 		"sha": request.SHA,
 	})
-	err = c._doRequest(req, nil)
+	err = c._doRequest(req, nil, false)
 	return err
 }

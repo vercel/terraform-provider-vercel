@@ -71,7 +71,7 @@ An Edge Config token is used to authenticate against an Edge Config's endpoint.
 				},
 			},
 			"edge_config_id": schema.StringAttribute{
-				Description:   "The label of the Edge Config Token.",
+				Description:   "The ID of the Edge Config store.",
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -141,7 +141,7 @@ func (r *edgeConfigTokenResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	result := responseToEdgeConfigToken(out)
-	tflog.Trace(ctx, "created Edge Config Token", map[string]interface{}{
+	tflog.Info(ctx, "created Edge Config Token", map[string]interface{}{
 		"team_id":        plan.TeamID.ValueString(),
 		"edge_config_id": result.EdgeConfigID.ValueString(),
 		"token_id":       result.ID.ValueString(),
@@ -186,7 +186,7 @@ func (r *edgeConfigTokenResource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	result := responseToEdgeConfigToken(out)
-	tflog.Trace(ctx, "read edge config token", map[string]interface{}{
+	tflog.Info(ctx, "read edge config token", map[string]interface{}{
 		"team_id":        result.TeamID.ValueString(),
 		"edge_config_id": result.EdgeConfigID.ValueString(),
 		"token_id":       result.ID.ValueString(),
@@ -238,7 +238,7 @@ func (r *edgeConfigTokenResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	tflog.Trace(ctx, "deleted edge config token", map[string]interface{}{
+	tflog.Info(ctx, "deleted edge config token", map[string]interface{}{
 		"team_id":        state.TeamID.ValueString(),
 		"edge_config_id": state.EdgeConfigID.ValueString(),
 		"token_id":       state.ID.ValueString(),
@@ -277,7 +277,7 @@ func (r *edgeConfigTokenResource) ImportState(ctx context.Context, req resource.
 	}
 
 	result := responseToEdgeConfigToken(out)
-	tflog.Trace(ctx, "import edge config token", map[string]interface{}{
+	tflog.Info(ctx, "import edge config token", map[string]interface{}{
 		"team_id":        result.TeamID.ValueString(),
 		"edge_config_id": result.EdgeConfigID.ValueString(),
 		"token_id":       result.ID.ValueString(),

@@ -45,7 +45,7 @@ resource "vercel_project_environment_variable" "example" {
 
 ### Required
 
-- `edge_config_id` (String) The label of the Edge Config Token.
+- `edge_config_id` (String) The ID of the Edge Config store.
 - `label` (String) The label of the Edge Config Token.
 
 ### Optional

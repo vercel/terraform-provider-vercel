@@ -22,7 +22,7 @@ func (c *Client) UpdateProjectDomain(ctx context.Context, projectID, domain, tea
 	}
 
 	payload := string(mustMarshal(request))
-	tflog.Trace(ctx, "updating project domain", map[string]interface{}{
+	tflog.Info(ctx, "updating project domain", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})

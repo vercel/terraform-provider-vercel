@@ -13,7 +13,7 @@ func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamI
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Trace(ctx, "deleting environment variable", map[string]interface{}{
+	tflog.Info(ctx, "deleting environment variable", map[string]interface{}{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{

@@ -23,7 +23,7 @@ func (c *Client) CreateTeam(ctx context.Context, request TeamCreateRequest) (r T
 	url := fmt.Sprintf("%s/v1/teams", c.baseURL)
 
 	payload := string(mustMarshal(request))
-	tflog.Trace(ctx, "creating team", map[string]interface{}{
+	tflog.Info(ctx, "creating team", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
