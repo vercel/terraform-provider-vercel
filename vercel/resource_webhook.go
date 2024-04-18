@@ -91,7 +91,7 @@ When an event happens, a webhook is sent to a third-party app, which can then ta
 				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()},
 			},
 			"endpoint": schema.StringAttribute{
-				Description:   "Webhooks events will be sent as POST request to this URL.",
+				Description:   "Webhooks events will be sent as POST requests to this URL.",
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -104,6 +104,7 @@ When an event happens, a webhook is sent to a third-party app, which can then ta
 			"secret": schema.StringAttribute{
 				Description:   "A secret value which will be provided in the `x-vercel-signature` header and can be used to verify the authenticity of the webhook. See https://vercel.com/docs/observability/webhooks-overview/webhooks-api#securing-webhooks for further details.",
 				Computed:      true,
+				Sensitive:     true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 		},

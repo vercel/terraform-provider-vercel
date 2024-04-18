@@ -48,6 +48,13 @@ func fromInt64Pointer(v *int64) types.Int64 {
 	return types.Int64Value(*v)
 }
 
+func fromFloat64Pointer(v *float64) types.Float64 {
+	if v == nil {
+		return types.Float64Null()
+	}
+	return types.Float64Value(*v)
+}
+
 func toTeamID(v string) types.String {
 	if v == "" {
 		return types.StringNull()
