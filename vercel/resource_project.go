@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -156,7 +157,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"git_repository": schema.SingleNestedAttribute{
 				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
 				Optional:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace(), objectplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
 						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
@@ -164,12 +165,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Validators: []validator.String{
 							stringOneOf("github", "gitlab", "bitbucket"),
 						},
-						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 					},
 					"repo": schema.StringAttribute{
-						Description:   "The name of the git repository. For example: `vercel/next.js`.",
-						Required:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+						Description: "The name of the git repository. For example: `vercel/next.js`.",
+						Required:    true,
 					},
 					"production_branch": schema.StringAttribute{
 						Description: "By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.",
@@ -298,9 +297,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "If `protection_bypass_for_automation` is enabled, use this value in the `x-vercel-protection-bypass` header to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments.",
 			},
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
+				Optional:      true,
+				Computed:      true,
+				Description:   "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 		},
 	}
@@ -460,6 +460,18 @@ type GitRepository struct {
 	Type             types.String `tfsdk:"type"`
 	Repo             types.String `tfsdk:"repo"`
 	ProductionBranch types.String `tfsdk:"production_branch"`
+}
+
+func (g *GitRepository) isDifferentRepo(other *GitRepository) bool {
+	if g == nil && other == nil {
+		return false
+	}
+
+	if g == nil || other == nil {
+		return true
+	}
+
+	return g.Repo.ValueString() != other.Repo.ValueString() || g.Type.ValueString() != other.Type.ValueString()
 }
 
 func (g *GitRepository) toCreateProjectRequest() *client.GitRepository {
@@ -1114,7 +1126,70 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	if plan.GitRepository != nil && !plan.GitRepository.ProductionBranch.IsNull() && (state.GitRepository == nil || state.GitRepository.ProductionBranch.ValueString() != plan.GitRepository.ProductionBranch.ValueString()) {
+	if plan.GitRepository == nil && state.GitRepository != nil {
+		out, err = r.client.UnlinkGitRepoFromProject(ctx, plan.ID.ValueString(), plan.TeamID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project",
+				fmt.Sprintf(
+					"Could not update project %s %s, unexpected error: %s",
+					state.TeamID.ValueString(),
+					state.ID.ValueString(),
+					err,
+				),
+			)
+			return
+		}
+	}
+
+	wasUnlinked := false
+	if plan.GitRepository.isDifferentRepo(state.GitRepository) {
+		if state.GitRepository != nil {
+			_, err = r.client.UnlinkGitRepoFromProject(ctx, plan.ID.ValueString(), plan.TeamID.ValueString())
+			wasUnlinked = true
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error updating project",
+					fmt.Sprintf(
+						"Could not update project unlinking git repo %s %s, unexpected error: %s",
+						state.TeamID.ValueString(),
+						state.ID.ValueString(),
+						err,
+					),
+				)
+				return
+			}
+		}
+
+		if plan.GitRepository != nil {
+			out, err = r.client.LinkGitRepoToProject(ctx, client.LinkGitRepoToProjectRequest{
+				ProjectID: plan.ID.ValueString(),
+				TeamID:    plan.TeamID.ValueString(),
+				Repo:      plan.GitRepository.Repo.ValueString(),
+				Type:      plan.GitRepository.Type.ValueString(),
+			})
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error updating project",
+					fmt.Sprintf(
+						"Could not update project git repo %s %s, unexpected error: %s",
+						state.TeamID.ValueString(),
+						state.ID.ValueString(),
+						err,
+					),
+				)
+				return
+			}
+		}
+	}
+
+	if plan.GitRepository != nil && !plan.GitRepository.ProductionBranch.IsUnknown() &&
+		!plan.GitRepository.ProductionBranch.IsNull() && // we know the value the production branch _should_ be
+		(wasUnlinked || // and we either unlinked the repo,
+			(state.GitRepository == nil || // or the production branch was never set
+				// or the production branch was/is something else
+				state.GitRepository.ProductionBranch.ValueString() != plan.GitRepository.ProductionBranch.ValueString())) {
+
 		out, err = r.client.UpdateProductionBranch(ctx, client.UpdateProductionBranchRequest{
 			ProjectID: plan.ID.ValueString(),
 			TeamID:    plan.TeamID.ValueString(),
@@ -1124,9 +1199,10 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			resp.Diagnostics.AddError(
 				"Error updating project",
 				fmt.Sprintf(
-					"Could not update project %s %s, unexpected error: %s",
+					"Could not update project production branch %s %s to '%s', unexpected error: %s",
 					state.TeamID.ValueString(),
 					state.ID.ValueString(),
+					plan.GitRepository.ProductionBranch.ValueString(),
 					err,
 				),
 			)
