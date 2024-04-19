@@ -18,10 +18,10 @@ type validatorStringSetMinCount struct {
 }
 
 func (v validatorStringSetMinCount) Description(ctx context.Context) string {
-	return fmt.Sprintf("Set must contain at least %d items", v.Min)
+	return fmt.Sprintf("Set must contain %d or more items", v.Min)
 }
 func (v validatorStringSetMinCount) MarkdownDescription(ctx context.Context) string {
-	return fmt.Sprintf("Set must contain at least %d items", v.Min)
+	return fmt.Sprintf("Set must contain %d or more items", v.Min)
 }
 
 func (v validatorStringSetMinCount) ValidateSet(ctx context.Context, req validator.SetRequest, resp *validator.SetResponse) {

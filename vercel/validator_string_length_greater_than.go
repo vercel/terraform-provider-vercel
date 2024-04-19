@@ -20,11 +20,11 @@ type validatorStringLengthGreaterThan struct {
 }
 
 func (v validatorStringLengthGreaterThan) Description(ctx context.Context) string {
-	return fmt.Sprintf("String length must be greater than %d", v.Min)
+	return fmt.Sprintf("String length must be equal to or greater than %d", v.Min)
 }
 
 func (v validatorStringLengthGreaterThan) MarkdownDescription(ctx context.Context) string {
-	return fmt.Sprintf("String length must be greater than %d", v.Min)
+	return fmt.Sprintf("String length must be equal to or greater than %d", v.Min)
 }
 
 func (v validatorStringLengthGreaterThan) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {

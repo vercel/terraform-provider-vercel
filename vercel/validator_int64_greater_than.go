@@ -18,10 +18,10 @@ type validatorInt64GreaterThan struct {
 }
 
 func (v validatorInt64GreaterThan) Description(ctx context.Context) string {
-	return fmt.Sprintf("Value must be greater than %d", v.Min)
+	return fmt.Sprintf("Value must be equal to or greater than %d", v.Min)
 }
 func (v validatorInt64GreaterThan) MarkdownDescription(ctx context.Context) string {
-	return fmt.Sprintf("Value must be greater than `%d`", v.Min)
+	return fmt.Sprintf("Value must be equal to or greater than `%d`", v.Min)
 }
 
 func (v validatorInt64GreaterThan) ValidateInt64(ctx context.Context, req validator.Int64Request, resp *validator.Int64Response) {

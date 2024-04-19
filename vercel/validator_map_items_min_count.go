@@ -19,10 +19,10 @@ type validatorMapItemsMinCount struct {
 }
 
 func (v validatorMapItemsMinCount) Description(ctx context.Context) string {
-	return fmt.Sprintf("Map must contain at least %d item(s)", v.Min)
+	return fmt.Sprintf("Map must contain %d or more item(s)", v.Min)
 }
 func (v validatorMapItemsMinCount) MarkdownDescription(ctx context.Context) string {
-	return fmt.Sprintf("Map must contain at least `%d` item(s)", v.Min)
+	return fmt.Sprintf("Map must contain %d or more item(s)", v.Min)
 }
 
 func (v validatorMapItemsMinCount) ValidateMap(ctx context.Context, req validator.MapRequest, resp *validator.MapResponse) {
