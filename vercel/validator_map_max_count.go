@@ -20,10 +20,10 @@ type validatorMapMaxCount struct {
 }
 
 func (v validatorMapMaxCount) Description(ctx context.Context) string {
-	return fmt.Sprintf("Map must contain fewer than %d items", v.Max)
+	return fmt.Sprintf("Map must contain %d or fewer items", v.Max)
 }
 func (v validatorMapMaxCount) MarkdownDescription(ctx context.Context) string {
-	return fmt.Sprintf("Map must contain fewer than %d items", v.Max)
+	return fmt.Sprintf("Map must contain %d or fewer items", v.Max)
 }
 
 func (v validatorMapMaxCount) ValidateMap(ctx context.Context, req validator.MapRequest, resp *validator.MapResponse) {

@@ -18,10 +18,10 @@ type validatorFloat64LessThan struct {
 }
 
 func (v validatorFloat64LessThan) Description(ctx context.Context) string {
-	return fmt.Sprintf("Value must be less than %.2f", v.Max)
+	return fmt.Sprintf("Value must be equal to or less than %.2f", v.Max)
 }
 func (v validatorFloat64LessThan) MarkdownDescription(ctx context.Context) string {
-	return fmt.Sprintf("Value must be less than `%.2f`", v.Max)
+	return fmt.Sprintf("Value must be equal to or less than `%.2f`", v.Max)
 }
 
 func (v validatorFloat64LessThan) ValidateFloat64(ctx context.Context, req validator.Float64Request, resp *validator.Float64Response) {
