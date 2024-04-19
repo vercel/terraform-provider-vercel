@@ -51,15 +51,16 @@ Use the navigation to the left to read about the available resources.
 func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		newAliasResource,
-		newDeploymentResource,
 		newDNSRecordResource,
-		newProjectResource,
+		newDeploymentResource,
+		newEdgeConfigResource,
+		newEdgeConfigSchemaResource,
+		newEdgeConfigTokenResource,
+		newLogDrainResource,
 		newProjectDomainResource,
 		newProjectEnvironmentVariableResource,
+		newProjectResource,
 		newSharedEnvironmentVariableResource,
-		newEdgeConfigResource,
-		newEdgeConfigTokenResource,
-		newEdgeConfigSchemaResource,
 		newWebhookResource,
 	}
 }
@@ -67,14 +68,16 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		newAliasDataSource,
+		newEdgeConfigDataSource,
+		newEdgeConfigSchemaDataSource,
+		newEdgeConfigTokenDataSource,
+		newEndpointVerificationDataSource,
 		newFileDataSource,
 		newPrebuiltProjectDataSource,
 		newProjectDataSource,
 		newProjectDirectoryDataSource,
 		newSharedEnvironmentVariableDataSource,
-		newEdgeConfigDataSource,
-		newEdgeConfigTokenDataSource,
-		newEdgeConfigSchemaDataSource,
+		newLogDrainDataSource,
 	}
 }
 

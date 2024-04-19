@@ -44,7 +44,7 @@ resource "vercel_webhook" "without_project_ids" {
 
 ### Required
 
-- `endpoint` (String) Webhooks events will be sent as POST request to this URL.
+- `endpoint` (String) Webhooks events will be sent as POST requests to this URL.
 - `events` (Set of String) A list of the events the webhook will listen to. At least one must be present.
 
 ### Optional
@@ -55,4 +55,4 @@ resource "vercel_webhook" "without_project_ids" {
 ### Read-Only
 
 - `id` (String) The ID of the Webhook.
-- `secret` (String) A secret value which will be provided in the `x-vercel-signature` header and can be used to verify the authenticity of the webhook. See https://vercel.com/docs/observability/webhooks-overview/webhooks-api#securing-webhooks for further details.
+- `secret` (String, Sensitive) A secret value which will be provided in the `x-vercel-signature` header and can be used to verify the authenticity of the webhook. See https://vercel.com/docs/observability/webhooks-overview/webhooks-api#securing-webhooks for further details.
