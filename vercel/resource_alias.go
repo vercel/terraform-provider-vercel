@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -76,6 +77,26 @@ An Alias allows a ` + "`vercel_deployment` to be accessed through a different UR
 				Computed: true,
 			},
 		},
+	}
+}
+
+// Alias represents the terraform state for an alias resource.
+type Alias struct {
+	Alias        types.String `tfsdk:"alias"`
+	ID           types.String `tfsdk:"id"`
+	DeploymentID types.String `tfsdk:"deployment_id"`
+	TeamID       types.String `tfsdk:"team_id"`
+}
+
+// convertResponseToAlias is used to populate terraform state based on an API response.
+// Where possible, values from the API response are used to populate state. If not possible,
+// values from plan are used.
+func convertResponseToAlias(response client.AliasResponse, plan Alias) Alias {
+	return Alias{
+		Alias:        plan.Alias,
+		ID:           types.StringValue(response.UID),
+		DeploymentID: types.StringValue(response.DeploymentID),
+		TeamID:       toTeamID(response.TeamID),
 	}
 }
 
