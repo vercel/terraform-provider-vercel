@@ -68,6 +68,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		newAliasDataSource,
+		newDeploymentDataSource,
 		newEdgeConfigDataSource,
 		newEdgeConfigSchemaDataSource,
 		newEdgeConfigTokenDataSource,
