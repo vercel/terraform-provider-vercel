@@ -148,7 +148,7 @@ func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	_, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString(), false)
+	_, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating project domain",

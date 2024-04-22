@@ -37,12 +37,12 @@ func testAccProjectEnvironmentVariablesDoNotExist(n, teamID string) resource.Tes
 			return fmt.Errorf("no ID is set")
 		}
 
-		project, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID, true)
+		envs, err := testClient().GetEnvironmentVariables(context.TODO(), rs.Primary.ID, teamID)
 		if err != nil {
 			return fmt.Errorf("could not fetch the project: %w", err)
 		}
 
-		if len(project.EnvironmentVariables) != 0 {
+		if len(envs) != 0 {
 			return fmt.Errorf("project environment variables not deleted, they still exist")
 		}
 

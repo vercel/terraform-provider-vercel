@@ -64,11 +64,6 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 	if err != nil {
 		return r, err
 	}
-	env, err := c.getEnvironmentVariables(ctx, r.ID, teamID)
-	if err != nil {
-		return r, fmt.Errorf("error getting environment variables: %w", err)
-	}
-	r.EnvironmentVariables = env
 	r.TeamID = c.teamID(teamID)
 	return r, err
 }
@@ -96,6 +91,7 @@ type Repository struct {
 	Type             string
 	Repo             string
 	ProductionBranch *string
+	DeployHooks      []DeployHook
 }
 
 // getRepoNameFromURL is a helper method to extract the repo name from a GitLab URL.
@@ -120,18 +116,21 @@ func (r *ProjectResponse) Repository() *Repository {
 			Type:             "github",
 			Repo:             fmt.Sprintf("%s/%s", r.Link.Org, r.Link.Repo),
 			ProductionBranch: r.Link.ProductionBranch,
+			DeployHooks:      r.Link.DeployHooks,
 		}
 	case "gitlab":
 		return &Repository{
 			Type:             "gitlab",
 			Repo:             fmt.Sprintf("%s/%s", r.Link.ProjectNamespace, getRepoNameFromURL(r.Link.ProjectURL)),
 			ProductionBranch: r.Link.ProductionBranch,
+			DeployHooks:      r.Link.DeployHooks,
 		}
 	case "bitbucket":
 		return &Repository{
 			Type:             "bitbucket",
 			Repo:             fmt.Sprintf("%s/%s", r.Link.Owner, r.Link.Slug),
 			ProductionBranch: r.Link.ProductionBranch,
+			DeployHooks:      r.Link.DeployHooks,
 		}
 	}
 	return nil
@@ -139,14 +138,13 @@ func (r *ProjectResponse) Repository() *Repository {
 
 // ProjectResponse defines the information Vercel returns about a project.
 type ProjectResponse struct {
-	BuildCommand                *string               `json:"buildCommand"`
-	CommandForIgnoringBuildStep *string               `json:"commandForIgnoringBuildStep"`
-	DevCommand                  *string               `json:"devCommand"`
-	EnvironmentVariables        []EnvironmentVariable `json:"env"`
-	Framework                   *string               `json:"framework"`
-	ID                          string                `json:"id"`
-	TeamID                      string                `json:"-"`
-	InstallCommand              *string               `json:"installCommand"`
+	BuildCommand                *string `json:"buildCommand"`
+	CommandForIgnoringBuildStep *string `json:"commandForIgnoringBuildStep"`
+	DevCommand                  *string `json:"devCommand"`
+	Framework                   *string `json:"framework"`
+	ID                          string  `json:"id"`
+	TeamID                      string  `json:"-"`
+	InstallCommand              *string `json:"installCommand"`
 	Link                        *struct {
 		Type string `json:"type"`
 		// github
@@ -160,7 +158,8 @@ type ProjectResponse struct {
 		ProjectURL       string `json:"projectUrl"`
 		ProjectID        int64  `json:"projectId,string"`
 		// production branch
-		ProductionBranch *string `json:"productionBranch"`
+		ProductionBranch *string      `json:"productionBranch"`
+		DeployHooks      []DeployHook `json:"deployHooks"`
 	} `json:"link"`
 	Name                     string                      `json:"name"`
 	OutputDirectory          *string                     `json:"outputDirectory"`
@@ -175,14 +174,13 @@ type ProjectResponse struct {
 }
 
 // GetProject retrieves information about an existing project from Vercel.
-func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shouldFetchEnvironmentVariables bool) (r ProjectResponse, err error) {
+func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v10/projects/%s", c.baseURL, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	tflog.Info(ctx, "getting project", map[string]interface{}{
-		"url":                    url,
-		"shouldFetchEnvironment": shouldFetchEnvironmentVariables,
+		"url": url,
 	})
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
@@ -194,16 +192,6 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string, shoul
 		return r, fmt.Errorf("unable to get project: %w", err)
 	}
 
-	if shouldFetchEnvironmentVariables {
-		r.EnvironmentVariables, err = c.getEnvironmentVariables(ctx, projectID, teamID)
-		if err != nil {
-			return r, fmt.Errorf("error getting environment variables for project: %w", err)
-		}
-	} else {
-		// The get project endpoint returns environment variables, but returns them fully
-		// encrypted. This isn't useful, so we just remove them.
-		r.EnvironmentVariables = nil
-	}
 	r.TeamID = c.teamID(teamID)
 	return r, err
 }
@@ -257,16 +245,15 @@ type UpdateProjectRequest struct {
 }
 
 // UpdateProject updates an existing projects configuration within Vercel.
-func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, request UpdateProjectRequest, shouldFetchEnvironmentVariables bool) (r ProjectResponse, err error) {
+func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, request UpdateProjectRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v9/projects/%s", c.baseURL, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "updating project", map[string]interface{}{
-		"url":                             url,
-		"payload":                         payload,
-		"shouldFetchEnvironmentVariables": shouldFetchEnvironmentVariables,
+		"url":     url,
+		"payload": payload,
 	})
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
@@ -276,14 +263,6 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 	}, &r)
 	if err != nil {
 		return r, err
-	}
-	if shouldFetchEnvironmentVariables {
-		r.EnvironmentVariables, err = c.getEnvironmentVariables(ctx, r.ID, teamID)
-		if err != nil {
-			return r, fmt.Errorf("error getting environment variables for project: %w", err)
-		}
-	} else {
-		r.EnvironmentVariables = nil
 	}
 
 	r.TeamID = c.teamID(teamID)
@@ -315,11 +294,6 @@ func (c *Client) UpdateProductionBranch(ctx context.Context, request UpdateProdu
 	if err != nil {
 		return r, err
 	}
-	env, err := c.getEnvironmentVariables(ctx, r.ID, request.TeamID)
-	if err != nil {
-		return r, fmt.Errorf("error getting environment variables: %w", err)
-	}
-	r.EnvironmentVariables = env
 	r.TeamID = c.teamID(c.teamID(request.TeamID))
 	return r, err
 }
@@ -340,11 +314,6 @@ func (c *Client) UnlinkGitRepoFromProject(ctx context.Context, projectID, teamID
 	if err != nil {
 		return r, fmt.Errorf("error unlinking git repo: %w", err)
 	}
-	env, err := c.getEnvironmentVariables(ctx, r.ID, teamID)
-	if err != nil {
-		return r, fmt.Errorf("error getting environment variables: %w", err)
-	}
-	r.EnvironmentVariables = env
 	r.TeamID = c.teamID(teamID)
 	return r, err
 }
@@ -374,11 +343,6 @@ func (c *Client) LinkGitRepoToProject(ctx context.Context, request LinkGitRepoTo
 	if err != nil {
 		return r, fmt.Errorf("error linking git repo: %w", err)
 	}
-	env, err := c.getEnvironmentVariables(ctx, r.ID, request.TeamID)
-	if err != nil {
-		return r, fmt.Errorf("error getting environment variables: %w", err)
-	}
-	r.EnvironmentVariables = env
 	r.TeamID = c.teamID(c.teamID(request.TeamID))
 	return r, err
 }

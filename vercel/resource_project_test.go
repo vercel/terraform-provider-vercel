@@ -283,7 +283,7 @@ func testAccProjectExists(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no projectID is set")
 		}
 
-		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID, false)
+		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID)
 		return err
 	}
 }
@@ -299,7 +299,7 @@ func testAccProjectDestroy(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no projectID is set")
 		}
 
-		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID, false)
+		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID)
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
@@ -487,6 +487,12 @@ resource "vercel_project" "test_git" {
   git_repository = {
     type = "github"
     repo = "%s"
+    deploy_hooks = [
+        {
+            ref = "main"
+            name = "some deploy hook"
+        }
+    ]
   }
   environment = [
     {
@@ -510,6 +516,16 @@ resource "vercel_project" "test_git" {
     type = "github"
     repo = "%s"
     production_branch = "staging"
+    deploy_hooks = [
+        {
+            ref = "main"
+            name = "some deploy hook"
+        },
+        {
+            ref = "main"
+            name = "some other hook"
+        }
+    ]
   }
   environment = [
     {
