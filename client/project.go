@@ -323,3 +323,62 @@ func (c *Client) UpdateProductionBranch(ctx context.Context, request UpdateProdu
 	r.TeamID = c.teamID(c.teamID(request.TeamID))
 	return r, err
 }
+
+func (c *Client) UnlinkGitRepoFromProject(ctx context.Context, projectID, teamID string) (r ProjectResponse, err error) {
+	url := fmt.Sprintf("%s/v9/projects/%s/link", c.baseURL, projectID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	}
+	tflog.Info(ctx, "unlinking project git repo", map[string]interface{}{
+		"url": url,
+	})
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "DELETE",
+		url:    url,
+	}, &r)
+	if err != nil {
+		return r, fmt.Errorf("error unlinking git repo: %w", err)
+	}
+	env, err := c.getEnvironmentVariables(ctx, r.ID, teamID)
+	if err != nil {
+		return r, fmt.Errorf("error getting environment variables: %w", err)
+	}
+	r.EnvironmentVariables = env
+	r.TeamID = c.teamID(teamID)
+	return r, err
+}
+
+type LinkGitRepoToProjectRequest struct {
+	ProjectID string `json:"-"`
+	TeamID    string `json:"-"`
+	Type      string `json:"type"`
+	Repo      string `json:"repo"`
+}
+
+func (c *Client) LinkGitRepoToProject(ctx context.Context, request LinkGitRepoToProjectRequest) (r ProjectResponse, err error) {
+	url := fmt.Sprintf("%s/v9/projects/%s/link", c.baseURL, request.ProjectID)
+	if c.teamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	}
+	tflog.Info(ctx, "linking project git repo", map[string]interface{}{
+		"url": url,
+	})
+	payload := string(mustMarshal(request))
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "POST",
+		url:    url,
+		body:   payload,
+	}, &r)
+	if err != nil {
+		return r, fmt.Errorf("error linking git repo: %w", err)
+	}
+	env, err := c.getEnvironmentVariables(ctx, r.ID, request.TeamID)
+	if err != nil {
+		return r, fmt.Errorf("error getting environment variables: %w", err)
+	}
+	r.EnvironmentVariables = env
+	r.TeamID = c.teamID(c.teamID(request.TeamID))
+	return r, err
+}
