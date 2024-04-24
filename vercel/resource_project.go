@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -22,8 +23,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &projectResource{}
-	_ resource.ResourceWithConfigure = &projectResource{}
+	_ resource.Resource                = &projectResource{}
+	_ resource.ResourceWithConfigure   = &projectResource{}
+	_ resource.ResourceWithImportState = &projectResource{}
 )
 
 func newProjectResource() resource.Resource {
@@ -174,6 +176,31 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Description: "By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.",
 						Optional:    true,
 						Computed:    true,
+					},
+					"deploy_hooks": schema.SetNestedAttribute{
+						Description: "Deploy hooks are unique URLs that allow you to trigger a deployment of a given branch. See https://vercel.com/docs/deployments/deploy-hooks for full information.",
+						Optional:    true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"id": schema.StringAttribute{
+									Description: "The ID of the deploy hook.",
+									Computed:    true,
+								},
+								"name": schema.StringAttribute{
+									Description: "The name of the deploy hook.",
+									Required:    true,
+								},
+								"ref": schema.StringAttribute{
+									Description: "The branch or commit hash that should be deployed.",
+									Required:    true,
+								},
+								"url": schema.StringAttribute{
+									Description: "A URL that, when a POST request is made to, will trigger a new deployment.",
+									Computed:    true,
+									Sensitive:   true,
+								},
+							},
+						},
 					},
 				},
 			},
@@ -455,11 +482,19 @@ func (e *EnvironmentItem) toEnvironmentVariableRequest() client.EnvironmentVaria
 	}
 }
 
+type DeployHook struct {
+	Name types.String `tfsdk:"name"`
+	Ref  types.String `tfsdk:"ref"`
+	URL  types.String `tfsdk:"url"`
+	ID   types.String `tfsdk:"id"`
+}
+
 // GitRepository reflects the state terraform stores internally for a nested git_repository block on a project resource.
 type GitRepository struct {
 	Type             types.String `tfsdk:"type"`
 	Repo             types.String `tfsdk:"repo"`
 	ProductionBranch types.String `tfsdk:"production_branch"`
+	DeployHooks      types.Set    `tfsdk:"deploy_hooks"`
 }
 
 func (g *GitRepository) isDifferentRepo(other *GitRepository) bool {
@@ -649,7 +684,23 @@ func hasSameTarget(p EnvironmentItem, target []string) bool {
 	return true
 }
 
-func convertResponseToProject(ctx context.Context, response client.ProjectResponse, plan Project) (Project, error) {
+var deployHookType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"name": types.StringType,
+		"ref":  types.StringType,
+		"url":  types.StringType,
+		"id":   types.StringType,
+	},
+}
+
+type deployHook struct {
+	Name string `tfsdk:"name"`
+	Ref  string `tfsdk:"ref"`
+	URL  string `tfsdk:"url"`
+	ID   string `tfsdk:"id"`
+}
+
+func convertResponseToProject(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (Project, error) {
 	fields := plan.coercedFields()
 
 	var gr *GitRepository
@@ -658,9 +709,26 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 			Type:             types.StringValue(repo.Type),
 			Repo:             types.StringValue(repo.Repo),
 			ProductionBranch: types.StringNull(),
+			DeployHooks:      types.SetNull(deployHookType),
 		}
 		if repo.ProductionBranch != nil {
 			gr.ProductionBranch = types.StringValue(*repo.ProductionBranch)
+		}
+		if repo.DeployHooks != nil && plan.GitRepository != nil && !plan.GitRepository.DeployHooks.IsNull() {
+			var dh []deployHook
+			for _, h := range repo.DeployHooks {
+				dh = append(dh, deployHook{
+					Name: h.Name,
+					Ref:  h.Ref,
+					URL:  h.URL,
+					ID:   h.ID,
+				})
+			}
+			hooks, diags := types.SetValueFrom(ctx, deployHookType, dh)
+			if diags.HasError() {
+				return Project{}, fmt.Errorf("error reading project deploy hooks: %s - %s", diags[0].Summary(), diags[0].Detail())
+			}
+			gr.DeployHooks = hooks
 		}
 	}
 
@@ -702,7 +770,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	var env []attr.Value
-	for _, e := range response.EnvironmentVariables {
+	for _, e := range environmentVariables {
 		target := []attr.Value{}
 		for _, t := range e.Target {
 			target = append(target, types.StringValue(t))
@@ -758,7 +826,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	environmentEntry := types.SetValueMust(envVariableElemType, env)
-	if len(response.EnvironmentVariables) == 0 && plan.Environment.IsNull() {
+	if plan.Environment.IsNull() {
 		environmentEntry = types.SetNull(envVariableElemType)
 	}
 
@@ -814,7 +882,16 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	result, err := convertResponseToProject(ctx, out, plan)
+	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project environment variables",
+			"Could not create project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	result, err := convertResponseToProject(ctx, out, plan, environmentVariables)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
@@ -832,8 +909,46 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	if plan.GitRepository != nil && !plan.GitRepository.DeployHooks.IsNull() && !plan.GitRepository.DeployHooks.IsUnknown() {
+		var hooks []DeployHook
+		diags := plan.GitRepository.DeployHooks.ElementsAs(ctx, &hooks, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		for _, hook := range hooks {
+			hook, err := r.client.CreateDeployHook(ctx, client.CreateDeployHookRequest{
+				ProjectID: result.ID.ValueString(),
+				TeamID:    result.TeamID.ValueString(),
+				Name:      hook.Name.ValueString(),
+				Ref:       hook.Ref.ValueString(),
+			})
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error creating deploy hook",
+					"Could not create project, unexpected error: "+err.Error(),
+				)
+				return
+			}
+			out.Link.DeployHooks = append(out.Link.DeployHooks, hook)
+		}
+		result, err := convertResponseToProject(ctx, out, plan, environmentVariables)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error converting project response to model",
+				"Could not create project, unexpected error: "+err.Error(),
+			)
+			return
+		}
+		diags = resp.State.Set(ctx, result)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	if plan.PasswordProtection != nil || plan.VercelAuthentication != nil || plan.TrustedIps != nil || !plan.AutoExposeSystemEnvVars.IsNull() {
-		out, err = r.client.UpdateProject(ctx, result.ID.ValueString(), plan.TeamID.ValueString(), plan.toUpdateProjectRequest(plan.Name.ValueString()), !plan.Environment.IsNull())
+		out, err = r.client.UpdateProject(ctx, result.ID.ValueString(), plan.TeamID.ValueString(), plan.toUpdateProjectRequest(plan.Name.ValueString()))
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating project as part of creating project",
@@ -842,7 +957,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			return
 		}
 
-		result, err = convertResponseToProject(ctx, out, plan)
+		result, err = convertResponseToProject(ctx, out, plan, environmentVariables)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error converting project response to model",
@@ -900,7 +1015,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	result, err = convertResponseToProject(ctx, out, plan)
+	result, err = convertResponseToProject(ctx, out, plan, environmentVariables)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
@@ -930,7 +1045,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	out, err := r.client.GetProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), !state.Environment.IsNull())
+	out, err := r.client.GetProject(ctx, state.ID.ValueString(), state.TeamID.ValueString())
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -947,7 +1062,15 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	result, err := convertResponseToProject(ctx, out, state)
+	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project environment variables",
+			"Could not read project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	result, err := convertResponseToProject(ctx, out, state, environmentVariables)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
@@ -996,6 +1119,51 @@ func diffEnvVars(oldVars, newVars []EnvironmentItem) (toCreate, toRemove []Envir
 		}
 	}
 	return toCreate, toRemove
+}
+
+func containsDeployHook(hooks []DeployHook, h DeployHook) bool {
+	for _, hook := range hooks {
+		if hook.ID == h.ID {
+			return true
+		}
+	}
+	return false
+}
+
+func diffDeployHooks(ctx context.Context, new, old *GitRepository) (toCreate, toRemove []DeployHook, diags diag.Diagnostics) {
+	if new == nil && old == nil {
+		return nil, nil, nil
+	}
+	if new == nil {
+		diags = old.DeployHooks.ElementsAs(ctx, &toRemove, false)
+		return nil, toRemove, diags
+	}
+	if old == nil {
+		diags = new.DeployHooks.ElementsAs(ctx, &toCreate, false)
+		return toCreate, nil, diags
+	}
+	var oldHooks []DeployHook
+	var newHooks []DeployHook
+	diags = old.DeployHooks.ElementsAs(ctx, &oldHooks, false)
+	if diags.HasError() {
+		return nil, nil, diags
+	}
+	diags = new.DeployHooks.ElementsAs(ctx, &newHooks, false)
+	if diags.HasError() {
+		return nil, nil, diags
+	}
+
+	for _, h := range oldHooks {
+		if !containsDeployHook(newHooks, h) {
+			toRemove = append(toRemove, h)
+		}
+	}
+	for _, h := range newHooks {
+		if !containsDeployHook(oldHooks, h) {
+			toCreate = append(toCreate, h)
+		}
+	}
+	return toCreate, toRemove, diags
 }
 
 // Update will update a project and it's associated environment variables via the vercel API.
@@ -1112,7 +1280,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	out, err := r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), plan.toUpdateProjectRequest(state.Name.ValueString()), !plan.Environment.IsNull())
+	out, err := r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), plan.toUpdateProjectRequest(state.Name.ValueString()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -1210,11 +1378,65 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	result, err := convertResponseToProject(ctx, out, plan)
+	hooksToCreate, hooksToRemove, diags := diffDeployHooks(ctx, plan.GitRepository, state.GitRepository)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	for _, h := range hooksToRemove {
+		err := r.client.DeleteDeployHook(ctx, client.DeleteDeployHookRequest{
+			ProjectID: plan.ID.ValueString(),
+			TeamID:    plan.TeamID.ValueString(),
+			ID:        h.ID.ValueString(),
+		})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error deleting deploy hook",
+				"Could not update project, unexpected error: "+err.Error(),
+			)
+			return
+		}
+	}
+	for _, h := range hooksToCreate {
+		_, err := r.client.CreateDeployHook(ctx, client.CreateDeployHookRequest{
+			ProjectID: plan.ID.ValueString(),
+			TeamID:    plan.TeamID.ValueString(),
+			Name:      h.Name.ValueString(),
+			Ref:       h.Ref.ValueString(),
+		})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error creating deploy hook",
+				"Could not update project, unexpected error: "+err.Error(),
+			)
+			return
+		}
+	}
+	if hooksToCreate != nil || hooksToRemove != nil {
+		// Re-fetch the project to ensure the hooks afterwards are all correct
+		out, err = r.client.GetProject(ctx, plan.ID.ValueString(), plan.TeamID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error reading project",
+				"Could not update project, unexpected error: "+err.Error(),
+			)
+			return
+		}
+	}
+
+	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project environment variables",
+			"Could not update project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	result, err := convertResponseToProject(ctx, out, plan, environmentVariables)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
-			"Could not create project, unexpected error: "+err.Error(),
+			"Could not update project, unexpected error: "+err.Error(),
 		)
 		return
 	}
@@ -1274,7 +1496,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		)
 	}
 
-	out, err := r.client.GetProject(ctx, projectID, teamID, false)
+	out, err := r.client.GetProject(ctx, projectID, teamID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
@@ -1287,11 +1509,19 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	result, err := convertResponseToProject(ctx, out, nullProject)
+	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project environment variables",
+			"Could not import project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	result, err := convertResponseToProject(ctx, out, nullProject, environmentVariables)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
-			"Could not create project, unexpected error: "+err.Error(),
+			"Could not import project, unexpected error: "+err.Error(),
 		)
 		return
 	}

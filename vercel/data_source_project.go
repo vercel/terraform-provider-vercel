@@ -243,8 +243,9 @@ type ProjectDataSource struct {
 	AutoExposeSystemEnvVars  types.Bool            `tfsdk:"automatically_expose_system_environment_variables"`
 }
 
-func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project) (ProjectDataSource, error) {
-	project, err := convertResponseToProject(ctx, response, plan)
+func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
+	plan.Environment = types.SetValueMust(envVariableElemType, []attr.Value{})
+	project, err := convertResponseToProject(ctx, response, plan, environmentVariables)
 	if err != nil {
 		return ProjectDataSource{}, err
 	}
@@ -288,7 +289,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	out, err := d.client.GetProject(ctx, config.Name.ValueString(), config.TeamID.ValueString(), true)
+	out, err := d.client.GetProject(ctx, config.Name.ValueString(), config.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
@@ -301,7 +302,15 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	result, err := convertResponseToProjectDataSource(ctx, out, nullProject)
+	environmentVariables, err := d.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project environment variables",
+			"Could not read project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+	result, err := convertResponseToProjectDataSource(ctx, out, nullProject, environmentVariables)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",

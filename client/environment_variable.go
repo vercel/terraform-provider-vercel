@@ -123,7 +123,7 @@ func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamI
 	}, nil)
 }
 
-func (c *Client) getEnvironmentVariables(ctx context.Context, projectID, teamID string) ([]EnvironmentVariable, error) {
+func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID string) ([]EnvironmentVariable, error) {
 	url := fmt.Sprintf("%s/v8/projects/%s/env?decrypt=true", c.baseURL, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(teamID))

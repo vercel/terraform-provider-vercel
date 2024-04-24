@@ -107,7 +107,22 @@ Required:
 
 Optional:
 
+- `deploy_hooks` (Attributes Set) Deploy hooks are unique URLs that allow you to trigger a deployment of a given branch. See https://vercel.com/docs/deployments/deploy-hooks for full information. (see [below for nested schema](#nestedatt--git_repository--deploy_hooks))
 - `production_branch` (String) By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.
+
+<a id="nestedatt--git_repository--deploy_hooks"></a>
+### Nested Schema for `git_repository.deploy_hooks`
+
+Required:
+
+- `name` (String) The name of the deploy hook.
+- `ref` (String) The branch or commit hash that should be deployed.
+
+Read-Only:
+
+- `id` (String) The ID of the deploy hook.
+- `url` (String, Sensitive) A URL that, when a POST request is made to, will trigger a new deployment.
+
 
 
 <a id="nestedatt--password_protection"></a>
