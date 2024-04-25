@@ -16,7 +16,8 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &projectDataSource{}
+	_ datasource.DataSource              = &projectDataSource{}
+	_ datasource.DataSourceWithConfigure = &projectDataSource{}
 )
 
 func newProjectDataSource() datasource.DataSource {
@@ -213,9 +214,63 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Description: "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.",
 			},
+			"protection_bypass_for_automation": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Allows automation services to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments on this project when using an HTTP header named `x-vercel-protection-bypass`.",
+			},
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
 				Computed:    true,
 				Description: "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
+			},
+			"git_comments": schema.SingleNestedAttribute{
+				Description: "Configuration for Git Comments.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"on_pull_request": schema.BoolAttribute{
+						Description: "Whether Pull Request comments are enabled",
+						Required:    true,
+					},
+					"on_commit": schema.BoolAttribute{
+						Description: "Whether Commit comments are enabled",
+						Required:    true,
+					},
+				},
+			},
+			"preview_comments": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Whether comments are enabled on your Preview Deployments.",
+			},
+			"auto_assign_custom_domains": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Automatically assign custom production domains after each Production deployment via merge to the production branch or Vercel CLI deploy with --prod. Defaults to `true`",
+			},
+			"git_lfs": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Enables Git LFS support. Git LFS replaces large files such as audio samples, videos, datasets, and graphics with text pointers inside Git, while storing the file contents on a remote server like GitHub.com or GitHub Enterprise.",
+			},
+			"function_failover": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Automatically failover Serverless Functions to the nearest region. You can customize regions through vercel.json. A new Deployment is required for your changes to take effect.",
+			},
+			"customer_success_code_visibility": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.",
+			},
+			"git_fork_protection": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Ensures that pull requests targeting your Git repository must be authorized by a member of your Team before deploying if your Project has Environment Variables or if the pull request includes a change to vercel.json.",
+			},
+			"prioritise_production_builds": schema.BoolAttribute{
+				Computed:    true,
+				Description: "If enabled, builds for the Production environment will be prioritized over Preview environments.",
+			},
+			"directory_listing": schema.BoolAttribute{
+				Computed:    true,
+				Description: "If no index file is present within a directory, the directory contents will be displayed.",
+			},
+			"skew_protection": schema.StringAttribute{
+				Computed:    true,
+				Description: "Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.",
 			},
 		},
 	}
@@ -223,28 +278,46 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 // Project reflects the state terraform stores internally for a project.
 type ProjectDataSource struct {
-	BuildCommand             types.String          `tfsdk:"build_command"`
-	DevCommand               types.String          `tfsdk:"dev_command"`
-	Environment              types.Set             `tfsdk:"environment"`
-	Framework                types.String          `tfsdk:"framework"`
-	GitRepository            *GitRepository        `tfsdk:"git_repository"`
-	ID                       types.String          `tfsdk:"id"`
-	IgnoreCommand            types.String          `tfsdk:"ignore_command"`
-	InstallCommand           types.String          `tfsdk:"install_command"`
-	Name                     types.String          `tfsdk:"name"`
-	OutputDirectory          types.String          `tfsdk:"output_directory"`
-	PublicSource             types.Bool            `tfsdk:"public_source"`
-	RootDirectory            types.String          `tfsdk:"root_directory"`
-	ServerlessFunctionRegion types.String          `tfsdk:"serverless_function_region"`
-	TeamID                   types.String          `tfsdk:"team_id"`
-	VercelAuthentication     *VercelAuthentication `tfsdk:"vercel_authentication"`
-	PasswordProtection       *PasswordProtection   `tfsdk:"password_protection"`
-	TrustedIps               *TrustedIps           `tfsdk:"trusted_ips"`
-	AutoExposeSystemEnvVars  types.Bool            `tfsdk:"automatically_expose_system_environment_variables"`
+	BuildCommand                  types.String          `tfsdk:"build_command"`
+	DevCommand                    types.String          `tfsdk:"dev_command"`
+	Environment                   types.Set             `tfsdk:"environment"`
+	Framework                     types.String          `tfsdk:"framework"`
+	GitRepository                 *GitRepository        `tfsdk:"git_repository"`
+	ID                            types.String          `tfsdk:"id"`
+	IgnoreCommand                 types.String          `tfsdk:"ignore_command"`
+	InstallCommand                types.String          `tfsdk:"install_command"`
+	Name                          types.String          `tfsdk:"name"`
+	OutputDirectory               types.String          `tfsdk:"output_directory"`
+	PublicSource                  types.Bool            `tfsdk:"public_source"`
+	RootDirectory                 types.String          `tfsdk:"root_directory"`
+	ServerlessFunctionRegion      types.String          `tfsdk:"serverless_function_region"`
+	TeamID                        types.String          `tfsdk:"team_id"`
+	VercelAuthentication          *VercelAuthentication `tfsdk:"vercel_authentication"`
+	PasswordProtection            *PasswordProtection   `tfsdk:"password_protection"`
+	TrustedIps                    *TrustedIps           `tfsdk:"trusted_ips"`
+	ProtectionBypassForAutomation types.Bool            `tfsdk:"protection_bypass_for_automation"`
+	AutoExposeSystemEnvVars       types.Bool            `tfsdk:"automatically_expose_system_environment_variables"`
+	GitComments                   types.Object          `tfsdk:"git_comments"`
+	PreviewComments               types.Bool            `tfsdk:"preview_comments"`
+	AutoAssignCustomDomains       types.Bool            `tfsdk:"auto_assign_custom_domains"`
+	GitLFS                        types.Bool            `tfsdk:"git_lfs"`
+	FunctionFailover              types.Bool            `tfsdk:"function_failover"`
+	CustomerSuccessCodeVisibility types.Bool            `tfsdk:"customer_success_code_visibility"`
+	GitForkProtection             types.Bool            `tfsdk:"git_fork_protection"`
+	PrioritiseProductionBuilds    types.Bool            `tfsdk:"prioritise_production_builds"`
+	DirectoryListing              types.Bool            `tfsdk:"directory_listing"`
+	SkewProtection                types.String          `tfsdk:"skew_protection"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
+	/* Force reading of environment and git comments. These are ignored usually if the planned value is null,
+	   otherwise it causes issues with terraform thinking there are changes when there aren't. However,
+	   for the data source we always want to read the value */
 	plan.Environment = types.SetValueMust(envVariableElemType, []attr.Value{})
+	plan.GitComments = types.ObjectValueMust(gitCommentsAttrTypes, map[string]attr.Value{
+		"on_pull_request": types.BoolValue(response.GitComments.OnPullRequest),
+		"on_commit":       types.BoolValue(response.GitComments.OnCommit),
+	})
 	project, err := convertResponseToProject(ctx, response, plan, environmentVariables)
 	if err != nil {
 		return ProjectDataSource{}, err
@@ -257,24 +330,35 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		}
 	}
 	return ProjectDataSource{
-		BuildCommand:             project.BuildCommand,
-		DevCommand:               project.DevCommand,
-		Environment:              project.Environment,
-		Framework:                project.Framework,
-		GitRepository:            project.GitRepository,
-		ID:                       project.ID,
-		IgnoreCommand:            project.IgnoreCommand,
-		InstallCommand:           project.InstallCommand,
-		Name:                     project.Name,
-		OutputDirectory:          project.OutputDirectory,
-		PublicSource:             project.PublicSource,
-		RootDirectory:            project.RootDirectory,
-		ServerlessFunctionRegion: project.ServerlessFunctionRegion,
-		TeamID:                   project.TeamID,
-		VercelAuthentication:     project.VercelAuthentication,
-		PasswordProtection:       pp,
-		TrustedIps:               project.TrustedIps,
-		AutoExposeSystemEnvVars:  fromBoolPointer(response.AutoExposeSystemEnvVars),
+		BuildCommand:                  project.BuildCommand,
+		DevCommand:                    project.DevCommand,
+		Environment:                   project.Environment,
+		Framework:                     project.Framework,
+		GitRepository:                 project.GitRepository,
+		ID:                            project.ID,
+		IgnoreCommand:                 project.IgnoreCommand,
+		InstallCommand:                project.InstallCommand,
+		Name:                          project.Name,
+		OutputDirectory:               project.OutputDirectory,
+		PublicSource:                  project.PublicSource,
+		RootDirectory:                 project.RootDirectory,
+		ServerlessFunctionRegion:      project.ServerlessFunctionRegion,
+		TeamID:                        project.TeamID,
+		VercelAuthentication:          project.VercelAuthentication,
+		PasswordProtection:            pp,
+		TrustedIps:                    project.TrustedIps,
+		AutoExposeSystemEnvVars:       types.BoolPointerValue(response.AutoExposeSystemEnvVars),
+		ProtectionBypassForAutomation: project.ProtectionBypassForAutomation,
+		GitComments:                   project.GitComments,
+		PreviewComments:               project.PreviewComments,
+		AutoAssignCustomDomains:       project.AutoAssignCustomDomains,
+		GitLFS:                        project.GitLFS,
+		FunctionFailover:              project.FunctionFailover,
+		CustomerSuccessCodeVisibility: project.CustomerSuccessCodeVisibility,
+		GitForkProtection:             project.GitForkProtection,
+		PrioritiseProductionBuilds:    project.PrioritiseProductionBuilds,
+		DirectoryListing:              project.DirectoryListing,
+		SkewProtection:                project.SkewProtection,
 	}, nil
 }
 

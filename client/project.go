@@ -40,7 +40,7 @@ type CreateProjectRequest struct {
 	OutputDirectory             *string               `json:"outputDirectory"`
 	PublicSource                *bool                 `json:"publicSource"`
 	RootDirectory               *string               `json:"rootDirectory"`
-	ServerlessFunctionRegion    *string               `json:"serverlessFunctionRegion,omitempty"`
+	ServerlessFunctionRegion    string                `json:"serverlessFunctionRegion,omitempty"`
 }
 
 // CreateProject will create a project within Vercel.
@@ -161,16 +161,31 @@ type ProjectResponse struct {
 		ProductionBranch *string      `json:"productionBranch"`
 		DeployHooks      []DeployHook `json:"deployHooks"`
 	} `json:"link"`
-	Name                     string                      `json:"name"`
-	OutputDirectory          *string                     `json:"outputDirectory"`
-	PublicSource             *bool                       `json:"publicSource"`
-	RootDirectory            *string                     `json:"rootDirectory"`
-	ServerlessFunctionRegion *string                     `json:"serverlessFunctionRegion"`
-	VercelAuthentication     *VercelAuthentication       `json:"ssoProtection"`
-	PasswordProtection       *PasswordProtection         `json:"passwordProtection"`
-	TrustedIps               *TrustedIps                 `json:"trustedIps"`
-	ProtectionBypass         map[string]ProtectionBypass `json:"protectionBypass"`
-	AutoExposeSystemEnvVars  *bool                       `json:"autoExposeSystemEnvs"`
+	Name                                 string                      `json:"name"`
+	OutputDirectory                      *string                     `json:"outputDirectory"`
+	PublicSource                         *bool                       `json:"publicSource"`
+	RootDirectory                        *string                     `json:"rootDirectory"`
+	ServerlessFunctionRegion             *string                     `json:"serverlessFunctionRegion"`
+	VercelAuthentication                 *VercelAuthentication       `json:"ssoProtection"`
+	PasswordProtection                   *PasswordProtection         `json:"passwordProtection"`
+	TrustedIps                           *TrustedIps                 `json:"trustedIps"`
+	ProtectionBypass                     map[string]ProtectionBypass `json:"protectionBypass"`
+	AutoExposeSystemEnvVars              *bool                       `json:"autoExposeSystemEnvs"`
+	EnablePreviewFeedback                *bool                       `json:"enablePreviewFeedback"`
+	AutoAssignCustomDomains              bool                        `json:"autoAssignCustomDomains"`
+	GitLFS                               bool                        `json:"gitLFS"`
+	ServerlessFunctionZeroConfigFailover bool                        `json:"serverlessFunctionZeroConfigFailover"`
+	CustomerSupportCodeVisibility        bool                        `json:"customerSupportCodeVisibility"`
+	GitForkProtection                    bool                        `json:"gitForkProtection"`
+	ProductionDeploymentsFastLane        bool                        `json:"productionDeploymentsFastLane"`
+	DirectoryListing                     bool                        `json:"directoryListing"`
+	SkewProtectionMaxAge                 int                         `json:"skewProtectionMaxAge"`
+	GitComments                          *GitComments                `json:"gitComments"`
+}
+
+type GitComments struct {
+	OnCommit      bool `json:"onCommit"`
+	OnPullRequest bool `json:"onPullRequest"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.
@@ -228,20 +243,30 @@ func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectRe
 // - setting the field to an empty value (e.g. "") will remove the setting for that field.
 // - omitting the value entirely from the request will _not_ update the field.
 type UpdateProjectRequest struct {
-	BuildCommand                *string                         `json:"buildCommand"`
-	CommandForIgnoringBuildStep *string                         `json:"commandForIgnoringBuildStep"`
-	DevCommand                  *string                         `json:"devCommand"`
-	Framework                   *string                         `json:"framework"`
-	InstallCommand              *string                         `json:"installCommand"`
-	Name                        *string                         `json:"name,omitempty"`
-	OutputDirectory             *string                         `json:"outputDirectory"`
-	PublicSource                *bool                           `json:"publicSource"`
-	RootDirectory               *string                         `json:"rootDirectory"`
-	ServerlessFunctionRegion    *string                         `json:"serverlessFunctionRegion"`
-	VercelAuthentication        *VercelAuthentication           `json:"ssoProtection"`
-	PasswordProtection          *PasswordProtectionWithPassword `json:"passwordProtection"`
-	TrustedIps                  *TrustedIps                     `json:"trustedIps"`
-	AutoExposeSystemEnvVars     *bool                           `json:"autoExposeSystemEnvs,omitempty"`
+	BuildCommand                         *string                         `json:"buildCommand"`
+	CommandForIgnoringBuildStep          *string                         `json:"commandForIgnoringBuildStep"`
+	DevCommand                           *string                         `json:"devCommand"`
+	Framework                            *string                         `json:"framework"`
+	InstallCommand                       *string                         `json:"installCommand"`
+	Name                                 *string                         `json:"name,omitempty"`
+	OutputDirectory                      *string                         `json:"outputDirectory"`
+	PublicSource                         *bool                           `json:"publicSource"`
+	RootDirectory                        *string                         `json:"rootDirectory"`
+	ServerlessFunctionRegion             string                          `json:"serverlessFunctionRegion,omitempty"`
+	VercelAuthentication                 *VercelAuthentication           `json:"ssoProtection"`
+	PasswordProtection                   *PasswordProtectionWithPassword `json:"passwordProtection"`
+	TrustedIps                           *TrustedIps                     `json:"trustedIps"`
+	AutoExposeSystemEnvVars              bool                            `json:"autoExposeSystemEnvs"`
+	EnablePreviewFeedback                *bool                           `json:"enablePreviewFeedback"`
+	AutoAssignCustomDomains              bool                            `json:"autoAssignCustomDomains"`
+	GitLFS                               bool                            `json:"gitLFS"`
+	ServerlessFunctionZeroConfigFailover bool                            `json:"serverlessFunctionZeroConfigFailover"`
+	CustomerSupportCodeVisibility        bool                            `json:"customerSupportCodeVisibility"`
+	GitForkProtection                    bool                            `json:"gitForkProtection"`
+	ProductionDeploymentsFastLane        bool                            `json:"productionDeploymentsFastLane"`
+	DirectoryListing                     bool                            `json:"directoryListing"`
+	SkewProtectionMaxAge                 int                             `json:"skewProtectionMaxAge"`
+	GitComments                          *GitComments                    `json:"gitComments"`
 }
 
 // UpdateProject updates an existing projects configuration within Vercel.

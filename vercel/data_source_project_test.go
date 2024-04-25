@@ -41,6 +41,17 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 						"value": "bar",
 					}),
 					resource.TestCheckTypeSetElemAttr("data.vercel_project.test", "environment.0.target.*", "production"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "git_comments.on_pull_request", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "git_comments.on_commit", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "preview_comments", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "auto_assign_custom_domains", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "git_lfs", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "function_failover", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "customer_success_code_visibility", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "git_fork_protection", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "prioritise_production_builds", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "directory_listing", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "skew_protection", "7 days"),
 				),
 			},
 		},
@@ -84,6 +95,19 @@ resource "vercel_project" "test" {
     }
   ]
   automatically_expose_system_environment_variables = true
+  git_comments = {
+      on_pull_request = true,
+      on_commit = true
+  }
+  preview_comments = true
+  auto_assign_custom_domains = true
+  git_lfs = true
+  function_failover = true
+  customer_success_code_visibility = true
+  git_fork_protection = true
+  prioritise_production_builds = true
+  directory_listing = true
+  skew_protection = "7 days"
 }
 
 data "vercel_project" "test" {

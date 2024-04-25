@@ -144,7 +144,7 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client
 			Key:       e.Key.ValueString(),
 			Value:     e.Value.ValueString(),
 			Target:    target,
-			GitBranch: toStrPointer(e.GitBranch),
+			GitBranch: e.GitBranch.ValueStringPointer(),
 			Type:      envVariableType,
 		},
 		ProjectID: e.ProjectID.ValueString(),
@@ -169,7 +169,7 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client
 	return client.UpdateEnvironmentVariableRequest{
 		Value:     e.Value.ValueString(),
 		Target:    target,
-		GitBranch: toStrPointer(e.GitBranch),
+		GitBranch: e.GitBranch.ValueStringPointer(),
 		Type:      envVariableType,
 		ProjectID: e.ProjectID.ValueString(),
 		TeamID:    e.TeamID.ValueString(),
@@ -193,7 +193,7 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 
 	return ProjectEnvironmentVariable{
 		Target:    target,
-		GitBranch: fromStringPointer(response.GitBranch),
+		GitBranch: types.StringPointerValue(response.GitBranch),
 		Key:       types.StringValue(response.Key),
 		Value:     value,
 		TeamID:    toTeamID(response.TeamID),

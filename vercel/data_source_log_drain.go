@@ -141,7 +141,7 @@ func responseToLogDrainWithoutSecret(ctx context.Context, out client.LogDrain) (
 		ID:             types.StringValue(out.ID),
 		TeamID:         toTeamID(out.TeamID),
 		DeliveryFormat: types.StringValue(out.DeliveryFormat),
-		SamplingRate:   fromFloat64Pointer(out.SamplingRate),
+		SamplingRate:   types.Float64PointerValue(out.SamplingRate),
 		Endpoint:       types.StringValue(out.Endpoint),
 		Environments:   environments,
 		Headers:        headers,
