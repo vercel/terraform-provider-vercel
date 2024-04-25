@@ -212,7 +212,7 @@ func setIfNotUnknown(m map[string]interface{}, v types.String, name string) {
 		m[name] = nil
 	}
 	if v.ValueString() != "" {
-		m[name] = toPtr(v.ValueString())
+		m[name] = v.ValueStringPointer()
 	}
 }
 

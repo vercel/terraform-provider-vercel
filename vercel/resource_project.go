@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -104,8 +106,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"serverless_function_region": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				Description:   "The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.",
 				Validators: []validator.String{
 					validateServerlessFunctionRegion(),
 				},
@@ -173,9 +175,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Required:    true,
 					},
 					"production_branch": schema.StringAttribute{
-						Description: "By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.",
-						Optional:    true,
-						Computed:    true,
+						Description:   "By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"deploy_hooks": schema.SetNestedAttribute{
 						Description: "Deploy hooks are unique URLs that allow you to trigger a deployment of a given branch. See https://vercel.com/docs/deployments/deploy-hooks for full information.",
@@ -326,8 +329,76 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				Description:   "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
+			},
+			"git_comments": schema.SingleNestedAttribute{
+				Description: "Configuration for Git Comments.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"on_pull_request": schema.BoolAttribute{
+						Description: "Whether Pull Request comments are enabled",
+						Required:    true,
+					},
+					"on_commit": schema.BoolAttribute{
+						Description: "Whether Commit comments are enabled",
+						Required:    true,
+					},
+				},
+			},
+			"preview_comments": schema.BoolAttribute{
+				Optional:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "Whether to enable comments on your Preview Deployments. If omitted, comments are controlled at the team level (default behaviour).",
+			},
+			"auto_assign_custom_domains": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Automatically assign custom production domains after each Production deployment via merge to the production branch or Vercel CLI deploy with --prod. Defaults to `true`",
+				Default:     booldefault.StaticBool(true),
+			},
+			"git_lfs": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "Enables Git LFS support. Git LFS replaces large files such as audio samples, videos, datasets, and graphics with text pointers inside Git, while storing the file contents on a remote server like GitHub.com or GitHub Enterprise.",
+			},
+			"function_failover": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "Automatically failover Serverless Functions to the nearest region. You can customize regions through vercel.json. A new Deployment is required for your changes to take effect.",
+			},
+			"customer_success_code_visibility": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.",
+			},
+			"git_fork_protection": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
+				Description: "Ensures that pull requests targeting your Git repository must be authorized by a member of your Team before deploying if your Project has Environment Variables or if the pull request includes a change to vercel.json. Defaults to `true`.",
+			},
+			"prioritise_production_builds": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "If enabled, builds for the Production environment will be prioritized over Preview environments.",
+			},
+			"directory_listing": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "If no index file is present within a directory, the directory contents will be displayed.",
+			},
+			"skew_protection": schema.StringAttribute{
+				Optional:    true,
+				Description: "Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.",
+				Validators: []validator.String{
+					stringOneOf("30 minutes", "12 hours", "1 day", "7 days"),
+				},
 			},
 		},
 	}
@@ -355,6 +426,48 @@ type Project struct {
 	ProtectionBypassForAutomation       types.Bool                      `tfsdk:"protection_bypass_for_automation"`
 	ProtectionBypassForAutomationSecret types.String                    `tfsdk:"protection_bypass_for_automation_secret"`
 	AutoExposeSystemEnvVars             types.Bool                      `tfsdk:"automatically_expose_system_environment_variables"`
+	GitComments                         types.Object                    `tfsdk:"git_comments"`
+	PreviewComments                     types.Bool                      `tfsdk:"preview_comments"`
+	AutoAssignCustomDomains             types.Bool                      `tfsdk:"auto_assign_custom_domains"`
+	GitLFS                              types.Bool                      `tfsdk:"git_lfs"`
+	FunctionFailover                    types.Bool                      `tfsdk:"function_failover"`
+	CustomerSuccessCodeVisibility       types.Bool                      `tfsdk:"customer_success_code_visibility"`
+	GitForkProtection                   types.Bool                      `tfsdk:"git_fork_protection"`
+	PrioritiseProductionBuilds          types.Bool                      `tfsdk:"prioritise_production_builds"`
+	DirectoryListing                    types.Bool                      `tfsdk:"directory_listing"`
+	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
+}
+
+type GitComments struct {
+	OnPullRequest types.Bool `tfsdk:"on_pull_request"`
+	OnCommit      types.Bool `tfsdk:"on_commit"`
+}
+
+func (g *GitComments) toUpdateProjectRequest() *client.GitComments {
+	if g == nil {
+		return nil
+	}
+	return &client.GitComments{
+		OnPullRequest: g.OnPullRequest.ValueBool(),
+		OnCommit:      g.OnCommit.ValueBool(),
+	}
+}
+
+func (p Project) RequiresUpdateAfterCreation() bool {
+	return p.PasswordProtection != nil ||
+		p.VercelAuthentication != nil ||
+		p.TrustedIps != nil ||
+		!p.AutoExposeSystemEnvVars.IsNull() ||
+		p.GitComments.IsNull() ||
+		!p.PreviewComments.IsNull() ||
+		(!p.AutoAssignCustomDomains.IsNull() && !p.AutoAssignCustomDomains.ValueBool()) ||
+		!p.GitLFS.IsNull() ||
+		!p.FunctionFailover.IsNull() ||
+		!p.CustomerSuccessCodeVisibility.IsNull() ||
+		(!p.GitForkProtection.IsNull() && !p.GitForkProtection.ValueBool()) ||
+		!p.PrioritiseProductionBuilds.IsNull() ||
+		!p.DirectoryListing.IsNull() ||
+		!p.SkewProtection.IsNull()
 }
 
 var nullProject = Project{
@@ -400,7 +513,7 @@ func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 			Key:       e.Key.ValueString(),
 			Value:     e.Value.ValueString(),
 			Target:    target,
-			GitBranch: toStrPointer(e.GitBranch),
+			GitBranch: e.GitBranch.ValueStringPointer(),
 			Type:      envVariableType,
 			ID:        e.ID.ValueString(),
 		})
@@ -410,43 +523,74 @@ func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 
 func (p *Project) toCreateProjectRequest(envs []EnvironmentItem) client.CreateProjectRequest {
 	return client.CreateProjectRequest{
-		BuildCommand:                toStrPointer(p.BuildCommand),
-		CommandForIgnoringBuildStep: toStrPointer(p.IgnoreCommand),
-		DevCommand:                  toStrPointer(p.DevCommand),
+		BuildCommand:                p.BuildCommand.ValueStringPointer(),
+		CommandForIgnoringBuildStep: p.IgnoreCommand.ValueStringPointer(),
+		DevCommand:                  p.DevCommand.ValueStringPointer(),
 		EnvironmentVariables:        parseEnvironment(envs),
-		Framework:                   toStrPointer(p.Framework),
+		Framework:                   p.Framework.ValueStringPointer(),
 		GitRepository:               p.GitRepository.toCreateProjectRequest(),
-		InstallCommand:              toStrPointer(p.InstallCommand),
+		InstallCommand:              p.InstallCommand.ValueStringPointer(),
 		Name:                        p.Name.ValueString(),
-		OutputDirectory:             toStrPointer(p.OutputDirectory),
-		PublicSource:                toBoolPointer(p.PublicSource),
-		RootDirectory:               toStrPointer(p.RootDirectory),
-		ServerlessFunctionRegion:    toStrPointer(p.ServerlessFunctionRegion),
+		OutputDirectory:             p.OutputDirectory.ValueStringPointer(),
+		PublicSource:                p.PublicSource.ValueBoolPointer(),
+		RootDirectory:               p.RootDirectory.ValueStringPointer(),
+		ServerlessFunctionRegion:    p.ServerlessFunctionRegion.ValueString(),
 	}
 }
 
-func (p *Project) toUpdateProjectRequest(oldName string) client.UpdateProjectRequest {
+func toSkewProtectionAge(sp types.String) int {
+	if sp.IsNull() || sp.IsUnknown() {
+		return 0
+	}
+	var ages = map[string]int{
+		"30 minutes": 1800,
+		"12 hours":   43200,
+		"1 day":      86400,
+		"7 days":     604800,
+	}
+	return ages[sp.ValueString()]
+}
+
+func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (req client.UpdateProjectRequest, diags diag.Diagnostics) {
 	var name *string = nil
 	if oldName != p.Name.ValueString() {
 		n := p.Name.ValueString()
 		name = &n
 	}
-	return client.UpdateProjectRequest{
-		BuildCommand:                toStrPointer(p.BuildCommand),
-		CommandForIgnoringBuildStep: toStrPointer(p.IgnoreCommand),
-		DevCommand:                  toStrPointer(p.DevCommand),
-		Framework:                   toStrPointer(p.Framework),
-		InstallCommand:              toStrPointer(p.InstallCommand),
-		Name:                        name,
-		OutputDirectory:             toStrPointer(p.OutputDirectory),
-		PublicSource:                toBoolPointer(p.PublicSource),
-		RootDirectory:               toStrPointer(p.RootDirectory),
-		ServerlessFunctionRegion:    toStrPointer(p.ServerlessFunctionRegion),
-		PasswordProtection:          p.PasswordProtection.toUpdateProjectRequest(),
-		VercelAuthentication:        p.VercelAuthentication.toUpdateProjectRequest(),
-		TrustedIps:                  p.TrustedIps.toUpdateProjectRequest(),
-		AutoExposeSystemEnvVars:     toBoolPointer(p.AutoExposeSystemEnvVars),
+	var gc *GitComments
+	diags = p.GitComments.As(ctx, &gc, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	if diags.HasError() {
+		return req, diags
 	}
+	return client.UpdateProjectRequest{
+		BuildCommand:                         p.BuildCommand.ValueStringPointer(),
+		CommandForIgnoringBuildStep:          p.IgnoreCommand.ValueStringPointer(),
+		DevCommand:                           p.DevCommand.ValueStringPointer(),
+		Framework:                            p.Framework.ValueStringPointer(),
+		InstallCommand:                       p.InstallCommand.ValueStringPointer(),
+		Name:                                 name,
+		OutputDirectory:                      p.OutputDirectory.ValueStringPointer(),
+		PublicSource:                         p.PublicSource.ValueBoolPointer(),
+		RootDirectory:                        p.RootDirectory.ValueStringPointer(),
+		ServerlessFunctionRegion:             p.ServerlessFunctionRegion.ValueString(),
+		PasswordProtection:                   p.PasswordProtection.toUpdateProjectRequest(),
+		VercelAuthentication:                 p.VercelAuthentication.toUpdateProjectRequest(),
+		TrustedIps:                           p.TrustedIps.toUpdateProjectRequest(),
+		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
+		EnablePreviewFeedback:                p.PreviewComments.ValueBoolPointer(),
+		AutoAssignCustomDomains:              p.AutoAssignCustomDomains.ValueBool(),
+		GitLFS:                               p.GitLFS.ValueBool(),
+		ServerlessFunctionZeroConfigFailover: p.FunctionFailover.ValueBool(),
+		CustomerSupportCodeVisibility:        p.CustomerSuccessCodeVisibility.ValueBool(),
+		GitForkProtection:                    p.GitForkProtection.ValueBool(),
+		ProductionDeploymentsFastLane:        p.PrioritiseProductionBuilds.ValueBool(),
+		DirectoryListing:                     p.DirectoryListing.ValueBool(),
+		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
+		GitComments:                          gc.toUpdateProjectRequest(),
+	}, nil
 }
 
 // EnvironmentItem reflects the state terraform stores internally for a project's environment variable.
@@ -477,7 +621,7 @@ func (e *EnvironmentItem) toEnvironmentVariableRequest() client.EnvironmentVaria
 		Key:       e.Key.ValueString(),
 		Value:     e.Value.ValueString(),
 		Target:    target,
-		GitBranch: toStrPointer(e.GitBranch),
+		GitBranch: e.GitBranch.ValueStringPointer(),
 		Type:      envVariableType,
 	}
 }
@@ -671,6 +815,11 @@ var envVariableElemType = types.ObjectType{
 	},
 }
 
+var gitCommentsAttrTypes = map[string]attr.Type{
+	"on_commit":       types.BoolType,
+	"on_pull_request": types.BoolType,
+}
+
 func hasSameTarget(p EnvironmentItem, target []string) bool {
 	if len(p.Target) != len(target) {
 		return false
@@ -698,6 +847,23 @@ type deployHook struct {
 	Ref  string `tfsdk:"ref"`
 	URL  string `tfsdk:"url"`
 	ID   string `tfsdk:"id"`
+}
+
+func fromSkewProtectionMaxAge(sp int) types.String {
+	if sp == 0 {
+		return types.StringNull()
+	}
+	var ages = map[int]string{
+		1800:   "30 minutes",
+		43200:  "12 hours",
+		86400:  "1 day",
+		604800: "7 days",
+	}
+	v, ok := ages[sp]
+	if !ok {
+		return types.StringValue(fmt.Sprintf("unknown - %d seconds", sp))
+	}
+	return types.StringValue(v)
 }
 
 func convertResponseToProject(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (Project, error) {
@@ -805,7 +971,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 				"key":        types.StringValue(e.Key),
 				"value":      value,
 				"target":     types.SetValueMust(types.StringType, target),
-				"git_branch": fromStringPointer(e.GitBranch),
+				"git_branch": types.StringPointerValue(e.GitBranch),
 				"id":         types.StringValue(e.ID),
 				"sensitive":  types.BoolValue(e.Type == "sensitive"),
 			},
@@ -830,27 +996,49 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		environmentEntry = types.SetNull(envVariableElemType)
 	}
 
+	gitComments := types.ObjectNull(gitCommentsAttrTypes)
+	if response.GitComments != nil && !plan.GitComments.IsNull() {
+		var diags diag.Diagnostics
+		gitComments, diags = types.ObjectValueFrom(ctx, gitCommentsAttrTypes, &GitComments{
+			OnPullRequest: types.BoolValue(response.GitComments.OnPullRequest),
+			OnCommit:      types.BoolValue(response.GitComments.OnCommit),
+		})
+		if diags.HasError() {
+			return Project{}, fmt.Errorf("error reading project git comments: %s - %s", diags[0].Summary(), diags[0].Detail())
+		}
+	}
+
 	return Project{
-		BuildCommand:                        uncoerceString(fields.BuildCommand, fromStringPointer(response.BuildCommand)),
-		DevCommand:                          uncoerceString(fields.DevCommand, fromStringPointer(response.DevCommand)),
+		BuildCommand:                        uncoerceString(fields.BuildCommand, types.StringPointerValue(response.BuildCommand)),
+		DevCommand:                          uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
 		Environment:                         environmentEntry,
-		Framework:                           fromStringPointer(response.Framework),
+		Framework:                           types.StringPointerValue(response.Framework),
 		GitRepository:                       gr,
 		ID:                                  types.StringValue(response.ID),
-		IgnoreCommand:                       fromStringPointer(response.CommandForIgnoringBuildStep),
-		InstallCommand:                      uncoerceString(fields.InstallCommand, fromStringPointer(response.InstallCommand)),
+		IgnoreCommand:                       types.StringPointerValue(response.CommandForIgnoringBuildStep),
+		InstallCommand:                      uncoerceString(fields.InstallCommand, types.StringPointerValue(response.InstallCommand)),
 		Name:                                types.StringValue(response.Name),
-		OutputDirectory:                     uncoerceString(fields.OutputDirectory, fromStringPointer(response.OutputDirectory)),
-		PublicSource:                        uncoerceBool(fields.PublicSource, fromBoolPointer(response.PublicSource)),
-		RootDirectory:                       fromStringPointer(response.RootDirectory),
-		ServerlessFunctionRegion:            fromStringPointer(response.ServerlessFunctionRegion),
+		OutputDirectory:                     uncoerceString(fields.OutputDirectory, types.StringPointerValue(response.OutputDirectory)),
+		PublicSource:                        uncoerceBool(fields.PublicSource, types.BoolPointerValue(response.PublicSource)),
+		RootDirectory:                       types.StringPointerValue(response.RootDirectory),
+		ServerlessFunctionRegion:            types.StringPointerValue(response.ServerlessFunctionRegion),
 		TeamID:                              toTeamID(response.TeamID),
 		PasswordProtection:                  pp,
 		VercelAuthentication:                va,
 		TrustedIps:                          tip,
 		ProtectionBypassForAutomation:       protectionBypass,
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
-		AutoExposeSystemEnvVars:             fromBoolPointer(response.AutoExposeSystemEnvVars),
+		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
+		PreviewComments:                     types.BoolPointerValue(response.EnablePreviewFeedback),
+		AutoAssignCustomDomains:             types.BoolValue(response.AutoAssignCustomDomains),
+		GitLFS:                              types.BoolValue(response.GitLFS),
+		FunctionFailover:                    types.BoolValue(response.ServerlessFunctionZeroConfigFailover),
+		CustomerSuccessCodeVisibility:       types.BoolValue(response.CustomerSupportCodeVisibility),
+		GitForkProtection:                   types.BoolValue(response.GitForkProtection),
+		PrioritiseProductionBuilds:          types.BoolValue(response.ProductionDeploymentsFastLane),
+		DirectoryListing:                    types.BoolValue(response.DirectoryListing),
+		SkewProtection:                      fromSkewProtectionMaxAge(response.SkewProtectionMaxAge),
+		GitComments:                         gitComments,
 	}, nil
 }
 
@@ -947,8 +1135,15 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		}
 	}
 
-	if plan.PasswordProtection != nil || plan.VercelAuthentication != nil || plan.TrustedIps != nil || !plan.AutoExposeSystemEnvVars.IsNull() {
-		out, err = r.client.UpdateProject(ctx, result.ID.ValueString(), plan.TeamID.ValueString(), plan.toUpdateProjectRequest(plan.Name.ValueString()))
+	// Fields that have to be updated after the project is initially created.
+	if plan.RequiresUpdateAfterCreation() {
+		req, diags := plan.toUpdateProjectRequest(ctx, plan.Name.ValueString())
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		out, err = r.client.UpdateProject(ctx, result.ID.ValueString(), plan.TeamID.ValueString(), req)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating project as part of creating project",
@@ -1280,7 +1475,12 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	out, err := r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), plan.toUpdateProjectRequest(state.Name.ValueString()))
+	updateRequest, diags := plan.toUpdateProjectRequest(ctx, state.Name.ValueString())
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	out, err := r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), updateRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",

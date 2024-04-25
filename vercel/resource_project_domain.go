@@ -112,11 +112,11 @@ type ProjectDomain struct {
 func convertResponseToProjectDomain(response client.ProjectDomainResponse) ProjectDomain {
 	return ProjectDomain{
 		Domain:             types.StringValue(response.Name),
-		GitBranch:          fromStringPointer(response.GitBranch),
+		GitBranch:          types.StringPointerValue(response.GitBranch),
 		ID:                 types.StringValue(response.Name),
 		ProjectID:          types.StringValue(response.ProjectID),
-		Redirect:           fromStringPointer(response.Redirect),
-		RedirectStatusCode: fromInt64Pointer(response.RedirectStatusCode),
+		Redirect:           types.StringPointerValue(response.Redirect),
+		RedirectStatusCode: types.Int64PointerValue(response.RedirectStatusCode),
 		TeamID:             toTeamID(response.TeamID),
 	}
 }
@@ -132,9 +132,9 @@ func (p *ProjectDomain) toCreateRequest() client.CreateProjectDomainRequest {
 
 func (p *ProjectDomain) toUpdateRequest() client.UpdateProjectDomainRequest {
 	return client.UpdateProjectDomainRequest{
-		GitBranch:          toStrPointer(p.GitBranch),
-		Redirect:           toStrPointer(p.Redirect),
-		RedirectStatusCode: toInt64Pointer(p.RedirectStatusCode),
+		GitBranch:          p.GitBranch.ValueStringPointer(),
+		Redirect:           p.Redirect.ValueStringPointer(),
+		RedirectStatusCode: p.RedirectStatusCode.ValueInt64Pointer(),
 	}
 }
 

@@ -65,6 +65,17 @@ func TestAcc_Project(t *testing.T) {
 						"value": "bar",
 					}),
 					resource.TestCheckTypeSetElemAttr("vercel_project.test", "environment.0.target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_comments.on_pull_request", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_comments.on_commit", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "auto_assign_custom_domains", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_lfs", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "function_failover", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "customer_success_code_visibility", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_fork_protection", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "prioritise_production_builds", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "directory_listing", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "skew_protection", "7 days"),
 				),
 			},
 			// Update testing
@@ -588,6 +599,20 @@ resource "vercel_project" "test" {
   public_source = true
   root_directory = "ui/src"
   automatically_expose_system_environment_variables = true
+  git_comments = {
+      on_pull_request = true,
+      on_commit = true
+  }
+  preview_comments = true
+  auto_assign_custom_domains = true
+  git_lfs = true
+  function_failover = true
+  customer_success_code_visibility = true
+  git_fork_protection = true
+  prioritise_production_builds = true
+  directory_listing = true
+  skew_protection = "7 days"
+
   environment = [
     {
       key    = "foo"

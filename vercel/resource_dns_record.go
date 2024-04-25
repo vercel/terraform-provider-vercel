@@ -208,18 +208,18 @@ func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 	var srv *client.SRVUpdate = nil
 	if d.SRV != nil {
 		srv = &client.SRVUpdate{
-			Port:     toPtr(d.SRV.Port.ValueInt64()),
-			Priority: toPtr(d.SRV.Priority.ValueInt64()),
-			Target:   toPtr(d.SRV.Target.ValueString()),
-			Weight:   toPtr(d.SRV.Weight.ValueInt64()),
+			Port:     d.SRV.Port.ValueInt64Pointer(),
+			Priority: d.SRV.Priority.ValueInt64Pointer(),
+			Target:   d.SRV.Target.ValueStringPointer(),
+			Weight:   d.SRV.Weight.ValueInt64Pointer(),
 		}
 	}
 	return client.UpdateDNSRecordRequest{
-		MXPriority: toInt64Pointer(d.MXPriority),
-		Name:       toPtr(d.Name.ValueString()),
+		MXPriority: d.MXPriority.ValueInt64Pointer(),
+		Name:       d.Name.ValueStringPointer(),
 		SRV:        srv,
-		TTL:        toInt64Pointer(d.TTL),
-		Value:      toStrPointer(d.Value),
+		TTL:        d.TTL.ValueInt64Pointer(),
+		Value:      d.Value.ValueStringPointer(),
 		Comment:    d.Comment.ValueString(),
 	}
 }
