@@ -314,10 +314,13 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 	   otherwise it causes issues with terraform thinking there are changes when there aren't. However,
 	   for the data source we always want to read the value */
 	plan.Environment = types.SetValueMust(envVariableElemType, []attr.Value{})
-	plan.GitComments = types.ObjectValueMust(gitCommentsAttrTypes, map[string]attr.Value{
-		"on_pull_request": types.BoolValue(response.GitComments.OnPullRequest),
-		"on_commit":       types.BoolValue(response.GitComments.OnCommit),
-	})
+	plan.GitComments = types.ObjectNull(gitCommentsAttrTypes)
+	if response.GitComments != nil {
+		plan.GitComments = types.ObjectValueMust(gitCommentsAttrTypes, map[string]attr.Value{
+			"on_pull_request": types.BoolValue(response.GitComments.OnPullRequest),
+			"on_commit":       types.BoolValue(response.GitComments.OnCommit),
+		})
+	}
 	project, err := convertResponseToProject(ctx, response, plan, environmentVariables)
 	if err != nil {
 		return ProjectDataSource{}, err
