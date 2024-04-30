@@ -108,11 +108,21 @@ resource "vercel_project" "test" {
   prioritise_production_builds = true
   directory_listing = true
   skew_protection = "7 days"
+  git_repository = {
+    type = "github"
+    repo = "%[3]s"
+    deploy_hooks = [
+        {
+            ref = "main"
+            name = "some deploy hook"
+        }
+    ]
+  }
 }
 
 data "vercel_project" "test" {
     name = vercel_project.test.name
     %[2]s
 }
-`, name, teamID)
+`, name, teamID, testGithubRepo())
 }

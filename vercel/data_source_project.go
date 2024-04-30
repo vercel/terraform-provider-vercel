@@ -149,6 +149,31 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Description: "By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.",
 						Computed:    true,
 					},
+					"deploy_hooks": schema.SetNestedAttribute{
+						Description: "Deploy hooks are unique URLs that allow you to trigger a deployment of a given branch. See https://vercel.com/docs/deployments/deploy-hooks for full information.",
+						Computed:    true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"id": schema.StringAttribute{
+									Description: "The ID of the deploy hook.",
+									Computed:    true,
+								},
+								"name": schema.StringAttribute{
+									Description: "The name of the deploy hook.",
+									Computed:    true,
+								},
+								"ref": schema.StringAttribute{
+									Description: "The branch or commit hash that should be deployed.",
+									Computed:    true,
+								},
+								"url": schema.StringAttribute{
+									Description: "A URL that, when a POST request is made to, will trigger a new deployment.",
+									Computed:    true,
+									Sensitive:   true,
+								},
+							},
+						},
+					},
 				},
 			},
 			"vercel_authentication": schema.SingleNestedAttribute{
