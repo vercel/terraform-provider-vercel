@@ -4,8 +4,10 @@ version: "3"
 tasks:
   build:
     desc: "Build the provider binary"
+    deps:
+      - install-goreleaser
     cmds:
-      - go build -o terraform-provider-vercel
+      - goreleaser build --single-target --skip=validate --clean --snapshot
     sources:
       - "**/*.go"
       - go.mod
@@ -26,6 +28,13 @@ tasks:
       - go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.16.0
     status:
       - which tfplugindocs
+
+  install-goreleaser:
+    desc: "Install goreleaser"
+    cmds:
+      - go install github.com/goreleaser/goreleaser@latest
+    status:
+      - which goreleaser
 
   docs:
     desc: "Update the docs generated from description fields"
@@ -50,22 +59,21 @@ tasks:
     status:
       - which staticcheck
 
-  # Temporarily disable tfproviderlint as it doesn't support go 1.18+ syntax
-  # install-providerlint:
-  #   desc: "Install tfproviderlint tool"
-  #   cmds:
-  #     - go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@latest
-  #   status:
-  #     - which tfproviderlint
+  install-providerlint:
+    desc: "Install tfproviderlint tool"
+    cmds:
+      - go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@latest
+    status:
+      - which tfproviderlint
 
   lint:
     desc: "Run linters against the provider"
     deps:
       - install-staticcheck
-      # - install-providerlint
+      - install-providerlint
     cmds:
       - staticcheck -tags it ./...
-      # - tfproviderlint -R018=false -R009=false ./...
+      - tfproviderlint -R018=false -R009=false ./...
       - cmd: |
           export BADFMT=$(gofmt -s -l .)
           test -z "$BADFMT" || (echo -e "invalid gofmt: $BADFMT"; exit 1)
@@ -79,7 +87,7 @@ tasks:
           cat << EOF > ~/.terraformrc
           provider_installation {
             dev_overrides {
-              "vercel/vercel" = "$(pwd)"
+              "vercel/vercel" = "$(pwd)/dist/terraform-provider-vercel_{{ OS }}_{{ ARCH }}"
             }
             direct {}
           }

@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -26,18 +25,14 @@ func getUpdateBypassProtectionRequestBody(newValue bool, secret string) string {
 		return "{}"
 	}
 
-	bytes, err := json.Marshal(struct {
+	return string(mustMarshal(struct {
 		Revoke revokeBypassProtectionRequest `json:"revoke"`
 	}{
 		Revoke: revokeBypassProtectionRequest{
 			Regenerate: false,
 			Secret:     secret,
 		},
-	})
-	if err != nil {
-		panic(err)
-	}
-	return string(bytes)
+	}))
 }
 
 func (c *Client) UpdateProtectionBypassForAutomation(ctx context.Context, request UpdateProtectionBypassForAutomationRequest) (s string, err error) {
