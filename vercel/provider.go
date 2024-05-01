@@ -42,7 +42,7 @@ Use the navigation to the left to read about the available resources.
 			},
 			"team": schema.StringAttribute{
 				Optional:    true,
-				Description: "The default Vercel Team to use when creating resources. This can be provided as either a team slug, or team ID. The slug and ID are both available from the Team Settings page in the Vercel dashboard.",
+				Description: "The default Vercel Team to use when creating resources or reading data sources. This can be provided as either a team slug, or team ID. The slug and ID are both available from the Team Settings page in the Vercel dashboard.",
 			},
 		},
 	}

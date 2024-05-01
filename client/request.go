@@ -14,6 +14,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
+/*
+ * version is the tagged version of this repository. It is overriden at build time by ldflags.
+ * please see the .goreleaser.yml file for more information.
+ */
+var version = "dev"
+
 // APIError is an error type that exposes additional information about why an API request failed.
 type APIError struct {
 	Code       string `json:"code"`
@@ -46,6 +52,7 @@ func (cr *clientRequest) toHTTPRequest() (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+	r.Header.Set("User-Agent", fmt.Sprintf("terraform-provider-vercel/%s", version))
 	if cr.body != "" {
 		r.Header.Set("Content-Type", "application/json")
 	}
@@ -55,6 +62,7 @@ func (cr *clientRequest) toHTTPRequest() (*http.Request, error) {
 // doRequest is a helper function for consistently requesting data from vercel.
 // This manages:
 // - Setting the default Content-Type for requests with a body
+// - Setting the User-Agent
 // - Authorization via the Bearer token
 // - Converting error responses into an inspectable type
 // - Unmarshaling responses
