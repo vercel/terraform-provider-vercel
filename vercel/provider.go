@@ -59,6 +59,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newLogDrainResource,
 		newProjectDomainResource,
 		newProjectEnvironmentVariableResource,
+		newProjectFunctionCPUResource,
 		newProjectResource,
 		newSharedEnvironmentVariableResource,
 		newWebhookResource,
@@ -74,11 +75,12 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newEdgeConfigTokenDataSource,
 		newEndpointVerificationDataSource,
 		newFileDataSource,
+		newLogDrainDataSource,
 		newPrebuiltProjectDataSource,
 		newProjectDataSource,
 		newProjectDirectoryDataSource,
+		newProjectFunctionCPUDataSource,
 		newSharedEnvironmentVariableDataSource,
-		newLogDrainDataSource,
 	}
 }
 
