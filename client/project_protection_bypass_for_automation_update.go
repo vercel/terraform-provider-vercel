@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -50,7 +49,6 @@ func (c *Client) UpdateProtectionBypassForAutomation(ctx context.Context, reques
 	response := struct {
 		ProtectionBypass map[string]ProtectionBypass `json:"protectionBypass"`
 	}{}
-	time.Sleep(1 * time.Second)
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "PATCH",

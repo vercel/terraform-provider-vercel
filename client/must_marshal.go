@@ -22,6 +22,10 @@ func (v *VercelAuthentication) MarshalJSON() ([]byte, error) {
 // be marshaled. As our structs are known ahead of time and are all safe to marshal,
 // this simplifies the error checking process.
 func mustMarshal(v interface{}) []byte {
-	res, _ := json.Marshal(v)
+	res, err := json.Marshal(v)
+	if err != nil {
+		//lintignore:R009 // this is okay as we know the shape of the data
+		panic(err)
+	}
 	return res
 }

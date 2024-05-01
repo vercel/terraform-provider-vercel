@@ -18,10 +18,12 @@ func main() {
 	c := client.New(os.Getenv("VERCEL_API_TOKEN"))
 	teamID := os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM")
 	if teamID == "" {
+		//lintignore:R009
 		panic("VERCEL_TERRAFORM_TESTING_TEAM environment variable not set")
 	}
 	domain := os.Getenv("VERCEL_TERRAFORM_TESTING_DOMAIN")
 	if domain == "" {
+		//lintignore:R009
 		panic("VERCEL_TERRAFORM_TESTING_DOMAIN environment variable not set")
 	}
 	ctx := context.Background()
@@ -29,18 +31,22 @@ func main() {
 	// delete both for the testing team, and for without a team
 	err := deleteAllProjects(ctx, c, teamID)
 	if err != nil {
+		//lintignore:R009
 		panic(err)
 	}
 	err = deleteAllDNSRecords(ctx, c, domain, teamID)
 	if err != nil {
+		//lintignore:R009
 		panic(err)
 	}
 	err = deleteAllSharedEnvironmentVariables(ctx, c, teamID)
 	if err != nil {
+		//lintignore:R009
 		panic(err)
 	}
 	err = deleteAllEdgeConfigs(ctx, c, teamID)
 	if err != nil {
+		//lintignore:R009
 		panic(err)
 	}
 }
