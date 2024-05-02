@@ -96,7 +96,7 @@ func convertResponseToProjectFunctionCPU(response client.ProjectFunctionCPU) Pro
 		ID:        types.StringValue(response.ProjectID),
 		TeamID:    toTeamID(response.TeamID),
 		ProjectID: types.StringValue(response.ProjectID),
-		CPU:       types.StringValue(response.CPU),
+		CPU:       types.StringPointerValue(response.CPU),
 	}
 }
 

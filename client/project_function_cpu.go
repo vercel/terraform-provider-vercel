@@ -14,13 +14,13 @@ type ProjectFunctionCPURequest struct {
 }
 
 type functionCPU struct {
-	DefaultMemoryType string `json:"defaultMemoryType"`
+	DefaultMemoryType *string `json:"defaultMemoryType"`
 }
 
 type ProjectFunctionCPU struct {
 	ProjectID string
 	TeamID    string
-	CPU       string
+	CPU       *string
 }
 
 var toCPUNetwork = map[string]string{
@@ -52,10 +52,15 @@ func (c *Client) GetProjectFunctionCPU(ctx context.Context, projectID, teamID st
 	if err != nil {
 		return p, err
 	}
+	var cpu *string
+	if f.DefaultMemoryType != nil {
+		v := fromCPUNetwork[*f.DefaultMemoryType]
+		cpu = &v
+	}
 	return ProjectFunctionCPU{
 		ProjectID: projectID,
 		TeamID:    teamID,
-		CPU:       fromCPUNetwork[f.DefaultMemoryType],
+		CPU:       cpu,
 	}, err
 }
 
@@ -65,8 +70,9 @@ func (c *Client) UpdateProjectFunctionCPU(ctx context.Context, request ProjectFu
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 
+	v := toCPUNetwork[request.CPU]
 	payload := string(mustMarshal(functionCPU{
-		DefaultMemoryType: toCPUNetwork[request.CPU],
+		DefaultMemoryType: &v,
 	}))
 	var f functionCPU
 	err = c.doRequest(clientRequest{
@@ -78,9 +84,14 @@ func (c *Client) UpdateProjectFunctionCPU(ctx context.Context, request ProjectFu
 	if err != nil {
 		return p, err
 	}
+	var cpu *string
+	if f.DefaultMemoryType != nil {
+		v := fromCPUNetwork[*f.DefaultMemoryType]
+		cpu = &v
+	}
 	return ProjectFunctionCPU{
 		ProjectID: request.ProjectID,
 		TeamID:    request.TeamID,
-		CPU:       fromCPUNetwork[f.DefaultMemoryType],
+		CPU:       cpu,
 	}, err
 }
