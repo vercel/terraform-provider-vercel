@@ -51,6 +51,7 @@ Use the navigation to the left to read about the available resources.
 func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		newAliasResource,
+		newAttackChallengeModeResource,
 		newDNSRecordResource,
 		newDeploymentResource,
 		newEdgeConfigResource,
@@ -69,6 +70,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		newAliasDataSource,
+		newAttackChallengeModeDataSource,
 		newDeploymentDataSource,
 		newEdgeConfigDataSource,
 		newEdgeConfigSchemaDataSource,

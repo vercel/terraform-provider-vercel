@@ -181,11 +181,16 @@ type ProjectResponse struct {
 	DirectoryListing                     bool                        `json:"directoryListing"`
 	SkewProtectionMaxAge                 int                         `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                `json:"gitComments"`
+	Security                             *Security                   `json:"security"`
 }
 
 type GitComments struct {
 	OnCommit      bool `json:"onCommit"`
 	OnPullRequest bool `json:"onPullRequest"`
+}
+
+type Security struct {
+	AttackModeEnabled bool `json:"attackModeEnabled"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.
