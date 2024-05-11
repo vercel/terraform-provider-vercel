@@ -144,7 +144,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Computed:    true,
 						},
 						"sensitive": schema.BoolAttribute{
-							Description: "Whether the Environment Variable is sensitive or not.",
+							Description: "Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))",
 							Optional:    true,
 							Computed:    true,
 						},
