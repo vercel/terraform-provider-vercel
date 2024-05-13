@@ -26,6 +26,7 @@ func main() {
 		//lintignore:R009
 		panic("VERCEL_TERRAFORM_TESTING_DOMAIN environment variable not set")
 	}
+	clearDNS := os.Getenv("VERCEL_TERRAFORM_CLEAR_DNS") != ""
 	ctx := context.Background()
 
 	// delete both for the testing team, and for without a team
@@ -34,10 +35,12 @@ func main() {
 		//lintignore:R009
 		panic(err)
 	}
-	err = deleteAllDNSRecords(ctx, c, domain, teamID)
-	if err != nil {
-		//lintignore:R009
-		panic(err)
+	if clearDNS {
+		err = deleteAllDNSRecords(ctx, c, domain, teamID)
+		if err != nil {
+			//lintignore:R009
+			panic(err)
+		}
 	}
 	err = deleteAllSharedEnvironmentVariables(ctx, c, teamID)
 	if err != nil {

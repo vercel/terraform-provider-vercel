@@ -78,6 +78,14 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "value", "bar-sensitive"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_sensitive", "target.*", "production"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "sensitive", "true"),
+
+					/*
+						testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_not_sensitive", testTeam()),
+						resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "key", "foo_not_sensitive"),
+						resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "value", "bar-not-sensitive"),
+						resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_not_sensitive", "target.*", "production"),
+						resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "sensitive", "false"),
+					*/
 				),
 			},
 			{
@@ -179,6 +187,17 @@ resource "vercel_project_environment_variable" "example_sensitive" {
 	target     = ["production"]
 	sensitive  = true
 }
+
+/*
+resource "vercel_project_environment_variable" "example_not_sensitive" {
+	project_id = vercel_project.example.id
+	%[3]s
+	key        = "foo_not_sensitive"
+	value      = "bar-not-sensitive"
+	target     = ["production"]
+	sensitive  = false
+}
+*/
 `, projectName, testGithubRepo(), teamIDConfig())
 }
 

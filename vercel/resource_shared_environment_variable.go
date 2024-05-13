@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -19,8 +20,10 @@ import (
 )
 
 var (
-	_ resource.Resource              = &sharedEnvironmentVariableResource{}
-	_ resource.ResourceWithConfigure = &sharedEnvironmentVariableResource{}
+	_ resource.Resource                = &sharedEnvironmentVariableResource{}
+	_ resource.ResourceWithConfigure   = &sharedEnvironmentVariableResource{}
+	_ resource.ResourceWithImportState = &sharedEnvironmentVariableResource{}
+	_ resource.ResourceWithModifyPlan  = &sharedEnvironmentVariableResource{}
 )
 
 func newSharedEnvironmentVariableResource() resource.Resource {
@@ -29,6 +32,49 @@ func newSharedEnvironmentVariableResource() resource.Resource {
 
 type sharedEnvironmentVariableResource struct {
 	client *client.Client
+}
+
+func (r *sharedEnvironmentVariableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	var config SharedEnvironmentVariable
+	diags := req.Plan.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if config.ID.ValueString() != "" {
+		// The resource already exists, so this is okay.
+		return
+	}
+	if config.Sensitive.IsUnknown() || config.Sensitive.IsNull() || config.Sensitive.ValueBool() {
+		// Sensitive is either true, or computed, which is fine.
+		return
+	}
+
+	// if sensitive is explicitly set to `false`, then validate that an env var can be created with the given
+	// team sensitive environment variable policy.
+	team, err := r.client.Team(ctx, config.TeamID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error validating shared environment variable",
+			"Could not validate shared environment variable, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	if team.SensitiveEnvironmentVariablePolicy == nil || *team.SensitiveEnvironmentVariablePolicy != "on" {
+		// the policy isn't enabled
+		return
+	}
+
+	resp.Diagnostics.AddAttributeError(
+		path.Root("sensitive"),
+		"Shared Environment Variable Invalid",
+		"This team has a policy that forces all environment variables to be sensitive. Please remove the `sensitive` field or set the `sensitive` field to `true` in your configuration.",
+	)
 }
 
 func (r *sharedEnvironmentVariableResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {

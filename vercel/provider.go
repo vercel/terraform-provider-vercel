@@ -154,7 +154,7 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 			)
 			return
 		}
-		vercelClient = vercelClient.WithTeamID(res.ID)
+		vercelClient = vercelClient.WithTeam(res)
 	}
 
 	resp.DataSourceData = vercelClient

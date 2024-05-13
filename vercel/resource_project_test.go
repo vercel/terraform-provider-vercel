@@ -526,7 +526,7 @@ resource "vercel_project" "test_git" {
   git_repository = {
     type = "github"
     repo = "%s"
-    production_branch = "staging"
+    production_branch = "production"
     deploy_hooks = [
         {
             ref = "main"

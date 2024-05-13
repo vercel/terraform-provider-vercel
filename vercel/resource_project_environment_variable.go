@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -17,8 +18,10 @@ import (
 )
 
 var (
-	_ resource.Resource              = &projectEnvironmentVariableResource{}
-	_ resource.ResourceWithConfigure = &projectEnvironmentVariableResource{}
+	_ resource.Resource                = &projectEnvironmentVariableResource{}
+	_ resource.ResourceWithConfigure   = &projectEnvironmentVariableResource{}
+	_ resource.ResourceWithImportState = &projectEnvironmentVariableResource{}
+	_ resource.ResourceWithModifyPlan  = &projectEnvironmentVariableResource{}
 )
 
 func newProjectEnvironmentVariableResource() resource.Resource {
@@ -108,6 +111,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))",
 				Optional:      true,
 				Computed:      true,
+				Validators:    []validator.Bool{},
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
 		},
@@ -124,6 +128,49 @@ type ProjectEnvironmentVariable struct {
 	ProjectID types.String   `tfsdk:"project_id"`
 	ID        types.String   `tfsdk:"id"`
 	Sensitive types.Bool     `tfsdk:"sensitive"`
+}
+
+func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	var config ProjectEnvironmentVariable
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if config.ID.ValueString() != "" {
+		// The resource already exists, so this is okay.
+		return
+	}
+	if config.Sensitive.IsUnknown() || config.Sensitive.IsNull() || config.Sensitive.ValueBool() {
+		// Sensitive is either true, or computed, which is fine.
+		return
+	}
+
+	// if sensitive is explicitly set to `false`, then validate that an env var can be created with the given
+	// team sensitive environment variable policy.
+	team, err := r.client.Team(ctx, config.TeamID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error validating project environment variable",
+			"Could not validate project environment variable, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	if team.SensitiveEnvironmentVariablePolicy == nil || *team.SensitiveEnvironmentVariablePolicy != "on" {
+		// the policy isn't enabled
+		return
+	}
+
+	resp.Diagnostics.AddAttributeError(
+		path.Root("sensitive"),
+		"Project Environment Variable Invalid",
+		"This team has a policy that forces all environment variables to be sensitive. Please remove the `sensitive` field or set the `sensitive` field to `true` in your configuration.",
+	)
 }
 
 func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client.CreateEnvironmentVariableRequest {

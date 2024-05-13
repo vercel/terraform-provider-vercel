@@ -13,13 +13,14 @@ type TeamCreateRequest struct {
 	Name string `json:"name"`
 }
 
-// TeamResponse is the information returned by the vercel api when a team is created.
-type TeamResponse struct {
-	ID string `json:"id"`
+// Team is the information returned by the vercel api when a team is created.
+type Team struct {
+	ID                                 string  `json:"id"`
+	SensitiveEnvironmentVariablePolicy *string `json:"sensitiveEnvironmentVariablePolicy"`
 }
 
 // CreateTeam creates a team within vercel.
-func (c *Client) CreateTeam(ctx context.Context, request TeamCreateRequest) (r TeamResponse, err error) {
+func (c *Client) CreateTeam(ctx context.Context, request TeamCreateRequest) (r Team, err error) {
 	url := fmt.Sprintf("%s/v1/teams", c.baseURL)
 
 	payload := string(mustMarshal(request))
@@ -51,7 +52,7 @@ func (c *Client) DeleteTeam(ctx context.Context, teamID string) error {
 }
 
 // GetTeam returns information about an existing team within vercel.
-func (c *Client) GetTeam(ctx context.Context, idOrSlug string) (r TeamResponse, err error) {
+func (c *Client) GetTeam(ctx context.Context, idOrSlug string) (r Team, err error) {
 	url := fmt.Sprintf("%s/v2/teams/%s", c.baseURL, idOrSlug)
 	tflog.Info(ctx, "getting team", map[string]interface{}{
 		"url": url,

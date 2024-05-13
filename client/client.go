@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"net/http"
 	"time"
 )
@@ -9,7 +10,7 @@ import (
 type Client struct {
 	token   string
 	client  *http.Client
-	_teamID string
+	team    Team
 	baseURL string
 }
 
@@ -33,9 +34,16 @@ func New(token string) *Client {
 	}
 }
 
-func (c *Client) WithTeamID(teamID string) *Client {
-	c._teamID = teamID
+func (c *Client) WithTeam(team Team) *Client {
+	c.team = team
 	return c
+}
+
+func (c *Client) Team(ctx context.Context, teamID string) (Team, error) {
+	if teamID != "" {
+		return c.GetTeam(ctx, teamID)
+	}
+	return c.team, nil
 }
 
 // teamID is a helper method to return one of two values based on specificity.
@@ -45,5 +53,5 @@ func (c *Client) teamID(teamID string) string {
 	if teamID != "" {
 		return teamID
 	}
-	return c._teamID
+	return c.team.ID
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -28,6 +29,7 @@ var (
 	_ resource.Resource                = &projectResource{}
 	_ resource.ResourceWithConfigure   = &projectResource{}
 	_ resource.ResourceWithImportState = &projectResource{}
+	_ resource.ResourceWithModifyPlan  = &projectResource{}
 )
 
 func newProjectResource() resource.Resource {
@@ -949,7 +951,8 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 				return Project{}, fmt.Errorf("error reading project environment variables: %s", err)
 			}
 			for _, p := range environment {
-				if p.Sensitive.ValueBool() && p.Key.ValueString() == e.Key && hasSameTarget(p, e.Target) {
+				if p.Key.ValueString() == e.Key && hasSameTarget(p, e.Target) {
+
 					value = p.Value
 					break
 				}
@@ -1040,6 +1043,72 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		SkewProtection:                      fromSkewProtectionMaxAge(response.SkewProtectionMaxAge),
 		GitComments:                         gitComments,
 	}, nil
+}
+
+func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	var config Project
+	diags := req.Plan.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	environment, err := config.environment(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing project environment variables",
+			"Could not read environment variables, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	// work out if there are any new env vars that are specifying sensitive = false
+	var nonSensitiveEnvVars []path.Path
+	for i, e := range environment {
+		if e.ID.ValueString() != "" {
+			continue
+		}
+		if e.Sensitive.IsUnknown() || e.Sensitive.IsNull() || e.Sensitive.ValueBool() {
+			continue
+		}
+		nonSensitiveEnvVars = append(
+			nonSensitiveEnvVars,
+			path.Root("environment").
+				AtSetValue(config.Environment.Elements()[i]).
+				AtName("sensitive"),
+		)
+	}
+
+	if len(nonSensitiveEnvVars) == 0 {
+		return
+	}
+
+	// if sensitive is explicitly set to `false`, then validate that an env var can be created with the given
+	// team sensitive environment variable policy.
+	team, err := r.client.Team(ctx, config.TeamID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error validating project environment variable",
+			"Could not validate project environment variable, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	if team.SensitiveEnvironmentVariablePolicy == nil || *team.SensitiveEnvironmentVariablePolicy != "on" {
+		// the policy isn't enabled
+		return
+	}
+
+	for _, p := range nonSensitiveEnvVars {
+		resp.Diagnostics.AddAttributeError(
+			p,
+			"Project Invalid",
+			"This team has a policy that forces all environment variables to be sensitive. Please remove the `sensitive` field for your environment variables or set the `sensitive` field to `true` in your configuration.",
+		)
+	}
 }
 
 // Create will create a project within Vercel by calling the Vercel API.
