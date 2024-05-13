@@ -52,7 +52,7 @@ resource "vercel_shared_environment_variable" "example" {
 
 ### Optional
 
-- `sensitive` (Boolean) Whether the Environment Variable is sensitive or not.
+- `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))
 - `team_id` (String) The ID of the Vercel team. Shared environment variables require a team.
 
 ### Read-Only
