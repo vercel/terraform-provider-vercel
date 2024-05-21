@@ -28,3 +28,11 @@ type TrustedIps struct {
 type ProtectionBypass struct {
 	Scope types.String `tfsdk:"scope"`
 }
+
+type OptionsAllowlist struct {
+	Paths []OptionsAllowlistPath `tfsdk:"paths"`
+}
+
+type OptionsAllowlistPath struct {
+	Value types.String `tfsdk:"value"`
+}

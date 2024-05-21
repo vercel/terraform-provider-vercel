@@ -26,3 +26,11 @@ type TrustedIps struct {
 type ProtectionBypass struct {
 	Scope string `json:"scope"`
 }
+
+type OptionsAllowlist struct {
+	Paths []OptionsAllowlistPath `json:"paths"`
+}
+
+type OptionsAllowlistPath struct {
+	Value string `json:"value"`
+}

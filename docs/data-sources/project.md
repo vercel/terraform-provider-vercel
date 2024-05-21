@@ -69,6 +69,7 @@ output "project_id" {
 - `skew_protection` (String) Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
+- `options_allowlist` (Attributes) Configuration for the OPTIONS Allowlist. (see [below for nested schema](#nestedatt--options_allowlist))
 
 <a id="nestedatt--environment"></a>
 ### Nested Schema for `environment`
@@ -139,6 +140,19 @@ Read-Only:
 - `note` (String)
 - `value` (String)
 
+<a id="#nestedatt--options_allowlist"></a>
+### Nested Schema for `options_allowlist`
+
+Read-Only:
+
+- `paths` (List of Object) The allowed paths for the OPTIONS Allowlist. (see [below for nested schema](#nestedatt--options_allowlist--paths))
+
+<a id="nestedatt--options_allowlist--paths"></a>
+### Nested Schema for `options_allowlist.paths`
+
+Read-Only:
+
+- `value` (String)
 
 
 <a id="nestedatt--vercel_authentication"></a>

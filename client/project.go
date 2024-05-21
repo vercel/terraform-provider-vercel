@@ -169,6 +169,7 @@ type ProjectResponse struct {
 	VercelAuthentication                 *VercelAuthentication       `json:"ssoProtection"`
 	PasswordProtection                   *PasswordProtection         `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                 `json:"trustedIps"`
+	OptionsAllowlist                     *OptionsAllowlist           `json:"optionsAllowlist"`
 	ProtectionBypass                     map[string]ProtectionBypass `json:"protectionBypass"`
 	AutoExposeSystemEnvVars              *bool                       `json:"autoExposeSystemEnvs"`
 	EnablePreviewFeedback                *bool                       `json:"enablePreviewFeedback"`
@@ -261,6 +262,7 @@ type UpdateProjectRequest struct {
 	VercelAuthentication                 *VercelAuthentication           `json:"ssoProtection"`
 	PasswordProtection                   *PasswordProtectionWithPassword `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                     `json:"trustedIps"`
+	OptionsAllowlist                     *OptionsAllowlist               `json:"optionsAllowlist"`
 	AutoExposeSystemEnvVars              bool                            `json:"autoExposeSystemEnvs"`
 	EnablePreviewFeedback                *bool                           `json:"enablePreviewFeedback"`
 	AutoAssignCustomDomains              bool                            `json:"autoAssignCustomDomains"`
