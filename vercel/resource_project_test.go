@@ -166,7 +166,7 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 		CheckDestroy:             testAccProjectDestroy("vercel_project.enabled_to_start", testTeam()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIps(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsAndOptionsAllowlist(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists("vercel_project.enabled_to_start", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.deployment_type", "all_deployments"),
@@ -179,6 +179,8 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 					}),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "trusted_ips.deployment_type", "all_deployments"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "trusted_ips.protection_mode", "trusted_ip_optional"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "options_allowlist.paths.#", "1"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "options_allowlist.paths.0.value", "/foo"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret"),
 					testAccProjectExists("vercel_project.disabled_to_start", testTeam()),
@@ -198,12 +200,14 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 					}),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.deployment_type", "only_production_deployments"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.protection_mode", "trusted_ip_required"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "options_allowlist.paths.#", "1"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "options_allowlist.paths.0.value", "/bar"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.enabled_to_update", "protection_bypass_for_automation_secret"),
 				),
 			},
 			{
-				Config: testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsUpdated(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsAndOptionsAllowlistUpdated(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.deployment_type", "standard_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "password_protection"),
@@ -221,6 +225,8 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 					}),
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "trusted_ips.deployment_type", "standard_protection"),
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "trusted_ips.protection_mode", "trusted_ip_required"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "options_allowlist.paths.#", "1"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "options_allowlist.paths.0.value", "/foo"),
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.disabled_to_start", "protection_bypass_for_automation_secret"),
 
@@ -235,6 +241,8 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.deployment_type", "all_deployments"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.protection_mode", "trusted_ip_optional"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation", "false"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "options_allowlist.paths.#", "1"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "options_allowlist.paths.0.value", "/bar"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation_secret"),
 				),
 			},
@@ -378,7 +386,7 @@ resource "vercel_project" "test" {
 `, projectSuffix, teamID)
 }
 
-func testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIps(projectSuffix, teamID string) string {
+func testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsAndOptionsAllowlist(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "enabled_to_start" {
   name = "test-acc-protection-one-%[1]s"
@@ -399,6 +407,13 @@ resource "vercel_project" "enabled_to_start" {
 	]
 	deployment_type = "all_deployments"
 	protection_mode = "trusted_ip_optional"
+  }
+  options_allowlist = {
+    paths = [
+      {
+        value = "/foo"
+      }
+    ]
   }
   protection_bypass_for_automation = true
 }
@@ -431,12 +446,19 @@ resource "vercel_project" "enabled_to_update" {
 	]
 	deployment_type = "only_production_deployments"
   }
+  options_allowlist = {
+    paths = [
+      {
+        value = "/bar"
+      }
+    ]
+  }
   protection_bypass_for_automation = true
 }
     `, projectSuffix, teamID)
 }
 
-func testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsUpdated(projectSuffix, teamID string) string {
+func testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsAndOptionsAllowlistUpdated(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "enabled_to_start" {
   name = "test-acc-protection-one-%[1]s"
@@ -462,6 +484,13 @@ resource "vercel_project" "disabled_to_start" {
 	]
 	deployment_type = "standard_protection"
   }
+  options_allowlist = {
+    paths = [
+      {
+        value = "/foo"
+      }
+    ]
+  }
   protection_bypass_for_automation = true
 }
 
@@ -484,6 +513,13 @@ resource "vercel_project" "enabled_to_update" {
 	]
 	deployment_type = "all_deployments"
 	protection_mode = "trusted_ip_optional"
+  }
+  options_allowlist = {
+    paths = [
+      {
+        value = "/bar"
+      }
+    ]
   }
   protection_bypass_for_automation = false
 }
