@@ -221,11 +221,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				},
 			},
 			"options_allowlist": schema.SingleNestedAttribute{
-				Description: "Ensures only requests starting with specified paths can bypass Deployment Protection for OPTIONS requests.",
+				Description: "Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"paths": schema.ListAttribute{
-						Description: "The path to compare the request path against.",
+						Description: "The allowed paths for the OPTIONS Allowlist. Incoming requests will bypass Deployment Protection if they have the method `OPTIONS` and **start with** one of the path values.",
 						Computed:    true,
 						ElementType: types.ObjectType{
 							AttrTypes: map[string]attr.Type{
