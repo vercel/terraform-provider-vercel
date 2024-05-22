@@ -82,7 +82,7 @@ resource "vercel_project" "example" {
 - `team_id` (String) The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
-- `options_allowlist` (Attributes) Configuration for the OPTIONS Allowlist. (see [below for nested schema](#nestedatt--options_allowlist))
+- `options_allowlist` (Attributes) Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths. (see [below for nested schema](#nestedatt--options_allowlist))
 
 ### Read-Only
 
@@ -182,14 +182,14 @@ Optional:
 
 Required:
 
-- `paths` (Attributes Set) The allowed paths for the OPTIONS Allowlist. (see [below for nested schema](#nestedatt--options_allowlist--paths))
+- `paths` (Attributes Set) The allowed paths for the OPTIONS Allowlist. Incoming requests will bypass Deployment Protection if they have the method `OPTIONS` and **start with** one of the path values. (see [below for nested schema](#nestedatt--options_allowlist--paths))
 
 <a id="nestedatt--options_allowlist--paths"></a>
 ### Nested Schema for `options_allowlist.paths`
 
 Required:
 
-- `value` (String) The path that can be accessed.
+- `value` (String) The prefix for allowed paths
 
 <a id="nestedatt--vercel_authentication"></a>
 ### Nested Schema for `vercel_authentication`
