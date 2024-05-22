@@ -220,6 +220,21 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					},
 				},
 			},
+			"options_allowlist": schema.SingleNestedAttribute{
+				Description: "Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"paths": schema.ListAttribute{
+						Description: "The allowed paths for the OPTIONS Allowlist. Incoming requests will bypass Deployment Protection if they have the method `OPTIONS` and **start with** one of the path values.",
+						Computed:    true,
+						ElementType: types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"value": types.StringType,
+							},
+						},
+					},
+				},
+			},
 			"id": schema.StringAttribute{
 				Computed: true,
 			},
@@ -320,6 +335,7 @@ type ProjectDataSource struct {
 	VercelAuthentication          *VercelAuthentication `tfsdk:"vercel_authentication"`
 	PasswordProtection            *PasswordProtection   `tfsdk:"password_protection"`
 	TrustedIps                    *TrustedIps           `tfsdk:"trusted_ips"`
+	OptionsAllowlist              *OptionsAllowlist     `tfsdk:"options_allowlist"`
 	ProtectionBypassForAutomation types.Bool            `tfsdk:"protection_bypass_for_automation"`
 	AutoExposeSystemEnvVars       types.Bool            `tfsdk:"automatically_expose_system_environment_variables"`
 	GitComments                   types.Object          `tfsdk:"git_comments"`
@@ -375,6 +391,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		VercelAuthentication:          project.VercelAuthentication,
 		PasswordProtection:            pp,
 		TrustedIps:                    project.TrustedIps,
+		OptionsAllowlist:              project.OptionsAllowlist,
 		AutoExposeSystemEnvVars:       types.BoolPointerValue(response.AutoExposeSystemEnvVars),
 		ProtectionBypassForAutomation: project.ProtectionBypassForAutomation,
 		GitComments:                   project.GitComments,

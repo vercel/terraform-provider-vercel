@@ -35,6 +35,8 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					}),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.deployment_type", "only_production_deployments"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.protection_mode", "trusted_ip_required"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "options_allowlist.paths.#", "1"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "options_allowlist.paths.0.value", "/api"),
 
 					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "environment.*", map[string]string{
 						"key":   "foo",
@@ -85,6 +87,13 @@ resource "vercel_project" "test" {
 	]
 	deployment_type = "only_production_deployments"
 	protection_mode = "trusted_ip_required"
+  }
+  options_allowlist = {
+    paths = [
+      {
+        value = "/api"
+      }
+    ]
   }
   %s
   environment = [

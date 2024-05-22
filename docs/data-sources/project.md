@@ -58,6 +58,7 @@ output "project_id" {
 - `id` (String) The ID of this resource.
 - `ignore_command` (String) When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.
 - `install_command` (String) The install command for this project. If omitted, this value will be automatically detected.
+- `options_allowlist` (Attributes) Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths. (see [below for nested schema](#nestedatt--options_allowlist))
 - `output_directory` (String) The output directory of the project. When null is used this value will be automatically detected.
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
 - `preview_comments` (Boolean) Whether comments are enabled on your Preview Deployments.
@@ -111,6 +112,22 @@ Read-Only:
 - `name` (String) The name of the deploy hook.
 - `ref` (String) The branch or commit hash that should be deployed.
 - `url` (String, Sensitive) A URL that, when a POST request is made to, will trigger a new deployment.
+
+
+
+<a id="nestedatt--options_allowlist"></a>
+### Nested Schema for `options_allowlist`
+
+Read-Only:
+
+- `paths` (List of Object) The allowed paths for the OPTIONS Allowlist. Incoming requests will bypass Deployment Protection if they have the method `OPTIONS` and **start with** one of the path values. (see [below for nested schema](#nestedatt--options_allowlist--paths))
+
+<a id="nestedatt--options_allowlist--paths"></a>
+### Nested Schema for `options_allowlist.paths`
+
+Read-Only:
+
+- `value` (String)
 
 
 

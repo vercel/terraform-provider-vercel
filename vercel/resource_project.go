@@ -300,6 +300,28 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
+			"options_allowlist": schema.SingleNestedAttribute{
+				Description: "Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"paths": schema.SetNestedAttribute{
+						Description:   "The allowed paths for the OPTIONS Allowlist. Incoming requests will bypass Deployment Protection if they have the method `OPTIONS` and **start with** one of the path values.",
+						Required:      true,
+						PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"value": schema.StringAttribute{
+									Description: "The path prefix to compare with the incoming request path.",
+									Required:    true,
+								},
+							},
+						},
+						Validators: []validator.Set{
+							stringSetMinCount(1),
+						},
+					},
+				},
+			},
 			"id": schema.StringAttribute{
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -425,6 +447,7 @@ type Project struct {
 	VercelAuthentication                *VercelAuthentication           `tfsdk:"vercel_authentication"`
 	PasswordProtection                  *PasswordProtectionWithPassword `tfsdk:"password_protection"`
 	TrustedIps                          *TrustedIps                     `tfsdk:"trusted_ips"`
+	OptionsAllowlist                    *OptionsAllowlist               `tfsdk:"options_allowlist"`
 	ProtectionBypassForAutomation       types.Bool                      `tfsdk:"protection_bypass_for_automation"`
 	ProtectionBypassForAutomationSecret types.String                    `tfsdk:"protection_bypass_for_automation_secret"`
 	AutoExposeSystemEnvVars             types.Bool                      `tfsdk:"automatically_expose_system_environment_variables"`
@@ -459,6 +482,7 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 	return p.PasswordProtection != nil ||
 		p.VercelAuthentication != nil ||
 		p.TrustedIps != nil ||
+		p.OptionsAllowlist != nil ||
 		!p.AutoExposeSystemEnvVars.IsNull() ||
 		p.GitComments.IsNull() ||
 		!p.PreviewComments.IsNull() ||
@@ -581,6 +605,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		PasswordProtection:                   p.PasswordProtection.toUpdateProjectRequest(),
 		VercelAuthentication:                 p.VercelAuthentication.toUpdateProjectRequest(),
 		TrustedIps:                           p.TrustedIps.toUpdateProjectRequest(),
+		OptionsAllowlist:                     p.OptionsAllowlist.toUpdateProjectRequest(),
 		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
 		EnablePreviewFeedback:                p.PreviewComments.ValueBoolPointer(),
 		AutoAssignCustomDomains:              p.AutoAssignCustomDomains.ValueBool(),
@@ -755,6 +780,23 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 		Addresses:      addresses,
 		DeploymentType: toApiDeploymentProtectionType(t.DeploymentType),
 		ProtectionMode: toApiTrustedIpProtectionMode(t.ProtectionMode),
+	}
+}
+
+func (t *OptionsAllowlist) toUpdateProjectRequest() *client.OptionsAllowlist {
+	if t == nil {
+		return nil
+	}
+
+	var paths = []client.OptionsAllowlistPath{}
+	for _, path := range t.Paths {
+		paths = append(paths, client.OptionsAllowlistPath{
+			Value: path.Value.ValueString(),
+		})
+	}
+
+	return &client.OptionsAllowlist{
+		Paths: paths,
 	}
 }
 
@@ -937,6 +979,19 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 	}
 
+	var oal *OptionsAllowlist
+	if response.OptionsAllowlist != nil {
+		var paths []OptionsAllowlistPath
+		for _, path := range response.OptionsAllowlist.Paths {
+			paths = append(paths, OptionsAllowlistPath{
+				Value: types.StringValue(path.Value),
+			})
+		}
+		oal = &OptionsAllowlist{
+			Paths: paths,
+		}
+	}
+
 	var env []attr.Value
 	for _, e := range environmentVariables {
 		target := []attr.Value{}
@@ -1029,6 +1084,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		PasswordProtection:                  pp,
 		VercelAuthentication:                va,
 		TrustedIps:                          tip,
+		OptionsAllowlist:                    oal,
 		ProtectionBypassForAutomation:       protectionBypass,
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),

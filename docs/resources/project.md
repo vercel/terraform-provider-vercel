@@ -70,6 +70,7 @@ resource "vercel_project" "example" {
 - `git_repository` (Attributes) The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed. (see [below for nested schema](#nestedatt--git_repository))
 - `ignore_command` (String) When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.
 - `install_command` (String) The install command for this project. If omitted, this value will be automatically detected.
+- `options_allowlist` (Attributes) Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths. (see [below for nested schema](#nestedatt--options_allowlist))
 - `output_directory` (String) The output directory of the project. If omitted, this value will be automatically detected.
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
 - `preview_comments` (Boolean) Whether to enable comments on your Preview Deployments. If omitted, comments are controlled at the team level (default behaviour).
@@ -141,6 +142,22 @@ Read-Only:
 
 - `id` (String) The ID of the deploy hook.
 - `url` (String, Sensitive) A URL that, when a POST request is made to, will trigger a new deployment.
+
+
+
+<a id="nestedatt--options_allowlist"></a>
+### Nested Schema for `options_allowlist`
+
+Required:
+
+- `paths` (Attributes Set) The allowed paths for the OPTIONS Allowlist. Incoming requests will bypass Deployment Protection if they have the method `OPTIONS` and **start with** one of the path values. (see [below for nested schema](#nestedatt--options_allowlist--paths))
+
+<a id="nestedatt--options_allowlist--paths"></a>
+### Nested Schema for `options_allowlist.paths`
+
+Required:
+
+- `value` (String) The path prefix to compare with the incoming request path.
 
 
 
