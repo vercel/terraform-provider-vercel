@@ -772,7 +772,7 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 	for _, address := range t.Addresses {
 		addresses = append(addresses, client.TrustedIpAddress{
 			Value: address.Value.ValueString(),
-			Note:  address.Note.ValueString(),
+			Note:  address.Note.ValueStringPointer(),
 		})
 	}
 
@@ -967,9 +967,13 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	if response.TrustedIps != nil {
 		var addresses []TrustedIpAddress
 		for _, address := range response.TrustedIps.Addresses {
+			var note = types.StringNull()
+			if address.Note != nil {
+				note = types.StringValue(*address.Note)
+			}
 			addresses = append(addresses, TrustedIpAddress{
 				Value: types.StringValue(address.Value),
-				Note:  types.StringValue(address.Note),
+				Note:  note,
 			})
 		}
 		tip = &TrustedIps{

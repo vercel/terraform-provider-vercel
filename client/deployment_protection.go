@@ -13,8 +13,8 @@ type PasswordProtectionWithPassword struct {
 }
 
 type TrustedIpAddress struct {
-	Value string `json:"value"`
-	Note  string `json:"note"`
+	Value string  `json:"value"`
+	Note  *string `json:"note,omitempty"`
 }
 
 type TrustedIps struct {
