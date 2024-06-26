@@ -474,10 +474,6 @@ type Project struct {
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
 }
 
-type OIDCTokenConfig struct {
-	Enabled types.Bool `tfsdk:"enabled"`
-}
-
 type GitComments struct {
 	OnPullRequest types.Bool `tfsdk:"on_pull_request"`
 	OnCommit      types.Bool `tfsdk:"on_commit"`
@@ -572,6 +568,7 @@ func (p *Project) toCreateProjectRequest(envs []EnvironmentItem) client.CreatePr
 		GitRepository:               p.GitRepository.toCreateProjectRequest(),
 		InstallCommand:              p.InstallCommand.ValueStringPointer(),
 		Name:                        p.Name.ValueString(),
+		OIDCTokenConfig:             p.OIDCTokenConfig.toCreateProjectRequest(),
 		OutputDirectory:             p.OutputDirectory.ValueStringPointer(),
 		PublicSource:                p.PublicSource.ValueBoolPointer(),
 		RootDirectory:               p.RootDirectory.ValueStringPointer(),
@@ -799,13 +796,27 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 	}
 }
 
-func (t *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
-	if t == nil {
+type OIDCTokenConfig struct {
+	Enabled types.Bool `tfsdk:"enabled"`
+}
+
+func (o *OIDCTokenConfig) toCreateProjectRequest() *client.OIDCTokenConfig {
+	if o == nil {
 		return nil
 	}
 
 	return &client.OIDCTokenConfig{
-		Enabled: t.Enabled.ValueBool(),
+		Enabled: o.Enabled.ValueBool(),
+	}
+}
+
+func (o *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
+	if o == nil {
+		return nil
+	}
+
+	return &client.OIDCTokenConfig{
+		Enabled: o.Enabled.ValueBool(),
 	}
 }
 
