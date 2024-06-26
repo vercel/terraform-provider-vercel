@@ -89,7 +89,7 @@ func TestAcc_Project(t *testing.T) {
 						"key":   "bar",
 						"value": "baz",
 					}),
-					resource.TestCheckResourceAttr("vercel_project.test", "oict_token_config.enabled", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "true"),
 				),
 			},
 		},
@@ -650,7 +650,9 @@ resource "vercel_project" "test" {
   prioritise_production_builds = true
   directory_listing = true
   skew_protection = "7 days"
-
+  oidc_token_config = {
+    enabled = true
+  }
   environment = [
     {
       key    = "foo"
