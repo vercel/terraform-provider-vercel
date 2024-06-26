@@ -220,6 +220,16 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					},
 				},
 			},
+			"oidc_token_config": schema.SingleNestedAttribute{
+				Description: "Configuration for OpenID Connect (OIDC) tokens.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"enabled": schema.BoolAttribute{
+						Description: "Whether or not OIDC tokens are enabled.",
+						Computed:    true,
+					},
+				},
+			},
 			"options_allowlist": schema.SingleNestedAttribute{
 				Description: "Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths.",
 				Computed:    true,
@@ -335,6 +345,7 @@ type ProjectDataSource struct {
 	VercelAuthentication          *VercelAuthentication `tfsdk:"vercel_authentication"`
 	PasswordProtection            *PasswordProtection   `tfsdk:"password_protection"`
 	TrustedIps                    *TrustedIps           `tfsdk:"trusted_ips"`
+	OIDCTokenConfig               *OIDCTokenConfig      `tfsdk:"oidc_token_config"`
 	OptionsAllowlist              *OptionsAllowlist     `tfsdk:"options_allowlist"`
 	ProtectionBypassForAutomation types.Bool            `tfsdk:"protection_bypass_for_automation"`
 	AutoExposeSystemEnvVars       types.Bool            `tfsdk:"automatically_expose_system_environment_variables"`
@@ -391,6 +402,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		VercelAuthentication:          project.VercelAuthentication,
 		PasswordProtection:            pp,
 		TrustedIps:                    project.TrustedIps,
+		OIDCTokenConfig:               project.OIDCTokenConfig,
 		OptionsAllowlist:              project.OptionsAllowlist,
 		AutoExposeSystemEnvVars:       types.BoolPointerValue(response.AutoExposeSystemEnvVars),
 		ProtectionBypassForAutomation: project.ProtectionBypassForAutomation,

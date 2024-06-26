@@ -447,6 +447,7 @@ type Project struct {
 	VercelAuthentication                *VercelAuthentication           `tfsdk:"vercel_authentication"`
 	PasswordProtection                  *PasswordProtectionWithPassword `tfsdk:"password_protection"`
 	TrustedIps                          *TrustedIps                     `tfsdk:"trusted_ips"`
+	OIDCTokenConfig                     *OIDCTokenConfig                `tfsdk:"oidc_token_config"`
 	OptionsAllowlist                    *OptionsAllowlist               `tfsdk:"options_allowlist"`
 	ProtectionBypassForAutomation       types.Bool                      `tfsdk:"protection_bypass_for_automation"`
 	ProtectionBypassForAutomationSecret types.String                    `tfsdk:"protection_bypass_for_automation_secret"`
@@ -461,6 +462,10 @@ type Project struct {
 	PrioritiseProductionBuilds          types.Bool                      `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                    types.Bool                      `tfsdk:"directory_listing"`
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
+}
+
+type OIDCTokenConfig struct {
+	Enabled types.Bool `tfsdk:"enabled"`
 }
 
 type GitComments struct {
@@ -605,6 +610,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		PasswordProtection:                   p.PasswordProtection.toUpdateProjectRequest(),
 		VercelAuthentication:                 p.VercelAuthentication.toUpdateProjectRequest(),
 		TrustedIps:                           p.TrustedIps.toUpdateProjectRequest(),
+		OIDCTokenConfig:                      p.OIDCTokenConfig.toUpdateProjectRequest(),
 		OptionsAllowlist:                     p.OptionsAllowlist.toUpdateProjectRequest(),
 		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
 		EnablePreviewFeedback:                p.PreviewComments.ValueBoolPointer(),
@@ -780,6 +786,16 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 		Addresses:      addresses,
 		DeploymentType: toApiDeploymentProtectionType(t.DeploymentType),
 		ProtectionMode: toApiTrustedIpProtectionMode(t.ProtectionMode),
+	}
+}
+
+func (t *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
+	if t == nil {
+		return nil
+	}
+
+	return &client.OIDCTokenConfig{
+		Enabled: t.Enabled.ValueBool(),
 	}
 }
 
@@ -983,6 +999,13 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 	}
 
+	var oidcTokenConfig *OIDCTokenConfig
+	if response.OIDCTokenConfig != nil {
+		oidcTokenConfig = &OIDCTokenConfig{
+			Enabled: types.BoolValue(response.OIDCTokenConfig.Enabled),
+		}
+	}
+
 	var oal *OptionsAllowlist
 	if response.OptionsAllowlist != nil {
 		var paths []OptionsAllowlistPath
@@ -1088,6 +1111,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		PasswordProtection:                  pp,
 		VercelAuthentication:                va,
 		TrustedIps:                          tip,
+		OIDCTokenConfig:                     oidcTokenConfig,
 		OptionsAllowlist:                    oal,
 		ProtectionBypassForAutomation:       protectionBypass,
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
