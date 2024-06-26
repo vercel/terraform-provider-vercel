@@ -300,6 +300,16 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
+			"oidc_token_config": schema.SingleNestedAttribute{
+				Description: "Configuration for OIDC Tokens.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"enabled": schema.BoolAttribute{
+						Description: "Whether or not OIDC Tokens are enabled",
+						Required:    true,
+					},
+				},
+			},
 			"options_allowlist": schema.SingleNestedAttribute{
 				Description: "Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths.",
 				Optional:    true,
