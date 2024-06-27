@@ -268,7 +268,7 @@ type UpdateProjectRequest struct {
 	VercelAuthentication                 *VercelAuthentication           `json:"ssoProtection"`
 	PasswordProtection                   *PasswordProtectionWithPassword `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                     `json:"trustedIps"`
-	OIDCTokenConfig                      *OIDCTokenConfig                `json:"oidcTokenConfig,omitempty"`
+	OIDCTokenConfig                      *OIDCTokenConfig                `json:"oidcTokenConfig"`
 	OptionsAllowlist                     *OptionsAllowlist               `json:"optionsAllowlist"`
 	AutoExposeSystemEnvVars              bool                            `json:"autoExposeSystemEnvs"`
 	EnablePreviewFeedback                *bool                           `json:"enablePreviewFeedback"`

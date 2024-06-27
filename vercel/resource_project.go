@@ -303,12 +303,21 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"oidc_token_config": schema.SingleNestedAttribute{
 				Description: "Configuration for OpenID Connect (OIDC) tokens.",
 				Optional:    true,
+				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
 						Description: "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
 						Required:    true,
 					},
 				},
+				Default: objectdefault.StaticValue(types.ObjectValueMust(
+					map[string]attr.Type{
+						"enabled": types.BoolType,
+					},
+					map[string]attr.Value{
+						"enabled": types.BoolValue(false),
+					},
+				)),
 			},
 			"options_allowlist": schema.SingleNestedAttribute{
 				Description: "Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths.",
@@ -813,7 +822,9 @@ func (o *OIDCTokenConfig) toCreateProjectRequest() *client.OIDCTokenConfig {
 
 func (o *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
 	if o == nil {
-		return nil
+		return &client.OIDCTokenConfig{
+			Enabled: types.BoolValue(false).ValueBool(),
+		}
 	}
 
 	return &client.OIDCTokenConfig{
@@ -1021,11 +1032,11 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 	}
 
-	var oidcTokenConfig *OIDCTokenConfig
+	var oidcTokenConfig *OIDCTokenConfig = &OIDCTokenConfig{
+		Enabled: types.BoolValue(false),
+	}
 	if response.OIDCTokenConfig != nil {
-		oidcTokenConfig = &OIDCTokenConfig{
-			Enabled: types.BoolValue(response.OIDCTokenConfig.Enabled),
-		}
+		oidcTokenConfig.Enabled = types.BoolValue(response.OIDCTokenConfig.Enabled)
 	}
 
 	var oal *OptionsAllowlist
