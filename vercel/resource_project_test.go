@@ -76,6 +76,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "prioritise_production_builds", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "directory_listing", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "skew_protection", "7 days"),
+					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "true"),
 				),
 			},
 			// Update testing
@@ -88,6 +89,7 @@ func TestAcc_Project(t *testing.T) {
 						"key":   "bar",
 						"value": "baz",
 					}),
+					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "false"),
 				),
 			},
 		},
@@ -648,7 +650,9 @@ resource "vercel_project" "test" {
   prioritise_production_builds = true
   directory_listing = true
   skew_protection = "7 days"
-
+  oidc_token_config = {
+    enabled = true
+  }
   environment = [
     {
       key    = "foo"

@@ -15,6 +15,10 @@ type GitRepository struct {
 	Repo string `json:"repo"`
 }
 
+type OIDCTokenConfig struct {
+	Enabled bool `json:"enabled"`
+}
+
 // EnvironmentVariable defines the information Vercel requires and surfaces about an environment variable
 // that is associated with a project.
 type EnvironmentVariable struct {
@@ -37,6 +41,7 @@ type CreateProjectRequest struct {
 	GitRepository               *GitRepository        `json:"gitRepository,omitempty"`
 	InstallCommand              *string               `json:"installCommand"`
 	Name                        string                `json:"name"`
+	OIDCTokenConfig             *OIDCTokenConfig      `json:"oidcTokenConfig,omitempty"`
 	OutputDirectory             *string               `json:"outputDirectory"`
 	PublicSource                *bool                 `json:"publicSource"`
 	RootDirectory               *string               `json:"rootDirectory"`
@@ -169,6 +174,7 @@ type ProjectResponse struct {
 	VercelAuthentication                 *VercelAuthentication       `json:"ssoProtection"`
 	PasswordProtection                   *PasswordProtection         `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                 `json:"trustedIps"`
+	OIDCTokenConfig                      *OIDCTokenConfig            `json:"oidcTokenConfig"`
 	OptionsAllowlist                     *OptionsAllowlist           `json:"optionsAllowlist"`
 	ProtectionBypass                     map[string]ProtectionBypass `json:"protectionBypass"`
 	AutoExposeSystemEnvVars              *bool                       `json:"autoExposeSystemEnvs"`
@@ -262,6 +268,7 @@ type UpdateProjectRequest struct {
 	VercelAuthentication                 *VercelAuthentication           `json:"ssoProtection"`
 	PasswordProtection                   *PasswordProtectionWithPassword `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                     `json:"trustedIps"`
+	OIDCTokenConfig                      *OIDCTokenConfig                `json:"oidcTokenConfig"`
 	OptionsAllowlist                     *OptionsAllowlist               `json:"optionsAllowlist"`
 	AutoExposeSystemEnvVars              bool                            `json:"autoExposeSystemEnvs"`
 	EnablePreviewFeedback                *bool                           `json:"enablePreviewFeedback"`

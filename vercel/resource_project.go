@@ -300,6 +300,25 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
+			"oidc_token_config": schema.SingleNestedAttribute{
+				Description: "Configuration for OpenID Connect (OIDC) tokens.",
+				Optional:    true,
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"enabled": schema.BoolAttribute{
+						Description: "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
+						Required:    true,
+					},
+				},
+				Default: objectdefault.StaticValue(types.ObjectValueMust(
+					map[string]attr.Type{
+						"enabled": types.BoolType,
+					},
+					map[string]attr.Value{
+						"enabled": types.BoolValue(false),
+					},
+				)),
+			},
 			"options_allowlist": schema.SingleNestedAttribute{
 				Description: "Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths.",
 				Optional:    true,
@@ -447,6 +466,7 @@ type Project struct {
 	VercelAuthentication                *VercelAuthentication           `tfsdk:"vercel_authentication"`
 	PasswordProtection                  *PasswordProtectionWithPassword `tfsdk:"password_protection"`
 	TrustedIps                          *TrustedIps                     `tfsdk:"trusted_ips"`
+	OIDCTokenConfig                     *OIDCTokenConfig                `tfsdk:"oidc_token_config"`
 	OptionsAllowlist                    *OptionsAllowlist               `tfsdk:"options_allowlist"`
 	ProtectionBypassForAutomation       types.Bool                      `tfsdk:"protection_bypass_for_automation"`
 	ProtectionBypassForAutomationSecret types.String                    `tfsdk:"protection_bypass_for_automation_secret"`
@@ -482,6 +502,7 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 	return p.PasswordProtection != nil ||
 		p.VercelAuthentication != nil ||
 		p.TrustedIps != nil ||
+		p.OIDCTokenConfig != nil ||
 		p.OptionsAllowlist != nil ||
 		!p.AutoExposeSystemEnvVars.IsNull() ||
 		p.GitComments.IsNull() ||
@@ -557,6 +578,7 @@ func (p *Project) toCreateProjectRequest(envs []EnvironmentItem) client.CreatePr
 		GitRepository:               p.GitRepository.toCreateProjectRequest(),
 		InstallCommand:              p.InstallCommand.ValueStringPointer(),
 		Name:                        p.Name.ValueString(),
+		OIDCTokenConfig:             p.OIDCTokenConfig.toCreateProjectRequest(),
 		OutputDirectory:             p.OutputDirectory.ValueStringPointer(),
 		PublicSource:                p.PublicSource.ValueBoolPointer(),
 		RootDirectory:               p.RootDirectory.ValueStringPointer(),
@@ -605,6 +627,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		PasswordProtection:                   p.PasswordProtection.toUpdateProjectRequest(),
 		VercelAuthentication:                 p.VercelAuthentication.toUpdateProjectRequest(),
 		TrustedIps:                           p.TrustedIps.toUpdateProjectRequest(),
+		OIDCTokenConfig:                      p.OIDCTokenConfig.toUpdateProjectRequest(),
 		OptionsAllowlist:                     p.OptionsAllowlist.toUpdateProjectRequest(),
 		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
 		EnablePreviewFeedback:                p.PreviewComments.ValueBoolPointer(),
@@ -780,6 +803,32 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 		Addresses:      addresses,
 		DeploymentType: toApiDeploymentProtectionType(t.DeploymentType),
 		ProtectionMode: toApiTrustedIpProtectionMode(t.ProtectionMode),
+	}
+}
+
+type OIDCTokenConfig struct {
+	Enabled types.Bool `tfsdk:"enabled"`
+}
+
+func (o *OIDCTokenConfig) toCreateProjectRequest() *client.OIDCTokenConfig {
+	if o == nil {
+		return nil
+	}
+
+	return &client.OIDCTokenConfig{
+		Enabled: o.Enabled.ValueBool(),
+	}
+}
+
+func (o *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
+	if o == nil {
+		return &client.OIDCTokenConfig{
+			Enabled: types.BoolValue(false).ValueBool(),
+		}
+	}
+
+	return &client.OIDCTokenConfig{
+		Enabled: o.Enabled.ValueBool(),
 	}
 }
 
@@ -983,6 +1032,13 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 	}
 
+	var oidcTokenConfig *OIDCTokenConfig = &OIDCTokenConfig{
+		Enabled: types.BoolValue(false),
+	}
+	if response.OIDCTokenConfig != nil {
+		oidcTokenConfig.Enabled = types.BoolValue(response.OIDCTokenConfig.Enabled)
+	}
+
 	var oal *OptionsAllowlist
 	if response.OptionsAllowlist != nil {
 		var paths []OptionsAllowlistPath
@@ -1088,6 +1144,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		PasswordProtection:                  pp,
 		VercelAuthentication:                va,
 		TrustedIps:                          tip,
+		OIDCTokenConfig:                     oidcTokenConfig,
 		OptionsAllowlist:                    oal,
 		ProtectionBypassForAutomation:       protectionBypass,
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
