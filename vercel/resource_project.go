@@ -493,6 +493,7 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 	return p.PasswordProtection != nil ||
 		p.VercelAuthentication != nil ||
 		p.TrustedIps != nil ||
+		p.OIDCTokenConfig != nil ||
 		p.OptionsAllowlist != nil ||
 		!p.AutoExposeSystemEnvVars.IsNull() ||
 		p.GitComments.IsNull() ||
