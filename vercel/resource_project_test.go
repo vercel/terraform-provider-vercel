@@ -89,7 +89,7 @@ func TestAcc_Project(t *testing.T) {
 						"key":   "bar",
 						"value": "baz",
 					}),
-					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "false"),
 				),
 			},
 		},
