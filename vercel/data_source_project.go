@@ -225,7 +225,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
-						Description: "Whether or not OIDC tokens are enabled.",
+						Description: "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
 						Computed:    true,
 					},
 				},

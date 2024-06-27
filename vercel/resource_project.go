@@ -301,11 +301,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"oidc_token_config": schema.SingleNestedAttribute{
-				Description: "Configuration for OIDC Tokens.",
+				Description: "Configuration for OpenID Connect (OIDC) tokens.",
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
-						Description: "Whether or not OIDC Tokens are enabled",
+						Description: "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
 						Required:    true,
 					},
 				},
