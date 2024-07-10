@@ -70,6 +70,7 @@ resource "vercel_project" "example" {
 - `git_repository` (Attributes) The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed. (see [below for nested schema](#nestedatt--git_repository))
 - `ignore_command` (String) When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.
 - `install_command` (String) The install command for this project. If omitted, this value will be automatically detected.
+- `oidc_token_config` (Attributes) Configuration for OpenID Connect (OIDC) tokens. (see [below for nested schema](#nestedatt--oidc_token_config))
 - `options_allowlist` (Attributes) Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths. (see [below for nested schema](#nestedatt--options_allowlist))
 - `output_directory` (String) The output directory of the project. If omitted, this value will be automatically detected.
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
@@ -143,6 +144,14 @@ Read-Only:
 - `id` (String) The ID of the deploy hook.
 - `url` (String, Sensitive) A URL that, when a POST request is made to, will trigger a new deployment.
 
+
+
+<a id="nestedatt--oidc_token_config"></a>
+### Nested Schema for `oidc_token_config`
+
+Required:
+
+- `enabled` (Boolean) When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.
 
 
 <a id="nestedatt--options_allowlist"></a>
