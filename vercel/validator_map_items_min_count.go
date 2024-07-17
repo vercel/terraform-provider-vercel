@@ -14,7 +14,6 @@ func mapItemsMinCount(minCount int) validatorMapItemsMinCount {
 }
 
 type validatorMapItemsMinCount struct {
-	Max int
 	Min int
 }
 

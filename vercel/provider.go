@@ -65,6 +65,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newProjectEnvironmentVariableResource,
 		newProjectResource,
 		newSharedEnvironmentVariableResource,
+		newTeamConfigResource,
 		newWebhookResource,
 	}
 }
