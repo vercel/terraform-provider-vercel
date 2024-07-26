@@ -63,7 +63,7 @@ Attack Challenge Mode prevent malicious traffic by showing a verification challe
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
-				Description:   "The ID of the Project to adjust the CPU for.",
+				Description:   "The ID of the Project to toggle Attack Challenge Mode on.",
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
