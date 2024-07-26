@@ -495,7 +495,7 @@ func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) FirewallRule {
 		Description: types.StringValue(rule.Description),
 		Active:      types.BoolValue(rule.Active),
 	}
-	if rule.Active == true && ref.Active == types.BoolNull() {
+	if rule.Active && ref.Active == types.BoolNull() {
 		r.Active = ref.Active
 	}
 
@@ -519,7 +519,7 @@ func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) FirewallRule {
 	if rule.Description == "" && ref.Description == types.StringNull() {
 		r.Description = ref.Description
 	}
-	if rule.Active == true && ref.Active == types.BoolNull() {
+	if rule.Active && ref.Active == types.BoolNull() {
 		r.Active = ref.Active
 	}
 
@@ -643,14 +643,14 @@ func fromCRS(conf map[string]client.CoreRuleSet, refMr *FirewallManagedRulesets)
 }
 
 func fromCoreRuleset(crsRule client.CoreRuleSet, ref *CRSRuleConfig) *CRSRuleConfig {
-	if ref == nil && crsRule.Active == false && crsRule.Action == "log" {
+	if ref == nil && !crsRule.Active && crsRule.Action == "log" {
 		return nil
 	}
 	c := &CRSRuleConfig{
 		Active: types.BoolValue(crsRule.Active),
 		Action: types.StringValue(crsRule.Action),
 	}
-	if (ref == nil && crsRule.Active == true) ||
+	if (ref == nil && crsRule.Active) ||
 		ref != nil && ref.Active == types.BoolNull() {
 		c.Active = types.BoolNull()
 	}
@@ -788,7 +788,6 @@ func (r *firewallConfigResource) Create(ctx context.Context, req resource.Create
 	cfg := fromClient(out, plan)
 	diags = resp.State.Set(ctx, cfg)
 	resp.Diagnostics.Append(diags...)
-	return
 }
 
 func (r *firewallConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -806,7 +805,6 @@ func (r *firewallConfigResource) Read(ctx context.Context, req resource.ReadRequ
 	cfg := fromClient(out, state)
 	diags = resp.State.Set(ctx, cfg)
 	resp.Diagnostics.Append(diags...)
-	return
 }
 
 func (r *firewallConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -830,7 +828,6 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 	cfg := fromClient(out, plan)
 	diags = resp.State.Set(ctx, cfg)
 	resp.Diagnostics.Append(diags...)
-	return
 }
 func (r *firewallConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state FirewallConfig
@@ -854,7 +851,6 @@ func (r *firewallConfigResource) Delete(ctx context.Context, req resource.Delete
 		"project_id": state.ProjectID.ValueString(),
 		"team_id":    state.TeamID.ValueString(),
 	})
-	return
 }
 func (r *firewallConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, projectID, ok := splitInto1Or2(req.ID)
