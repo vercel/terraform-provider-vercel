@@ -825,6 +825,7 @@ func (r *firewallConfigResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
+		return
 	}
 	cfg := fromClient(out, state)
 	diags = resp.State.Set(ctx, cfg)
