@@ -312,7 +312,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 			"ip_rules": schema.SingleNestedBlock{
 				Description: "IP rules to apply to the project.",
 				Blocks: map[string]schema.Block{
-					"rule": schema.SetNestedBlock{
+					"rule": schema.ListNestedBlock{
 						NestedObject: schema.NestedBlockObject{
 							Attributes: map[string]schema.Attribute{
 								"id": schema.StringAttribute{
@@ -669,36 +669,40 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) FirewallConfig
 		cfg.Enabled = state.Enabled
 	}
 
-	rules := make([]FirewallRule, len(conf.Rules))
-	for i, rule := range conf.Rules {
-		// Set empty optional types
-		var stateRule = FirewallRule{
-			Active: types.BoolNull(),
-		}
-		if state.Rules != nil && len(state.Rules.Rules)-1 > i {
-			stateRule = state.Rules.Rules[i]
-		}
-		rules[i] = fromFirewallRule(rule, stateRule)
+	if len(conf.Rules) > 0 {
+		rules := make([]FirewallRule, len(conf.Rules))
+		for i, rule := range conf.Rules {
+			// Set empty optional types
+			var stateRule = FirewallRule{
+				Active: types.BoolNull(),
+			}
+			if state.Rules != nil && len(state.Rules.Rules)-1 > i {
+				stateRule = state.Rules.Rules[i]
+			}
+			rules[i] = fromFirewallRule(rule, stateRule)
 
-	}
-	cfg.Rules = &FirewallRules{Rules: rules}
-
-	ipRules := make([]IPRule, len(conf.IPRules))
-	for i, iprule := range conf.IPRules {
-		ipRules[i] = IPRule{
-			ID:       types.StringValue(iprule.ID),
-			Hostname: types.StringValue(iprule.Hostname),
-			IP:       types.StringValue(iprule.IP),
-			Notes:    types.StringValue(iprule.Notes),
-			Action:   types.StringValue(iprule.Action),
 		}
-		// notes don't have to be set
-		if iprule.Notes == "" && state.IPRules != nil && len(state.IPRules.Rules) > i && state.IPRules.Rules[i].Notes.IsNull() {
-			ipRules[i].Notes = state.IPRules.Rules[i].Notes
-		}
+		cfg.Rules = &FirewallRules{Rules: rules}
 	}
 
-	cfg.IPRules = &IPRules{Rules: ipRules}
+	if len(conf.IPRules) > 0 {
+		ipRules := make([]IPRule, len(conf.IPRules))
+		for i, iprule := range conf.IPRules {
+			ipRules[i] = IPRule{
+				ID:       types.StringValue(iprule.ID),
+				Hostname: types.StringValue(iprule.Hostname),
+				IP:       types.StringValue(iprule.IP),
+				Notes:    types.StringValue(iprule.Notes),
+				Action:   types.StringValue(iprule.Action),
+			}
+			// notes don't have to be set
+			if iprule.Notes == "" && state.IPRules != nil && len(state.IPRules.Rules) > i && state.IPRules.Rules[i].Notes.IsNull() {
+				ipRules[i].Notes = state.IPRules.Rules[i].Notes
+			}
+		}
+
+		cfg.IPRules = &IPRules{Rules: ipRules}
+	}
 
 	managedRulesets := &FirewallManagedRulesets{}
 	if conf.ManagedRulesets != nil && conf.CRS != nil {
