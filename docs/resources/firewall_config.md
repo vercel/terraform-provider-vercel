@@ -24,7 +24,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 - `enabled` (Boolean) Whether firewall is enabled or not.
 - `ip_rules` (Block, Optional) IP rules to apply to the project. (see [below for nested schema](#nestedblock--ip_rules))
 - `managed_rulesets` (Block, Optional) The managed rulesets that are enabled. (see [below for nested schema](#nestedblock--managed_rulesets))
-- `rules` (Block, Optional) (see [below for nested schema](#nestedblock--rules))
+- `rules` (Block, Optional) Custom rules to apply to the project (see [below for nested schema](#nestedblock--rules))
 - `team_id` (String) The ID of the team this project belongs to.
 
 <a id="nestedblock--ip_rules"></a>
@@ -40,8 +40,8 @@ Optional:
 Required:
 
 - `action` (String)
-- `hostname` (String)
-- `ip` (String)
+- `hostname` (String) Hosts to apply these rules to
+- `ip` (String) IP or CIDR to block
 
 Optional:
 
@@ -58,7 +58,7 @@ Read-Only:
 
 Optional:
 
-- `owasp` (Block, Optional) (see [below for nested schema](#nestedblock--managed_rulesets--owasp))
+- `owasp` (Block, Optional) Enable the owasp managed rulesets and select ruleset behaviors (see [below for nested schema](#nestedblock--managed_rulesets--owasp))
 
 <a id="nestedblock--managed_rulesets--owasp"></a>
 ### Nested Schema for `managed_rulesets.owasp`
@@ -210,13 +210,13 @@ Optional:
 
 Required:
 
-- `action` (Attributes) (see [below for nested schema](#nestedatt--rules--rule--action))
-- `condition_group` (Attributes List) (see [below for nested schema](#nestedatt--rules--rule--condition_group))
-- `name` (String)
+- `action` (Attributes) Actions to take when the condition groups match a request (see [below for nested schema](#nestedatt--rules--rule--action))
+- `condition_group` (Attributes List) Sets of conditions that may match a request (see [below for nested schema](#nestedatt--rules--rule--condition_group))
+- `name` (String) Name to identify the rule
 
 Optional:
 
-- `active` (Boolean)
+- `active` (Boolean) Whether the rule is active or not
 - `description` (String)
 
 Read-Only:
@@ -228,24 +228,24 @@ Read-Only:
 
 Required:
 
-- `action` (String)
+- `action` (String) Base action
 
 Optional:
 
-- `action_duration` (String)
-- `rate_limit` (Attributes) (see [below for nested schema](#nestedatt--rules--rule--action--rate_limit))
-- `redirect` (Attributes) (see [below for nested schema](#nestedatt--rules--rule--action--redirect))
+- `action_duration` (String) Forward persistence of a rule aciton
+- `rate_limit` (Attributes) Behavior or a rate limiting action. Required if action is rate_limit (see [below for nested schema](#nestedatt--rules--rule--action--rate_limit))
+- `redirect` (Attributes) How to redirect a request. Required if action is redirect (see [below for nested schema](#nestedatt--rules--rule--action--redirect))
 
 <a id="nestedatt--rules--rule--action--rate_limit"></a>
 ### Nested Schema for `rules.rule.action.rate_limit`
 
 Required:
 
-- `action` (String)
-- `algo` (String)
-- `keys` (List of String)
-- `limit` (Number)
-- `window` (Number)
+- `action` (String) Action taken when rate limit is exceeded
+- `algo` (String) Rate limiting algorithm
+- `keys` (List of String) Keys used to bucket an individual client
+- `limit` (Number) number of requests allowed in the window
+- `window` (Number) Time window in seconds
 
 
 <a id="nestedatt--rules--rule--action--redirect"></a>
@@ -263,18 +263,18 @@ Required:
 
 Required:
 
-- `conditions` (Attributes List) (see [below for nested schema](#nestedatt--rules--rule--condition_group--conditions))
+- `conditions` (Attributes List) Conditions that must all match within a group (see [below for nested schema](#nestedatt--rules--rule--condition_group--conditions))
 
 <a id="nestedatt--rules--rule--condition_group--conditions"></a>
 ### Nested Schema for `rules.rule.condition_group.conditions`
 
 Required:
 
-- `op` (String)
-- `type` (String)
+- `op` (String) How to comparse type to value
+- `type` (String) Request key type to match against
 - `value` (String)
 
 Optional:
 
-- `key` (String)
+- `key` (String) Key within type to match against
 - `neg` (Boolean)
