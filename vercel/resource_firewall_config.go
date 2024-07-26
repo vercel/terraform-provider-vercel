@@ -43,6 +43,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 				Description: "The managed rulesets that are enabled.",
 				Blocks: map[string]schema.Block{
 					"owasp": schema.SingleNestedBlock{
+						Description: "Enable the owasp managed rulesets and select ruleset behaviors",
 						Attributes: map[string]schema.Attribute{
 							"xss": schema.SingleNestedAttribute{
 								Optional: true,
@@ -159,6 +160,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 				},
 			},
 			"rules": schema.SingleNestedBlock{
+				Description: "Custom rules to apply to the project",
 				Blocks: map[string]schema.Block{
 					"rule": schema.ListNestedBlock{
 						Validators: []validator.List{
@@ -170,7 +172,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 									Computed: true,
 								},
 								"name": schema.StringAttribute{
-									Required: true,
+									Description: "Name to identify the rule",
+									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.LengthBetween(4, 160),
 									},
@@ -182,35 +185,44 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 									},
 								},
 								"active": schema.BoolAttribute{
-									Optional: true,
+									Description: "Whether the rule is active or not",
+									Optional:    true,
 								},
 								"action": schema.SingleNestedAttribute{
-									Required: true,
+									Description: "Actions to take when the condition groups match a request",
+									Required:    true,
 									Attributes: map[string]schema.Attribute{
 										"action": schema.StringAttribute{
-											Required: true,
+											Description: "Base action",
+											Required:    true,
 											Validators: []validator.String{
 												stringvalidator.OneOf("bypass", "log", "challenge", "deny", "rate_limit", "redirect"),
 											},
 										},
 										"rate_limit": schema.SingleNestedAttribute{
-											Optional: true,
+											Description: "Behavior or a rate limiting action. Required if action is rate_limit",
+											Optional:    true,
 											Attributes: map[string]schema.Attribute{
 												"algo": schema.StringAttribute{
-													Required: true,
+													Description: "Rate limiting algorithm",
+													Required:    true,
 												},
 												"window": schema.Int64Attribute{
-													Required: true,
+													Description: "Time window in seconds",
+													Required:    true,
 												},
 												"limit": schema.Int64Attribute{
-													Required: true,
+													Description: "number of requests allowed in the window",
+													Required:    true,
 												},
 												"keys": schema.ListAttribute{
+													Description: "Keys used to bucket an individual client",
 													Required:    true,
 													ElementType: types.StringType,
 												},
 												"action": schema.StringAttribute{
-													Required: true,
+													Description: "Action taken when rate limit is exceeded",
+													Required:    true,
 													Validators: []validator.String{
 														stringvalidator.OneOf("bypass", "log", "challenge", "deny", "rate_limit"),
 													},
@@ -218,7 +230,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 											},
 										},
 										"redirect": schema.SingleNestedAttribute{
-											Optional: true,
+											Description: "How to redirect a request. Required if action is redirect",
+											Optional:    true,
 											Attributes: map[string]schema.Attribute{
 												"location": schema.StringAttribute{
 													Required: true,
@@ -229,20 +242,24 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 											},
 										},
 										"action_duration": schema.StringAttribute{
-											Optional: true,
+											Description: "Forward persistence of a rule aciton",
+											Optional:    true,
 										},
 									},
 								},
 								"condition_group": schema.ListNestedAttribute{
-									Required: true,
+									Description: "Sets of conditions that may match a request",
+									Required:    true,
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"conditions": schema.ListNestedAttribute{
-												Required: true,
+												Description: "Conditions that must all match within a group",
+												Required:    true,
 												NestedObject: schema.NestedAttributeObject{
 													Attributes: map[string]schema.Attribute{
 														"type": schema.StringAttribute{
-															Required: true,
+															Description: "Request key type to match against",
+															Required:    true,
 															Validators: []validator.String{
 																stringvalidator.OneOf(
 																	"host",
@@ -269,7 +286,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 															},
 														},
 														"op": schema.StringAttribute{
-															Required: true,
+															Description: "How to comparse type to value",
+															Required:    true,
 															Validators: []validator.String{
 																stringvalidator.OneOf(
 																	"re",
@@ -293,7 +311,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 															Optional: true,
 														},
 														"key": schema.StringAttribute{
-															Optional: true,
+															Description: "Key within type to match against",
+															Optional:    true,
 														},
 														"value": schema.StringAttribute{
 															Required: true,
@@ -319,13 +338,15 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 									Computed: true,
 								},
 								"hostname": schema.StringAttribute{
-									Required: true,
+									Description: "Hosts to apply these rules to",
+									Required:    true,
 								},
 								"notes": schema.StringAttribute{
 									Optional: true,
 								},
 								"ip": schema.StringAttribute{
-									Required: true,
+									Description: "IP or CIDR to block",
+									Required:    true,
 								},
 								"action": schema.StringAttribute{
 									Required: true,
@@ -801,6 +822,9 @@ func (r *firewallConfigResource) Read(ctx context.Context, req resource.ReadRequ
 	out, err := r.client.GetFirewallConfig(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
 	if err != nil {
 		diags.AddError("failed to read firewall config", err.Error())
+	}
+	if client.NotFound(err) {
+		resp.State.RemoveResource(ctx)
 	}
 	cfg := fromClient(out, state)
 	diags = resp.State.Set(ctx, cfg)
