@@ -23,15 +23,14 @@ type EdgeConfigItem struct {
 type CreateEdgeConfigItemRequest struct {
 	EdgeConfigID string
 	TeamID       string
-	Token        string
 	Key          string
 	Value        string
 }
 
 func (c *Client) CreateEdgeConfigItem(ctx context.Context, request CreateEdgeConfigItemRequest) (e EdgeConfigItem, err error) {
-	url := fmt.Sprintf("%s/v1/edge-config/%s/items?token=%s", c.baseURL, request.EdgeConfigID, request.Token)
+	url := fmt.Sprintf("%s/v1/edge-config/%s/items", c.baseURL, request.EdgeConfigID)
 	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(request.TeamID))
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 
 	payload := string(mustMarshal(
@@ -62,7 +61,6 @@ func (c *Client) CreateEdgeConfigItem(ctx context.Context, request CreateEdgeCon
 type EdgeConfigItemRequest struct {
 	EdgeConfigID string
 	TeamID       string
-	Token        string
 	Key          string
 	Value        string
 }
@@ -96,9 +94,9 @@ func (c *Client) DeleteEdgeConfigItem(ctx context.Context, request EdgeConfigIte
 }
 
 func (c *Client) GetEdgeConfigItem(ctx context.Context, request EdgeConfigItemRequest) (e EdgeConfigItem, err error) {
-	url := fmt.Sprintf("%s/v1/edge-config/%s/item/%s?token=%s", c.baseURL, request.EdgeConfigID, request.Key, request.Token)
+	url := fmt.Sprintf("%s/v1/edge-config/%s/item/%s", c.baseURL, request.EdgeConfigID, request.Key)
 	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(request.TeamID))
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 
 	tflog.Info(ctx, "getting edge config token", map[string]interface{}{

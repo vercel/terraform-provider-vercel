@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -73,25 +74,27 @@ An Edge Config item is a value within an Edge Config.
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"value": schema.StringAttribute{
-				Description: "The value you want to assign to the key.",
-				Required:    true,
+				Description:   "The value you want to assign to the key.",
+				Required:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 		},
 	}
 }
 
 type EdgeConfigItem struct {
+	EdgeConfigID types.String `tfsdk:"edge_config_id"`
+	TeamID       types.String `tfsdk:"team_id"`
 	Key          types.String `tfsdk:"key"`
 	Value        types.String `tfsdk:"value"`
-	TeamID       types.String `tfsdk:"team_id"`
-	EdgeConfigID types.String `tfsdk:"edge_config_id"`
-	Token        types.String `tfsdk:"token"`
 }
 
 func responseToEdgeConfigItem(out client.EdgeConfigItem) EdgeConfigItem {
 	return EdgeConfigItem{
-		Key:   types.StringValue(out.Key),
-		Value: types.StringValue(out.Value),
+		EdgeConfigID: types.StringValue(out.EdgeConfigID),
+		TeamID:       types.StringValue(out.TeamID),
+		Key:          types.StringValue(out.Key),
+		Value:        types.StringValue(out.Value),
 	}
 }
 
@@ -108,7 +111,6 @@ func (r *edgeConfigItemResource) Create(ctx context.Context, req resource.Create
 	out, err := r.client.CreateEdgeConfigItem(ctx, client.CreateEdgeConfigItemRequest{
 		TeamID:       plan.TeamID.ValueString(),
 		EdgeConfigID: plan.EdgeConfigID.ValueString(),
-		Token:        plan.Token.ValueString(),
 		Key:          plan.Key.ValueString(),
 		Value:        plan.Value.ValueString(),
 	})
@@ -145,11 +147,9 @@ func (r *edgeConfigItemResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	out, err := r.client.GetEdgeConfigItem(ctx, client.EdgeConfigItemRequest{
-		Token:        state.Token.ValueString(),
-		TeamID:       state.TeamID.ValueString(),
 		EdgeConfigID: state.EdgeConfigID.ValueString(),
+		TeamID:       state.TeamID.ValueString(),
 		Key:          state.Key.ValueString(),
-		Value:        state.Value.ValueString(),
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
@@ -169,8 +169,8 @@ func (r *edgeConfigItemResource) Read(ctx context.Context, req resource.ReadRequ
 
 	result := responseToEdgeConfigItem(out)
 	tflog.Info(ctx, "read edge config token", map[string]interface{}{
-		"team_id":        state.TeamID.ValueString(),
 		"edge_config_id": state.EdgeConfigID.ValueString(),
+		"team_id":        state.TeamID.ValueString(),
 		"key":            state.Key.ValueString(),
 	})
 
@@ -183,40 +183,7 @@ func (r *edgeConfigItemResource) Read(ctx context.Context, req resource.ReadRequ
 
 // Update is the same as Create
 func (r *edgeConfigItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan EdgeConfigItem
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	out, err := r.client.CreateEdgeConfigItem(ctx, client.CreateEdgeConfigItemRequest{
-		TeamID:       plan.TeamID.ValueString(),
-		EdgeConfigID: plan.EdgeConfigID.ValueString(),
-		Token:        plan.Token.ValueString(),
-		Key:          plan.Key.ValueString(),
-		Value:        plan.Value.ValueString(),
-	})
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error creating Edge Config Item",
-			"Could not create Edge Config Item, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	result := responseToEdgeConfigItem(out)
-	tflog.Info(ctx, "created Edge Config Item", map[string]interface{}{
-		"edge_config_id": plan.EdgeConfigID.ValueString(),
-		"key":            result.Key.ValueString(),
-		"value":          result.Value.ValueString(),
-	})
-
-	diags = resp.State.Set(ctx, result)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	panic(errors.New("Update is not supported, attributes require replacement"))
 }
 
 // Delete deletes an Edge Config.
@@ -229,11 +196,9 @@ func (r *edgeConfigItemResource) Delete(ctx context.Context, req resource.Delete
 	}
 
 	err := r.client.DeleteEdgeConfigItem(ctx, client.EdgeConfigItemRequest{
-		Token:        state.Token.ValueString(),
 		TeamID:       state.TeamID.ValueString(),
 		EdgeConfigID: state.EdgeConfigID.ValueString(),
 		Key:          state.Key.ValueString(),
-		Value:        state.Value.ValueString(),
 	})
 	if client.NotFound(err) {
 		return
@@ -253,8 +218,8 @@ func (r *edgeConfigItemResource) Delete(ctx context.Context, req resource.Delete
 	}
 
 	tflog.Info(ctx, "deleted edge config token", map[string]interface{}{
-		"team_id":        state.TeamID.ValueString(),
 		"edge_config_id": state.EdgeConfigID.ValueString(),
+		"team_id":        state.TeamID.ValueString(),
 		"key":            state.Key.ValueString(),
 	})
 }
