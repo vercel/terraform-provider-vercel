@@ -20,6 +20,10 @@ var (
 	_ resource.ResourceWithConfigure = &edgeConfigItemResource{}
 )
 
+func newEdgeConfigItemResource() resource.Resource {
+	return &edgeConfigItemResource{}
+}
+
 type edgeConfigItemResource struct {
 	client *client.Client
 }
@@ -54,7 +58,7 @@ Provides an Edge Config Item.
 
 An Edge Config is a global data store that enables experimentation with feature flags, A/B testing, critical redirects, and more.
 
-An Edge Config item is a value within an Edge Config.
+An Edge Config Item is a value within an Edge Config.
 `,
 		Attributes: map[string]schema.Attribute{
 			"edge_config_id": schema.StringAttribute{
@@ -222,4 +226,49 @@ func (r *edgeConfigItemResource) Delete(ctx context.Context, req resource.Delete
 		"team_id":        state.TeamID.ValueString(),
 		"key":            state.Key.ValueString(),
 	})
+}
+
+func (r *edgeConfigItemResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	teamID, edgeConfigId, id, ok := splitInto2Or3(req.ID)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Error importing Edge Config Item",
+			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/edge_config_id/key\" or \"edge_config_id/key\"", req.ID),
+		)
+	}
+
+	out, err := r.client.GetEdgeConfigItem(ctx, client.EdgeConfigItemRequest{
+		EdgeConfigID: edgeConfigId,
+		TeamID:       teamID,
+		Key:          id,
+	})
+	if client.NotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading Edge Config Item",
+			fmt.Sprintf("Could not get Edge Config Item %s %s %s, unexpected error: %s",
+				teamID,
+				edgeConfigId,
+				id,
+				err,
+			),
+		)
+		return
+	}
+
+	result := responseToEdgeConfigItem(out)
+	tflog.Info(ctx, "import edge config schema", map[string]interface{}{
+		"team_id":        result.TeamID.ValueString(),
+		"edge_config_id": result.EdgeConfigID.ValueString(),
+		"key":            result.Key.ValueString(),
+	})
+
+	diags := resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
