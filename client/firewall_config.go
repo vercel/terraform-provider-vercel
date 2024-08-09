@@ -79,7 +79,7 @@ type CoreRuleSet struct {
 func (c *Client) GetFirewallConfig(ctx context.Context, projectId string, teamId string) (FirewallConfig, error) {
 	teamId = c.teamID(teamId)
 	url := fmt.Sprintf(
-		"%s/security/firewall/config?projectId=%s&teamId=%s",
+		"%s/v1/security/firewall/config?projectId=%s&teamId=%s",
 		c.baseURL,
 		projectId,
 		teamId,
