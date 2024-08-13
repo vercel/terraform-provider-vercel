@@ -97,7 +97,7 @@ func (c *Client) GetFirewallConfig(ctx context.Context, projectId string, teamId
 func (c *Client) PutFirewallConfig(ctx context.Context, cfg FirewallConfig) (FirewallConfig, error) {
 	teamId := c.teamID(cfg.TeamID)
 	url := fmt.Sprintf(
-		"%s/v1/security/firewall/%s?teamId=%s",
+		"%s/v1/security/firewall/config?projectId=%s&teamId=%s",
 		c.baseURL,
 		cfg.ProjectID,
 		teamId,
