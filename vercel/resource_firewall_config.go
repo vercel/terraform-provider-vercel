@@ -877,6 +877,7 @@ func (r *firewallConfigResource) Delete(ctx context.Context, req resource.Delete
 		"team_id":    state.TeamID.ValueString(),
 	})
 }
+
 func (r *firewallConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, projectID, ok := splitInto1Or2(req.ID)
 	if !ok {

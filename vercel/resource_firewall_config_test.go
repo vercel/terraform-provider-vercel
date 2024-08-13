@@ -9,6 +9,24 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
+func getFirewallImportID(n string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", n)
+		}
+
+		if rs.Primary.ID == "" {
+			return "", fmt.Errorf("no ID is set")
+		}
+
+		if rs.Primary.Attributes["team_id"] == "" {
+			return rs.Primary.ID, nil
+		}
+		return fmt.Sprintf("%s/%s", rs.Primary.Attributes["team_id"], rs.Primary.Attributes["project_id"]), nil
+	}
+}
+
 func TestAcc_FirewallConfigResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
@@ -131,37 +149,19 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 				),
 			},
 			{
-				ImportState:  true,
-				ResourceName: "vercel_firewall_config.managed",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources["vercel_firewall_config.managed"]
-					if !ok {
-						return "", fmt.Errorf("resource not found")
-					}
-					return fmt.Sprintf("%s/%s", rs.Primary.Attributes["team_id"], rs.Primary.ID), nil
-				},
+				ImportState:       true,
+				ResourceName:      "vercel_firewall_config.managed",
+				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.managed"),
 			},
 			{
-				ImportState:  true,
-				ResourceName: "vercel_firewall_config.custom",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources["vercel_firewall_config.custom"]
-					if !ok {
-						return "", fmt.Errorf("resource not found")
-					}
-					return fmt.Sprintf("%s/%s", rs.Primary.Attributes["team_id"], rs.Primary.ID), nil
-				},
+				ImportState:       true,
+				ResourceName:      "vercel_firewall_config.custom",
+				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.custom"),
 			},
 			{
-				ImportState:  true,
-				ResourceName: "vercel_firewall_config.ips",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources["vercel_firewall_config.ips"]
-					if !ok {
-						return "", fmt.Errorf("resource not found")
-					}
-					return fmt.Sprintf("%s/%s", rs.Primary.Attributes["team_id"], rs.Primary.ID), nil
-				},
+				ImportState:       true,
+				ResourceName:      "vercel_firewall_config.ips",
+				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.ips"),
 			},
 			{
 				Config: testAccFirewallConfigResourceUpdated(name, teamIDConfig()),
