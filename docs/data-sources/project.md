@@ -46,6 +46,7 @@ output "project_id" {
 - `automatically_expose_system_environment_variables` (Boolean) Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field
 - `build_command` (String) The build command for this project. If omitted, this value will be automatically detected.
 - `customer_success_code_visibility` (Boolean) Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.
+- `deployment_expiration` (Attributes) Configuration for Deployment Retention. (see [below for nested schema](#nestedatt--deployment_expiration))
 - `dev_command` (String) The dev command for this project. If omitted, this value will be automatically detected.
 - `directory_listing` (Boolean) If no index file is present within a directory, the directory contents will be displayed.
 - `environment` (Attributes Set) A list of environment variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
@@ -71,6 +72,22 @@ output "project_id" {
 - `skew_protection` (String) Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
+
+<a id="nestedatt--deployment_expiration"></a>
+### Nested Schema for `deployment_expiration`
+
+Required:
+
+- `project_id` (String) The ID of the Project for the retention policy
+
+Optional:
+
+- `expiration_canceled` (String) Canceled deployments will be automatically deleted after this time.
+- `expiration_errored` (String) Errored deployments will be automatically deleted after this time.
+- `expiration_preview` (String) Preview deployments will be automatically deleted after this time.
+- `expiration_production` (String) Production deployments will be automatically deleted after this time.
+- `team_id` (String) The ID of the Vercel team.
+
 
 <a id="nestedatt--environment"></a>
 ### Nested Schema for `environment`
