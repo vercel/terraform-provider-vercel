@@ -481,6 +481,7 @@ type Project struct {
 	PrioritiseProductionBuilds          types.Bool                      `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                    types.Bool                      `tfsdk:"directory_listing"`
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
+	DeploymentExpiration                types.Object                    `tfsdk:"deployment_expiration"`
 }
 
 type GitComments struct {
@@ -913,6 +914,15 @@ var gitCommentsAttrTypes = map[string]attr.Type{
 	"on_pull_request": types.BoolType,
 }
 
+var deploymentExpirationAttrTypes = map[string]attr.Type{
+	"expiration_preview":    types.StringType,
+	"expiration_production": types.StringType,
+	"expiration_canceled":   types.StringType,
+	"expiration_errored":    types.StringType,
+	"project_id":            types.StringType,
+	"team_id":               types.StringType,
+}
+
 func hasSameTarget(p EnvironmentItem, target []string) bool {
 	if len(p.Target) != len(target) {
 		return false
@@ -1126,6 +1136,22 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 	}
 
+	deploymentExpiration := types.ObjectNull(deploymentExpirationAttrTypes)
+	if response.DeploymentExpiration != nil {
+		var diags diag.Diagnostics
+		deploymentExpiration, diags = types.ObjectValueFrom(ctx, deploymentExpirationAttrTypes, &ProjectDeploymentRetention{
+			ExpirationPreview:    types.StringValue(response.DeploymentExpiration.ExpirationPreview),
+			ExpirationProduction: types.StringValue(response.DeploymentExpiration.ExpirationProduction),
+			ExpirationCanceled:   types.StringValue(response.DeploymentExpiration.ExpirationCanceled),
+			ExpirationErrored:    types.StringValue(response.DeploymentExpiration.ExpirationErrored),
+			ProjectID:            types.StringValue(response.ID),
+			TeamID:               toTeamID(response.TeamID),
+		})
+		if diags.HasError() {
+			return Project{}, fmt.Errorf("error reading project deployment expiration: %s - %s", diags[0].Summary(), diags[0].Detail())
+		}
+	}
+
 	return Project{
 		BuildCommand:                        uncoerceString(fields.BuildCommand, types.StringPointerValue(response.BuildCommand)),
 		DevCommand:                          uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
@@ -1159,6 +1185,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		DirectoryListing:                    types.BoolValue(response.DirectoryListing),
 		SkewProtection:                      fromSkewProtectionMaxAge(response.SkewProtectionMaxAge),
 		GitComments:                         gitComments,
+		DeploymentExpiration:                deploymentExpiration,
 	}, nil
 }
 

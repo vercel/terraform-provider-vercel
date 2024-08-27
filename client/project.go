@@ -31,6 +31,13 @@ type EnvironmentVariable struct {
 	TeamID    string   `json:"-"`
 }
 
+type DeploymentExpiration struct {
+	ExpirationPreview    string `json:"expiration"`
+	ExpirationProduction string `json:"expirationProduction"`
+	ExpirationCanceled   string `json:"expirationCanceled"`
+	ExpirationErrored    string `json:"expirationErrored"`
+}
+
 // CreateProjectRequest defines the information necessary to create a project.
 type CreateProjectRequest struct {
 	BuildCommand                *string               `json:"buildCommand"`
@@ -189,6 +196,7 @@ type ProjectResponse struct {
 	SkewProtectionMaxAge                 int                         `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                `json:"gitComments"`
 	Security                             *Security                   `json:"security"`
+	DeploymentExpiration                 *DeploymentExpiration       `json:"deploymentExpiration"`
 }
 
 type GitComments struct {
@@ -281,6 +289,7 @@ type UpdateProjectRequest struct {
 	DirectoryListing                     bool                            `json:"directoryListing"`
 	SkewProtectionMaxAge                 int                             `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                    `json:"gitComments"`
+	DeploymentExpiration                 *DeploymentExpiration           `json:"deploymentExpiration"`
 }
 
 // UpdateProject updates an existing projects configuration within Vercel.

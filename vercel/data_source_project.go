@@ -322,6 +322,37 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Description: "Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.",
 			},
+			"deployment_expiration": schema.SingleNestedAttribute{
+				Description: "Configuration for Deployment Retention.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"expiration_preview": schema.StringAttribute{
+						Description: "Preview deployments will be automatically deleted after this time.",
+						Optional:    true,
+					},
+					"expiration_production": schema.StringAttribute{
+						Description: "Production deployments will be automatically deleted after this time.",
+						Optional:    true,
+					},
+					"expiration_canceled": schema.StringAttribute{
+						Description: "Canceled deployments will be automatically deleted after this time.",
+						Optional:    true,
+					},
+					"expiration_errored": schema.StringAttribute{
+						Description: "Errored deployments will be automatically deleted after this time.",
+						Optional:    true,
+					},
+					"project_id": schema.StringAttribute{
+						Description: "The ID of the Project for the retention policy",
+						Required:    true,
+					},
+					"team_id": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: "The ID of the Vercel team.",
+					},
+				},
+			},
 		},
 	}
 }
@@ -359,6 +390,7 @@ type ProjectDataSource struct {
 	PrioritiseProductionBuilds    types.Bool            `tfsdk:"prioritise_production_builds"`
 	DirectoryListing              types.Bool            `tfsdk:"directory_listing"`
 	SkewProtection                types.String          `tfsdk:"skew_protection"`
+	DeploymentExpiration          types.Object          `tfsdk:"deployment_expiration"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
@@ -416,6 +448,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		PrioritiseProductionBuilds:    project.PrioritiseProductionBuilds,
 		DirectoryListing:              project.DirectoryListing,
 		SkewProtection:                project.SkewProtection,
+		DeploymentExpiration:          project.DeploymentExpiration,
 	}, nil
 }
 
