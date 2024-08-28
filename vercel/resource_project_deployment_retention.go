@@ -52,33 +52,6 @@ func (r *projectDeploymentRetentionResource) Configure(ctx context.Context, req 
 	r.client = client
 }
 
-// AllowedValuesStringValidator is a validator that checks if the string value is among the allowed options.
-type AllowedValuesStringValidator struct {
-	AllowedValues []string
-}
-
-func (v AllowedValuesStringValidator) Description(ctx context.Context) string {
-	return fmt.Sprintf("must be one of the following values: %v", v.AllowedValues)
-}
-
-func (v AllowedValuesStringValidator) MarkdownDescription(ctx context.Context) string {
-	return fmt.Sprintf("must be one of the following values: %v", v.AllowedValues)
-}
-
-func (v AllowedValuesStringValidator) ValidateString(ctx context.Context, request validator.StringRequest, response *validator.StringResponse) {
-	strVal := request.ConfigValue.ValueString()
-
-	for _, allowed := range v.AllowedValues {
-		if strVal == allowed {
-			return
-		}
-	}
-
-	response.Diagnostics.AddError(
-		"Invalid Value",
-		fmt.Sprintf("Value '%s' is not a valid option, must be one of %v.", strVal, v.AllowedValues),
-	)
-}
 
 // Schema returns the schema information for a project deployment retention resource.
 func (r *projectDeploymentRetentionResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
