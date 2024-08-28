@@ -289,7 +289,6 @@ type UpdateProjectRequest struct {
 	DirectoryListing                     bool                            `json:"directoryListing"`
 	SkewProtectionMaxAge                 int                             `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                    `json:"gitComments"`
-	DeploymentExpiration                 *DeploymentExpiration           `json:"deploymentExpiration"`
 }
 
 // UpdateProject updates an existing projects configuration within Vercel.

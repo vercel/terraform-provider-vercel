@@ -38,7 +38,6 @@ output "project_id" {
 
 ### Optional
 
-- `deployment_expiration` (Attributes) Configuration for Deployment Retention. (see [below for nested schema](#nestedatt--deployment_expiration))
 - `team_id` (String) The team ID the project exists beneath. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
@@ -72,22 +71,6 @@ output "project_id" {
 - `skew_protection` (String) Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
-
-<a id="nestedatt--deployment_expiration"></a>
-### Nested Schema for `deployment_expiration`
-
-Required:
-
-- `project_id` (String) The ID of the Project for the retention policy
-
-Optional:
-
-- `expiration_canceled` (String) Canceled deployments will be automatically deleted after this time.
-- `expiration_errored` (String) Errored deployments will be automatically deleted after this time.
-- `expiration_preview` (String) Preview deployments will be automatically deleted after this time.
-- `expiration_production` (String) Production deployments will be automatically deleted after this time.
-- `team_id` (String) The ID of the Vercel team.
-
 
 <a id="nestedatt--environment"></a>
 ### Nested Schema for `environment`
