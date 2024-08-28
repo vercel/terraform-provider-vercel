@@ -119,7 +119,7 @@ resource "vercel_project" "example_diff" {
 
 	git_repository = {
 		type = "github"
-		repo = "%[2]s-diff"
+		repo = "%[2]s"
 	}
 }
 
@@ -161,7 +161,7 @@ resource "vercel_project" "example_diff" {
 
 	git_repository = {
 		type = "github"
-		repo = "%[2]s-diff"
+		repo = "%[2]s"
 	}
 }
 
