@@ -19,7 +19,6 @@ var (
 	_ resource.Resource                = &projectDeploymentRetentionResource{}
 	_ resource.ResourceWithConfigure   = &projectDeploymentRetentionResource{}
 	_ resource.ResourceWithImportState = &projectDeploymentRetentionResource{}
-	_ resource.ResourceWithModifyPlan  = &projectDeploymentRetentionResource{}
 )
 
 func newProjectDeploymentRetentionResource() resource.Resource {
@@ -52,7 +51,6 @@ func (r *projectDeploymentRetentionResource) Configure(ctx context.Context, req 
 	r.client = client
 }
 
-
 // Schema returns the schema information for a project deployment retention resource.
 func (r *projectDeploymentRetentionResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -70,34 +68,28 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Optional:    true,
 				Description: "The retention period for preview deployments.",
 				Validators: []validator.String{
-					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited")
+					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"expiration_production": schema.StringAttribute{
 				Optional:    true,
 				Description: "The retention period for production deployments.",
 				Validators: []validator.String{
-					AllowedValuesStringValidator{
-						AllowedValues: []string{"1m", "2m", "3m", "6m", "1y", "unlimited"},
-					},
+					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"expiration_canceled": schema.StringAttribute{
 				Optional:    true,
 				Description: "The retention period for canceled deployments.",
 				Validators: []validator.String{
-					AllowedValuesStringValidator{
-						AllowedValues: []string{"1m", "2m", "3m", "6m", "1y", "unlimited"},
-					},
+					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"expiration_errored": schema.StringAttribute{
 				Optional:    true,
 				Description: "The retention period for errored deployments.",
 				Validators: []validator.String{
-					AllowedValuesStringValidator{
-						AllowedValues: []string{"1m", "2m", "3m", "6m", "1y", "unlimited"},
-					},
+					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"project_id": schema.StringAttribute{
@@ -123,18 +115,6 @@ type ProjectDeploymentRetention struct {
 	ExpirationErrored    types.String `tfsdk:"expiration_errored"`
 	ProjectID            types.String `tfsdk:"project_id"`
 	TeamID               types.String `tfsdk:"team_id"`
-}
-
-func (r *projectDeploymentRetentionResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-	var config ProjectDeploymentRetention
-	diags := req.Config.Get(ctx, &config)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (e *ProjectDeploymentRetention) toUpdateDeploymentRetentionRequest() client.UpdateDeploymentRetentionRequest {
