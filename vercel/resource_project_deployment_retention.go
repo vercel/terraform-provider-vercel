@@ -70,9 +70,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Optional:    true,
 				Description: "The retention period for preview deployments.",
 				Validators: []validator.String{
-					AllowedValuesStringValidator{
-						AllowedValues: []string{"1m", "2m", "3m", "6m", "1y", "unlimited"},
-					},
+					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited")
 				},
 			},
 			"expiration_production": schema.StringAttribute{
