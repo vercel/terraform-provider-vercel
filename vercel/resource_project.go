@@ -483,15 +483,6 @@ type Project struct {
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
 }
 
-type DeploymentExpiration struct {
-	ExpirationPreview    types.String `tfsdk:"expiration_preview"`
-	ExpirationProduction types.String `tfsdk:"expiration_production"`
-	ExpirationCanceled   types.String `tfsdk:"expiration_canceled"`
-	ExpirationErrored    types.String `tfsdk:"expiration_errored"`
-	ProjectID            types.String `tfsdk:"project_id"`
-	TeamID               types.String `tfsdk:"team_id"`
-}
-
 type GitComments struct {
 	OnPullRequest types.Bool `tfsdk:"on_pull_request"`
 	OnCommit      types.Bool `tfsdk:"on_commit"`
@@ -920,15 +911,6 @@ var envVariableElemType = types.ObjectType{
 var gitCommentsAttrTypes = map[string]attr.Type{
 	"on_commit":       types.BoolType,
 	"on_pull_request": types.BoolType,
-}
-
-var deploymentExpirationAttrTypes = map[string]attr.Type{
-	"expiration_preview":    types.StringType,
-	"expiration_production": types.StringType,
-	"expiration_canceled":   types.StringType,
-	"expiration_errored":    types.StringType,
-	"project_id":            types.StringType,
-	"team_id":               types.StringType,
 }
 
 func hasSameTarget(p EnvironmentItem, target []string) bool {
