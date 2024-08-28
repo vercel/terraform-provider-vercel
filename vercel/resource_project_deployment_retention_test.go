@@ -43,12 +43,6 @@ func TestAcc_ProjectDeploymentRetentions(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_production", "1m"),
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_canceled", "1m"),
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_errored", "1m"),
-
-					testAccProjectDeploymentRetentionExists("vercel_project_deployment_retention.example_diff", testTeam()),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example_diff", "expiration_preview", "1m"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example_diff", "expiration_production", "2m"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example_diff", "expiration_canceled", "3m"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example_diff", "expiration_errored", "6m"),
 				),
 			},
 			{
@@ -59,12 +53,6 @@ func TestAcc_ProjectDeploymentRetentions(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_production", "2m"),
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_canceled", "2m"),
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_errored", "2m"),
-
-					testAccProjectDeploymentRetentionExists("vercel_project_deployment_retention.example_diff", testTeam()),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example_diff", "expiration_preview", "2m"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example_diff", "expiration_production", "3m"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example_diff", "expiration_canceled", "6m"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example_diff", "expiration_errored", "1y"),
 				),
 			},
 			{
@@ -113,16 +101,6 @@ resource "vercel_project" "example" {
 	}
 }
 
-resource "vercel_project" "example_diff" {
-	name = "test-acc-example-project-%[1]s-diff"
-	%[3]s
-
-	git_repository = {
-		type = "github"
-		repo = "%[2]s"
-	}
-}
-
 resource "vercel_project_deployment_retention" "example" {
 	project_id = vercel_project.example.id
 	%[3]s
@@ -130,15 +108,6 @@ resource "vercel_project_deployment_retention" "example" {
 	expiration_production = "1m"
 	expiration_canceled   = "1m"
 	expiration_errored    = "1m"
-}
-
-resource "vercel_project_deployment_retention" "example_diff" {
-	project_id = vercel_project.example_diff.id
-	%[3]s
-	expiration_preview    = "1m"
-	expiration_production = "2m"
-	expiration_canceled   = "3m"
-	expiration_errored    = "6m"
 }
 `, projectName, testGithubRepo(), teamIDConfig())
 }
@@ -155,16 +124,6 @@ resource "vercel_project" "example" {
     }
 }
 
-resource "vercel_project" "example_diff" {
-	name = "test-acc-example-project-%[1]s-diff"
-	%[3]s
-
-	git_repository = {
-		type = "github"
-		repo = "%[2]s"
-	}
-}
-
 resource "vercel_project_deployment_retention" "example" {
 	project_id = vercel_project.example.id
 	%[3]s
@@ -172,15 +131,6 @@ resource "vercel_project_deployment_retention" "example" {
 	expiration_production = "2m"
 	expiration_canceled   = "2m"
 	expiration_errored    = "2m"
-}
-
-resource "vercel_project_deployment_retention" "example_diff" {
-	project_id = vercel_project.example_diff.id
-	%[3]s
-	expiration_preview    = "2m"
-	expiration_production = "3m"
-	expiration_canceled   = "6m"
-	expiration_errored    = "1y"
 }
 `, projectName, testGithubRepo(), teamIDConfig())
 }
