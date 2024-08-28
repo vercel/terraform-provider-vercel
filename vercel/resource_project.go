@@ -481,7 +481,7 @@ type Project struct {
 	PrioritiseProductionBuilds          types.Bool                      `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                    types.Bool                      `tfsdk:"directory_listing"`
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
-	DeploymentExpiration                types.Object                    `tfsdk:"deployment_expiration"`
+	DeploymentExpiration                *types.Object                   `tfsdk:"deployment_expiration"`
 }
 
 type GitComments struct {
@@ -1136,10 +1136,11 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 	}
 
-	deploymentExpiration := types.ObjectNull(deploymentExpirationAttrTypes)
+	var deploymentExpiration *types.Object
 	if response.DeploymentExpiration != nil {
+		de := types.ObjectNull(deploymentExpirationAttrTypes)
 		var diags diag.Diagnostics
-		deploymentExpiration, diags = types.ObjectValueFrom(ctx, deploymentExpirationAttrTypes, &ProjectDeploymentRetention{
+		de, diags = types.ObjectValueFrom(ctx, deploymentExpirationAttrTypes, &ProjectDeploymentRetention{
 			ExpirationPreview:    types.StringValue(response.DeploymentExpiration.ExpirationPreview),
 			ExpirationProduction: types.StringValue(response.DeploymentExpiration.ExpirationProduction),
 			ExpirationCanceled:   types.StringValue(response.DeploymentExpiration.ExpirationCanceled),
@@ -1150,6 +1151,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		if diags.HasError() {
 			return Project{}, fmt.Errorf("error reading project deployment expiration: %s - %s", diags[0].Summary(), diags[0].Detail())
 		}
+		deploymentExpiration = &de
 	}
 
 	return Project{

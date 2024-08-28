@@ -324,7 +324,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"deployment_expiration": schema.SingleNestedAttribute{
 				Description: "Configuration for Deployment Retention.",
-				Computed:    true,
+				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"expiration_preview": schema.StringAttribute{
 						Description: "Preview deployments will be automatically deleted after this time.",
@@ -390,7 +390,7 @@ type ProjectDataSource struct {
 	PrioritiseProductionBuilds    types.Bool            `tfsdk:"prioritise_production_builds"`
 	DirectoryListing              types.Bool            `tfsdk:"directory_listing"`
 	SkewProtection                types.String          `tfsdk:"skew_protection"`
-	DeploymentExpiration          types.Object          `tfsdk:"deployment_expiration"`
+	DeploymentExpiration          *types.Object         `tfsdk:"deployment_expiration"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {

@@ -38,6 +38,7 @@ output "project_id" {
 
 ### Optional
 
+- `deployment_expiration` (Attributes) Configuration for Deployment Retention. (see [below for nested schema](#nestedatt--deployment_expiration))
 - `team_id` (String) The team ID the project exists beneath. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
@@ -46,7 +47,6 @@ output "project_id" {
 - `automatically_expose_system_environment_variables` (Boolean) Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field
 - `build_command` (String) The build command for this project. If omitted, this value will be automatically detected.
 - `customer_success_code_visibility` (Boolean) Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.
-- `deployment_expiration` (Attributes) Configuration for Deployment Retention. (see [below for nested schema](#nestedatt--deployment_expiration))
 - `dev_command` (String) The dev command for this project. If omitted, this value will be automatically detected.
 - `directory_listing` (Boolean) If no index file is present within a directory, the directory contents will be displayed.
 - `environment` (Attributes Set) A list of environment variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
