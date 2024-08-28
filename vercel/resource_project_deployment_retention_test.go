@@ -114,7 +114,7 @@ resource "vercel_project" "example" {
 }
 
 resource "vercel_project" "example_diff" {
-	name = "test-acc-example-project-%[1]s"
+	name = "test-acc-example-project-%[1]s-diff"
 	%[3]s
 
 	git_repository = {
@@ -156,7 +156,7 @@ resource "vercel_project" "example" {
 }
 
 resource "vercel_project" "example_diff" {
-	name = "test-acc-example-project-%[1]s"
+	name = "test-acc-example-project-%[1]s-diff"
 	%[3]s
 
 	git_repository = {
