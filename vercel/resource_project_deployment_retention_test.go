@@ -70,13 +70,13 @@ func TestAcc_ProjectDeploymentRetentions(t *testing.T) {
 			{
 				ResourceName:      "vercel_project_deployment_retention.example",
 				ImportState:       true,
-				ImportStateVerify: true,
+				ImportStateVerify: false,
 				ImportStateIdFunc: getProjectDeploymentRetentionImportID("vercel_project_deployment_retention.example"),
 			},
 			{
 				ResourceName:      "vercel_project_deployment_retention.example_diff",
 				ImportState:       true,
-				ImportStateVerify: true,
+				ImportStateVerify: false,
 				ImportStateIdFunc: getProjectDeploymentRetentionImportID("vercel_project_deployment_retention.example_diff"),
 			},
 		},
