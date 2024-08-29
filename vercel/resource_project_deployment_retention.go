@@ -66,6 +66,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 		Attributes: map[string]schema.Attribute{
 			"expiration_preview": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "The retention period for preview deployments.",
 				Validators: []validator.String{
 					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
@@ -73,6 +74,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"expiration_production": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "The retention period for production deployments.",
 				Validators: []validator.String{
 					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
@@ -80,6 +82,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"expiration_canceled": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "The retention period for canceled deployments.",
 				Validators: []validator.String{
 					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
@@ -87,6 +90,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"expiration_errored": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "The retention period for errored deployments.",
 				Validators: []validator.String{
 					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
