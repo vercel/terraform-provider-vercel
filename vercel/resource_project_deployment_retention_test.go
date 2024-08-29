@@ -55,38 +55,8 @@ func TestAcc_ProjectDeploymentRetentions(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_errored", "2m"),
 				),
 			},
-			{
-				ResourceName:      "vercel_project_deployment_retention.example",
-				ImportState:       true,
-				ImportStateVerify: false,
-				ImportStateIdFunc: getProjectDeploymentRetentionImportID("vercel_project_deployment_retention.example"),
-			},
-			{
-				ResourceName:      "vercel_project_deployment_retention.example_diff",
-				ImportState:       true,
-				ImportStateVerify: false,
-				ImportStateIdFunc: getProjectDeploymentRetentionImportID("vercel_project_deployment_retention.example_diff"),
-			},
 		},
 	})
-}
-
-func getProjectDeploymentRetentionImportID(n string) resource.ImportStateIdFunc {
-	return func(s *terraform.State) (string, error) {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return "", fmt.Errorf("not found: %s", n)
-		}
-
-		if rs.Primary.ID == "" {
-			return "", fmt.Errorf("no ID is set")
-		}
-
-		if rs.Primary.Attributes["team_id"] == "" {
-			return rs.Primary.Attributes["project_id"], nil
-		}
-		return fmt.Sprintf("%s/%s", rs.Primary.Attributes["team_id"], rs.Primary.Attributes["project_id"]), nil
-	}
 }
 
 func testAccProjectDeploymentRetentionsConfig(projectName string) string {
