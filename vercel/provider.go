@@ -65,6 +65,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newProjectEnvironmentVariableResource,
 		newProjectResource,
 		newSharedEnvironmentVariableResource,
+		newTeamResource,
 		newWebhookResource,
 	}
 }
@@ -86,6 +87,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newProjectDeploymentRetentionDataSource,
 		newProjectDirectoryDataSource,
 		newSharedEnvironmentVariableDataSource,
+		newTeamDataSource,
 	}
 }
 

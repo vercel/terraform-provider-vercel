@@ -11,6 +11,7 @@ import (
 type TeamCreateRequest struct {
 	Slug string `json:"slug"`
 	Name string `json:"name"`
+	Plan string `json:"plan"`
 }
 
 type SamlConnection struct {
@@ -23,8 +24,10 @@ type SamlDirectory struct {
 }
 
 type SamlConfig struct {
-	Connection *SamlConnection `json:"connection"`
-	Directory  *SamlDirectory  `json:"directory"`
+	Connection *SamlConnection   `json:"connection"`
+	Directory  *SamlDirectory    `json:"directory"`
+	Enforced   bool              `json:"enforced,omitempty"`
+	Roles      map[string]string `json:"roles,omitempty"`
 }
 
 type TaxID struct {
@@ -60,6 +63,7 @@ type SpacesConfig struct {
 // Team is the information returned by the vercel api when a team is created.
 type Team struct {
 	ID                                 string         `json:"id"`
+	Name                               string         `json:"name"`
 	Avatar                             *string        `json:"avatar"` // hash of uploaded image
 	Description                        *string        `json:"description"`
 	Slug                               string         `json:"slug"`
@@ -123,8 +127,8 @@ func (c *Client) GetTeam(ctx context.Context, idOrSlug string) (t Team, err erro
 }
 
 type UpdateSamlConfig struct {
-	Enforced bool              `json:"enforced,omitempty"`
-	Roles    map[string]string `json:"roles,omitempty"`
+	Enforced bool              `json:"enforced"`
+	Roles    map[string]string `json:"roles"`
 }
 
 type UpdateTeamRequest struct {
