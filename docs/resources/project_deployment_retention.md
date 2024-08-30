@@ -6,7 +6,6 @@ description: |-
   Provides a Project Deployment Retention resource.
   A Project Deployment Retention resource defines an Deployment Retention on a Vercel Project.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/security/deployment-retention.
-  ~> Terraform currently provides a project deployment retention resource.
 ---
 
 # vercel_project_deployment_retention (Resource)
@@ -16,8 +15,6 @@ Provides a Project Deployment Retention resource.
 A Project Deployment Retention resource defines an Deployment Retention on a Vercel Project.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/security/deployment-retention).
-
-~> Terraform currently provides a project deployment retention resource.
 
 ## Example Usage
 
@@ -63,10 +60,10 @@ resource "vercel_project_deployment_retention" "example_customized" {
 
 ### Optional
 
-- `expiration_canceled` (String) The retention period for canceled deployments.
-- `expiration_errored` (String) The retention period for errored deployments.
-- `expiration_preview` (String) The retention period for preview deployments.
-- `expiration_production` (String) The retention period for production deployments.
+- `expiration_canceled` (String) The retention period for canceled deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.
+- `expiration_errored` (String) The retention period for errored deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.
+- `expiration_preview` (String) The retention period for preview deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.
+- `expiration_production` (String) The retention period for production deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.
 - `team_id` (String) The ID of the Vercel team.
 
 ## Import
