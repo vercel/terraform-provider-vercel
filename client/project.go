@@ -31,6 +31,13 @@ type EnvironmentVariable struct {
 	TeamID    string   `json:"-"`
 }
 
+type DeploymentExpiration struct {
+	ExpirationPreview    int `json:"expirationDays"`
+	ExpirationProduction int `json:"expirationDaysProduction"`
+	ExpirationCanceled   int `json:"expirationDaysCanceled"`
+	ExpirationErrored    int `json:"expirationDaysErrored"`
+}
+
 // CreateProjectRequest defines the information necessary to create a project.
 type CreateProjectRequest struct {
 	BuildCommand                *string               `json:"buildCommand"`
@@ -189,6 +196,7 @@ type ProjectResponse struct {
 	SkewProtectionMaxAge                 int                         `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                `json:"gitComments"`
 	Security                             *Security                   `json:"security"`
+	DeploymentExpiration                 *DeploymentExpiration       `json:"deploymentExpiration"`
 }
 
 type GitComments struct {

@@ -1032,7 +1032,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 	}
 
-	var oidcTokenConfig *OIDCTokenConfig = &OIDCTokenConfig{
+	var oidcTokenConfig = &OIDCTokenConfig{
 		Enabled: types.BoolValue(false),
 	}
 	if response.OIDCTokenConfig != nil {
