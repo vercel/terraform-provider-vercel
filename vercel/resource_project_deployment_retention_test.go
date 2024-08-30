@@ -26,7 +26,7 @@ func testAccProjectDeploymentRetentionExists(n, teamID string) resource.TestChec
 	}
 }
 
-func TestAcc_ProjectDeploymentRetentions(t *testing.T) {
+func TestAcc_ProjectDeploymentRetention(t *testing.T) {
 	nameSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -40,8 +40,18 @@ func TestAcc_ProjectDeploymentRetentions(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectDeploymentRetentionExists("vercel_project_deployment_retention.example", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_preview", "1m"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_production", "1m"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_canceled", "1m"),
+					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_production", "2m"),
+					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_canceled", "3m"),
+					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_errored", "1y"),
+				),
+			},
+			{
+				Config: testAccProjectDeploymentRetentionsConfigUpdated(nameSuffix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectDeploymentRetentionExists("vercel_project_deployment_retention.example", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_preview", "2m"),
+					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_production", "3m"),
+					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_canceled", "6m"),
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_errored", "1m"),
 				),
 			},
@@ -65,8 +75,31 @@ resource "vercel_project_deployment_retention" "example" {
 	project_id = vercel_project.example.id
 	%[3]s
 	expiration_preview    = "1m"
-	expiration_production = "1m"
-	expiration_canceled   = "1m"
+	expiration_production = "2m"
+	expiration_canceled   = "3m"
+	expiration_errored    = "1y"
+}
+`, projectName, testGithubRepo(), teamIDConfig())
+}
+
+func testAccProjectDeploymentRetentionsConfigUpdated(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+	%[3]s
+
+	git_repository = {
+		type = "github"
+		repo = "%[2]s"
+	}
+}
+
+resource "vercel_project_deployment_retention" "example" {
+	project_id = vercel_project.example.id
+	%[3]s
+	expiration_preview    = "2m"
+	expiration_production = "3m"
+	expiration_canceled   = "6m"
 	expiration_errored    = "1m"
 }
 `, projectName, testGithubRepo(), teamIDConfig())

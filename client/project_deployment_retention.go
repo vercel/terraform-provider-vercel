@@ -46,8 +46,44 @@ func (c *Client) DeleteDeploymentRetention(ctx context.Context, projectID, teamI
 	return err
 }
 
-type DeploymentExpirationResponse struct {
-	DeploymentExpiration DeploymentExpiration `json:"deploymentExpiration"`
+type deploymentExpirationResponse struct {
+	DeploymentExpiration struct {
+		Expiration           string `json:"expiration"`
+		ExpirationProduction string `json:"expirationProduction"`
+		ExpirationCanceled   string `json:"expirationCanceled"`
+		ExpirationErrored    string `json:"expirationErrored"`
+	} `json:"deploymentExpiration"`
+}
+
+var DeploymentRetentionDaysToString = map[int]string{
+	1:     "1d",
+	7:     "1w",
+	30:    "1m",
+	60:    "2m",
+	90:    "3m",
+	180:   "6m",
+	365:   "1y",
+	36500: "unlimited",
+}
+
+var DeploymentRetentionStringToDays = map[string]int{
+	"1d":        1,
+	"1w":        7,
+	"1m":        30,
+	"2m":        60,
+	"3m":        90,
+	"6m":        180,
+	"1y":        365,
+	"unlimited": 36500,
+}
+
+func (d deploymentExpirationResponse) toDeploymentExpiration() DeploymentExpiration {
+	return DeploymentExpiration{
+		ExpirationPreview:    DeploymentRetentionStringToDays[d.DeploymentExpiration.Expiration],
+		ExpirationProduction: DeploymentRetentionStringToDays[d.DeploymentExpiration.ExpirationProduction],
+		ExpirationCanceled:   DeploymentRetentionStringToDays[d.DeploymentExpiration.ExpirationCanceled],
+		ExpirationErrored:    DeploymentRetentionStringToDays[d.DeploymentExpiration.ExpirationErrored],
+	}
 }
 
 // UpdateDeploymentRetention will update an existing deployment retention to the latest information.
@@ -62,19 +98,19 @@ func (c *Client) UpdateDeploymentRetention(ctx context.Context, request UpdateDe
 		"url":     url,
 		"payload": payload,
 	})
-	var d DeploymentExpirationResponse
+	var d deploymentExpirationResponse
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "PATCH",
 		url:    url,
 		body:   payload,
 	}, &d)
-	return d.DeploymentExpiration, err
+	return d.toDeploymentExpiration(), err
 }
 
 // GetDeploymentRetention returns the deployment retention for a given project.
 func (c *Client) GetDeploymentRetention(ctx context.Context, projectID, teamID string) (d DeploymentExpiration, err error) {
-	url := fmt.Sprintf("%s/v1/projects/%s", c.baseURL, projectID)
+	url := fmt.Sprintf("%s/v2/projects/%s", c.baseURL, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
@@ -89,6 +125,10 @@ func (c *Client) GetDeploymentRetention(ctx context.Context, projectID, teamID s
 		url:    url,
 		body:   "",
 	}, &p)
+	tflog.Info(ctx, "got deployment retention", map[string]interface{}{
+		"url":       url,
+		"retention": p.DeploymentExpiration,
+	})
 	if p.DeploymentExpiration == nil {
 		return DeploymentExpiration{}, fmt.Errorf("deployment retention not found")
 	}

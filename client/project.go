@@ -32,10 +32,10 @@ type EnvironmentVariable struct {
 }
 
 type DeploymentExpiration struct {
-	ExpirationPreview    string `json:"expiration"`
-	ExpirationProduction string `json:"expirationProduction"`
-	ExpirationCanceled   string `json:"expirationCanceled"`
-	ExpirationErrored    string `json:"expirationErrored"`
+	ExpirationPreview    int `json:"expirationDays"`
+	ExpirationProduction int `json:"expirationDaysProduction"`
+	ExpirationCanceled   int `json:"expirationDaysCanceled"`
+	ExpirationErrored    int `json:"expirationDaysErrored"`
 }
 
 // CreateProjectRequest defines the information necessary to create a project.

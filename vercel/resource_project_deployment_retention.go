@@ -122,17 +122,12 @@ type ProjectDeploymentRetention struct {
 }
 
 func (e *ProjectDeploymentRetention) toUpdateDeploymentRetentionRequest() client.UpdateDeploymentRetentionRequest {
-
-	preview := e.ExpirationPreview.ValueString()
-	production := e.ExpirationProduction.ValueString()
-	canceled := e.ExpirationCanceled.ValueString()
-	errored := e.ExpirationErrored.ValueString()
 	return client.UpdateDeploymentRetentionRequest{
 		DeploymentRetention: client.DeploymentRetentionRequest{
-			ExpirationPreview:    &preview,
-			ExpirationProduction: &production,
-			ExpirationCanceled:   &canceled,
-			ExpirationErrored:    &errored,
+			ExpirationPreview:    e.ExpirationPreview.ValueStringPointer(),
+			ExpirationProduction: e.ExpirationProduction.ValueStringPointer(),
+			ExpirationCanceled:   e.ExpirationCanceled.ValueStringPointer(),
+			ExpirationErrored:    e.ExpirationErrored.ValueStringPointer(),
 		},
 		ProjectID: e.ProjectID.ValueString(),
 		TeamID:    e.TeamID.ValueString(),
@@ -143,12 +138,11 @@ func (e *ProjectDeploymentRetention) toUpdateDeploymentRetentionRequest() client
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
 func convertResponseToProjectDeploymentRetention(response client.DeploymentExpiration, projectID types.String, teamID types.String) ProjectDeploymentRetention {
-
 	return ProjectDeploymentRetention{
-		ExpirationPreview:    types.StringValue(response.ExpirationPreview),
-		ExpirationProduction: types.StringValue(response.ExpirationProduction),
-		ExpirationCanceled:   types.StringValue(response.ExpirationCanceled),
-		ExpirationErrored:    types.StringValue(response.ExpirationErrored),
+		ExpirationPreview:    types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationPreview]),
+		ExpirationProduction: types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationProduction]),
+		ExpirationCanceled:   types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationCanceled]),
+		ExpirationErrored:    types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationErrored]),
 		TeamID:               teamID,
 		ProjectID:            projectID,
 	}
@@ -169,6 +163,13 @@ func (r *projectDeploymentRetentionResource) Create(ctx context.Context, req res
 		resp.Diagnostics.AddError(
 			"Error creating project deployment retention",
 			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
+		)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating project deployment retention",
+			"Error reading project information, unexpected error: "+err.Error(),
 		)
 		return
 	}
