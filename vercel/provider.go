@@ -81,6 +81,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newLogDrainDataSource,
 		newPrebuiltProjectDataSource,
 		newProjectDataSource,
+		newProjectDeploymentRetentionDataSource,
 		newProjectDirectoryDataSource,
 		newProjectFunctionCPUDataSource,
 		newSharedEnvironmentVariableDataSource,

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -60,14 +61,13 @@ Provides a Project Deployment Retention resource.
 A Project Deployment Retention resource defines an Deployment Retention on a Vercel Project.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/security/deployment-retention).
-
-~> Terraform currently provides a project deployment retention resource.
 `,
 		Attributes: map[string]schema.Attribute{
 			"expiration_preview": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for preview deployments.",
+				Description: "The retention period for preview deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
+				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
 					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
@@ -75,7 +75,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"expiration_production": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for production deployments.",
+				Description: "The retention period for production deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
+				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
 					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
@@ -83,7 +84,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"expiration_canceled": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for canceled deployments.",
+				Description: "The retention period for canceled deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
+				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
 					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
@@ -91,7 +93,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"expiration_errored": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for errored deployments.",
+				Description: "The retention period for errored deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
+				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
 					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
@@ -124,10 +127,10 @@ type ProjectDeploymentRetention struct {
 func (e *ProjectDeploymentRetention) toUpdateDeploymentRetentionRequest() client.UpdateDeploymentRetentionRequest {
 	return client.UpdateDeploymentRetentionRequest{
 		DeploymentRetention: client.DeploymentRetentionRequest{
-			ExpirationPreview:    e.ExpirationPreview.ValueStringPointer(),
-			ExpirationProduction: e.ExpirationProduction.ValueStringPointer(),
-			ExpirationCanceled:   e.ExpirationCanceled.ValueStringPointer(),
-			ExpirationErrored:    e.ExpirationErrored.ValueStringPointer(),
+			ExpirationPreview:    e.ExpirationPreview.ValueString(),
+			ExpirationProduction: e.ExpirationProduction.ValueString(),
+			ExpirationCanceled:   e.ExpirationCanceled.ValueString(),
+			ExpirationErrored:    e.ExpirationErrored.ValueString(),
 		},
 		ProjectID: e.ProjectID.ValueString(),
 		TeamID:    e.TeamID.ValueString(),

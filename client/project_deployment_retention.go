@@ -10,10 +10,10 @@ import (
 // CreateDeploymentRetentionRequest defines the information that needs to be passed to Vercel in order to
 // create an deployment retention.
 type DeploymentRetentionRequest struct {
-	ExpirationPreview    *string `json:"expiration,omitempty"`
-	ExpirationProduction *string `json:"expirationProduction,omitempty"`
-	ExpirationCanceled   *string `json:"expirationCanceled,omitempty"`
-	ExpirationErrored    *string `json:"expirationErrored,omitempty"`
+	ExpirationPreview    string `json:"expiration,omitempty"`
+	ExpirationProduction string `json:"expirationProduction,omitempty"`
+	ExpirationCanceled   string `json:"expirationCanceled,omitempty"`
+	ExpirationErrored    string `json:"expirationErrored,omitempty"`
 }
 
 // UpdateDeploymentRetentionRequest defines the information that needs to be passed to Vercel in order to
@@ -31,7 +31,7 @@ func (c *Client) DeleteDeploymentRetention(ctx context.Context, projectID, teamI
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	unlimited := "unlimited"
-	payload := string(mustMarshal(DeploymentRetentionRequest{ExpirationPreview: &unlimited, ExpirationProduction: &unlimited, ExpirationCanceled: &unlimited, ExpirationErrored: &unlimited}))
+	payload := string(mustMarshal(DeploymentRetentionRequest{ExpirationPreview: unlimited, ExpirationProduction: unlimited, ExpirationCanceled: unlimited, ExpirationErrored: unlimited}))
 
 	tflog.Info(ctx, "updating deployment expiration", map[string]interface{}{
 		"url":     url,
@@ -125,10 +125,6 @@ func (c *Client) GetDeploymentRetention(ctx context.Context, projectID, teamID s
 		url:    url,
 		body:   "",
 	}, &p)
-	tflog.Info(ctx, "got deployment retention", map[string]interface{}{
-		"url":       url,
-		"retention": p.DeploymentExpiration,
-	})
 	if p.DeploymentExpiration == nil {
 		return DeploymentExpiration{}, fmt.Errorf("deployment retention not found")
 	}
