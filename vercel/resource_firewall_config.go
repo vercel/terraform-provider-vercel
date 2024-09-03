@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -484,24 +486,28 @@ func (r *FirewallRule) Mitigate() client.Mitigate {
 	mit := client.Mitigate{
 		Action: r.Action.Action.ValueString(),
 	}
-	if r.Action.RateLimit != nil {
-		keys := make([]string, len(r.Action.RateLimit.Keys))
-		for i, k := range r.Action.RateLimit.Keys {
-			keys[i] = k.ValueString()
+	fmt.Println(r)
+	if !r.Action.RateLimit.IsNull() {
+		fmt.Println("RateLimit is not null")
+		rl := &client.RateLimit{}
+		diags := r.Action.RateLimit.As(context.Background(), rl, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    false,
+			UnhandledUnknownAsEmpty: false,
+		})
+		if diags.HasError() {
+			fmt.Println("Has error")
+			fmt.Println(diags)
 		}
-		mit.RateLimit = &client.RateLimit{
-			Algo:   r.Action.RateLimit.Algo.ValueString(),
-			Window: r.Action.RateLimit.Window.ValueInt64(),
-			Limit:  r.Action.RateLimit.Limit.ValueInt64(),
-			Keys:   keys,
-			Action: r.Action.RateLimit.Action.ValueString(),
-		}
+		mit.RateLimit = rl
 	}
-	if r.Action.Redirect != nil {
-		mit.Redirect = &client.Redirect{
-			Location:  r.Action.Redirect.Location.ValueString(),
-			Permanent: r.Action.Redirect.Permanent.ValueBool(),
-		}
+
+	if !r.Action.Redirect.IsNull() {
+		rd := &client.Redirect{}
+		r.Action.Redirect.As(context.Background(), rd, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    true,
+			UnhandledUnknownAsEmpty: true,
+		})
+		mit.Redirect = rd
 	}
 	if !r.Action.ActionDuration.IsNull() {
 		mit.ActionDuration = r.Action.ActionDuration.ValueString()
@@ -547,10 +553,37 @@ func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) FirewallRule {
 	return r
 }
 
+/*
+	type Mitigate struct {
+		Action         types.String `tfsdk:"action"`
+		RateLimit      *RateLimit   `tfsdk:"rate_limit"`
+		Redirect       *Redirect    `tfsdk:"redirect"`
+		ActionDuration types.String `tfsdk:"action_duration"`
+	}
+*/
+var redirectType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"location":  types.StringType,
+		"permanent": types.BoolType,
+	},
+}
+
+var ratelimitType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"algo":   types.StringType,
+		"window": types.Int64Type,
+		"limit":  types.Int64Type,
+		"keys": types.ListType{
+			ElemType: types.StringType,
+		},
+		"action": types.StringType,
+	},
+}
+
 type Mitigate struct {
 	Action         types.String `tfsdk:"action"`
-	RateLimit      *RateLimit   `tfsdk:"rate_limit"`
-	Redirect       *Redirect    `tfsdk:"redirect"`
+	RateLimit      types.Object `tfsdk:"rate_limit"`
+	Redirect       types.Object `tfsdk:"redirect"`
 	ActionDuration types.String `tfsdk:"action_duration"`
 }
 
@@ -558,6 +591,8 @@ func fromMitigate(mitigate client.Mitigate, ref Mitigate) Mitigate {
 	m := Mitigate{
 		Action:         types.StringValue(mitigate.Action),
 		ActionDuration: types.StringValue(mitigate.ActionDuration),
+		Redirect:       types.ObjectNull(redirectType.AttrTypes),
+		RateLimit:      types.ObjectNull(ratelimitType.AttrTypes),
 	}
 
 	if mitigate.ActionDuration == "" && ref.ActionDuration == types.StringNull() {
@@ -565,23 +600,31 @@ func fromMitigate(mitigate client.Mitigate, ref Mitigate) Mitigate {
 	}
 
 	if mitigate.RateLimit != nil {
-		keys := make([]types.String, len(mitigate.RateLimit.Keys))
-		for i, k := range mitigate.RateLimit.Keys {
-			keys[i] = types.StringValue(k)
-		}
-		m.RateLimit = &RateLimit{
-			Algo:   types.StringValue(mitigate.RateLimit.Algo),
-			Window: types.Int64Value(mitigate.RateLimit.Window),
-			Limit:  types.Int64Value(mitigate.RateLimit.Limit),
-			Keys:   keys,
-			Action: types.StringValue(mitigate.RateLimit.Action),
+		// TODO diags
+		keys, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, mitigate.RateLimit.Keys)
+		m.RateLimit = types.ObjectValueMust(
+			ratelimitType.AttrTypes,
+			map[string]attr.Value{
+				"algo":   types.StringValue(mitigate.RateLimit.Algo),
+				"window": types.Int64Value(mitigate.RateLimit.Window),
+				"limit":  types.Int64Value(mitigate.RateLimit.Limit),
+				"keys":   keys,
+				"action": types.StringValue(mitigate.RateLimit.Action),
+			},
+		)
+		if diags.HasError() {
+			fmt.Println("has error")
+			fmt.Println(diags)
 		}
 	}
 	if mitigate.Redirect != nil {
-		m.Redirect = &Redirect{
-			Location:  types.StringValue(mitigate.Redirect.Location),
-			Permanent: types.BoolValue(mitigate.Redirect.Permanent),
-		}
+		m.Redirect = types.ObjectValueMust(
+			redirectType.AttrTypes,
+			map[string]attr.Value{
+				"location":  types.StringValue(mitigate.Redirect.Location),
+				"permanent": types.BoolValue(mitigate.Redirect.Permanent),
+			},
+		)
 	}
 	return m
 }
@@ -592,11 +635,11 @@ type Redirect struct {
 }
 
 type RateLimit struct {
-	Algo   types.String   `tfsdk:"algo"`
-	Window types.Int64    `tfsdk:"window"`
-	Limit  types.Int64    `tfsdk:"limit"`
-	Keys   []types.String `tfsdk:"keys"`
-	Action types.String   `tfsdk:"action"`
+	Algo   types.String `tfsdk:"algo"`
+	Window types.Int64  `tfsdk:"window"`
+	Limit  types.Int64  `tfsdk:"limit"`
+	Keys   types.List   `tfsdk:"keys"`
+	Action types.String `tfsdk:"action"`
 }
 
 type ConditionGroup struct {

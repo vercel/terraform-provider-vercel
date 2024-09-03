@@ -51,16 +51,16 @@ type Mitigate struct {
 }
 
 type RateLimit struct {
-	Algo   string   `json:"algo"`
-	Window int64    `json:"window"`
-	Limit  int64    `json:"limit"`
-	Keys   []string `json:"keys"`
-	Action string   `json:"action"`
+	Algo   string   `json:"algo" tfsdk:"algo"`
+	Window int64    `json:"window" tfsdk:"window"`
+	Limit  int64    `json:"limit" tfsdk:"limit"`
+	Keys   []string `json:"keys" tfsdk:"keys"`
+	Action string   `json:"action" tfsdk:"action"`
 }
 
 type Redirect struct {
-	Location  string `json:"location"`
-	Permanent bool   `json:"permanent"`
+	Location  string `json:"location" tfsdk:"location"`
+	Permanent bool   `json:"permanent" tfsdk:"permanent"`
 }
 
 type IPRule struct {
@@ -108,6 +108,8 @@ func (c *Client) PutFirewallConfig(ctx context.Context, cfg FirewallConfig) (Fir
 		Error  map[string]string `json:"error,omitempty"`
 	}
 	payload := mustMarshal(cfg)
+
+	//fmt.Println("Payload: ", string(payload))
 
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
