@@ -482,40 +482,41 @@ func (r *FirewallRule) Conditions() []client.ConditionGroup {
 	return groups
 }
 
-func (r *FirewallRule) Mitigate() client.Mitigate {
+func (r *FirewallRule) Mitigate() (client.Mitigate, error) {
 	mit := client.Mitigate{
 		Action: r.Action.Action.ValueString(),
 	}
-	fmt.Println(r)
 	if !r.Action.RateLimit.IsNull() {
-		fmt.Println("RateLimit is not null")
 		rl := &client.RateLimit{}
 		diags := r.Action.RateLimit.As(context.Background(), rl, basetypes.ObjectAsOptions{
 			UnhandledNullAsEmpty:    false,
 			UnhandledUnknownAsEmpty: false,
 		})
 		if diags.HasError() {
-			fmt.Println("Has error")
-			fmt.Println(diags)
+			return mit, fmt.Errorf("error converting rate limit: %s - %s", diags[0].Summary(), diags[0].Detail())
 		}
 		mit.RateLimit = rl
 	}
 
 	if !r.Action.Redirect.IsNull() {
 		rd := &client.Redirect{}
-		r.Action.Redirect.As(context.Background(), rd, basetypes.ObjectAsOptions{
+		diags := r.Action.Redirect.As(context.Background(), rd, basetypes.ObjectAsOptions{
 			UnhandledNullAsEmpty:    true,
 			UnhandledUnknownAsEmpty: true,
 		})
+		if diags.HasError() {
+			return mit, fmt.Errorf("error converting rate limit: %s - %s", diags[0].Summary(), diags[0].Detail())
+		}
 		mit.Redirect = rd
 	}
 	if !r.Action.ActionDuration.IsNull() {
 		mit.ActionDuration = r.Action.ActionDuration.ValueString()
 	}
-	return mit
+	return mit, nil
 }
 
-func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) FirewallRule {
+func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) (FirewallRule, error) {
+	var err error
 	r := FirewallRule{
 		ID:          types.StringValue(rule.ID),
 		Name:        types.StringValue(rule.Name),
@@ -526,7 +527,10 @@ func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) FirewallRule {
 		r.Active = ref.Active
 	}
 
-	r.Action = fromMitigate(rule.Action.Mitigate, ref.Action)
+	r.Action, err = fromMitigate(rule.Action.Mitigate, ref.Action)
+	if err != nil {
+		return r, err
+	}
 	var conditionGroups = make([]ConditionGroup, len(rule.ConditionGroup))
 	for j, group := range rule.ConditionGroup {
 		var conditions = make([]Condition, len(group.Conditions))
@@ -550,7 +554,7 @@ func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) FirewallRule {
 		r.Active = ref.Active
 	}
 
-	return r
+	return r, nil
 }
 
 /*
@@ -587,7 +591,7 @@ type Mitigate struct {
 	ActionDuration types.String `tfsdk:"action_duration"`
 }
 
-func fromMitigate(mitigate client.Mitigate, ref Mitigate) Mitigate {
+func fromMitigate(mitigate client.Mitigate, ref Mitigate) (Mitigate, error) {
 	m := Mitigate{
 		Action:         types.StringValue(mitigate.Action),
 		ActionDuration: types.StringValue(mitigate.ActionDuration),
@@ -602,6 +606,9 @@ func fromMitigate(mitigate client.Mitigate, ref Mitigate) Mitigate {
 	if mitigate.RateLimit != nil {
 		// TODO diags
 		keys, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, mitigate.RateLimit.Keys)
+		if diags.HasError() {
+			return m, fmt.Errorf("error converting keys: %s - %s", diags[0].Summary(), diags[0].Detail())
+		}
 		m.RateLimit = types.ObjectValueMust(
 			ratelimitType.AttrTypes,
 			map[string]attr.Value{
@@ -612,10 +619,6 @@ func fromMitigate(mitigate client.Mitigate, ref Mitigate) Mitigate {
 				"action": types.StringValue(mitigate.RateLimit.Action),
 			},
 		)
-		if diags.HasError() {
-			fmt.Println("has error")
-			fmt.Println(diags)
-		}
 	}
 	if mitigate.Redirect != nil {
 		m.Redirect = types.ObjectValueMust(
@@ -626,7 +629,7 @@ func fromMitigate(mitigate client.Mitigate, ref Mitigate) Mitigate {
 			},
 		)
 	}
-	return m
+	return m, nil
 }
 
 type Redirect struct {
@@ -721,7 +724,8 @@ func fromCoreRuleset(crsRule client.CoreRuleSet, ref *CRSRuleConfig) *CRSRuleCon
 	return c
 }
 
-func fromClient(conf client.FirewallConfig, state FirewallConfig) FirewallConfig {
+func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfig, error) {
+	var err error
 	cfg := FirewallConfig{
 		ProjectID: state.ProjectID,
 		// Take the teamID from the response/provider if it wasn't provided in resource
@@ -743,8 +747,10 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) FirewallConfig
 			if state.Rules != nil && len(state.Rules.Rules)-1 > i {
 				stateRule = state.Rules.Rules[i]
 			}
-			rules[i] = fromFirewallRule(rule, stateRule)
-
+			rules[i], err = fromFirewallRule(rule, stateRule)
+			if err != nil {
+				return cfg, err
+			}
 		}
 		cfg.Rules = &FirewallRules{Rules: rules}
 	}
@@ -774,10 +780,10 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) FirewallConfig
 		cfg.ManagedRulesets.OWASP = fromCRS(conf.CRS, state.ManagedRulesets)
 	}
 
-	return cfg
+	return cfg, nil
 }
 
-func (f *FirewallConfig) toClient() client.FirewallConfig {
+func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 	conf := client.FirewallConfig{
 		ProjectID: f.ProjectID.ValueString(),
 		TeamID:    f.TeamID.ValueString(),
@@ -803,6 +809,10 @@ func (f *FirewallConfig) toClient() client.FirewallConfig {
 	}
 	if f.Rules != nil && len(f.Rules.Rules) > 0 {
 		for _, rule := range f.Rules.Rules {
+			mit, err := rule.Mitigate()
+			if err != nil {
+				return conf, err
+			}
 			conf.Rules = append(conf.Rules, client.FirewallRule{
 				ID:             rule.ID.ValueString(),
 				Name:           rule.Name.ValueString(),
@@ -810,7 +820,7 @@ func (f *FirewallConfig) toClient() client.FirewallConfig {
 				Active:         rule.Active.IsNull() || rule.Active.ValueBool(),
 				ConditionGroup: rule.Conditions(),
 				Action: client.Action{
-					Mitigate: rule.Mitigate(),
+					Mitigate: mit,
 				},
 			})
 		}
@@ -827,7 +837,7 @@ func (f *FirewallConfig) toClient() client.FirewallConfig {
 			})
 		}
 	}
-	return conf
+	return conf, nil
 }
 
 func (r *firewallConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -838,7 +848,11 @@ func (r *firewallConfigResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	conf := plan.toClient()
+	conf, err := plan.toClient()
+	if err != nil {
+		diags.AddError("failed to convert plan to client", err.Error())
+		return
+	}
 
 	out, err := r.client.PutFirewallConfig(ctx, conf)
 	if err != nil {
@@ -849,7 +863,11 @@ func (r *firewallConfigResource) Create(ctx context.Context, req resource.Create
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	cfg := fromClient(out, plan)
+	cfg, err := fromClient(out, plan)
+	if err != nil {
+		diags.AddError("failed to read created firewall config", err.Error())
+		return
+	}
 	diags = resp.State.Set(ctx, cfg)
 	resp.Diagnostics.Append(diags...)
 }
@@ -870,7 +888,11 @@ func (r *firewallConfigResource) Read(ctx context.Context, req resource.ReadRequ
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	cfg := fromClient(out, state)
+	cfg, err := fromClient(out, state)
+	if err != nil {
+		diags.AddError("failed to read firewall config", err.Error())
+		return
+	}
 	diags = resp.State.Set(ctx, cfg)
 	resp.Diagnostics.Append(diags...)
 }
@@ -882,7 +904,11 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	conf := plan.toClient()
+	conf, err := plan.toClient()
+	if err != nil {
+		diags.AddError("failed to convert plan to client", err.Error())
+		return
+	}
 
 	out, err := r.client.PutFirewallConfig(ctx, conf)
 	if err != nil {
@@ -893,7 +919,11 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	cfg := fromClient(out, plan)
+	cfg, err := fromClient(out, plan)
+	if err != nil {
+		diags.AddError("failed to read updated firewall config", err.Error())
+		return
+	}
 	diags = resp.State.Set(ctx, cfg)
 	resp.Diagnostics.Append(diags...)
 }
@@ -934,10 +964,14 @@ func (r *firewallConfigResource) ImportState(ctx context.Context, req resource.I
 		resp.Diagnostics.AddError("Error importing Firewall Config", err.Error())
 		return
 	}
-	conf := fromClient(out, FirewallConfig{
+	conf, err := fromClient(out, FirewallConfig{
 		ProjectID: types.StringValue(projectID),
 		TeamID:    types.StringValue(out.TeamID), // use output teamID if not provided on import
 	})
+	if err != nil {
+		resp.Diagnostics.AddError("failed to read firewall config", err.Error())
+		return
+	}
 	tflog.Info(ctx, "imported firewall config", map[string]interface{}{
 		"team_id":    conf.TeamID.ValueString(),
 		"project_id": conf.ProjectID.ValueString(),
