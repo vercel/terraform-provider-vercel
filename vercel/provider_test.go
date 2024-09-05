@@ -17,7 +17,7 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 
 func mustHaveEnv(t *testing.T, name string) {
 	if os.Getenv(name) == "" {
-		//t.Fatalf("%s environment variable must be set for acceptance tests", name)
+		t.Fatalf("%s environment variable must be set for acceptance tests", name)
 	}
 }
 
