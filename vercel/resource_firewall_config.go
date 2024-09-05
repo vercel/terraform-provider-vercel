@@ -48,7 +48,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 						Description: "Enable the owasp managed rulesets and select ruleset behaviors",
 						Attributes: map[string]schema.Attribute{
 							"xss": schema.SingleNestedAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: "Cross Site Scripting Rules",
 								Attributes: map[string]schema.Attribute{
 									"active": schema.BoolAttribute{
 										Optional: true,
@@ -59,7 +60,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 								},
 							},
 							"sqli": schema.SingleNestedAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: "SQL Injection Rules",
 								Attributes: map[string]schema.Attribute{
 									"active": schema.BoolAttribute{
 										Optional: true,
@@ -70,7 +72,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 								},
 							},
 							"lfi": schema.SingleNestedAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: "Local File Inclusion Rules",
 								Attributes: map[string]schema.Attribute{
 									"active": schema.BoolAttribute{
 										Optional: true,
@@ -81,7 +84,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 								},
 							},
 							"rfi": schema.SingleNestedAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: "Remote File Inclusion Rules",
 								Attributes: map[string]schema.Attribute{
 									"active": schema.BoolAttribute{
 										Optional: true,
@@ -92,7 +96,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 								},
 							},
 							"rce": schema.SingleNestedAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: "Remote Code Execution Rules",
 								Attributes: map[string]schema.Attribute{
 									"active": schema.BoolAttribute{
 										Optional: true,
@@ -103,7 +108,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 								},
 							},
 							"sd": schema.SingleNestedAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: "Scanner Detection Rules",
 								Attributes: map[string]schema.Attribute{
 									"active": schema.BoolAttribute{
 										Optional: true,
@@ -114,7 +120,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 								},
 							},
 							"ma": schema.SingleNestedAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: "Multipart Rules",
 								Attributes: map[string]schema.Attribute{
 									"active": schema.BoolAttribute{
 										Optional: true,
@@ -125,7 +132,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 								},
 							},
 							"php": schema.SingleNestedAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: "PHP Attack Detection",
 								Attributes: map[string]schema.Attribute{
 									"active": schema.BoolAttribute{
 										Optional: true,
@@ -136,7 +144,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 								},
 							},
 							"gen": schema.SingleNestedAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: "Generic Attack Detection",
 								Attributes: map[string]schema.Attribute{
 									"active": schema.BoolAttribute{
 										Optional: true,
@@ -147,7 +156,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 								},
 							},
 							"java": schema.SingleNestedAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: "Java Attack Detection",
 								Attributes: map[string]schema.Attribute{
 									"active": schema.BoolAttribute{
 										Optional: true,
@@ -187,7 +197,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 									},
 								},
 								"active": schema.BoolAttribute{
-									Description: "Whether the rule is active or not",
+									Description: "Rule is active or disabled",
 									Optional:    true,
 								},
 								"action": schema.SingleNestedAttribute{
@@ -223,7 +233,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 													ElementType: types.StringType,
 												},
 												"action": schema.StringAttribute{
-													Description: "Action taken when rate limit is exceeded",
+													Description: "Action to take when rate limit is exceeded",
 													Required:    true,
 													Validators: []validator.String{
 														stringvalidator.OneOf("bypass", "log", "challenge", "deny", "rate_limit"),
@@ -317,7 +327,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 															Optional:    true,
 														},
 														"value": schema.StringAttribute{
-															Required: true,
+															Optional: true,
 														},
 													},
 												},
@@ -669,8 +679,13 @@ func fromCondition(condition client.Condition, ref Condition) Condition {
 	if ref.Neg == types.BoolNull() {
 		c.Neg = types.BoolNull()
 	}
+	// if key is present it's possible for value to be optional
 	if ref.Key == types.StringNull() {
 		c.Key = types.StringNull()
+	} else {
+		if ref.Value == types.StringNull() {
+			c.Value = types.StringNull()
+		}
 	}
 	return c
 }

@@ -1,0 +1,1 @@
+terraform import vercel_firewall_config.example team_xxxxxxxxxxxxxxxxxxxxxxxx/prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
