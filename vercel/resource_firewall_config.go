@@ -614,7 +614,6 @@ func fromMitigate(mitigate client.Mitigate, ref Mitigate) (Mitigate, error) {
 	}
 
 	if mitigate.RateLimit != nil {
-		// TODO diags
 		keys, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, mitigate.RateLimit.Keys)
 		if diags.HasError() {
 			return m, fmt.Errorf("error converting keys: %s - %s", diags[0].Summary(), diags[0].Detail())
@@ -872,6 +871,7 @@ func (r *firewallConfigResource) Create(ctx context.Context, req resource.Create
 	out, err := r.client.PutFirewallConfig(ctx, conf)
 	if err != nil {
 		diags.AddError("failed to create firewall config", err.Error())
+		return
 	}
 
 	resp.Diagnostics.Append(diags...)
@@ -898,6 +898,7 @@ func (r *firewallConfigResource) Read(ctx context.Context, req resource.ReadRequ
 	out, err := r.client.GetFirewallConfig(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
 	if err != nil {
 		diags.AddError("failed to read firewall config", err.Error())
+		return
 	}
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
@@ -928,6 +929,7 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 	out, err := r.client.PutFirewallConfig(ctx, conf)
 	if err != nil {
 		diags.AddError("failed to create firewall config", err.Error())
+		return
 	}
 
 	resp.Diagnostics.Append(diags...)
@@ -959,6 +961,7 @@ func (r *firewallConfigResource) Delete(ctx context.Context, req resource.Delete
 	_, err := r.client.PutFirewallConfig(ctx, conf)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to delete firewall config", err.Error())
+		return
 	}
 	tflog.Info(ctx, "deleted firewall config", map[string]interface{}{
 		"project_id": state.ProjectID.ValueString(),
