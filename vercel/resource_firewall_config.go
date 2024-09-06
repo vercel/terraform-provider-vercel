@@ -567,14 +567,6 @@ func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) (FirewallRule,
 	return r, nil
 }
 
-/*
-	type Mitigate struct {
-		Action         types.String `tfsdk:"action"`
-		RateLimit      *RateLimit   `tfsdk:"rate_limit"`
-		Redirect       *Redirect    `tfsdk:"redirect"`
-		ActionDuration types.String `tfsdk:"action_duration"`
-	}
-*/
 var redirectType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
 		"location":  types.StringType,

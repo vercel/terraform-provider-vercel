@@ -109,8 +109,6 @@ func (c *Client) PutFirewallConfig(ctx context.Context, cfg FirewallConfig) (Fir
 	}
 	payload := mustMarshal(cfg)
 
-	//fmt.Println("Payload: ", string(payload))
-
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "PUT",
