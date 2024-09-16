@@ -33,7 +33,7 @@ resource "vercel_project" "elevated" {
 
 resource "vercel_project_function_cpu" "elevated" {
     project_id = vercel_project.elevated.id
-    max_duration = "100"
+    max_duration = 100
     %[2]s
 }
 
