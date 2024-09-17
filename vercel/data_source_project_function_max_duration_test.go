@@ -31,14 +31,14 @@ resource "vercel_project" "elevated" {
     %[2]s
 }
 
-resource "vercel_project_function_cpu" "elevated" {
+resource "vercel_project_function_max_duration" "elevated" {
     project_id = vercel_project.elevated.id
     max_duration = 100
     %[2]s
 }
 
-data "vercel_project_function_cpu" "elevated" {
-    project_id = vercel_project_function_cpu.elevated.project_id
+data "vercel_project_function_max_duration" "elevated" {
+    project_id = vercel_project_function_max_duration.elevated.project_id
     %[2]s
 }
 `, name, teamID)
