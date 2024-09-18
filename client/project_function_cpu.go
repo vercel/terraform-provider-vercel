@@ -36,7 +36,7 @@ var fromCPUNetwork = map[string]string{
 }
 
 func (c *Client) GetProjectFunctionCPU(ctx context.Context, projectID, teamID string) (p ProjectFunctionCPU, err error) {
-	url := fmt.Sprintf("%s/v1/projects/%s/resource-config", c.baseURL, projectID)
+	url := fmt.Sprintf("%s/v1/projects/%s", c.baseURL, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
@@ -65,7 +65,7 @@ func (c *Client) GetProjectFunctionCPU(ctx context.Context, projectID, teamID st
 }
 
 func (c *Client) UpdateProjectFunctionCPU(ctx context.Context, request ProjectFunctionCPURequest) (p ProjectFunctionCPU, err error) {
-	url := fmt.Sprintf("%s/v1/projects/%s/resource-config", c.baseURL, request.ProjectID)
+	url := fmt.Sprintf("%s/v1/projects/%s", c.baseURL, request.ProjectID)
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
