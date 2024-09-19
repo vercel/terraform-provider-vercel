@@ -53,6 +53,8 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "prioritise_production_builds", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "directory_listing", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "skew_protection", "7 days"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "resource_config.function_default_cpu_type", "standard_legacy"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "resource_config.function_default_timeout", "30"),
 				),
 			},
 		},
@@ -124,6 +126,10 @@ resource "vercel_project" "test" {
             name = "some deploy hook"
         }
     ]
+  }
+  resource_config = {
+    function_default_cpu_type = "standard_legacy"
+	function_default_timeout = 30
   }
 }
 

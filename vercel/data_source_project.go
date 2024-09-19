@@ -322,6 +322,21 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Description: "Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.",
 			},
+			"resource_config": schema.SingleNestedAttribute{
+				Description: "Resource Configuration for the project.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					// This is actually "function_default_memory_type" in the API schema, but for better convention, we use "cpu" and do translation in the provider.
+					"function_default_cpu_type": schema.StringAttribute{
+						Description: "The amount of CPU available to your Serverless Functions. Should be one of 'standard_legacy' (0.6vCPU), 'standard' (1vCPU) or 'performance' (1.7vCPUs).",
+						Computed:    true,
+					},
+					"function_default_timeout": schema.Int64Attribute{
+						Description: "The default timeout for Serverless Functions.",
+						Computed:    true,
+					},
+				},
+			},
 		},
 	}
 }
@@ -359,6 +374,7 @@ type ProjectDataSource struct {
 	PrioritiseProductionBuilds    types.Bool            `tfsdk:"prioritise_production_builds"`
 	DirectoryListing              types.Bool            `tfsdk:"directory_listing"`
 	SkewProtection                types.String          `tfsdk:"skew_protection"`
+	ResourceConfig                *ResourceConfig       `tfsdk:"resource_config"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
@@ -373,6 +389,14 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 			"on_commit":       types.BoolValue(response.GitComments.OnCommit),
 		})
 	}
+
+	if response.ResourceConfig != nil {
+		plan.ResourceConfig = &ResourceConfig{
+			FunctionDefaultMemoryType: types.StringValue(response.ResourceConfig.FunctionDefaultMemoryType),
+			FunctionDefaultTimeout:    types.Int64Value(response.ResourceConfig.FunctionDefaultTimeout),
+		}
+	}
+
 	project, err := convertResponseToProject(ctx, response, plan, environmentVariables)
 	if err != nil {
 		return ProjectDataSource{}, err
@@ -416,6 +440,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		PrioritiseProductionBuilds:    project.PrioritiseProductionBuilds,
 		DirectoryListing:              project.DirectoryListing,
 		SkewProtection:                project.SkewProtection,
+		ResourceConfig:                project.ResourceConfig,
 	}, nil
 }
 
