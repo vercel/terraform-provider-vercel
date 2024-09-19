@@ -369,11 +369,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
 				Computed:    true,
 				Description: "If `protection_bypass_for_automation` is enabled, use this value in the `x-vercel-protection-bypass` header to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments.",
-				// This is a read-only attribute. Avoid empty plans.
-				PlanModifiers: []planmodifier.String{
-					SuppressDiffIfNotConfigured(),
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
 				Optional:      true,
