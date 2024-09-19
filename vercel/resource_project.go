@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -368,6 +369,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
 				Computed:    true,
 				Description: "If `protection_bypass_for_automation` is enabled, use this value in the `x-vercel-protection-bypass` header to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments.",
+				// This is a read-only attribute. Avoid empty plans.
+				PlanModifiers: []planmodifier.String{
+					SuppressDiffIfNotConfigured(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
 				Optional:      true,
@@ -443,7 +449,73 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					stringOneOf("30 minutes", "12 hours", "1 day", "7 days"),
 				},
 			},
+			"resource_config": schema.SingleNestedAttribute{
+				Description: "Resource Configuration for the project.",
+				Optional:    true,
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					// This is actually "function_default_memory_type" in the API schema, but for better convention, we use "cpu" and do translation in the provider.
+					"function_default_cpu_type": schema.StringAttribute{
+						Description: "The amount of CPU available to your Serverless Functions. Should be one of 'standard_legacy' (0.6vCPU), 'standard' (1vCPU) or 'performance' (1.7vCPUs).",
+						Optional:    true,
+						Computed:    true,
+						Validators: []validator.String{
+							stringOneOf("standard_legacy", "standard", "performance"),
+						},
+						PlanModifiers: []planmodifier.String{SuppressDiffIfNotConfigured(), stringplanmodifier.UseStateForUnknown()},
+					},
+					"function_default_timeout": schema.Int64Attribute{
+						Description: "The default timeout for Serverless Functions.",
+						Optional:    true,
+						Computed:    true,
+						Validators: []validator.Int64{
+							int64GreaterThan(0),
+						},
+						PlanModifiers: []planmodifier.Int64{SuppressDiffIfNotConfigured(), int64planmodifier.UseStateForUnknown()},
+					},
+				},
+				Default: objectdefault.StaticValue(types.ObjectValueMust(
+					map[string]attr.Type{
+						"function_default_cpu_type": types.StringType,
+						"function_default_timeout":  types.Int64Type,
+					},
+					map[string]attr.Value{
+						"function_default_cpu_type": types.StringNull(),
+						"function_default_timeout":  types.Int64Null(),
+					},
+				)),
+			},
 		},
+	}
+}
+
+type suppressDiffIfNotConfigured struct{}
+
+func SuppressDiffIfNotConfigured() *suppressDiffIfNotConfigured {
+	return &suppressDiffIfNotConfigured{}
+}
+
+func (m *suppressDiffIfNotConfigured) Description(ctx context.Context) string {
+	return "Ensures that the diff is suppressed if the attribute is not explicitly configured by users."
+}
+
+func (m *suppressDiffIfNotConfigured) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m *suppressDiffIfNotConfigured) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.ConfigValue.IsNull() {
+		resp.PlanValue = req.StateValue
+		resp.RequiresReplace = false
+		return
+	}
+}
+
+func (m *suppressDiffIfNotConfigured) PlanModifyInt64(ctx context.Context, req planmodifier.Int64Request, resp *planmodifier.Int64Response) {
+	if req.ConfigValue.IsNull() {
+		resp.PlanValue = req.StateValue
+		resp.RequiresReplace = false
+		return
 	}
 }
 
@@ -481,6 +553,7 @@ type Project struct {
 	PrioritiseProductionBuilds          types.Bool                      `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                    types.Bool                      `tfsdk:"directory_listing"`
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
+	ResourceConfig                      *ResourceConfig                 `tfsdk:"resource_config"`
 }
 
 type GitComments struct {
@@ -514,7 +587,8 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 		(!p.GitForkProtection.IsNull() && !p.GitForkProtection.ValueBool()) ||
 		!p.PrioritiseProductionBuilds.IsNull() ||
 		!p.DirectoryListing.IsNull() ||
-		!p.SkewProtection.IsNull()
+		!p.SkewProtection.IsNull() ||
+		p.ResourceConfig != nil
 }
 
 var nullProject = Project{
@@ -640,6 +714,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		DirectoryListing:                     p.DirectoryListing.ValueBool(),
 		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
 		GitComments:                          gc.toUpdateProjectRequest(),
+		ResourceConfig:                       p.ResourceConfig.toUpdateProjectRequest(),
 	}, nil
 }
 
@@ -830,6 +905,26 @@ func (o *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
 	return &client.OIDCTokenConfig{
 		Enabled: o.Enabled.ValueBool(),
 	}
+}
+
+type ResourceConfig struct {
+	FunctionDefaultMemoryType types.String `tfsdk:"function_default_cpu_type"`
+	FunctionDefaultTimeout    types.Int64  `tfsdk:"function_default_timeout"`
+}
+
+func (r *ResourceConfig) toUpdateProjectRequest() *client.ResourceConfig {
+	resourceConfig := &client.ResourceConfig{}
+	if r == nil {
+		return resourceConfig
+	}
+
+	if !r.FunctionDefaultMemoryType.IsNull() {
+		resourceConfig.FunctionDefaultMemoryType = r.FunctionDefaultMemoryType.ValueString()
+	}
+	if !r.FunctionDefaultTimeout.IsNull() {
+		resourceConfig.FunctionDefaultTimeout = r.FunctionDefaultTimeout.ValueInt64()
+	}
+	return resourceConfig
 }
 
 func (t *OptionsAllowlist) toUpdateProjectRequest() *client.OptionsAllowlist {
@@ -1039,6 +1134,16 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		oidcTokenConfig.Enabled = types.BoolValue(response.OIDCTokenConfig.Enabled)
 	}
 
+	resourceConfig := &ResourceConfig{}
+	if response.ResourceConfig != nil && plan.ResourceConfig != nil {
+		if !plan.ResourceConfig.FunctionDefaultMemoryType.IsNull() {
+			resourceConfig.FunctionDefaultMemoryType = types.StringValue(response.ResourceConfig.FunctionDefaultMemoryType)
+		}
+		if !plan.ResourceConfig.FunctionDefaultTimeout.IsNull() {
+			resourceConfig.FunctionDefaultTimeout = types.Int64Value(response.ResourceConfig.FunctionDefaultTimeout)
+		}
+	}
+
 	var oal *OptionsAllowlist
 	if response.OptionsAllowlist != nil {
 		var paths []OptionsAllowlistPath
@@ -1159,6 +1264,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		DirectoryListing:                    types.BoolValue(response.DirectoryListing),
 		SkewProtection:                      fromSkewProtectionMaxAge(response.SkewProtectionMaxAge),
 		GitComments:                         gitComments,
+		ResourceConfig:                      resourceConfig,
 	}, nil
 }
 
