@@ -55,7 +55,10 @@ func (r *projectFunctionCPUResource) Configure(ctx context.Context, req resource
 func (r *projectFunctionCPUResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		DeprecationMessage: "This resource is deprecated and no longer works. Please use the `vercel_project` resource and its `resource_config` attribute instead.",
-		Description: `Provides a Function CPU resource for a Project.
+		Description: `
+~> This resource has been deprecated and no longer works. Please use the ` + "`vercel_project`" + ` resource and its ` + "`resource_config`" + ` attribute instead.
+
+Provides a Function CPU resource for a Project.
 
 This controls the maximum amount of CPU utilization your Serverless Functions can use while executing. Standard is optimal for most frontend workloads. You can override this per function using the vercel.json file.
 

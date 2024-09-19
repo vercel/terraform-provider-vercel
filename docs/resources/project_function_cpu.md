@@ -10,7 +10,7 @@ description: |-
 
 # vercel_project_function_cpu (Resource)
 
-~> This data source has been deprecated and no longer works. Please use the `vercel_project` data source and its `resource_config` attribute instead.
+~> This resource has been deprecated and no longer works. Please use the `vercel_project` resource and its `resource_config` attribute instead.
 
 Provides a Function CPU resource for a Project.
 

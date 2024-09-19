@@ -50,7 +50,10 @@ func (d *projectFunctionCPUDataSource) Configure(ctx context.Context, req dataso
 func (r *projectFunctionCPUDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		DeprecationMessage: "This data source is deprecated and no longer works. Please use the `vercel_project` data source and its `resource_config` attribute instead.",
-		Description: `Provides information about a Project's Function CPU setting.
+		Description: `
+~> This data source has been deprecated and no longer works. Please use the ` + "`vercel_project`" + ` data source and its ` + "`resource_config`" + ` attribute instead.
+
+Provides information about a Project's Function CPU setting.
 
 This controls the maximum amount of CPU utilization your Serverless Functions can use while executing. Standard is optimal for most frontend workloads. You can override this per function using the vercel.json file.
 `,
