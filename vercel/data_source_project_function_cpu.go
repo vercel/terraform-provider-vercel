@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -48,6 +49,7 @@ func (d *projectFunctionCPUDataSource) Configure(ctx context.Context, req dataso
 
 func (r *projectFunctionCPUDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		DeprecationMessage: "This data source is deprecated and no longer works. Please use the `vercel_project` data source and its `resource_config` attribute instead.",
 		Description: `Provides information about a Project's Function CPU setting.
 
 This controls the maximum amount of CPU utilization your Serverless Functions can use while executing. Standard is optimal for most frontend workloads. You can override this per function using the vercel.json file.
@@ -75,6 +77,9 @@ This controls the maximum amount of CPU utilization your Serverless Functions ca
 }
 
 func (d *projectFunctionCPUDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	resp.Diagnostics.Append(
+		diag.NewErrorDiagnostic("`vercel_project_function_cpu` data source deprecated", "use `vercel_project` data source and its `resource_config` attribute instead"),
+	)
 	var config ProjectFunctionCPU
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
