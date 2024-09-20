@@ -10,6 +10,7 @@ import (
 )
 
 func TestAcc_ProjectFunctionCPUResource(t *testing.T) {
+	t.Skip("the resource is deprecated and tests should be removed in the next release")
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },

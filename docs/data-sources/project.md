@@ -66,6 +66,7 @@ output "project_id" {
 - `prioritise_production_builds` (Boolean) If enabled, builds for the Production environment will be prioritized over Preview environments.
 - `protection_bypass_for_automation` (Boolean) Allows automation services to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments on this project when using an HTTP header named `x-vercel-protection-bypass`.
 - `public_source` (Boolean) Specifies whether the source code and logs of the deployments for this project should be public or not.
+- `resource_config` (Attributes) Resource Configuration for the project. (see [below for nested schema](#nestedatt--resource_config))
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.
 - `serverless_function_region` (String) The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.
 - `skew_protection` (String) Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.
@@ -146,6 +147,15 @@ Read-Only:
 Read-Only:
 
 - `deployment_type` (String) The deployment environment that will be protected.
+
+
+<a id="nestedatt--resource_config"></a>
+### Nested Schema for `resource_config`
+
+Read-Only:
+
+- `function_default_cpu_type` (String) The amount of CPU available to your Serverless Functions. Should be one of 'standard_legacy' (0.6vCPU), 'standard' (1vCPU) or 'performance' (1.7vCPUs).
+- `function_default_timeout` (Number) The default timeout for Serverless Functions.
 
 
 <a id="nestedatt--trusted_ips"></a>

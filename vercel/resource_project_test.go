@@ -8,7 +8,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
 
@@ -114,6 +118,75 @@ func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists("vercel_project.test", testTeam()),
 				),
+			},
+		},
+	})
+}
+
+func TestAcc_ProjectUpdateResourceConfig(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectConfigBase(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test", testTeam()),
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"vercel_project.test",
+						tfjsonpath.New("resource_config").AtMapKey("function_default_cpu_type"),
+						knownvalue.Null(),
+					),
+					statecheck.ExpectKnownValue(
+						"vercel_project.test",
+						tfjsonpath.New("resource_config").AtMapKey("function_default_timeout"),
+						knownvalue.Null(),
+					),
+				},
+			},
+			{
+				Config: testAccProjectConfigBase(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test", testTeam()),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			{
+				Config: testAccProjectConfigWithResourceConfig(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test", testTeam()),
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"vercel_project.test",
+						tfjsonpath.New("resource_config").AtMapKey("function_default_cpu_type"),
+						knownvalue.StringExact("standard_legacy"),
+					),
+					statecheck.ExpectKnownValue(
+						"vercel_project.test",
+						tfjsonpath.New("resource_config").AtMapKey("function_default_timeout"),
+						knownvalue.Int64Exact(30),
+					),
+				},
+			},
+			{
+				Config: testAccProjectConfigWithResourceConfig(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.test", testTeam()),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 		},
 	})
@@ -330,6 +403,28 @@ func testAccProjectDestroy(n, teamID string) resource.TestCheckFunc {
 
 		return nil
 	}
+}
+
+func testAccProjectConfigBase(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-two-%s"
+  %s
+}
+`, projectSuffix, teamID)
+}
+
+func testAccProjectConfigWithResourceConfig(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-two-%s"
+  resource_config = {
+    function_default_cpu_type = "standard_legacy"
+	function_default_timeout = 30
+  }
+  %s
+}
+`, projectSuffix, teamID)
 }
 
 func testAccProjectConfigWithoutEnv(projectSuffix, teamID string) string {

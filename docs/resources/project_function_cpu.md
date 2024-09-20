@@ -3,12 +3,15 @@
 page_title: "vercel_project_function_cpu Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
+  ~> This resource has been deprecated and no longer works. Please use the vercel_project resource and its resource_config attribute instead.
   Provides a Function CPU resource for a Project.
   This controls the maximum amount of CPU utilization your Serverless Functions can use while executing. Standard is optimal for most frontend workloads. You can override this per function using the vercel.json file.
   A new Deployment is required for your changes to take effect.
 ---
 
 # vercel_project_function_cpu (Resource)
+
+~> This resource has been deprecated and no longer works. Please use the `vercel_project` resource and its `resource_config` attribute instead.
 
 Provides a Function CPU resource for a Project.
 
