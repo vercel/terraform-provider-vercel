@@ -465,6 +465,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Computed:    true,
 						Validators: []validator.Int64{
 							int64GreaterThan(0),
+							int64LessThan(901),
 						},
 						PlanModifiers: []planmodifier.Int64{SuppressDiffIfNotConfigured(), int64planmodifier.UseStateForUnknown()},
 					},
