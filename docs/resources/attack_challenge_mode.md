@@ -32,7 +32,7 @@ resource "vercel_attack_challenge_mode" "example" {
 ### Required
 
 - `enabled` (Boolean) Whether Attack Challenge Mode is enabled or not.
-- `project_id` (String) The ID of the Project to adjust the CPU for.
+- `project_id` (String) The ID of the Project to toggle Attack Challenge Mode on.
 
 ### Optional
 

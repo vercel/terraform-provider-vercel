@@ -57,6 +57,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newEdgeConfigResource,
 		newEdgeConfigSchemaResource,
 		newEdgeConfigTokenResource,
+		newFirewallConfigResource,
 		newLogDrainResource,
 		newProjectDeploymentRetentionResource,
 		newProjectDomainResource,
