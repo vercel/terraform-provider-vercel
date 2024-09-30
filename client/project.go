@@ -53,6 +53,7 @@ type CreateProjectRequest struct {
 	PublicSource                *bool                 `json:"publicSource"`
 	RootDirectory               *string               `json:"rootDirectory"`
 	ServerlessFunctionRegion    string                `json:"serverlessFunctionRegion,omitempty"`
+	ResourceConfig              *ResourceConfig       `json:"resourceConfig,omitempty"`
 }
 
 // CreateProject will create a project within Vercel.
@@ -197,6 +198,7 @@ type ProjectResponse struct {
 	GitComments                          *GitComments                `json:"gitComments"`
 	Security                             *Security                   `json:"security"`
 	DeploymentExpiration                 *DeploymentExpiration       `json:"deploymentExpiration"`
+	ResourceConfig                       *ResourceConfig             `json:"resourceConfig"`
 }
 
 type GitComments struct {
@@ -206,6 +208,11 @@ type GitComments struct {
 
 type Security struct {
 	AttackModeEnabled bool `json:"attackModeEnabled"`
+}
+
+type ResourceConfig struct {
+	FunctionDefaultMemoryType string `json:"functionDefaultMemoryType,omitempty"`
+	FunctionDefaultTimeout    int64  `json:"functionDefaultTimeout,omitempty"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.
@@ -289,6 +296,7 @@ type UpdateProjectRequest struct {
 	DirectoryListing                     bool                            `json:"directoryListing"`
 	SkewProtectionMaxAge                 int                             `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                    `json:"gitComments"`
+	ResourceConfig                       *ResourceConfig                 `json:"resourceConfig,omitempty"`
 }
 
 // UpdateProject updates an existing projects configuration within Vercel.

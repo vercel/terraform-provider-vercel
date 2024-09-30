@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -53,7 +54,11 @@ func (r *projectFunctionCPUResource) Configure(ctx context.Context, req resource
 // Schema returns the schema information for an alias resource.
 func (r *projectFunctionCPUResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: `Provides a Function CPU resource for a Project.
+		DeprecationMessage: "This resource is deprecated and no longer works. Please use the `vercel_project` resource and its `resource_config` attribute instead.",
+		Description: `
+~> This resource has been deprecated and no longer works. Please use the ` + "`vercel_project`" + ` resource and its ` + "`resource_config`" + ` attribute instead.
+
+Provides a Function CPU resource for a Project.
 
 This controls the maximum amount of CPU utilization your Serverless Functions can use while executing. Standard is optimal for most frontend workloads. You can override this per function using the vercel.json file.
 
@@ -101,6 +106,10 @@ func convertResponseToProjectFunctionCPU(response client.ProjectFunctionCPU) Pro
 }
 
 func (r *projectFunctionCPUResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	resp.Diagnostics.Append(
+		diag.NewErrorDiagnostic("`vercel_project_function_cpu` resource deprecated", "use `vercel_project` resource and its `resource_config` attribute instead"),
+	)
+
 	var plan ProjectFunctionCPU
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -136,6 +145,9 @@ func (r *projectFunctionCPUResource) Create(ctx context.Context, req resource.Cr
 }
 
 func (r *projectFunctionCPUResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	resp.Diagnostics.Append(
+		diag.NewErrorDiagnostic("`vercel_project_function_cpu` resource deprecated", "use `vercel_project` resource and its `resource_config` attribute instead"),
+	)
 	var state ProjectFunctionCPU
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -174,6 +186,9 @@ func (r *projectFunctionCPUResource) Read(ctx context.Context, req resource.Read
 }
 
 func (r *projectFunctionCPUResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	resp.Diagnostics.Append(
+		diag.NewErrorDiagnostic("`vercel_project_function_cpu` resource deprecated", "use `vercel_project` resource and its `resource_config` attribute instead"),
+	)
 	var plan ProjectFunctionCPU
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -209,6 +224,9 @@ func (r *projectFunctionCPUResource) Update(ctx context.Context, req resource.Up
 }
 
 func (r *projectFunctionCPUResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	resp.Diagnostics.Append(
+		diag.NewErrorDiagnostic("`vercel_project_function_cpu` resource deprecated", "use `vercel_project` resource and its `resource_config` attribute instead"),
+	)
 	tflog.Info(ctx, "deleted project function cpu", map[string]interface{}{})
 }
 
