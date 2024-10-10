@@ -105,7 +105,7 @@ resource "vercel_firewall_config" "example" {
           algo = "fixed_window"
           action = "deny"
         }
-        actionDuration = "5m"
+        action_duration = "5m"
       }
     }
   }

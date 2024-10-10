@@ -511,8 +511,8 @@ func (r *FirewallRule) Mitigate() (client.Mitigate, error) {
 	if !r.Action.Redirect.IsNull() {
 		rd := &client.Redirect{}
 		diags := r.Action.Redirect.As(context.Background(), rd, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
+			UnhandledNullAsEmpty:    false,
+			UnhandledUnknownAsEmpty: false,
 		})
 		if diags.HasError() {
 			return mit, fmt.Errorf("error converting rate limit: %s - %s", diags[0].Summary(), diags[0].Detail())
