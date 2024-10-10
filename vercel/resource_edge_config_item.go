@@ -62,7 +62,7 @@ An Edge Config Item is a value within an Edge Config.
 `,
 		Attributes: map[string]schema.Attribute{
 			"edge_config_id": schema.StringAttribute{
-				Description:   "The name of the key you want to add to or update within your Edge Config.",
+				Description:   "The ID of the Edge Config store.",
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -73,7 +73,7 @@ An Edge Config Item is a value within an Edge Config.
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"key": schema.StringAttribute{
-				Description:   "The ID of the Edge Config store.",
+				Description:   "The name of the key you want to add to or update within your Edge Config.",
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -190,7 +190,7 @@ func (r *edgeConfigItemResource) Update(ctx context.Context, req resource.Update
 	panic(errors.New("Update is not supported, attributes require replacement"))
 }
 
-// Delete deletes an Edge Config.
+// Delete deletes an Edge Config Item.
 func (r *edgeConfigItemResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state EdgeConfigItem
 	diags := req.State.Get(ctx, &state)
@@ -204,14 +204,11 @@ func (r *edgeConfigItemResource) Delete(ctx context.Context, req resource.Delete
 		EdgeConfigID: state.EdgeConfigID.ValueString(),
 		Key:          state.Key.ValueString(),
 	})
-	if client.NotFound(err) {
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error deleting Edge Config Token",
+			"Error deleting Edge Config Item",
 			fmt.Sprintf(
-				"Could not delete Edge Config Token %s %s %s, unexpected error: %s",
+				"Could not delete Edge Config Item %s %s %s, unexpected error: %s",
 				state.TeamID.ValueString(),
 				state.EdgeConfigID.ValueString(),
 				state.Key.ValueString(),

@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/client"
 )
@@ -56,28 +57,39 @@ An Edge Config is a global data store that enables experimentation with feature 
 
 An Edge Config Item is a value within an Edge Config.`,
 		Attributes: map[string]schema.Attribute{
-			"edge_config_id": schema.StringAttribute{
-				Description: "The name of the key you want to add to or update within your Edge Config.",
+			"id": schema.StringAttribute{
+				Description: "The ID of the Edge Config that the item should exist under.",
 				Required:    true,
 			},
 			"team_id": schema.StringAttribute{
+				Description: "The ID of the team the Edge Config should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
 				Optional:    true,
 				Computed:    true,
-				Description: "The ID of the team the Edge Config should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
 			"key": schema.StringAttribute{
-				Description: "The ID of the Edge Config store.",
+				Description: "The name of the key you want to retrieve within your Edge Config.",
 				Required:    true,
+			},
+			"value": schema.StringAttribute{
+				Description: "The value assigned to the key.",
+				Computed:    true,
 			},
 		},
 	}
+}
+
+type EdgeConfigItemDataSource struct {
+	EdgeConfigID types.String `tfsdk:"id"`
+	TeamID       types.String `tfsdk:"team_id"`
+	Key          types.String `tfsdk:"key"`
+	Value        types.String `tfsdk:"value"`
 }
 
 // Read will read the edgeConfigItem information by requesting it from the Vercel API, and will update terraform
 // with this information.
 // It is called by the provider whenever data source values should be read to update state.
 func (d *edgeConfigItemDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config EdgeConfigItem
+	var config EdgeConfigItemDataSource
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -108,7 +120,7 @@ func (d *edgeConfigItemDataSource) Read(ctx context.Context, req datasource.Read
 		"key":            result.Key.ValueString(),
 	})
 
-	diags = resp.State.Set(ctx, result)
+	diags = resp.State.Set(ctx, EdgeConfigItemDataSource(result))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

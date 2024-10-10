@@ -29,16 +29,21 @@ type CreateEdgeConfigItemRequest struct {
 
 func (c *Client) CreateEdgeConfigItem(ctx context.Context, request CreateEdgeConfigItemRequest) (e EdgeConfigItem, err error) {
 	url := fmt.Sprintf("%s/v1/edge-config/%s/items", c.baseURL, request.EdgeConfigID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	teamID := c.teamID(request.TeamID)
+	if teamID != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, teamID)
 	}
 
 	payload := string(mustMarshal(
-		[]EdgeConfigOperation{
-			{
-				Operation: "upsert",
-				Key:       request.Key,
-				Value:     request.Value,
+		struct {
+			Items []EdgeConfigOperation `json:"items"`
+		}{
+			Items: []EdgeConfigOperation{
+				{
+					Operation: "upsert",
+					Key:       request.Key,
+					Value:     request.Value,
+				},
 			},
 		},
 	))
@@ -51,11 +56,14 @@ func (c *Client) CreateEdgeConfigItem(ctx context.Context, request CreateEdgeCon
 		method: "PATCH",
 		url:    url,
 		body:   payload,
-	}, &e)
-	e.Key = request.Key
-	e.Value = request.Value
-	e.EdgeConfigID = request.EdgeConfigID
-	return e, err
+	}, nil)
+
+	return EdgeConfigItem{
+		Key:          request.Key,
+		Value:        request.Value,
+		EdgeConfigID: request.EdgeConfigID,
+		TeamID:       teamID,
+	}, err
 }
 
 type EdgeConfigItemRequest struct {
@@ -68,15 +76,19 @@ type EdgeConfigItemRequest struct {
 func (c *Client) DeleteEdgeConfigItem(ctx context.Context, request EdgeConfigItemRequest) error {
 	url := fmt.Sprintf("%s/v1/edge-config/%s/items", c.baseURL, request.EdgeConfigID)
 	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(request.TeamID))
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 
 	payload := string(mustMarshal(
-		[]EdgeConfigOperation{
-			{
-				Operation: "delete",
-				Key:       request.Key,
-				Value:     request.Value,
+		struct {
+			Items []EdgeConfigOperation `json:"items"`
+		}{
+			Items: []EdgeConfigOperation{
+				{
+					Operation: "delete",
+					Key:       request.Key,
+					Value:     request.Value,
+				},
 			},
 		},
 	))
@@ -103,16 +115,21 @@ func (c *Client) GetEdgeConfigItem(ctx context.Context, request EdgeConfigItemRe
 		"url": url,
 	})
 
-	var Value string
 	err = c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "GET",
-		url:    url,
-	}, &Value)
+		ctx:              ctx,
+		method:           "GET",
+		url:              url,
+		errorOnNoContent: true,
+	}, &e)
 
-	e.EdgeConfigID = request.EdgeConfigID
-	e.Key = request.Key
-	e.Value = Value
+	if noContent(err) {
+		return e, APIError{
+			StatusCode: 404,
+			Message:    "Edge Config Item not found",
+			Code:       "not_found",
+		}
+	}
 
+	e.TeamID = c.teamID(request.TeamID)
 	return e, err
 }
