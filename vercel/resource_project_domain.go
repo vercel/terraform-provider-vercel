@@ -148,11 +148,24 @@ func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	_, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	project, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating project domain",
 			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
+		)
+		return
+	}
+
+	// Crazy condition to add an error if the git_branch is the production branch.
+	if plan.GitBranch.ValueString() != "" && project.Link != nil && project.Link.ProductionBranch != nil && *project.Link.ProductionBranch == plan.GitBranch.ValueString() {
+		resp.Diagnostics.AddError(
+			"Error adding domain to project",
+			fmt.Sprintf(
+				"Could not add domain %s to project %s, the git_branch specified is the production branch. If you want to use this domain as a production domain, please omit the git_branch field.",
+				plan.Domain.ValueString(),
+				plan.ProjectID.ValueString(),
+			),
 		)
 		return
 	}
