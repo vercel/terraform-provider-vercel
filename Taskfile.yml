@@ -25,7 +25,7 @@ tasks:
   install-tfplugindocs:
     desc: "Install the tfplugindocs tool"
     cmds:
-      - go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.16.0
+      - go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.19.4
     status:
       - which tfplugindocs
 
@@ -55,7 +55,7 @@ tasks:
   install-staticcheck:
     desc: "Install the staticheck tool"
     cmds:
-      - go install honnef.co/go/tools/cmd/staticcheck@2023.1
+      - go install honnef.co/go/tools/cmd/staticcheck@2024.1
     status:
       - which staticcheck
 
