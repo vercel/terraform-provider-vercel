@@ -58,7 +58,7 @@ func TestAcc_EdgeConfigResource(t *testing.T) {
 		CheckDestroy:             testCheckEdgeConfigDeleted("vercel_edge_config.test", testTeam()),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceEdgeConfigItem(name, teamIDConfig()),
+				Config: testAccResourceEdgeConfig(name, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckEdgeConfigExists(testTeam(), "vercel_edge_config.test"),
 					resource.TestCheckResourceAttr("vercel_edge_config.test", "name", name),

@@ -2,7 +2,6 @@ package vercel
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -187,7 +186,10 @@ func (r *edgeConfigItemResource) Read(ctx context.Context, req resource.ReadRequ
 
 // Update is the same as Create
 func (r *edgeConfigItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	panic(errors.New("Update is not supported, attributes require replacement"))
+	resp.Diagnostics.AddError(
+		"Updating an Edge Config Item is not supported. If you see this error, this is a bug in the provider.",
+		"Updating an Edge Config Item is not supported. If you see this error, this is a bug in the provider.",
+	)
 }
 
 // Delete deletes an Edge Config Item.
