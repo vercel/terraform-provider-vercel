@@ -32,7 +32,7 @@ tasks:
   install-goreleaser:
     desc: "Install goreleaser"
     cmds:
-      - go install github.com/goreleaser/goreleaser@latest
+      - go install github.com/goreleaser/goreleaser/v2@latest
     status:
       - which goreleaser
 
