@@ -52,6 +52,7 @@ resource "vercel_shared_environment_variable" "example" {
 
 ### Optional
 
+- `comment` (String) A comment explaining what the environment variable is for.
 - `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))
 - `team_id` (String) The ID of the Vercel team. Shared environment variables require a team.
 
