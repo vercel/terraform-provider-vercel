@@ -45,6 +45,7 @@ data "vercel_shared_environment_variable" "example_by_key_and_target" {
 
 ### Read-Only
 
+- `comment` (String) A comment explaining what the environment variable is for.
 - `project_ids` (Set of String) The ID of the Vercel project.
 - `sensitive` (Boolean) Whether the Environment Variable is sensitive or not.
 - `value` (String, Sensitive) The value of the Environment Variable.

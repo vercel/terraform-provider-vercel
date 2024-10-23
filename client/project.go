@@ -29,6 +29,7 @@ type EnvironmentVariable struct {
 	Type      string   `json:"type"`
 	ID        string   `json:"id,omitempty"`
 	TeamID    string   `json:"-"`
+	Comment   string   `json:"comment"`
 }
 
 type DeploymentExpiration struct {
@@ -257,8 +258,8 @@ func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectRe
 		url:    url,
 		body:   "",
 	}, &pr)
-	for _, p := range pr.Projects {
-		p.TeamID = c.teamID(teamID)
+	for i := 0; i < len(pr.Projects); i++ {
+		pr.Projects[i].TeamID = c.teamID(teamID)
 	}
 	return pr.Projects, err
 }

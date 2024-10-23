@@ -151,6 +151,14 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
+			"comment": schema.StringAttribute{
+				Description: "A comment explaining what the environment variable is for.",
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					stringLengthBetween(0, 1000),
+				},
+			},
 		},
 	}
 }
@@ -164,6 +172,7 @@ type SharedEnvironmentVariable struct {
 	ProjectIDs types.Set    `tfsdk:"project_ids"`
 	ID         types.String `tfsdk:"id"`
 	Sensitive  types.Bool   `tfsdk:"sensitive"`
+	Comment    types.String `tfsdk:"comment"`
 }
 
 func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics) (req client.CreateSharedEnvironmentVariableRequest, ok bool) {
@@ -196,8 +205,9 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx
 			ProjectIDs: projectIDs,
 			EnvironmentVariables: []client.SharedEnvVarRequest{
 				{
-					Key:   e.Key.ValueString(),
-					Value: e.Value.ValueString(),
+					Key:     e.Key.ValueString(),
+					Value:   e.Value.ValueString(),
+					Comment: e.Comment.ValueString(),
 				},
 			},
 		},
@@ -233,6 +243,7 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx
 		TeamID:     e.TeamID.ValueString(),
 		EnvID:      e.ID.ValueString(),
 		ProjectIDs: projectIDs,
+		Comment:    e.Comment.ValueString(),
 	}, true
 }
 
@@ -263,6 +274,7 @@ func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmen
 		TeamID:     toTeamID(response.TeamID),
 		ID:         types.StringValue(response.ID),
 		Sensitive:  types.BoolValue(response.Type == "sensitive"),
+		Comment:    types.StringValue(response.Comment),
 	}
 }
 
