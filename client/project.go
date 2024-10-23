@@ -16,7 +16,8 @@ type GitRepository struct {
 }
 
 type OIDCTokenConfig struct {
-	Enabled bool `json:"enabled"`
+	Enabled    bool   `json:"enabled"`
+	IssuerMode string `json:"issuerMode,omitempty"`
 }
 
 // EnvironmentVariable defines the information Vercel requires and surfaces about an environment variable
