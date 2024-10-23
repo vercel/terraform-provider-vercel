@@ -115,8 +115,8 @@ func (c *Client) ListDNSRecords(ctx context.Context, domain, teamID string) (r [
 		url:    url,
 		body:   "",
 	}, &dr)
-	for _, record := range dr.Records {
-		record.TeamID = c.teamID(teamID)
+	for i := 0; i < len(dr.Records); i++ {
+		dr.Records[i].TeamID = c.teamID(teamID)
 	}
 	return dr.Records, err
 }

@@ -15,11 +15,13 @@ type SharedEnvironmentVariableResponse struct {
 	Type       string   `json:"type"`
 	Target     []string `json:"target"`
 	ProjectIDs []string `json:"projectId"`
+	Comment    string   `json:"comment"`
 }
 
 type SharedEnvVarRequest struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Key     string `json:"key"`
+	Value   string `json:"value"`
+	Comment string `json:"comment"`
 }
 
 type SharedEnvironmentVariableRequest struct {
@@ -126,8 +128,8 @@ func (c *Client) ListSharedEnvironmentVariables(ctx context.Context, teamID stri
 		url:    url,
 		body:   "",
 	}, &res)
-	for _, v := range res.Data {
-		v.TeamID = c.teamID(teamID)
+	for i := 0; i < len(res.Data); i++ {
+		res.Data[i].TeamID = c.teamID(teamID)
 	}
 	return res.Data, err
 }
@@ -137,6 +139,7 @@ type UpdateSharedEnvironmentVariableRequest struct {
 	Type       string   `json:"type"`
 	ProjectIDs []string `json:"projectId"`
 	Target     []string `json:"target"`
+	Comment    string   `json:"comment"`
 	TeamID     string   `json:"-"`
 	EnvID      string   `json:"-"`
 }

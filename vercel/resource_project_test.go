@@ -209,6 +209,7 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 						"key":        "foo",
 						"value":      "bar",
 						"git_branch": "staging",
+						"comment":    "some comment",
 					}),
 				),
 			},
@@ -217,8 +218,9 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists("vercel_project.test_git", testTeam()),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test_git", "environment.*", map[string]string{
-						"key":   "foo",
-						"value": "bar2",
+						"key":     "foo",
+						"value":   "bar2",
+						"comment": "some updated comment",
 					}),
 				),
 			},
@@ -644,6 +646,7 @@ resource "vercel_project" "test_git" {
       value      = "bar"
       target     = ["preview"]
       git_branch = "staging"
+      comment    = "some comment"
     }
   ]
 }
@@ -676,6 +679,7 @@ resource "vercel_project" "test_git" {
       key        = "foo"
       value      = "bar2"
       target     = ["preview"]
+      comment    = "some updated comment"
     }
   ]
 }

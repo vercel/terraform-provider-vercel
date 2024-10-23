@@ -151,6 +151,14 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Optional:    true,
 							Computed:    true,
 						},
+						"comment": schema.StringAttribute{
+							Description: "A comment explaining what the environment variable is for.",
+							Optional:    true,
+							Computed:    true,
+							Validators: []validator.String{
+								stringLengthBetween(0, 1000),
+							},
+						},
 					},
 				},
 			},
@@ -633,6 +641,7 @@ func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 			GitBranch: e.GitBranch.ValueStringPointer(),
 			Type:      envVariableType,
 			ID:        e.ID.ValueString(),
+			Comment:   e.Comment.ValueString(),
 		})
 	}
 	return out
@@ -722,6 +731,7 @@ type EnvironmentItem struct {
 	Value     types.String   `tfsdk:"value"`
 	ID        types.String   `tfsdk:"id"`
 	Sensitive types.Bool     `tfsdk:"sensitive"`
+	Comment   types.String   `tfsdk:"comment"`
 }
 
 func (e *EnvironmentItem) toEnvironmentVariableRequest() client.EnvironmentVariableRequest {
@@ -744,6 +754,7 @@ func (e *EnvironmentItem) toEnvironmentVariableRequest() client.EnvironmentVaria
 		Target:    target,
 		GitBranch: e.GitBranch.ValueStringPointer(),
 		Type:      envVariableType,
+		Comment:   e.Comment.ValueString(),
 	}
 }
 
@@ -996,6 +1007,7 @@ var envVariableElemType = types.ObjectType{
 		"git_branch": types.StringType,
 		"id":         types.StringType,
 		"sensitive":  types.BoolType,
+		"comment":    types.StringType,
 	},
 }
 
@@ -1185,6 +1197,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 				"git_branch": types.StringType,
 				"id":         types.StringType,
 				"sensitive":  types.BoolType,
+				"comment":    types.StringType,
 			},
 			map[string]attr.Value{
 				"key":        types.StringValue(e.Key),
@@ -1193,6 +1206,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 				"git_branch": types.StringPointerValue(e.GitBranch),
 				"id":         types.StringValue(e.ID),
 				"sensitive":  types.BoolValue(e.Type == "sensitive"),
+				"comment":    types.StringValue(e.Comment),
 			},
 		))
 	}
