@@ -3,7 +3,6 @@ package vercel
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -412,24 +411,10 @@ func (r *projectEnvironmentVariableResource) Delete(ctx context.Context, req res
 	})
 }
 
-// splitID is a helper function for splitting an import ID into the corresponding parts.
-// It also validates whether the ID is in a correct format.
-func splitProjectEnvironmentVariableID(id string) (teamID, projectID, envID string, ok bool) {
-	attributes := strings.Split(id, "/")
-	if len(attributes) == 3 {
-		return attributes[0], attributes[1], attributes[2], true
-	}
-	if len(attributes) == 2 {
-		return "", attributes[0], attributes[1], true
-	}
-
-	return "", "", "", false
-}
-
 // ImportState takes an identifier and reads all the project environment variable information from the Vercel API.
 // The results are then stored in terraform state.
 func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, projectID, envID, ok := splitProjectEnvironmentVariableID(req.ID)
+	teamID, projectID, envID, ok := splitInto2Or3(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing project environment variable",
