@@ -3,7 +3,6 @@ package vercel
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -409,21 +408,10 @@ func (r *sharedEnvironmentVariableResource) Delete(ctx context.Context, req reso
 	})
 }
 
-// splitID is a helper function for splitting an import ID into the corresponding parts.
-// It also validates whether the ID is in a correct format.
-func splitSharedEnvironmentVariableID(id string) (teamID, envID string, ok bool) {
-	attributes := strings.Split(id, "/")
-	if len(attributes) == 2 {
-		return attributes[0], attributes[1], true
-	}
-
-	return "", "", false
-}
-
 // ImportState takes an identifier and reads all the shared environment variable information from the Vercel API.
 // The results are then stored in terraform state.
 func (r *sharedEnvironmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, envID, ok := splitSharedEnvironmentVariableID(req.ID)
+	teamID, envID, ok := splitInto1Or2(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing shared environment variable",

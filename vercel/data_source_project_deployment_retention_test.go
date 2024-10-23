@@ -21,10 +21,15 @@ func TestAcc_ProjectDeploymentRetentionDataSource(t *testing.T) {
 				Config: testAccProjectDeploymentRetentionDataSourceConfig(nameSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectDeploymentRetentionExists("vercel_project_deployment_retention.example", testTeam()),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_preview", "1m"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_production", "unlimited"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_canceled", "unlimited"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_errored", "unlimited"),
+					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_preview", "1m"),
+					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_production", "unlimited"),
+					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_canceled", "unlimited"),
+					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_errored", "unlimited"),
+
+					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example_2", "expiration_preview", "unlimited"),
+					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example_2", "expiration_production", "unlimited"),
+					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example_2", "expiration_canceled", "unlimited"),
+					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example_2", "expiration_errored", "unlimited"),
 				),
 			},
 		},
@@ -51,6 +56,21 @@ resource "vercel_project_deployment_retention" "example" {
 
 data "vercel_project_deployment_retention" "example" {
 	project_id = vercel_project_deployment_retention.example.project_id
+	%[3]s
+}
+
+resource "vercel_project" "example_2" {
+	name = "test-acc-example-project-2-%[1]s"
+	%[3]s
+
+	git_repository = {
+		type = "github"
+		repo = "%[2]s"
+	}
+}
+
+data "vercel_project_deployment_retention" "example_2" {
+	project_id = vercel_project.example_2.id
 	%[3]s
 }
 `, projectName, testGithubRepo(), teamIDConfig())

@@ -3,7 +3,6 @@ package vercel
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -303,24 +302,10 @@ func (r *projectDeploymentRetentionResource) Update(ctx context.Context, req res
 	}
 }
 
-// splitID is a helper function for splitting an import ID into the corresponding parts.
-// It also validates whether the ID is in a correct format.
-func splitProjectDeploymentRetentionID(id string) (teamID, projectID string, ok bool) {
-	attributes := strings.Split(id, "/")
-	if len(attributes) == 2 {
-		return attributes[0], attributes[1], true
-	}
-	if len(attributes) == 1 {
-		return "", attributes[0], true
-	}
-
-	return "", "", false
-}
-
 // ImportState takes an identifier and reads all the project deployment retention information from the Vercel API.
 // The results are then stored in terraform state.
 func (r *projectDeploymentRetentionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, projectID, ok := splitProjectDeploymentRetentionID(req.ID)
+	teamID, projectID, ok := splitInto1Or2(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing project deployment retention",
