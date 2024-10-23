@@ -131,6 +131,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "Whether the Environment Variable is sensitive or not.",
 				Computed:    true,
 			},
+			"comment": schema.StringAttribute{
+				Description: "A comment explaining what the environment variable is for.",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -225,13 +229,6 @@ func (d *sharedEnvironmentVariableDataSource) Read(ctx context.Context, req data
 	}
 
 	result := convertResponseToSharedEnvironmentVariable(out, types.StringNull())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error converting shared environment variable response to model",
-			"Could not read shared environment variable, unexpected error: "+err.Error(),
-		)
-		return
-	}
 	tflog.Info(ctx, "read shared environment variable", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),

@@ -114,6 +114,14 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Validators:    []validator.Bool{},
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
+			"comment": schema.StringAttribute{
+				Description: "A comment explaining what the environment variable is for.",
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					stringLengthBetween(0, 1000),
+				},
+			},
 		},
 	}
 }
@@ -128,6 +136,7 @@ type ProjectEnvironmentVariable struct {
 	ProjectID types.String   `tfsdk:"project_id"`
 	ID        types.String   `tfsdk:"id"`
 	Sensitive types.Bool     `tfsdk:"sensitive"`
+	Comment   types.String   `tfsdk:"comment"`
 }
 
 func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
@@ -193,6 +202,7 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client
 			Target:    target,
 			GitBranch: e.GitBranch.ValueStringPointer(),
 			Type:      envVariableType,
+			Comment:   e.Comment.ValueString(),
 		},
 		ProjectID: e.ProjectID.ValueString(),
 		TeamID:    e.TeamID.ValueString(),
@@ -221,6 +231,7 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client
 		ProjectID: e.ProjectID.ValueString(),
 		TeamID:    e.TeamID.ValueString(),
 		EnvID:     e.ID.ValueString(),
+		Comment:   e.Comment.ValueString(),
 	}
 }
 
@@ -247,6 +258,7 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 		ProjectID: projectID,
 		ID:        types.StringValue(response.ID),
 		Sensitive: types.BoolValue(response.Type == "sensitive"),
+		Comment:   types.StringValue(response.Comment),
 	}
 }
 

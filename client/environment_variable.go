@@ -15,6 +15,7 @@ type EnvironmentVariableRequest struct {
 	Target    []string `json:"target"`
 	GitBranch *string  `json:"gitBranch,omitempty"`
 	Type      string   `json:"type"`
+	Comment   string   `json:"comment"`
 }
 
 type CreateEnvironmentVariableRequest struct {
@@ -78,6 +79,7 @@ type UpdateEnvironmentVariableRequest struct {
 	Target    []string `json:"target"`
 	GitBranch *string  `json:"gitBranch,omitempty"`
 	Type      string   `json:"type"`
+	Comment   string   `json:"comment"`
 	ProjectID string   `json:"-"`
 	TeamID    string   `json:"-"`
 	EnvID     string   `json:"-"`
@@ -141,8 +143,8 @@ func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID 
 		url:    url,
 		body:   "",
 	}, &envResponse)
-	for _, env := range envResponse.Env {
-		env.TeamID = c.teamID(teamID)
+	for i := 0; i < len(envResponse.Env); i++ {
+		envResponse.Env[i].TeamID = c.teamID(teamID)
 	}
 	return envResponse.Env, err
 }
