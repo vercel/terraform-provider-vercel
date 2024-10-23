@@ -41,11 +41,20 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 					testAccSharedEnvironmentVariableExists("vercel_shared_environment_variable.example", testTeam()),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", fmt.Sprintf("test_acc_foo_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "value", "bar"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "comment", "Test comment for example"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "production"),
 
+					testAccSharedEnvironmentVariableExists("vercel_shared_environment_variable.sensitive_example", testTeam()),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "key", fmt.Sprintf("test_acc_foo_sensitive_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "value", "bar"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "comment", "Test comment for sensitive example"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.sensitive_example", "target.*", "production"),
+
+					testAccSharedEnvironmentVariableExists("vercel_shared_environment_variable.no_comment_example", testTeam()),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.no_comment_example", "key", fmt.Sprintf("test_acc_foo_no_comment_%s", nameSuffix)),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.no_comment_example", "value", "baz"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.no_comment_example", "comment", ""),
+					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.no_comment_example", "target.*", "production"),
 				),
 			},
 			{
@@ -105,6 +114,7 @@ resource "vercel_shared_environment_variable" "example" {
     project_ids = [
         vercel_project.example.id
     ]
+    comment     = "Test comment for example"
 }
 
 resource "vercel_shared_environment_variable" "sensitive_example" {
@@ -112,6 +122,17 @@ resource "vercel_shared_environment_variable" "sensitive_example" {
 	key         = "test_acc_foo_sensitive_%[1]s"
 	value       = "bar"
     sensitive   = true
+	target      = ["production"]
+    project_ids = [
+        vercel_project.example.id
+    ]
+    comment     = "Test comment for sensitive example"
+}
+
+resource "vercel_shared_environment_variable" "no_comment_example" {
+	%[2]s
+	key         = "test_acc_foo_no_comment_%[1]s"
+	value       = "baz"
 	target      = ["production"]
     project_ids = [
         vercel_project.example.id

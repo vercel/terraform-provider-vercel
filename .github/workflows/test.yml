@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -31,8 +33,7 @@ jobs:
         uses: arduino/setup-task@v2
         with:
           version: "3.x"
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Get dependencies
         run: go mod download
       - name: Build
@@ -45,6 +46,8 @@ jobs:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -54,8 +57,7 @@ jobs:
         uses: arduino/setup-task@v2
         with:
           version: "3.x"
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check if docs are up-to-date
         run: |
           task docs
@@ -79,6 +81,8 @@ jobs:
           - "1.4.*"
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -88,8 +92,6 @@ jobs:
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
       - name: Get dependencies
         run: go mod download
       - name: TF acceptance tests

@@ -126,7 +126,12 @@ func (c *Client) GetDeploymentRetention(ctx context.Context, projectID, teamID s
 		body:   "",
 	}, &p)
 	if p.DeploymentExpiration == nil {
-		return DeploymentExpiration{}, fmt.Errorf("deployment retention not found")
+		return DeploymentExpiration{
+			ExpirationPreview:    36500,
+			ExpirationProduction: 36500,
+			ExpirationCanceled:   36500,
+			ExpirationErrored:    36500,
+		}, nil
 	}
 	return *p.DeploymentExpiration, err
 }

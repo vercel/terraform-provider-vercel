@@ -66,6 +66,7 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "key", "foo"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "value", "bar"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example", "target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "comment", "this is with a comment"),
 
 					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_git_branch", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "key", "foo"),
@@ -79,13 +80,11 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_sensitive", "target.*", "production"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "sensitive", "true"),
 
-					/*
-						testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_not_sensitive", testTeam()),
-						resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "key", "foo_not_sensitive"),
-						resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "value", "bar-not-sensitive"),
-						resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_not_sensitive", "target.*", "production"),
-						resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "sensitive", "false"),
-					*/
+					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_not_sensitive", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "key", "foo_not_sensitive"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "value", "bar-not-sensitive"),
+					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_not_sensitive", "target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "sensitive", "false"),
 				),
 			},
 			{
@@ -96,6 +95,7 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "value", "bar-new"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example", "target.*", "production"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example", "target.*", "preview"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "comment", "this is an updated comment"),
 
 					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_git_branch", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "key", "foo"),
@@ -168,6 +168,7 @@ resource "vercel_project_environment_variable" "example" {
 	key        = "foo"
 	value      = "bar"
 	target     = ["production"]
+    comment    = "this is with a comment"
 }
 
 resource "vercel_project_environment_variable" "example_git_branch" {
@@ -188,7 +189,6 @@ resource "vercel_project_environment_variable" "example_sensitive" {
 	sensitive  = true
 }
 
-/*
 resource "vercel_project_environment_variable" "example_not_sensitive" {
 	project_id = vercel_project.example.id
 	%[3]s
@@ -197,7 +197,6 @@ resource "vercel_project_environment_variable" "example_not_sensitive" {
 	target     = ["production"]
 	sensitive  = false
 }
-*/
 `, projectName, testGithubRepo(), teamIDConfig())
 }
 
@@ -219,6 +218,7 @@ resource "vercel_project_environment_variable" "example" {
     key        = "foo"
     value      = "bar-new"
     target     = ["production", "preview"]
+    comment    = "this is an updated comment"
 }
 
 resource "vercel_project_environment_variable" "example_git_branch" {

@@ -78,6 +78,7 @@ output "project_id" {
 
 Read-Only:
 
+- `comment` (String) A comment explaining what the environment variable is for.
 - `git_branch` (String) The git branch of the environment variable.
 - `id` (String) The ID of the environment variable
 - `key` (String) The name of the environment variable.

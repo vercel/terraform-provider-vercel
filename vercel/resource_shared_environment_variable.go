@@ -3,7 +3,6 @@ package vercel
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -151,6 +150,14 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
+			"comment": schema.StringAttribute{
+				Description: "A comment explaining what the environment variable is for.",
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					stringLengthBetween(0, 1000),
+				},
+			},
 		},
 	}
 }
@@ -164,6 +171,7 @@ type SharedEnvironmentVariable struct {
 	ProjectIDs types.Set    `tfsdk:"project_ids"`
 	ID         types.String `tfsdk:"id"`
 	Sensitive  types.Bool   `tfsdk:"sensitive"`
+	Comment    types.String `tfsdk:"comment"`
 }
 
 func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics) (req client.CreateSharedEnvironmentVariableRequest, ok bool) {
@@ -196,8 +204,9 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx
 			ProjectIDs: projectIDs,
 			EnvironmentVariables: []client.SharedEnvVarRequest{
 				{
-					Key:   e.Key.ValueString(),
-					Value: e.Value.ValueString(),
+					Key:     e.Key.ValueString(),
+					Value:   e.Value.ValueString(),
+					Comment: e.Comment.ValueString(),
 				},
 			},
 		},
@@ -233,6 +242,7 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx
 		TeamID:     e.TeamID.ValueString(),
 		EnvID:      e.ID.ValueString(),
 		ProjectIDs: projectIDs,
+		Comment:    e.Comment.ValueString(),
 	}, true
 }
 
@@ -263,6 +273,7 @@ func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmen
 		TeamID:     toTeamID(response.TeamID),
 		ID:         types.StringValue(response.ID),
 		Sensitive:  types.BoolValue(response.Type == "sensitive"),
+		Comment:    types.StringValue(response.Comment),
 	}
 }
 
@@ -409,21 +420,10 @@ func (r *sharedEnvironmentVariableResource) Delete(ctx context.Context, req reso
 	})
 }
 
-// splitID is a helper function for splitting an import ID into the corresponding parts.
-// It also validates whether the ID is in a correct format.
-func splitSharedEnvironmentVariableID(id string) (teamID, envID string, ok bool) {
-	attributes := strings.Split(id, "/")
-	if len(attributes) == 2 {
-		return attributes[0], attributes[1], true
-	}
-
-	return "", "", false
-}
-
 // ImportState takes an identifier and reads all the shared environment variable information from the Vercel API.
 // The results are then stored in terraform state.
 func (r *sharedEnvironmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, envID, ok := splitSharedEnvironmentVariableID(req.ID)
+	teamID, envID, ok := splitInto1Or2(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing shared environment variable",

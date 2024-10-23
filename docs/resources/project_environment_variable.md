@@ -40,6 +40,7 @@ resource "vercel_project_environment_variable" "example" {
   key        = "foo"
   value      = "bar"
   target     = ["production"]
+  comment    = "a production secret"
 }
 
 # An environment variable that will be created
@@ -50,16 +51,18 @@ resource "vercel_project_environment_variable" "example_git_branch" {
   value      = "bar-staging"
   target     = ["preview"]
   git_branch = "staging"
+  comment    = "a staging secret"
 }
 
 # A sensitive environment variable that will be created
 # for this project for the "production" environment.
 resource "vercel_project_environment_variable" "example_sensitive" {
-	project_id = vercel_project.example.id
-	key        = "foo"
-	value      = "bar-production"
-	target     = ["production"]
-	sensitive  = true
+  project_id = vercel_project.example.id
+  key        = "foo"
+  value      = "bar-production"
+  target     = ["production"]
+  sensitive  = true
+  comment    = "a sensitive production secret"
 }
 ```
 
@@ -75,6 +78,7 @@ resource "vercel_project_environment_variable" "example_sensitive" {
 
 ### Optional
 
+- `comment` (String) A comment explaining what the environment variable is for.
 - `git_branch` (String) The git branch of the Environment Variable.
 - `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))
 - `team_id` (String) The ID of the Vercel team.Required when configuring a team resource if a default team has not been set in the provider.

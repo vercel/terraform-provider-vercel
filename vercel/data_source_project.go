@@ -123,6 +123,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 							Description: "Whether the Environment Variable is sensitive or not. Note that the value will be `null` for sensitive environment variables.",
 							Computed:    true,
 						},
+						"comment": schema.StringAttribute{
+							Description: "A comment explaining what the environment variable is for.",
+							Computed:    true,
+						},
 					},
 				},
 			},

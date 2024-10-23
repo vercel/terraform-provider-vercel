@@ -102,6 +102,7 @@ Required:
 
 Optional:
 
+- `comment` (String) A comment explaining what the environment variable is for.
 - `git_branch` (String) The git branch of the Environment Variable.
 - `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))
 

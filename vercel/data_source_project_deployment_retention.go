@@ -110,10 +110,6 @@ func (r *projectDeploymentRetentionDataSource) Read(ctx context.Context, req dat
 	}
 
 	out, err := r.client.GetDeploymentRetention(ctx, config.ProjectID.ValueString(), config.TeamID.ValueString())
-	if client.NotFound(err) {
-		resp.State.RemoveResource(ctx)
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project deployment retention",
