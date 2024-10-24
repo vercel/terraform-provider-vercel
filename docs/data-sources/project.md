@@ -123,7 +123,7 @@ Read-Only:
 
 Optional:
 
-- `issuer_mode` (String) Configures the URL of the `iss` claim. `team` = `https://oidc.vercel.com/[team_slug]` `owner` = `https://oidc.vercel.com`
+- `issuer_mode` (String) Configures the URL of the `iss` claim. `team` = `https://oidc.vercel.com/[team_slug]` `global` = `https://oidc.vercel.com`
 
 Read-Only:
 
