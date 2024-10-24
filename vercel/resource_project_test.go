@@ -81,6 +81,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "directory_listing", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "skew_protection", "7 days"),
 					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.issuer_mode", "team"),
 				),
 			},
 			// Update testing
@@ -751,6 +752,7 @@ resource "vercel_project" "test" {
   skew_protection = "7 days"
   oidc_token_config = {
     enabled = true
+    issuer_mode = "team"
   }
   environment = [
     {
