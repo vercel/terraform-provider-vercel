@@ -44,14 +44,6 @@ type Address struct {
 	State      *string `json:"state"`
 }
 
-type Billing struct {
-	Currency *string  `json:"currency"`
-	Email    *string  `json:"email"`
-	TaxID    *TaxID   `json:"tax"`
-	Language *string  `json:"language"`
-	Address  *Address `json:"address"`
-}
-
 type RemoteCaching struct {
 	Enabled *bool `json:"enabled"`
 }
@@ -71,44 +63,13 @@ type Team struct {
 	EmailDomain                        *string        `json:"emailDomain"`
 	Saml                               *SamlConfig    `json:"saml"`
 	InviteCode                         *string        `json:"inviteCode"`
-	Billing                            *Billing       `json:"billing"`
 	PreviewDeploymentSuffix            *string        `json:"previewDeploymentSuffix"`
 	RemoteCaching                      *RemoteCaching `json:"remoteCaching"`
 	EnablePreviewFeedback              *string        `json:"enablePreviewFeedback"`
+	EnableProductionFeedback           *string        `json:"enableProductionFeedback"`
 	Spaces                             *SpacesConfig  `json:"spaces"`
 	HideIPAddresses                    *bool          `json:"hideIpAddresses"`
-}
-
-// CreateTeam creates a team within vercel.
-func (c *Client) CreateTeam(ctx context.Context, request TeamCreateRequest) (t Team, err error) {
-	url := fmt.Sprintf("%s/v1/teams", c.baseURL)
-
-	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "creating team", map[string]interface{}{
-		"url":     url,
-		"payload": payload,
-	})
-	err = c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "POST",
-		url:    url,
-		body:   payload,
-	}, &t)
-	return t, err
-}
-
-// DeleteTeam deletes an existing team within vercel.
-func (c *Client) DeleteTeam(ctx context.Context, teamID string) error {
-	url := fmt.Sprintf("%s/v1/teams/%s", c.baseURL, teamID)
-	tflog.Info(ctx, "deleting team", map[string]interface{}{
-		"url": url,
-	})
-	return c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "DELETE",
-		url:    url,
-		body:   "",
-	}, nil)
+	HideIPAddressesInLogDrains         *bool          `json:"hideIpAddressesInLogDrains,omitempty"`
 }
 
 // GetTeam returns information about an existing team within vercel.
@@ -134,15 +95,18 @@ type UpdateSamlConfig struct {
 type UpdateTeamRequest struct {
 	TeamID                             string            `json:"-"`
 	Avatar                             string            `json:"avatar,omitempty"`
+	Description                        *string           `json:"description,omitempty"`
 	EmailDomain                        string            `json:"emailDomain,omitempty"`
 	Name                               string            `json:"name,omitempty"`
 	PreviewDeploymentSuffix            string            `json:"previewDeploymentSuffix,omitempty"`
 	Saml                               *UpdateSamlConfig `json:"saml,omitempty"`
 	Slug                               string            `json:"slug,omitempty"`
 	EnablePreviewFeedback              string            `json:"enablePreviewFeedback,omitempty"`
+	EnableProductionFeedback           string            `json:"enableProductionFeedback,omitempty"`
 	SensitiveEnvironmentVariablePolicy string            `json:"sensitiveEnvironmentVariablePolicy,omitempty"`
 	RemoteCaching                      *RemoteCaching    `json:"remoteCaching,omitempty"`
 	HideIPAddresses                    *bool             `json:"hideIpAddresses,omitempty"`
+	HideIPAddressesInLogDrains         *bool             `json:"hideIpAddressesInLogDrains,omitempty"`
 }
 
 func (c *Client) UpdateTeam(ctx context.Context, request UpdateTeamRequest) (t Team, err error) {
