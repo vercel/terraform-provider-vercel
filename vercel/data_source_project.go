@@ -233,7 +233,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Computed:    true,
 					},
 					"issuer_mode": schema.StringAttribute{
-						Description: "Configures the URL of the `iss` claim. `team` = `https://oidc.vercel.com/[team_slug]` `owner` = `https://oidc.vercel.com`",
+						Description: "Configures the URL of the `iss` claim. `team` = `https://oidc.vercel.com/[team_slug]` `global` = `https://oidc.vercel.com`",
 						Computed:    true,
 						Optional:    true,
 						Validators: []validator.String{

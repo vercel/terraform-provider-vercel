@@ -322,7 +322,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Optional:      true,
 						Computed:      true,
 						Default:       stringdefault.StaticString("team"),
-						Description:   "Configures the URL of the `iss` claim. `team` = `https://oidc.vercel.com/[team_slug]` `owner` = `https://oidc.vercel.com`",
+						Description:   "Configures the URL of the `iss` claim. `team` = `https://oidc.vercel.com/[team_slug]` `global` = `https://oidc.vercel.com`",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
 							stringOneOf("team", "global"),
@@ -336,7 +336,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 					map[string]attr.Value{
 						"enabled":     types.BoolValue(false),
-						"issuer_mode": types.StringValue("team"),
+						"issuer_mode": types.StringValue("global"),
 					},
 				)),
 			},
@@ -920,7 +920,7 @@ func (o *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
 	if o == nil {
 		return &client.OIDCTokenConfig{
 			Enabled:    types.BoolValue(false).ValueBool(),
-			IssuerMode: types.StringValue("team").ValueString(),
+			IssuerMode: types.StringValue("global").ValueString(),
 		}
 	}
 
@@ -1153,7 +1153,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 
 	var oidcTokenConfig = &OIDCTokenConfig{
 		Enabled:    types.BoolValue(false),
-		IssuerMode: types.StringValue("team"),
+		IssuerMode: types.StringValue("global"),
 	}
 	if response.OIDCTokenConfig != nil {
 		oidcTokenConfig.Enabled = types.BoolValue(response.OIDCTokenConfig.Enabled)
