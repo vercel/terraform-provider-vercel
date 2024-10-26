@@ -863,7 +863,6 @@ func (r *firewallConfigResource) Create(ctx context.Context, req resource.Create
 	out, err := r.client.PutFirewallConfig(ctx, conf)
 	if err != nil {
 		diags.AddError("failed to create firewall config", err.Error())
-		return
 	}
 
 	resp.Diagnostics.Append(diags...)
@@ -920,8 +919,7 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 
 	out, err := r.client.PutFirewallConfig(ctx, conf)
 	if err != nil {
-		diags.AddError("failed to create firewall config", err.Error())
-		return
+		diags.AddError("failed to update firewall config", err.Error())
 	}
 
 	resp.Diagnostics.Append(diags...)
