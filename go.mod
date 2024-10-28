@@ -1,4 +1,4 @@
-module github.com/vercel/terraform-provider-vercel
+module github.com/vercel/terraform-provider-vercel/v2
 
 go 1.21
 
