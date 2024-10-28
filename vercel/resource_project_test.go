@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/vercel/terraform-provider-vercel/client"
+	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
 func TestAcc_Project(t *testing.T) {

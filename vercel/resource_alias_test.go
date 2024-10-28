@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/vercel/terraform-provider-vercel/client"
+	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
 func testCheckAliasExists(teamID, alias string) resource.TestCheckFunc {
