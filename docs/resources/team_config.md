@@ -53,6 +53,7 @@ resource "vercel_team_config" "example" {
 - `name` (String) The name of the team.
 - `preview_deployment_suffix` (String) The hostname that is used as the preview deployment suffix.
 - `remote_caching` (Attributes) Configuration for Remote Caching. (see [below for nested schema](#nestedatt--remote_caching))
+- `saml` (Attributes) Configuration for SAML authentication. (see [below for nested schema](#nestedatt--saml))
 - `sensitive_environment_variable_policy` (String)
 - `slug` (String) The slug of the team. Will be used in the URL of the team's dashboard.
 
@@ -66,3 +67,16 @@ resource "vercel_team_config" "example" {
 Optional:
 
 - `enabled` (Boolean) Indicates if Remote Caching is enabled.
+
+
+<a id="nestedatt--saml"></a>
+### Nested Schema for `saml`
+
+Required:
+
+- `enforced` (Boolean) Indicates if SAML is enforced for the team.
+
+Optional:
+
+- `access_group_id` (String) The ID of the access group to use for the team.
+- `roles` (Map of String) Directory groups to role or access group mappings.

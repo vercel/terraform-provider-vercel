@@ -2,16 +2,22 @@ package vercel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -111,54 +117,40 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Description:   "Hostname that'll be matched with emails on sign-up to automatically join the Team.",
 			},
-			/*
-				"saml": schema.SingleNestedAttribute{
-					Attributes: map[string]schema.Attribute{
-						"enforced": schema.BoolAttribute{
-							Description: "Indicates if SAML is enforced for the team.",
-							Required:    true,
-						},
-						"roles": schema.MapAttribute{
-							Description: "Directory groups to role or access group mappings.",
-							Optional:    true,
-						},
-						"access_group_id": schema.StringAttribute{
-							// TODO - enforce either accessGroupId or roles.
-							Description: "The ID of the access group to use for the team.",
-							Optional:    true,
-							Validators: []validator.String{
-								stringRegex(regexp.MustCompile("^ag_[A-z0-9_ -]+$"), "Access group ID must be a valid access group"),
-							},
-						},
-						"connection": schema.SingleNestedAttribute{
-							Attributes: map[string]schema.Attribute{
-								"status": schema.StringAttribute{
-									Computed:    true,
-									Description: "The current status of the connection.",
-								},
-							},
-							Description: "Info about the SAML connection.",
-							Computed:    true,
-						},
-						"directory": schema.SingleNestedAttribute{
-							Attributes: map[string]schema.Attribute{
-								"type": schema.StringAttribute{
-									Computed:    true,
-									Description: "The identity provider type.",
-								},
-								"state": schema.StringAttribute{
-									Computed:    true,
-									Description: "The current state of the SAML connection.",
-								},
-							},
-							Description: "Info about the SAML directory.",
-							Computed:    true,
+			"saml": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"enforced": schema.BoolAttribute{
+						Description: "Indicates if SAML is enforced for the team.",
+						Required:    true,
+					},
+					"roles": schema.MapAttribute{
+						Description: "Directory groups to role or access group mappings.",
+						Optional:    true,
+						ElementType: types.StringType,
+						Validators: []validator.Map{
+							// Validate only this attribute or roles is configured.
+							mapvalidator.ExactlyOneOf(path.Expressions{
+								path.MatchRoot("saml.access_group_id"),
+							}...),
 						},
 					},
-					Optional:    true,
-					Description: "Configuration for SAML authentication.",
+					"access_group_id": schema.StringAttribute{
+						Description: "The ID of the access group to use for the team.",
+						Optional:    true,
+						Validators: []validator.String{
+							stringRegex(regexp.MustCompile("^ag_[A-z0-9_ -]+$"), "Access group ID must be a valid access group"),
+							// Validate only this attribute or roles is configured.
+							stringvalidator.ExactlyOneOf(path.Expressions{
+								path.MatchRoot("saml.roles"),
+							}...),
+						},
+					},
 				},
-			*/
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Description:   "Configuration for SAML authentication.",
+			},
 			"invite_code": schema.StringAttribute{
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -171,9 +163,10 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "The hostname that is used as the preview deployment suffix.",
 			},
 			"remote_caching": schema.SingleNestedAttribute{
-				Description: "Configuration for Remote Caching.",
-				Optional:    true,
-				Computed:    true,
+				Description:   "Configuration for Remote Caching.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
 						Description:   "Indicates if Remote Caching is enabled.",
@@ -215,7 +208,6 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 	}
 }
 
-/*
 type SamlConnection struct {
 	Status types.String `tfsdk:"status"`
 }
@@ -226,16 +218,35 @@ type SamlDirectory struct {
 }
 
 type Saml struct {
-	Enforced      types.Bool      `tfsdk:"enforced"`
-	Roles         types.Map       `tfsdk:"roles"`
-	AccessGroupId types.String    `tfsdk:"access_group_id"`
-	Connection    *SamlConnection `tfsdk:"connection"`
-	Directory     *SamlDirectory  `tfsdk:"directory"`
+	Enforced      types.Bool   `tfsdk:"enforced"`
+	Roles         types.Map    `tfsdk:"roles"`
+	AccessGroupId types.String `tfsdk:"access_group_id"`
 }
 
-func (s Saml) toUpdateSamlConfig() *client.UpdateSamlConfig {
+var samlAttrTypes = map[string]attr.Type{
+	"enforced":        types.BoolType,
+	"roles":           types.MapType{ElemType: types.StringType},
+	"access_group_id": types.StringType,
 }
-*/
+
+func (s *Saml) toUpdateSamlConfig(ctx context.Context) *client.UpdateSamlConfig {
+	if s == nil {
+		return nil
+	}
+
+	config := &client.UpdateSamlConfig{
+		Enforced: s.Enforced.ValueBool(),
+	}
+	roles := map[string]string{}
+	if !s.AccessGroupId.IsNull() {
+		roles["accessGroupId"] = s.AccessGroupId.ValueString()
+	} else {
+		s.Roles.ElementsAs(ctx, &roles, false)
+	}
+	config.Roles = roles
+
+	return config
+}
 
 type EnableConfig struct {
 	Enabled types.Bool `tfsdk:"enabled"`
@@ -256,7 +267,7 @@ type TeamConfig struct {
 	EnableProductionFeedback           types.String `tfsdk:"enable_production_feedback"`
 	HideIPAddresses                    types.Bool   `tfsdk:"hide_ip_addresses"`
 	HideIPAddressesInLogDrains         types.Bool   `tfsdk:"hide_ip_addresses_in_log_drains"`
-	// Saml                               types.Object `tfsdk:"saml"`
+	Saml                               types.Object `tfsdk:"saml"`
 }
 
 type RemoteCaching struct {
@@ -291,6 +302,25 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		return client.UpdateTeamRequest{}, diags
 	}
 
+	var saml *Saml
+	diags = t.Saml.As(ctx, &saml, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	if diags.HasError() {
+		return client.UpdateTeamRequest{}, diags
+	}
+
+	var hideIPAddressses *bool
+	if !t.HideIPAddresses.IsUnknown() && !t.HideIPAddresses.IsNull() {
+		v := t.HideIPAddresses.ValueBool()
+		hideIPAddressses = &v
+	}
+	var hideIPAddresssesInLogDrains *bool
+	if !t.HideIPAddressesInLogDrains.IsUnknown() && !t.HideIPAddressesInLogDrains.IsNull() {
+		v := t.HideIPAddressesInLogDrains.ValueBool()
+		hideIPAddresssesInLogDrains = &v
+	}
 	return client.UpdateTeamRequest{
 		TeamID:                             t.ID.ValueString(),
 		Avatar:                             avatar,
@@ -303,9 +333,9 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		EnableProductionFeedback:           t.EnableProductionFeedback.ValueString(),
 		SensitiveEnvironmentVariablePolicy: t.SensitiveEnvironmentVariablePolicy.ValueString(),
 		RemoteCaching:                      rc.toUpdateTeamRequest(),
-		HideIPAddresses:                    t.HideIPAddresses.ValueBoolPointer(),
-		HideIPAddressesInLogDrains:         t.HideIPAddressesInLogDrains.ValueBoolPointer(),
-		// Saml:                               t.Saml.toUpdateSamlConfig(),
+		HideIPAddresses:                    hideIPAddressses,
+		HideIPAddressesInLogDrains:         hideIPAddresssesInLogDrains,
+		Saml:                               saml.toUpdateSamlConfig(ctx),
 	}, nil
 }
 
@@ -320,6 +350,30 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 			return TeamConfig{}, diags
 		}
 	}
+
+	saml := types.ObjectNull(samlAttrTypes)
+	if response.Saml != nil && response.Saml.Roles != nil {
+		samlValue := map[string]attr.Value{
+			"enforced":        types.BoolValue(response.Saml.Enforced),
+			"roles":           types.MapNull(types.StringType),
+			"access_group_id": types.StringNull(),
+		}
+		if response.Saml.Roles["accessGroupId"] != "" {
+			samlValue["access_group_id"] = types.StringValue(response.Saml.Roles["accessGroupId"])
+		} else {
+			roles, diags := types.MapValueFrom(ctx, types.StringType, response.Saml.Roles)
+			if diags.HasError() {
+				return TeamConfig{}, diags
+			}
+			samlValue["roles"] = roles
+		}
+		var diags diag.Diagnostics
+		saml, diags = types.ObjectValue(samlAttrTypes, samlValue)
+		if diags.HasError() {
+			return TeamConfig{}, diags
+		}
+	}
+
 	return TeamConfig{
 		Avatar:                             avatar,
 		ID:                                 types.StringValue(response.ID),
@@ -335,7 +389,7 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 		HideIPAddresses:                    types.BoolPointerValue(response.HideIPAddresses),
 		HideIPAddressesInLogDrains:         types.BoolPointerValue(response.HideIPAddressesInLogDrains),
 		RemoteCaching:                      remoteCaching,
-		// Saml:                               types.StringValue(response.Saml),
+		Saml:                               saml,
 	}, nil
 }
 
@@ -419,8 +473,10 @@ func (r *teamConfigResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	tflog.Info(ctx, "updated Team Configuration", map[string]interface{}{
-		"team_id": response.ID,
+	jsonResp, _ := json.Marshal(response)
+	tflog.Info(ctx, "created Team Configuration", map[string]interface{}{
+		"team_id":  response.ID,
+		"response": string(jsonResp),
 	})
 
 	teamConfig, diags := convertResponseToTeamConfig(ctx, response, plan.Avatar)
@@ -454,6 +510,9 @@ func (r *teamConfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	result, diags := convertResponseToTeamConfig(ctx, out, state.Avatar)
+	tflog.Info(ctx, "result", map[string]any{
+		"result": result,
+	})
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
