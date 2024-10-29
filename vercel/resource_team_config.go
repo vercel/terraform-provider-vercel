@@ -93,8 +93,8 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 				ElementType:   types.StringType,
 				Validators: []validator.Map{
-					mapItemsMinCount(1),
-					mapItemsMaxCount(1),
+					mapvalidator.SizeAtLeast(1),
+					mapvalidator.SizeAtMost(1),
 				},
 			},
 			"description": schema.StringAttribute{
@@ -108,7 +108,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Validators: []validator.String{
-					stringOneOf("on", "off"),
+					stringvalidator.OneOf("on", "off"),
 				},
 			},
 			"email_domain": schema.StringAttribute{
@@ -138,7 +138,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 						Description: "The ID of the access group to use for the team.",
 						Optional:    true,
 						Validators: []validator.String{
-							stringRegex(regexp.MustCompile("^ag_[A-z0-9_ -]+$"), "Access group ID must be a valid access group"),
+							stringvalidator.RegexMatches(regexp.MustCompile("^ag_[A-z0-9_ -]+$"), "Access group ID must be a valid access group"),
 							// Validate only this attribute or roles is configured.
 							stringvalidator.ExactlyOneOf(path.Expressions{
 								path.MatchRoot("saml.roles"),
@@ -181,7 +181,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Validators: []validator.String{
-					stringOneOf("default", "on", "off"),
+					stringvalidator.OneOf("default", "on", "off"),
 				},
 			},
 			"enable_production_feedback": schema.StringAttribute{
@@ -189,7 +189,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Validators: []validator.String{
-					stringOneOf("default", "on", "off"),
+					stringvalidator.OneOf("default", "on", "off"),
 				},
 			},
 			"hide_ip_addresses": schema.BoolAttribute{

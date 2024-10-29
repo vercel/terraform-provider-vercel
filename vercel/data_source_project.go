@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -69,8 +70,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"name": schema.StringAttribute{
 				Required: true,
 				Validators: []validator.String{
-					stringLengthBetween(1, 52),
-					stringRegex(
+					stringvalidator.LengthBetween(1, 52),
+					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-z0-9\-]{0,100}$`),
 						"The name of a Project can only contain up to 100 alphanumeric lowercase characters and hyphens",
 					),
@@ -142,7 +143,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
 						Computed:    true,
 						Validators: []validator.String{
-							stringOneOf("github", "gitlab", "bitbucket"),
+							stringvalidator.OneOf("github", "gitlab", "bitbucket"),
 						},
 					},
 					"repo": schema.StringAttribute{
@@ -237,7 +238,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Computed:    true,
 						Optional:    true,
 						Validators: []validator.String{
-							stringOneOf("team", "global"),
+							stringvalidator.OneOf("team", "global"),
 						},
 					},
 				},

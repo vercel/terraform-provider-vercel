@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -87,7 +89,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				Required:      true,
 				Validators: []validator.String{
-					stringOneOf("A", "AAAA", "ALIAS", "CAA", "CNAME", "MX", "NS", "SRV", "TXT"),
+					stringvalidator.OneOf("A", "AAAA", "ALIAS", "CAA", "CNAME", "MX", "NS", "SRV", "TXT"),
 				},
 			},
 			"value": schema.StringAttribute{
@@ -100,16 +102,16 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.Int64{
-					int64GreaterThan(60),
-					int64LessThan(2147483647),
+					int64validator.AtLeast(60),
+					int64validator.AtMost(2147483647),
 				},
 			},
 			"mx_priority": schema.Int64Attribute{
 				Description: "The priority of the MX record. The priority specifies the sequence that an email server receives emails. A smaller value indicates a higher priority.",
 				Optional:    true, // required for MX records.
 				Validators: []validator.Int64{
-					int64GreaterThan(0),
-					int64LessThan(65535),
+					int64validator.AtLeast(0),
+					int64validator.AtMost(65535),
 				},
 			},
 			"comment": schema.StringAttribute{
@@ -118,7 +120,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Default:     stringdefault.StaticString(""),
 				Validators: []validator.String{
-					stringLengthBetween(0, 500),
+					stringvalidator.LengthBetween(0, 500),
 				},
 			},
 			"srv": schema.SingleNestedAttribute{
@@ -129,24 +131,24 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Description: "A relative weight for records with the same priority, higher value means higher chance of getting picked.",
 						Required:    true,
 						Validators: []validator.Int64{
-							int64GreaterThan(0),
-							int64LessThan(65535),
+							int64validator.AtLeast(0),
+							int64validator.AtMost(65535),
 						},
 					},
 					"port": schema.Int64Attribute{
 						Description: "The TCP or UDP port on which the service is to be found.",
 						Required:    true,
 						Validators: []validator.Int64{
-							int64GreaterThan(0),
-							int64LessThan(65535),
+							int64validator.AtLeast(0),
+							int64validator.AtMost(65535),
 						},
 					},
 					"priority": schema.Int64Attribute{
 						Description: "The priority of the target host, lower value means more preferred.",
 						Required:    true,
 						Validators: []validator.Int64{
-							int64GreaterThan(0),
-							int64LessThan(65535),
+							int64validator.AtLeast(0),
+							int64validator.AtMost(65535),
 						},
 					},
 					"target": schema.StringAttribute{

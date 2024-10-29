@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/float64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -84,7 +88,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				Validators: []validator.String{
-					stringOneOf("json", "ndjson"),
+					stringvalidator.OneOf("json", "ndjson"),
 				},
 			},
 			"environments": schema.SetAttribute{
@@ -93,8 +97,8 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()},
 				Required:      true,
 				Validators: []validator.Set{
-					stringSetItemsIn("production", "preview"),
-					stringSetMinCount(1),
+					setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview")),
+					setvalidator.SizeAtLeast(1),
 				},
 			},
 			"headers": schema.MapAttribute{
@@ -103,7 +107,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 				Optional:      true,
 				Validators: []validator.Map{
-					mapMaxCount(5),
+					mapvalidator.SizeAtMost(5),
 				},
 			},
 			"project_ids": schema.SetAttribute{
@@ -117,8 +121,8 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				Optional:      true,
 				PlanModifiers: []planmodifier.Float64{float64planmodifier.RequiresReplace()},
 				Validators: []validator.Float64{
-					float64GreaterThan(0),
-					float64LessThan(1),
+					float64validator.AtLeast(0),
+					float64validator.AtMost(1),
 				},
 			},
 			"secret": schema.StringAttribute{
@@ -128,7 +132,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				Sensitive:     true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 				Validators: []validator.String{
-					stringLengthGreaterThan(32),
+					stringvalidator.LengthAtLeast(32),
 				},
 			},
 			"sources": schema.SetAttribute{
@@ -137,8 +141,8 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				ElementType:   types.StringType,
 				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()},
 				Validators: []validator.Set{
-					stringSetItemsIn("static", "edge", "external", "build", "lambda"),
-					stringSetMinCount(1),
+					setvalidator.ValueStringsAre(stringvalidator.OneOf("static", "edge", "external", "build", "lambda")),
+					setvalidator.SizeAtLeast(1),
 				},
 			},
 			"endpoint": schema.StringAttribute{

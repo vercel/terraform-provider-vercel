@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -78,15 +80,15 @@ When an event happens, a webhook is sent to a third-party app, which can then ta
 				Required:    true,
 				ElementType: types.StringType,
 				Validators: []validator.Set{
-					stringSetItemsIn(
+					setvalidator.ValueStringsAre(stringvalidator.OneOf(
 						"deployment.created",
 						"deployment.error",
 						"deployment.canceled",
 						"deployment.succeeded",
 						"project.created",
 						"project.removed",
-					),
-					stringSetMinCount(1),
+					)),
+					setvalidator.SizeAtLeast(1),
 				},
 				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()},
 			},

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -87,7 +88,7 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 				Description: "The HTTP status code to use when serving as a redirect.",
 				Optional:    true,
 				Validators: []validator.Int64{
-					int64OneOf(301, 302, 307, 308),
+					int64validator.OneOf(301, 302, 307, 308),
 				},
 			},
 			"git_branch": schema.StringAttribute{

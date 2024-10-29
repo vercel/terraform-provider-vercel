@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -128,7 +129,7 @@ terraform to your Deployment.
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 				ElementType:   types.StringType,
 				Validators: []validator.Map{
-					mapItemsMinCount(1),
+					mapvalidator.SizeAtLeast(1),
 				},
 			},
 			"ref": schema.StringAttribute{

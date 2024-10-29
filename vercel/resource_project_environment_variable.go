@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -72,8 +74,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
-					stringSetItemsIn("production", "preview", "development"),
-					stringSetMinCount(1),
+					setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
+					setvalidator.SizeAtLeast(1),
 				},
 			},
 			"key": schema.StringAttribute{
@@ -118,7 +120,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
-					stringLengthBetween(0, 1000),
+					stringvalidator.LengthBetween(0, 1000),
 				},
 			},
 		},

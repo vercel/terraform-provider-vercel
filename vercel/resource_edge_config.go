@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -64,7 +65,7 @@ An Edge Config is a global data store that enables experimentation with feature 
 				Description: "The name/slug of the Edge Config.",
 				Required:    true,
 				Validators: []validator.String{
-					stringRegex(
+					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-z0-9\_\-]{0,32}$`),
 						"The name of an Edge Config can only contain up to 32 alphanumeric lowercase characters, hyphens and underscores.",
 					),
