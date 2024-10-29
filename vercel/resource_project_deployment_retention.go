@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -68,7 +69,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The retention period for preview deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
 				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
-					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
+					stringvalidator.OneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"expiration_production": schema.StringAttribute{
@@ -77,7 +78,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The retention period for production deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
 				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
-					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
+					stringvalidator.OneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"expiration_canceled": schema.StringAttribute{
@@ -86,7 +87,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The retention period for canceled deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
 				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
-					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
+					stringvalidator.OneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"expiration_errored": schema.StringAttribute{
@@ -95,7 +96,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The retention period for errored deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
 				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
-					stringOneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
+					stringvalidator.OneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"project_id": schema.StringAttribute{

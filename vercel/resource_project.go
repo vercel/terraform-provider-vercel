@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -86,8 +89,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"name": schema.StringAttribute{
 				Required: true,
 				Validators: []validator.String{
-					stringLengthBetween(1, 52),
-					stringRegex(
+					stringvalidator.LengthBetween(1, 52),
+					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-z0-9\-]{0,100}$`),
 						"The name of a Project can only contain up to 100 alphanumeric lowercase characters and hyphens",
 					),
@@ -124,8 +127,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 							ElementType: types.StringType,
 							Validators: []validator.Set{
-								stringSetItemsIn("production", "preview", "development"),
-								stringSetMinCount(1),
+								setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
+								setvalidator.SizeAtLeast(1),
 							},
 							Required: true,
 						},
@@ -156,7 +159,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Optional:    true,
 							Computed:    true,
 							Validators: []validator.String{
-								stringLengthBetween(0, 1000),
+								stringvalidator.LengthBetween(0, 1000),
 							},
 						},
 					},
@@ -178,7 +181,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
 						Required:    true,
 						Validators: []validator.String{
-							stringOneOf("github", "gitlab", "bitbucket"),
+							stringvalidator.OneOf("github", "gitlab", "bitbucket"),
 						},
 					},
 					"repo": schema.StringAttribute{
@@ -237,7 +240,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Description:   "The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_preview_deployments`, or `none`.",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
-							stringOneOf("standard_protection", "all_deployments", "only_preview_deployments", "none"),
+							stringvalidator.OneOf("standard_protection", "all_deployments", "only_preview_deployments", "none"),
 						},
 					},
 				},
@@ -251,7 +254,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Required:    true,
 						Sensitive:   true,
 						Validators: []validator.String{
-							stringLengthBetween(1, 72),
+							stringvalidator.LengthBetween(1, 72),
 						},
 					},
 					"deployment_type": schema.StringAttribute{
@@ -259,7 +262,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Description:   "The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, or `only_preview_deployments`.",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
-							stringOneOf("standard_protection", "all_deployments", "only_preview_deployments"),
+							stringvalidator.OneOf("standard_protection", "all_deployments", "only_preview_deployments"),
 						},
 					},
 				},
@@ -286,7 +289,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							},
 						},
 						Validators: []validator.Set{
-							stringSetMinCount(1),
+							setvalidator.SizeAtLeast(1),
 						},
 					},
 					"deployment_type": schema.StringAttribute{
@@ -294,7 +297,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Description:   "The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
-							stringOneOf("standard_protection", "all_deployments", "only_production_deployments", "only_preview_deployments"),
+							stringvalidator.OneOf("standard_protection", "all_deployments", "only_production_deployments", "only_preview_deployments"),
 						},
 					},
 					"protection_mode": schema.StringAttribute{
@@ -304,7 +307,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Description:   "Whether or not Trusted IPs is optional to access a deployment. Must be either `trusted_ip_required` or `trusted_ip_optional`. `trusted_ip_optional` is only available with Standalone Trusted IPs.",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
-							stringOneOf("trusted_ip_required", "trusted_ip_optional"),
+							stringvalidator.OneOf("trusted_ip_required", "trusted_ip_optional"),
 						},
 					},
 				},
@@ -325,7 +328,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Description:   "Configures the URL of the `iss` claim. `team` = `https://oidc.vercel.com/[team_slug]` `global` = `https://oidc.vercel.com`",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
-							stringOneOf("team", "global"),
+							stringvalidator.OneOf("team", "global"),
 						},
 					},
 				},
@@ -357,7 +360,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							},
 						},
 						Validators: []validator.Set{
-							stringSetMinCount(1),
+							setvalidator.SizeAtLeast(1),
 						},
 					},
 				},
@@ -461,7 +464,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:    true,
 				Description: "Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.",
 				Validators: []validator.String{
-					stringOneOf("30 minutes", "12 hours", "1 day", "7 days"),
+					stringvalidator.OneOf("30 minutes", "12 hours", "1 day", "7 days"),
 				},
 			},
 			"resource_config": schema.SingleNestedAttribute{
@@ -475,7 +478,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Optional:    true,
 						Computed:    true,
 						Validators: []validator.String{
-							stringOneOf("standard_legacy", "standard", "performance"),
+							stringvalidator.OneOf("standard_legacy", "standard", "performance"),
 						},
 						PlanModifiers: []planmodifier.String{SuppressDiffIfNotConfigured(), stringplanmodifier.UseStateForUnknown()},
 					},
@@ -484,8 +487,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Optional:    true,
 						Computed:    true,
 						Validators: []validator.Int64{
-							int64GreaterThan(0),
-							int64LessThan(901),
+							int64validator.AtLeast(0),
+							int64validator.AtMost(901),
 						},
 						PlanModifiers: []planmodifier.Int64{SuppressDiffIfNotConfigured(), int64planmodifier.UseStateForUnknown()},
 					},

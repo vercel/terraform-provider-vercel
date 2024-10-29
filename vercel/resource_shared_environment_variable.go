@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -114,8 +116,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
-					stringSetItemsIn("production", "preview", "development"),
-					stringSetMinCount(1),
+					setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
+					setvalidator.SizeAtLeast(1),
 				},
 			},
 			"key": schema.StringAttribute{
@@ -155,7 +157,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
-					stringLengthBetween(0, 1000),
+					stringvalidator.LengthBetween(0, 1000),
 				},
 			},
 		},
