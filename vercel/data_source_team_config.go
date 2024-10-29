@@ -106,6 +106,25 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Computed:    true,
 				Description: "Indicates if ip addresses should be accessible in log drains.",
 			},
+			"saml": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"enforced": schema.BoolAttribute{
+						Description: "Indicates if SAML is enforced for the team.",
+						Computed:    true,
+					},
+					"roles": schema.MapAttribute{
+						Description: "Directory groups to role or access group mappings.",
+						Computed:    true,
+						ElementType: types.StringType,
+					},
+					"access_group_id": schema.StringAttribute{
+						Description: "The ID of the access group to use for the team.",
+						Computed:    true,
+					},
+				},
+				Computed:    true,
+				Description: "Configuration for SAML authentication.",
+			},
 		},
 	}
 }
@@ -124,7 +143,7 @@ type TeamConfigData struct {
 	EnableProductionFeedback           types.String `tfsdk:"enable_production_feedback"`
 	HideIPAddresses                    types.Bool   `tfsdk:"hide_ip_addresses"`
 	HideIPAddressesInLogDrains         types.Bool   `tfsdk:"hide_ip_addresses_in_log_drains"`
-	// Saml                               types.Object `tfsdk:"saml"`
+	Saml                               types.Object `tfsdk:"saml"`
 }
 
 func (d *teamConfigDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -165,6 +184,7 @@ func (d *teamConfigDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		HideIPAddresses:                    out.HideIPAddresses,
 		HideIPAddressesInLogDrains:         out.HideIPAddressesInLogDrains,
 		RemoteCaching:                      out.RemoteCaching,
+		Saml:                               out.Saml,
 	})
 	resp.Diagnostics.Append(diags...)
 }

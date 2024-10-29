@@ -14,20 +14,9 @@ type TeamCreateRequest struct {
 	Plan string `json:"plan"`
 }
 
-type SamlConnection struct {
-	Status string `json:"status"`
-}
-
-type SamlDirectory struct {
-	Type  string `json:"type"`
-	State string `json:"state"`
-}
-
 type SamlConfig struct {
-	Connection *SamlConnection   `json:"connection"`
-	Directory  *SamlDirectory    `json:"directory"`
-	Enforced   bool              `json:"enforced,omitempty"`
-	Roles      map[string]string `json:"roles,omitempty"`
+	Enforced bool              `json:"enforced,omitempty"`
+	Roles    map[string]string `json:"roles,omitempty"`
 }
 
 type TaxID struct {
