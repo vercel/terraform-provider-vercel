@@ -42,10 +42,69 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		url:    url,
 		body:   payload,
 	}, &e)
+	if conflictingEnv, isConflicting, err2 := conflictingEnvVar(err); isConflicting {
+		if err2 != nil {
+			return e, err2
+		}
+		id, err3 := c.findConflictingEnvID(ctx, request.TeamID, request.ProjectID, conflictingEnv)
+		if err3 != nil {
+			return e, fmt.Errorf("%w %s", err, err3)
+		}
+		return e, fmt.Errorf("%w the conflicting environment variable ID is %s", err, id)
+	}
+	if err != nil {
+		return e, err
+	}
 	// The API response returns an encrypted environment variable, but we want to return the decrypted version.
 	e.Value = request.EnvironmentVariable.Value
 	e.TeamID = c.teamID(request.TeamID)
 	return e, err
+}
+
+func (c *Client) ListEnvironmentVariables(ctx context.Context, teamID, projectID string) (envs []EnvironmentVariable, err error) {
+	url := fmt.Sprintf("%s/v9/projects/%s/env", c.baseURL, projectID)
+	if c.teamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	}
+
+	response := struct {
+		Envs []EnvironmentVariable `json:"envs"`
+	}{}
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "GET",
+		url:    url,
+	}, &response)
+	return response.Envs, err
+}
+
+func overlaps(s []string, e []string) bool {
+	for _, a := range s {
+		for _, b := range e {
+			if a == b {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (c *Client) findConflictingEnvID(ctx context.Context, teamID, projectID string, envConflict EnvConflictError) (string, error) {
+	envs, err := c.ListEnvironmentVariables(ctx, teamID, projectID)
+	if err != nil {
+		return "", fmt.Errorf("unable to list environment variables to detect conflict: %w", err)
+	}
+
+	for _, env := range envs {
+		if env.Key == envConflict.Key && overlaps(env.Target, envConflict.Target) && env.GitBranch == envConflict.GitBranch {
+			id := fmt.Sprintf("%s/%s", projectID, env.ID)
+			if teamID != "" {
+				id = fmt.Sprintf("%s/%s", teamID, id)
+			}
+			return id, nil
+		}
+	}
+	return "", fmt.Errorf("conflicting environment variable not found")
 }
 
 type CreateEnvironmentVariablesRequest struct {
@@ -64,12 +123,27 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		"url":     url,
 		"payload": payload,
 	})
-	return c.doRequest(clientRequest{
+	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "POST",
 		url:    url,
 		body:   payload,
 	}, nil)
+	if conflictingEnv, isConflicting, err2 := conflictingEnvVar(err); isConflicting {
+		if err2 != nil {
+			return err2
+		}
+		id, err3 := c.findConflictingEnvID(ctx, request.TeamID, request.ProjectID, conflictingEnv)
+		if err3 != nil {
+			return fmt.Errorf("%w %s", err, err3)
+		}
+		return fmt.Errorf("%w the conflicting environment variable ID is %s", err, id)
+	}
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 // UpdateEnvironmentVariableRequest defines the information that needs to be passed to Vercel in order to
