@@ -36,6 +36,28 @@ type CreateSharedEnvironmentVariableRequest struct {
 	TeamID              string
 }
 
+func (c *Client) findConflictingSharedEnvID(ctx context.Context, request CreateSharedEnvironmentVariableRequest) (string, error) {
+	envs, err := c.ListSharedEnvironmentVariables(ctx, request.TeamID)
+	if err != nil {
+		return "", fmt.Errorf("unable to list shared environment variables to detect conflict: %w", err)
+	}
+	if len(request.EnvironmentVariable.EnvironmentVariables) != 1 {
+		return "", fmt.Errorf("cannot detect conflict for multiple shared environment variables")
+	}
+	requestedEnv := request.EnvironmentVariable.EnvironmentVariables[0]
+
+	for _, env := range envs {
+		if env.Key == requestedEnv.Key && overlaps(env.Target, request.EnvironmentVariable.Target) {
+			id := env.ID
+			if request.TeamID != "" {
+				id = fmt.Sprintf("%s/%s", request.TeamID, id)
+			}
+			return id, nil
+		}
+	}
+	return "", fmt.Errorf("conflicting shared environment variable not found")
+}
+
 // CreateSharedEnvironmentVariable will create a brand new shared environment variable if one does not exist.
 func (c *Client) CreateSharedEnvironmentVariable(ctx context.Context, request CreateSharedEnvironmentVariableRequest) (e SharedEnvironmentVariableResponse, err error) {
 	url := fmt.Sprintf("%s/v1/env", c.baseURL)
@@ -56,6 +78,13 @@ func (c *Client) CreateSharedEnvironmentVariable(ctx context.Context, request Cr
 		url:    url,
 		body:   payload,
 	}, &response)
+	if conflictingSharedEnv(err) {
+		id, err2 := c.findConflictingSharedEnvID(ctx, request)
+		if err2 != nil {
+			return e, fmt.Errorf("%w %s", err, err2)
+		}
+		return e, fmt.Errorf("%w the conflicting shared environment variable ID is %s", err, id)
+	}
 	if err != nil {
 		return e, err
 	}
