@@ -27,7 +27,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.23"
         id: go
       - name: Install Task
         uses: arduino/setup-task@v2
@@ -51,7 +51,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.23"
         id: go
       - name: Install Task
         uses: arduino/setup-task@v2
@@ -73,24 +73,22 @@ jobs:
       max-parallel: 1
       fail-fast: false
       matrix:
-        os:
-          - "ubuntu-latest"
-          - "windows-latest"
-        terraform:
-          - "1.9.*"
-          - "1.4.*"
-    runs-on: ${{ matrix.os }}
+        m:
+          - { os: "ubuntu-latest", terraform: "1.9.*" }
+          - { os: "ubuntu-latest", terraform: "1.4.*" }
+          - { os: "windows-latest", terraform: "1.9.*" }
+    runs-on: ${{ matrix.m.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.23"
         id: go
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ matrix.terraform }}
+          terraform_version: ${{ matrix.m.terraform }}
           terraform_wrapper: false
       - name: Get dependencies
         run: go mod download
