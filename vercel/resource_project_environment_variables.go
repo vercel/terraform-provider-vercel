@@ -19,25 +19,24 @@ import (
 )
 
 var (
-	_ resource.Resource                = &projectEnvironmentVariableResource{}
-	_ resource.ResourceWithConfigure   = &projectEnvironmentVariableResource{}
-	_ resource.ResourceWithImportState = &projectEnvironmentVariableResource{}
-	_ resource.ResourceWithModifyPlan  = &projectEnvironmentVariableResource{}
+	_ resource.Resource               = &projectEnvironmentVariablesResource{}
+	_ resource.ResourceWithConfigure  = &projectEnvironmentVariablesResource{}
+	_ resource.ResourceWithModifyPlan = &projectEnvironmentVariablesResource{}
 )
 
-func newProjectEnvironmentVariableResource() resource.Resource {
-	return &projectEnvironmentVariableResource{}
+func newProjectEnvironmentVariablesResource() resource.Resource {
+	return &projectEnvironmentVariablesResource{}
 }
 
-type projectEnvironmentVariableResource struct {
+type projectEnvironmentVariablesResource struct {
 	client *client.Client
 }
 
-func (r *projectEnvironmentVariableResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_project_environment_variable"
+func (r *projectEnvironmentVariablesResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project_environment_variables"
 }
 
-func (r *projectEnvironmentVariableResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *projectEnvironmentVariablesResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -56,42 +55,19 @@ func (r *projectEnvironmentVariableResource) Configure(ctx context.Context, req 
 }
 
 // Schema returns the schema information for a project environment variable resource.
-func (r *projectEnvironmentVariableResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *projectEnvironmentVariablesResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: `
-Provides a Project Environment Variable resource.
+Provides a resource for managing a number of Project Environment Variables.
 
-A Project Environment Variable resource defines an Environment Variable on a Vercel Project.
+This resource defines multiple Environment Variables on a Vercel Project.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables).
 
-~> Terraform currently provides this Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and a Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
+~> Terraform currently provides this Project Environment Variables resource (multiple Environment Variables), a single Project Environment Variable Resource, and a Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 `,
 		Attributes: map[string]schema.Attribute{
-			"target": schema.SetAttribute{
-				Required:    true,
-				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
-				ElementType: types.StringType,
-				Validators: []validator.Set{
-					setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
-					setvalidator.SizeAtLeast(1),
-				},
-			},
-			"key": schema.StringAttribute{
-				Required:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
-				Description:   "The name of the Environment Variable.",
-			},
-			"value": schema.StringAttribute{
-				Required:    true,
-				Description: "The value of the Environment Variable.",
-				Sensitive:   true,
-			},
-			"git_branch": schema.StringAttribute{
-				Optional:    true,
-				Description: "The git branch of the Environment Variable.",
-			},
 			"project_id": schema.StringAttribute{
 				Required:      true,
 				Description:   "The ID of the Vercel project.",
@@ -100,63 +76,125 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				Description:   "The ID of the Vercel team.Required when configuring a team resource if a default team has not been set in the provider.",
+				Description:   "The ID of the Vercel team. Required when configuring a team resource if a default team has not been set in the provider.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
-			"id": schema.StringAttribute{
-				Description:   "The ID of the Environment Variable.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-			},
-			"sensitive": schema.BoolAttribute{
-				Description:   "Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))",
-				Optional:      true,
-				Computed:      true,
-				Validators:    []validator.Bool{},
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
-			},
-			"comment": schema.StringAttribute{
-				Description: "A comment explaining what the environment variable is for.",
-				Optional:    true,
-				Computed:    true,
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(0, 1000),
+			"variables": schema.SetNestedAttribute{
+				Required:    true,
+				Description: "A set of Environment Variables that should be configured for the project.",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							Description: "The ID of the Environment Variable.",
+							Computed:    true,
+						},
+						"key": schema.StringAttribute{
+							Required:      true,
+							PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+							Description:   "The name of the Environment Variable.",
+						},
+						"value": schema.StringAttribute{
+							Required:    true,
+							Description: "The value of the Environment Variable.",
+							Sensitive:   true,
+						},
+						"target": schema.SetAttribute{
+							Required:    true,
+							Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
+							ElementType: types.StringType,
+							Validators: []validator.Set{
+								setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
+								setvalidator.SizeAtLeast(1),
+							},
+						},
+						"git_branch": schema.StringAttribute{
+							Optional:    true,
+							Description: "The git branch of the Environment Variable.",
+						},
+						"sensitive": schema.BoolAttribute{
+							Description:   "Whether the Environment Variable is sensitive or not.",
+							Optional:      true,
+							Computed:      true,
+							PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
+						},
+						"comment": schema.StringAttribute{
+							Description: "A comment explaining what the environment variable is for.",
+							Optional:    true,
+							Computed:    true,
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(0, 1000),
+							},
+						},
+					},
 				},
 			},
 		},
 	}
 }
 
-// ProjectEnvironmentVariable reflects the state terraform stores internally for a project environment variable.
-type ProjectEnvironmentVariable struct {
-	Target    []types.String `tfsdk:"target"`
-	GitBranch types.String   `tfsdk:"git_branch"`
-	Key       types.String   `tfsdk:"key"`
-	Value     types.String   `tfsdk:"value"`
-	TeamID    types.String   `tfsdk:"team_id"`
-	ProjectID types.String   `tfsdk:"project_id"`
-	ID        types.String   `tfsdk:"id"`
-	Sensitive types.Bool     `tfsdk:"sensitive"`
-	Comment   types.String   `tfsdk:"comment"`
+// ProjectEnvironmentVariables reflects the state terraform stores internally for project environment variables.
+type ProjectEnvironmentVariables struct {
+	TeamID    types.String `tfsdk:"team_id"`
+	ProjectID types.String `tfsdk:"project_id"`
+	Variables types.Set    `tfsdk:"variables"`
 }
 
-func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+func (p *ProjectEnvironmentVariables) environment(ctx context.Context) ([]EnvironmentItem, error) {
+	if p.Variables.IsNull() {
+		return nil, nil
+	}
+
+	var vars []EnvironmentItem
+	err := p.Variables.ElementsAs(ctx, &vars, true)
+	if err != nil {
+		return nil, fmt.Errorf("error reading project environment variables: %s", err)
+	}
+	return vars, nil
+}
+
+func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.Plan.Raw.IsNull() {
 		return
 	}
-	var config ProjectEnvironmentVariable
+	var config ProjectEnvironmentVariables
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if config.ID.ValueString() != "" {
-		// The resource already exists, so this is okay.
+	environment, err := config.environment(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing project environment variables",
+			"Could not read environment variables, unexpected error: "+err.Error(),
+		)
 		return
 	}
-	if config.Sensitive.IsUnknown() || config.Sensitive.IsNull() || config.Sensitive.ValueBool() {
-		// Sensitive is either true, or computed, which is fine.
+
+	// Should be at least one variable
+	if len(environment) == 0 {
+		return
+	}
+
+	// work out if there are any new env vars that are specifying sensitive = false
+	var nonSensitiveEnvVars []path.Path
+	for i, e := range environment {
+		if e.ID.ValueString() != "" {
+			continue
+		}
+		if e.Sensitive.IsUnknown() || e.Sensitive.IsNull() || e.Sensitive.ValueBool() {
+			continue
+		}
+		nonSensitiveEnvVars = append(
+			nonSensitiveEnvVars,
+			path.Root("variables").
+				AtSetValue(config.Variables.Elements()[i]).
+				AtName("sensitive"),
+		)
+	}
+
+	if len(nonSensitiveEnvVars) == 0 {
 		return
 	}
 
@@ -176,14 +214,16 @@ func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req
 		return
 	}
 
-	resp.Diagnostics.AddAttributeError(
-		path.Root("sensitive"),
-		"Project Environment Variable Invalid",
-		"This team has a policy that forces all environment variables to be sensitive. Please remove the `sensitive` field or set the `sensitive` field to `true` in your configuration.",
-	)
+	for _, p := range nonSensitiveEnvVars {
+		resp.Diagnostics.AddAttributeError(
+			p,
+			"Project Environment Variables Invalid",
+			"This team has a policy that forces all environment variables to be sensitive. Please remove the `sensitive` field for your environment variables or set the `sensitive` field to `true` in your configuration.",
+		)
+	}
 }
 
-func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client.CreateEnvironmentVariableRequest {
+func (e *ProjectEnvironmentVariables) toCreateEnvironmentVariableRequest() client.CreateEnvironmentVariableRequest {
 	target := []string{}
 	for _, t := range e.Target {
 		target = append(target, t.ValueString())
@@ -210,7 +250,7 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client
 	}
 }
 
-func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client.UpdateEnvironmentVariableRequest {
+func (e *ProjectEnvironmentVariables) toUpdateEnvironmentVariableRequest() client.UpdateEnvironmentVariableRequest {
 	target := []string{}
 	for _, t := range e.Target {
 		target = append(target, t.ValueString())
@@ -236,10 +276,10 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client
 	}
 }
 
-// convertResponseToProjectEnvironmentVariable is used to populate terraform state based on an API response.
+// convertResponseToProjectEnvironmentVariables is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
-func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVariable, projectID types.String, v types.String) ProjectEnvironmentVariable {
+func convertResponseToProjectEnvironmentVariables(response client.EnvironmentVariable, projectID types.String, v types.String) ProjectEnvironmentVariables {
 	target := []types.String{}
 	for _, t := range response.Target {
 		target = append(target, types.StringValue(t))
@@ -250,7 +290,7 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 		value = v
 	}
 
-	return ProjectEnvironmentVariable{
+	return ProjectEnvironmentVariables{
 		Target:    target,
 		GitBranch: types.StringPointerValue(response.GitBranch),
 		Key:       types.StringValue(response.Key),
@@ -265,8 +305,8 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 
 // Create will create a new project environment variable for a Vercel project.
 // This is called automatically by the provider when a new resource should be created.
-func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan ProjectEnvironmentVariable
+func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan ProjectEnvironmentVariables
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -291,7 +331,7 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
+	result := convertResponseToProjectEnvironmentVariables(response, plan.ProjectID, plan.Value)
 
 	tflog.Info(ctx, "created project environment variable", map[string]interface{}{
 		"id":         result.ID.ValueString(),
@@ -308,8 +348,8 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 
 // Read will read an environment variable of a Vercel project by requesting it from the Vercel API, and will update terraform
 // with this information.
-func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state ProjectEnvironmentVariable
+func (r *projectEnvironmentVariablesResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state ProjectEnvironmentVariables
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -334,7 +374,7 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, state.ProjectID, state.Value)
+	result := convertResponseToProjectEnvironmentVariables(out, state.ProjectID, state.Value)
 	tflog.Info(ctx, "read project environment variable", map[string]interface{}{
 		"id":         result.ID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
@@ -349,8 +389,8 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 }
 
 // Update updates the project environment variable of a Vercel project state.
-func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan ProjectEnvironmentVariable
+func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan ProjectEnvironmentVariables
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -366,7 +406,7 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
+	result := convertResponseToProjectEnvironmentVariables(response, plan.ProjectID, plan.Value)
 
 	tflog.Info(ctx, "updated project environment variable", map[string]interface{}{
 		"id":         result.ID.ValueString(),
@@ -382,8 +422,8 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 }
 
 // Delete deletes a Vercel project environment variable.
-func (r *projectEnvironmentVariableResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state ProjectEnvironmentVariable
+func (r *projectEnvironmentVariablesResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state ProjectEnvironmentVariables
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -411,43 +451,4 @@ func (r *projectEnvironmentVariableResource) Delete(ctx context.Context, req res
 		"team_id":    state.TeamID.ValueString(),
 		"project_id": state.ProjectID.ValueString(),
 	})
-}
-
-// ImportState takes an identifier and reads all the project environment variable information from the Vercel API.
-// The results are then stored in terraform state.
-func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, projectID, envID, ok := splitInto2Or3(req.ID)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Error importing project environment variable",
-			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id/env_id\" or \"project_id/env_id\"", req.ID),
-		)
-	}
-
-	out, err := r.client.GetEnvironmentVariable(ctx, projectID, teamID, envID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading project environment variable",
-			fmt.Sprintf("Could not get project environment variable %s %s %s, unexpected error: %s",
-				teamID,
-				projectID,
-				envID,
-				err,
-			),
-		)
-		return
-	}
-
-	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID), types.StringNull())
-	tflog.Info(ctx, "imported project environment variable", map[string]interface{}{
-		"team_id":    result.TeamID.ValueString(),
-		"project_id": result.ProjectID.ValueString(),
-		"env_id":     result.ID.ValueString(),
-	})
-
-	diags := resp.State.Set(ctx, result)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
