@@ -1753,7 +1753,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	if items != nil {
-		err = r.client.CreateEnvironmentVariables(
+		_, err = r.client.CreateEnvironmentVariables(
 			ctx,
 			client.CreateEnvironmentVariablesRequest{
 				ProjectID:            plan.ID.ValueString(),

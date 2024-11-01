@@ -6,8 +6,8 @@ description: |-
   Provides a Project Environment Variable resource.
   A Project Environment Variable resource defines an Environment Variable on a Vercel Project.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/environment-variables.
-  ~> Terraform currently provides both a standalone Project Environment Variable resource (a single Environment Variable), and a Project resource with Environment Variables defined in-line via the environment field.
-  At this time you cannot use a Vercel Project resource with in-line environment in conjunction with any vercel_project_environment_variable resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+  ~> Terraform currently provides this Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and a Project resource with Environment Variables defined in-line via the environment field.
+  At this time you cannot use a Vercel Project resource with in-line environment in conjunction with any vercel_project_environment_variables or vercel_project_environment_variable resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 ---
 
 # vercel_project_environment_variable (Resource)
@@ -18,8 +18,8 @@ A Project Environment Variable resource defines an Environment Variable on a Ver
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables).
 
-~> Terraform currently provides both a standalone Project Environment Variable resource (a single Environment Variable), and a Project resource with Environment Variables defined in-line via the `environment` field.
-At this time you cannot use a Vercel Project resource with in-line `environment` in conjunction with any `vercel_project_environment_variable` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+~> Terraform currently provides this Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and a Project resource with Environment Variables defined in-line via the `environment` field.
+At this time you cannot use a Vercel Project resource with in-line `environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 
 ## Example Usage
 
