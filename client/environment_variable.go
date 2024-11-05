@@ -46,11 +46,16 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		if err2 != nil {
 			return e, err2
 		}
-		id, err3 := c.findConflictingEnvID(ctx, request.TeamID, request.ProjectID, conflictingEnv)
-		if err3 != nil {
-			return e, fmt.Errorf("%w %s", err, err3)
+
+		envs, err3 := c.ListEnvironmentVariables(ctx, request.TeamID, request.ProjectID)
+		if err != nil {
+			return e, fmt.Errorf("%s: unable to list environment variables to detect conflict: %s", err, err3)
 		}
-		return e, fmt.Errorf("%w the conflicting environment variable ID is %s", err, id)
+
+		id, found := findConflictingEnvID(request.TeamID, request.ProjectID, conflictingEnv, envs)
+		if found {
+			return e, fmt.Errorf("%w the conflicting environment variable ID is %s", err, id)
+		}
 	}
 	if err != nil {
 		return e, err
@@ -89,22 +94,17 @@ func overlaps(s []string, e []string) bool {
 	return false
 }
 
-func (c *Client) findConflictingEnvID(ctx context.Context, teamID, projectID string, envConflict EnvConflictError) (string, error) {
-	envs, err := c.ListEnvironmentVariables(ctx, teamID, projectID)
-	if err != nil {
-		return "", fmt.Errorf("unable to list environment variables to detect conflict: %w", err)
-	}
-
+func findConflictingEnvID(teamID, projectID string, envConflict EnvConflictError, envs []EnvironmentVariable) (string, bool) {
 	for _, env := range envs {
 		if env.Key == envConflict.Key && overlaps(env.Target, envConflict.Target) && env.GitBranch == envConflict.GitBranch {
 			id := fmt.Sprintf("%s/%s", projectID, env.ID)
 			if teamID != "" {
 				id = fmt.Sprintf("%s/%s", teamID, id)
 			}
-			return id, nil
+			return id, true
 		}
 	}
-	return "", fmt.Errorf("conflicting environment variable not found")
+	return "", false
 }
 
 type CreateEnvironmentVariablesRequest struct {
@@ -113,7 +113,20 @@ type CreateEnvironmentVariablesRequest struct {
 	TeamID               string
 }
 
-func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateEnvironmentVariablesRequest) error {
+type CreateEnvironmentVariablesResponse struct {
+	Created []EnvironmentVariable `json:"created"`
+	Failed  []struct {
+		Error struct {
+			Code      string   `json:"code"`
+			Message   string   `json:"message"`
+			Key       string   `json:"envVarKey"`
+			GitBranch *string  `json:"gitBranch"`
+			Target    []string `json:"target"`
+		} `json:"error"`
+	} `json:"failed"`
+}
+
+func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateEnvironmentVariablesRequest) ([]EnvironmentVariable, error) {
 	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, request.ProjectID)
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
@@ -123,27 +136,41 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		"url":     url,
 		"payload": payload,
 	})
+
+	var response CreateEnvironmentVariablesResponse
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "POST",
 		url:    url,
 		body:   payload,
-	}, nil)
-	if conflictingEnv, isConflicting, err2 := conflictingEnvVar(err); isConflicting {
-		if err2 != nil {
-			return err2
-		}
-		id, err3 := c.findConflictingEnvID(ctx, request.TeamID, request.ProjectID, conflictingEnv)
-		if err3 != nil {
-			return fmt.Errorf("%w %s", err, err3)
-		}
-		return fmt.Errorf("%w the conflicting environment variable ID is %s", err, id)
-	}
+	}, &response)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return err
+	if len(response.Failed) > 0 {
+		envs, err := c.ListEnvironmentVariables(ctx, request.TeamID, request.ProjectID)
+		if err != nil {
+			return response.Created, fmt.Errorf("failed to create environment variables. error detecting conflicting environment variables: %w", err)
+		}
+		for _, failed := range response.Failed {
+			if failed.Error.Code == "ENV_CONFLICT" {
+				id, found := findConflictingEnvID(request.TeamID, request.ProjectID, EnvConflictError{
+					Key:       failed.Error.Key,
+					Target:    failed.Error.Target,
+					GitBranch: failed.Error.GitBranch,
+				}, envs)
+				if found {
+					err = fmt.Errorf("%w, conflicting environment variable ID is %s", err, id)
+				}
+			} else {
+				err = fmt.Errorf("failed to create environment variables, %s %s %s", failed.Error.Message, failed.Error.Key, failed.Error.Target)
+			}
+		}
+		return response.Created, err
+	}
+
+	return response.Created, err
 }
 
 // UpdateEnvironmentVariableRequest defines the information that needs to be passed to Vercel in order to

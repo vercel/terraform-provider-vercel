@@ -26,7 +26,7 @@ func testAccProjectEnvironmentVariableExists(n, teamID string) resource.TestChec
 	}
 }
 
-func testAccProjectEnvironmentVariablesDoNotExist(n, teamID string) resource.TestCheckFunc {
+func testAccProjectEnvironmentVariableDoNotExist(n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -50,7 +50,7 @@ func testAccProjectEnvironmentVariablesDoNotExist(n, teamID string) resource.Tes
 	}
 }
 
-func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
+func TestAcc_ProjectEnvironmentVariable(t *testing.T) {
 	nameSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -60,7 +60,7 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectEnvironmentVariablesConfig(nameSuffix),
+				Config: testAccProjectEnvironmentVariableConfig(nameSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "key", "foo"),
@@ -88,7 +88,7 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccProjectEnvironmentVariablesConfigUpdated(nameSuffix),
+				Config: testAccProjectEnvironmentVariableConfigUpdated(nameSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "key", "foo"),
@@ -123,9 +123,9 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example_git_branch"),
 			},
 			{
-				Config: testAccProjectEnvironmentVariablesConfigDeleted(nameSuffix),
+				Config: testAccProjectEnvironmentVariableConfigDeleted(nameSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectEnvironmentVariablesDoNotExist("vercel_project.example", testTeam()),
+					testAccProjectEnvironmentVariableDoNotExist("vercel_project.example", testTeam()),
 				),
 			},
 		},
@@ -150,7 +150,7 @@ func getProjectEnvironmentVariableImportID(n string) resource.ImportStateIdFunc 
 	}
 }
 
-func testAccProjectEnvironmentVariablesConfig(projectName string) string {
+func testAccProjectEnvironmentVariableConfig(projectName string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%[1]s"
@@ -200,7 +200,7 @@ resource "vercel_project_environment_variable" "example_not_sensitive" {
 `, projectName, testGithubRepo(), teamIDConfig())
 }
 
-func testAccProjectEnvironmentVariablesConfigUpdated(projectName string) string {
+func testAccProjectEnvironmentVariableConfigUpdated(projectName string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
     name = "test-acc-example-project-%[1]s"
@@ -241,7 +241,7 @@ resource "vercel_project_environment_variable" "example_sensitive" {
 `, projectName, testGithubRepo(), teamIDConfig())
 }
 
-func testAccProjectEnvironmentVariablesConfigDeleted(projectName string) string {
+func testAccProjectEnvironmentVariableConfigDeleted(projectName string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
     name = "test-acc-example-project-%[1]s"
