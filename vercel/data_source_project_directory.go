@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 	"github.com/vercel/terraform-provider-vercel/v2/file"
+	"github.com/vercel/vercel"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -25,6 +26,7 @@ func newProjectDirectoryDataSource() datasource.DataSource {
 
 type projectDirectoryDataSource struct {
 	client *client.Client
+	sdk    *vercel.Vercel
 }
 
 func (d *projectDirectoryDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -37,7 +39,7 @@ func (d *projectDirectoryDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.Client)
+	providerData, ok := req.ProviderData.(providerData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
@@ -46,7 +48,8 @@ func (d *projectDirectoryDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	d.client = client
+	d.client = providerData.client
+	d.sdk = providerData.sdk
 }
 
 // Schema returns the schema information for a project directory data source

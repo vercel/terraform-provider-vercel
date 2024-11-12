@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v2/client"
+	"github.com/vercel/vercel"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -22,6 +23,7 @@ func newAttackChallengeModeDataSource() datasource.DataSource {
 
 type attackChallengeModeDataSource struct {
 	client *client.Client
+	sdk    *vercel.Vercel
 }
 
 func (d *attackChallengeModeDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -34,7 +36,7 @@ func (d *attackChallengeModeDataSource) Configure(ctx context.Context, req datas
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.Client)
+	providerData, ok := req.ProviderData.(providerData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
@@ -43,7 +45,8 @@ func (d *attackChallengeModeDataSource) Configure(ctx context.Context, req datas
 		return
 	}
 
-	d.client = client
+	d.client = providerData.client
+	d.sdk = providerData.sdk
 }
 
 func (r *attackChallengeModeDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {

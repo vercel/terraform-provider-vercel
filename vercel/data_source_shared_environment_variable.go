@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v2/client"
+	"github.com/vercel/vercel"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -26,6 +27,7 @@ func newSharedEnvironmentVariableDataSource() datasource.DataSource {
 
 type sharedEnvironmentVariableDataSource struct {
 	client *client.Client
+	sdk    *vercel.Vercel
 }
 
 func (d *sharedEnvironmentVariableDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -71,7 +73,7 @@ func (d *sharedEnvironmentVariableDataSource) Configure(ctx context.Context, req
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.Client)
+	providerData, ok := req.ProviderData.(providerData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
@@ -80,7 +82,8 @@ func (d *sharedEnvironmentVariableDataSource) Configure(ctx context.Context, req
 		return
 	}
 
-	d.client = client
+	d.client = providerData.client
+	d.sdk = providerData.sdk
 }
 
 // Schema returns the schema information for a shared environment variable data source

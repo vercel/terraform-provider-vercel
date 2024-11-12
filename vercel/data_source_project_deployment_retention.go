@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v2/client"
+	"github.com/vercel/vercel"
 )
 
 var (
@@ -22,32 +23,34 @@ func newProjectDeploymentRetentionDataSource() datasource.DataSource {
 
 type projectDeploymentRetentionDataSource struct {
 	client *client.Client
+	sdk    *vercel.Vercel
 }
 
-func (r *projectDeploymentRetentionDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *projectDeploymentRetentionDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_project_deployment_retention"
 }
 
-func (r *projectDeploymentRetentionDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *projectDeploymentRetentionDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.Client)
+	providerData, ok := req.ProviderData.(providerData)
 	if !ok {
 		resp.Diagnostics.AddError(
-			"Unexpected DataSource Configure Type",
+			"Unexpected Data Source Configure Type",
 			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
 
-	r.client = client
+	d.client = providerData.client
+	d.sdk = providerData.sdk
 }
 
 // Schema returns the schema information for a project deployment retention datasource.
-func (r *projectDeploymentRetentionDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *projectDeploymentRetentionDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: `
 Provides a Project Deployment Retention datasource.
@@ -101,7 +104,7 @@ type ProjectDeploymentRetentionWithID struct {
 
 // Read will read an deployment retention of a Vercel project by requesting it from the Vercel API, and will update terraform
 // with this information.
-func (r *projectDeploymentRetentionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *projectDeploymentRetentionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config ProjectDeploymentRetentionWithID
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -109,7 +112,7 @@ func (r *projectDeploymentRetentionDataSource) Read(ctx context.Context, req dat
 		return
 	}
 
-	out, err := r.client.GetDeploymentRetention(ctx, config.ProjectID.ValueString(), config.TeamID.ValueString())
+	out, err := d.client.GetDeploymentRetention(ctx, config.ProjectID.ValueString(), config.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project deployment retention",

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v2/client"
+	"github.com/vercel/vercel"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -24,6 +25,7 @@ func newEdgeConfigSchemaDataSource() datasource.DataSource {
 
 type edgeConfigSchemaDataSource struct {
 	client *client.Client
+	sdk    *vercel.Vercel
 }
 
 func (d *edgeConfigSchemaDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -36,7 +38,7 @@ func (d *edgeConfigSchemaDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.Client)
+	providerData, ok := req.ProviderData.(providerData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
@@ -45,7 +47,8 @@ func (d *edgeConfigSchemaDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	d.client = client
+	d.client = providerData.client
+	d.sdk = providerData.sdk
 }
 
 // Schema returns the schema information for an edgeConfig data source

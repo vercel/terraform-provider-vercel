@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v2/client"
+	"github.com/vercel/vercel"
 )
 
 type vercelProvider struct{}
@@ -92,7 +93,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 	}
 }
 
-type providerData struct {
+type providerConfig struct {
 	APIToken types.String `tfsdk:"api_token"`
 	Team     types.String `tfsdk:"team"`
 }
@@ -101,10 +102,15 @@ type providerData struct {
 // token provided matches the expected format.
 var apiTokenRe = regexp.MustCompile("[0-9a-zA-Z]{24}")
 
+type providerData struct {
+	client *client.Client
+	sdk    *vercel.Vercel
+}
+
 // Configure takes a provider and applies any configuration. In the context of Vercel
 // this allows us to set up an API token.
 func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var config providerData
+	var config providerConfig
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -163,6 +169,16 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		vercelClient = vercelClient.WithTeam(res)
 	}
 
-	resp.DataSourceData = vercelClient
-	resp.ResourceData = vercelClient
+	vercelSDK := vercel.New(func(sdk *vercel.Vercel) {
+        sdk.
+    })
+
+	resp.DataSourceData = providerData{
+		client: vercelClient,
+		sdk:    vercelSDK,
+	}
+	resp.ResourceData = providerData{
+		client: vercelClient,
+		sdk:    vercelSDK,
+	}
 }
