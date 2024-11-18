@@ -31,7 +31,7 @@ resource "vercel_access_group" "test" {
   %[1]s
 }
 
-data "vercel_access_group" test" {
+data "vercel_access_group" "test" {
 	id = vercel_access_group.test.id
 	%[1]s
 }
