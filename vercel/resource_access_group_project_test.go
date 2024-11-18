@@ -45,7 +45,7 @@ func TestAcc_AccessGroupProjectResource(t *testing.T) {
 			{
 				Config: testAccResourceAccessGroupProjectDeleted(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccAccessGroupProjectDoesNotExist("vercel_access_project.test", "vercel_project.test"),
+					testAccAccessGroupProjectDoesNotExist("vercel_access_group.test", "vercel_project.test"),
 				),
 			},
 		},
