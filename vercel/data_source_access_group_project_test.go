@@ -31,19 +31,19 @@ resource "vercel_project" "test" {
   name = "test-acc-%[2]s"
 }
 
-resource "access_group" "test" {
+resource "vercel_access_group" "test" {
 	%[1]s
 	name = "test-acc-%[2]s"
 }
 
-resource "access_group_project" "test" {
+resource "vercel_access_group_project" "test" {
 	%[1]s
 	access_group_id = vercel_access_group.test.id
 	project_id = vercel_project.test.id
 	role = "ADMIN"
 }
 
-data "access_group_project" "test" {
+data "vercel_access_group_project" "test" {
   %[1]s
   access_group_id = vercel_access_group.test.id
 	project_id = vercel_project.test.id
