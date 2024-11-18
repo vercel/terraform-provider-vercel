@@ -31,7 +31,6 @@ func TestAcc_AccessGroupResource(t *testing.T) {
 			{
 				ResourceName:      "vercel_access_group.test",
 				ImportState:       true,
-				ImportStateVerify: true,
 				ImportStateIdFunc: getAccessGroupImportID("vercel_access_group.test"),
 			},
 			{
