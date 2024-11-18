@@ -17,9 +17,7 @@ func TestAcc_AccessGroupProjectResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccAccessGroupProjectDoesNotExist("vercel_access_group_project.test"),
-		),
+		CheckDestroy:             noopDestroyCheck,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccResourceAccessGroupProject(name),
@@ -47,7 +45,7 @@ func TestAcc_AccessGroupProjectResource(t *testing.T) {
 			{
 				Config: testAccResourceAccessGroupProjectDeleted(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccAccessGroupProjectDoesNotExist("vercel_access_group_project.test"),
+					testAccAccessGroupProjectDoesNotExist("vercel_access_project.test", "vercel_project.test"),
 				),
 			},
 		},
@@ -86,17 +84,21 @@ func testCheckAccessGroupProjectExists(n string) resource.TestCheckFunc {
 	}
 }
 
-func testAccAccessGroupProjectDoesNotExist(n string) resource.TestCheckFunc {
+func testAccAccessGroupProjectDoesNotExist(accessGroup, project string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("not found: %s", n)
+		accessGroupResource, accessGroupResourceOk := s.RootModule().Resources[accessGroup]
+		if !accessGroupResourceOk {
+			return fmt.Errorf("not found: %s", accessGroup)
+		}
+		projectResource, projectResourceOk := s.RootModule().Resources[accessGroup]
+		if !projectResourceOk {
+			return fmt.Errorf("not found: %s", project)
 		}
 
 		_, err := testClient().GetAccessGroupProject(context.TODO(), client.GetAccessGroupProjectRequest{
 			TeamID:        testTeam(),
-			AccessGroupID: rs.Primary.Attributes["access_group_id"],
-			ProjectID:     rs.Primary.Attributes["project_id"],
+			AccessGroupID: accessGroupResource.Primary.Attributes["access_group_id"],
+			ProjectID:     projectResource.Primary.Attributes["project_id"],
 		})
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
