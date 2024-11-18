@@ -29,7 +29,7 @@ type accessGroupResource struct {
 }
 
 func (r *accessGroupResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_log_drain"
+	resp.TypeName = req.ProviderTypeName + "_access_group"
 }
 
 func (r *accessGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
