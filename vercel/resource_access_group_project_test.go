@@ -125,7 +125,7 @@ resource "vercel_access_group" "test" {
 resource "vercel_access_group_project" "test" {
 	%[1]s
 	project_id = vercel_project.test.id
-	access_group_id = vercel.vercel_access_group.test.id
+	access_group_id = vercel_access_group.test.id
 	role = "ADMIN"
 }
 `, teamIDConfig(), name)
@@ -145,7 +145,7 @@ resource "vercel_access_group" "test" {
 resource "vercel_access_group_project" "test" {
 	%[1]s
 	project_id = vercel_project.test.id
-	access_group_id = vercel.vercel_access_group.test.id
+	access_group_id = vercel_access_group.test.id
 	role = "PROJECT_DEVELOPER"
 }
 `, teamIDConfig(), name)
