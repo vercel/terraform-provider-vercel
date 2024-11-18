@@ -3,12 +3,15 @@
 page_title: "vercel_access_group_project Data Source - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  Provides information about an existing Access Group Project.
+  Provides information about an existing Access Group Project Assignment.
+  For more detailed information, please see the Vercel documentation https://vercel.com/docs/accounts/team-members-and-roles/access-groups.
 ---
 
 # vercel_access_group_project (Data Source)
 
-Provides information about an existing Access Group Project.
+Provides information about an existing Access Group Project Assignment.
+
+For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/accounts/team-members-and-roles/access-groups).
 
 
 

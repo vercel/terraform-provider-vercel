@@ -3,12 +3,18 @@
 page_title: "vercel_access_group Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  hello world
+  Provides an Access Group Resource.
+  Access Groups provide a way to manage groups of Vercel users across projects on your team. They are a set of project role assignations, a combination of Vercel users and the projects they work on.
+  For more detailed information, please see the Vercel documentation https://vercel.com/docs/accounts/team-members-and-roles/access-groups.
 ---
 
 # vercel_access_group (Resource)
 
-hello world
+Provides an Access Group Resource.
+
+Access Groups provide a way to manage groups of Vercel users across projects on your team. They are a set of project role assignations, a combination of Vercel users and the projects they work on.
+
+For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/accounts/team-members-and-roles/access-groups).
 
 
 

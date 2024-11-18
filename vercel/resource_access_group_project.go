@@ -54,7 +54,13 @@ func (r *accessGroupProjectResource) Configure(ctx context.Context, req resource
 
 func (r *accessGroupProjectResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: `hello world`,
+		Description: `
+Provides an Access Group Project Resource.
+
+An Access Group Project resource defines the relationship between a ` + "`vercel_access_group` and a `vercel_project`." + `
+
+For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/accounts/team-members-and-roles/access-groups).
+`,
 		Attributes: map[string]schema.Attribute{
 			"access_group_id": schema.StringAttribute{
 				Description:   "The ID of the Access Group.",

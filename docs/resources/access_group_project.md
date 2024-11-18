@@ -3,12 +3,18 @@
 page_title: "vercel_access_group_project Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  hello world
+  Provides an Access Group Project Resource.
+  An Access Group Project resource defines the relationship between a vercel_access_group and a vercel_project.
+  For more detailed information, please see the Vercel documentation https://vercel.com/docs/accounts/team-members-and-roles/access-groups.
 ---
 
 # vercel_access_group_project (Resource)
 
-hello world
+Provides an Access Group Project Resource.
+
+An Access Group Project resource defines the relationship between a `vercel_access_group` and a `vercel_project`.
+
+For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/accounts/team-members-and-roles/access-groups).
 
 
 

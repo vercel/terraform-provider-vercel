@@ -49,7 +49,11 @@ func (d *accessGroupDataSource) Configure(ctx context.Context, req datasource.Co
 
 func (r *accessGroupDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: `Provides information about an existing Access Group.`,
+		Description: `
+Provides information about an existing Access Group.
+
+For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/accounts/team-members-and-roles/access-groups).
+`,
 		Attributes: map[string]schema.Attribute{
 			"team_id": schema.StringAttribute{
 				Optional:    true,

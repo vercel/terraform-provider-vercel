@@ -4,11 +4,14 @@ page_title: "vercel_access_group Data Source - terraform-provider-vercel"
 subcategory: ""
 description: |-
   Provides information about an existing Access Group.
+  For more detailed information, please see the Vercel documentation https://vercel.com/docs/accounts/team-members-and-roles/access-groups.
 ---
 
 # vercel_access_group (Data Source)
 
 Provides information about an existing Access Group.
+
+For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/accounts/team-members-and-roles/access-groups).
 
 
 
