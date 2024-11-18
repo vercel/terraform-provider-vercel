@@ -17,7 +17,7 @@ func TestAcc_AccessGroupProjectDataSource(t *testing.T) {
 			{
 				Config: testAccAccessGroupProjectDataSource(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.access_group_project.test", "role", "ADMIN"),
+					resource.TestCheckResourceAttr("data.vercel_access_group_project.test", "role", "ADMIN"),
 				),
 			},
 		},
