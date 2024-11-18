@@ -135,6 +135,7 @@ func testAccResourceAccessGroupProjectUpdated(name string) string {
 resource "vercel_project" "test" {
   %[1]s
   name = "test-acc-%[2]s"
+}
 
 resource "vercel_access_group" "test" {
 	%[1]s
