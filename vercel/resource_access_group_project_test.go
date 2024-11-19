@@ -17,7 +17,7 @@ func TestAcc_AccessGroupProjectResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             noopDestroyCheck,
+		CheckDestroy:             testAccAccessGroupProjectDoesNotExist("vercel_access_group_project.test"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccResourceAccessGroupProject(name),
@@ -40,12 +40,6 @@ func TestAcc_AccessGroupProjectResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_access_group_project.test", "project_id"),
 					resource.TestCheckResourceAttrSet("vercel_access_group_project.test", "access_group_id"),
 					resource.TestCheckResourceAttr("vercel_access_group_project.test", "role", "PROJECT_DEVELOPER"),
-				),
-			},
-			{
-				Config: testAccResourceAccessGroupProjectDeleted(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccAccessGroupProjectDoesNotExist("vercel_access_group.test", "vercel_project.test"),
 				),
 			},
 		},
@@ -84,21 +78,17 @@ func testCheckAccessGroupProjectExists(n string) resource.TestCheckFunc {
 	}
 }
 
-func testAccAccessGroupProjectDoesNotExist(accessGroup, project string) resource.TestCheckFunc {
+func testAccAccessGroupProjectDoesNotExist(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		accessGroupResource, accessGroupResourceOk := s.RootModule().Resources[accessGroup]
-		if !accessGroupResourceOk {
-			return fmt.Errorf("not found: %s", accessGroup)
-		}
-		projectResource, projectResourceOk := s.RootModule().Resources[accessGroup]
-		if !projectResourceOk {
-			return fmt.Errorf("not found: %s", project)
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		_, err := testClient().GetAccessGroupProject(context.TODO(), client.GetAccessGroupProjectRequest{
 			TeamID:        testTeam(),
-			AccessGroupID: accessGroupResource.Primary.Attributes["access_group_id"],
-			ProjectID:     projectResource.Primary.Attributes["project_id"],
+			AccessGroupID: rs.Primary.Attributes["access_group_id"],
+			ProjectID:     rs.Primary.Attributes["project_id"],
 		})
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
@@ -149,20 +139,6 @@ resource "vercel_access_group_project" "test" {
 	project_id = vercel_project.test.id
 	access_group_id = vercel_access_group.test.id
 	role = "PROJECT_DEVELOPER"
-}
-`, teamIDConfig(), name)
-}
-
-func testAccResourceAccessGroupProjectDeleted(name string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  %[1]s
-  name = "%[2]s"
-}
-
-resource "vercel_access_group" "test" {
-	%[1]s
-	name = "%[2]s"
 }
 `, teamIDConfig(), name)
 }
