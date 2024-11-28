@@ -19,13 +19,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 ## Example Usage
 
 ```terraform
-data "vercel_project" "foo" {
+data "vercel_project" "example" {
   name = "my-existing-project"
-}
-
-# Outputs prj_xxxxxx
-output "project_id" {
-  value = data.vercel_project.foo.id
 }
 ```
 

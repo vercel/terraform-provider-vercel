@@ -111,7 +111,6 @@ func (c *Client) _doRequest(req *http.Request, v interface{}, errorOnNoContent b
 
 	defer resp.Body.Close()
 	responseBody, err := io.ReadAll(resp.Body)
-
 	if err != nil {
 		return fmt.Errorf("error reading response body: %w", err)
 	}

@@ -50,12 +50,14 @@ Use the navigation to the left to read about the available resources.
 
 func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		newAccessGroupProjectResource,
+		newAccessGroupResource,
 		newAliasResource,
 		newAttackChallengeModeResource,
 		newDNSRecordResource,
 		newDeploymentResource,
-		newEdgeConfigResource,
 		newEdgeConfigItemResource,
+		newEdgeConfigResource,
 		newEdgeConfigSchemaResource,
 		newEdgeConfigTokenResource,
 		newFirewallConfigResource,
@@ -67,14 +69,15 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newProjectResource,
 		newSharedEnvironmentVariableResource,
 		newTeamConfigResource,
+		newTeamMemberResource,
 		newWebhookResource,
-		newAccessGroupResource,
-		newAccessGroupProjectResource,
 	}
 }
 
 func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		newAccessGroupDataSource,
+		newAccessGroupProjectDataSource,
 		newAliasDataSource,
 		newAttackChallengeModeDataSource,
 		newDeploymentDataSource,
@@ -91,8 +94,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newProjectDirectoryDataSource,
 		newSharedEnvironmentVariableDataSource,
 		newTeamConfigDataSource,
-		newAccessGroupDataSource,
-		newAccessGroupProjectDataSource,
+		newTeamMemberDataSource,
 	}
 }
 

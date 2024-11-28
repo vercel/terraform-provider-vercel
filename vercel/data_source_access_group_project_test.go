@@ -46,10 +46,10 @@ resource "vercel_access_group_project" "test" {
 data "vercel_access_group_project" "test" {
   %[1]s
   access_group_id = vercel_access_group.test.id
-	project_id = vercel_project.test.id
-	depends_on = [
-		vercel_access_group_project.test
-	]
+  project_id = vercel_project.test.id
+  depends_on = [
+      vercel_access_group_project.test
+  ]
 }
 `, teamIDConfig(), name)
 }
