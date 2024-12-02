@@ -27,6 +27,7 @@ func testAccPreCheck(t *testing.T) {
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_GITLAB_REPO")
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO")
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_DOMAIN")
+	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
 }
 
 var tc *client.Client
@@ -64,4 +65,8 @@ func teamIDConfig() string {
 
 func testDomain() string {
 	return os.Getenv("VERCEL_TERRAFORM_TESTING_DOMAIN")
+}
+
+func testAdditionalUser() string {
+	return os.Getenv("VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
 }

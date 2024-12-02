@@ -112,7 +112,7 @@ func testCheckAccessGroupDoesNotExist(n string) resource.TestCheckFunc {
 func testAccResourceAccessGroup(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
-	%[1]s
+  %[1]s
   name = "test-acc-%[2]s"
 }
 `, teamIDConfig(), name)
