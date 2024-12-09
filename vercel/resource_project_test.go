@@ -260,7 +260,7 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "options_allowlist.paths.#", "1"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "options_allowlist.paths.0.value", "/foo"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation", "true"),
-					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
+					resource.TestCheckResourceAttrSet("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret"),
 					testAccProjectExists("vercel_project.disabled_to_start", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "vercel_authentication.deployment_type", "standard_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "password_protection"),
@@ -322,6 +322,48 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "options_allowlist.paths.#", "1"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "options_allowlist.paths.0.value", "/bar"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation_secret"),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_ProjectWithAutomationBypass(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.enabled_to_start", testTeam()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectConfigAutomationBypass(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists("vercel_project.disabled_to_enabled_generated_secret", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_enabled_generated_secret", "protection_bypass_for_automation", "false"),
+					testAccProjectExists("vercel_project.disabled_to_enabled_custom_secret", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_enabled_custom_secret", "protection_bypass_for_automation", "false"),
+					testAccProjectExists("vercel_project.enabled_generated_secret_to_enabled_custom_secret", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project.enabled_generated_secret_to_enabled_custom_secret", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project.enabled_generated_secret_to_enabled_custom_secret", "protection_bypass_for_automation_secret"),
+					testAccProjectExists("vercel_project.enabled_generated_secret_to_disabled", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project.enabled_generated_secret_to_disabled", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project.enabled_generated_secret_to_disabled", "protection_bypass_for_automation_secret"),
+					testAccProjectExists("vercel_project.enabled_custom_secret_to_disabled", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_disabled", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_disabled", "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
+				),
+			},
+			{
+				Config: testAccProjectConfigAutomationBypassUpdate(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_enabled_generated_secret", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project.disabled_to_enabled_generated_secret", "protection_bypass_for_automation_secret"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_enabled_custom_secret", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_enabled_custom_secret", "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_generated_secret_to_enabled_custom_secret", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_generated_secret_to_enabled_custom_secret", "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_generated_secret_to_disabled", "protection_bypass_for_automation", "false"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_disabled", "protection_bypass_for_automation", "false"),
 				),
 			},
 		},
@@ -516,7 +558,6 @@ resource "vercel_project" "enabled_to_start" {
     ]
   }
   protection_bypass_for_automation = true
-  protection_bypass_for_automation_secret = "12345678912345678912345678912345"
 }
 
 resource "vercel_project" "disabled_to_start" {
@@ -622,6 +663,75 @@ resource "vercel_project" "enabled_to_update" {
       }
     ]
   }
+  protection_bypass_for_automation = false
+}
+    `, projectSuffix, teamID)
+}
+
+func testAccProjectConfigAutomationBypass(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "disabled_to_enabled_generated_secret" {
+  name = "test-acc-protection-one-%[1]s"
+  %[2]s
+}
+
+resource "vercel_project" "disabled_to_enabled_custom_secret" {
+  name = "test-acc-protection-two-%[1]s"
+  %[2]s
+}
+
+resource "vercel_project" "enabled_generated_secret_to_enabled_custom_secret" {
+  name = "test-acc-protection-three-%[1]s"
+  %[2]s
+  protection_bypass_for_automation = true
+}
+
+resource "vercel_project" "enabled_generated_secret_to_disabled" {
+  name = "test-acc-protection-three-%[1]s"
+  %[2]s
+  protection_bypass_for_automation = true
+}
+
+resource "vercel_project" "enabled_custom_secret_to_disabled" {
+  name = "test-acc-protection-three-%[1]s"
+  %[2]s
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secret = "12345678912345678912345678912345"
+}
+    `, projectSuffix, teamID)
+}
+
+func testAccProjectConfigAutomationBypassUpdate(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "disabled_to_enabled_generated_secret" {
+  name = "test-acc-protection-one-%[1]s"
+  %[2]s
+  protection_bypass_for_automation = true
+}
+
+resource "vercel_project" "disabled_to_enabled_custom_secret" {
+  name = "test-acc-protection-two-%[1]s"
+  %[2]s
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secret = "12345678912345678912345678912345"
+}
+
+resource "vercel_project" "enabled_generated_secret_to_enabled_custom_secret" {
+  name = "test-acc-protection-three-%[1]s"
+  %[2]s
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secret = "12345678912345678912345678912345"
+}
+
+resource "vercel_project" "enabled_generated_secret_to_disabled" {
+  name = "test-acc-protection-three-%[1]s"
+  %[2]s
+  protection_bypass_for_automation = false
+}
+
+resource "vercel_project" "enabled_custom_secret_to_disabled" {
+  name = "test-acc-protection-three-%[1]s"
+  %[2]s
   protection_bypass_for_automation = false
 }
     `, projectSuffix, teamID)
