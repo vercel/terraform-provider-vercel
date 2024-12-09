@@ -435,11 +435,6 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		}
 	}
 
-	var protectionBypassForAutomationSecret = types.StringNull()
-	if project.ProtectionBypassForAutomation.ValueBool() {
-		protectionBypassForAutomationSecret = types.StringValue(project.ProtectionBypassForAutomationSecret.ValueString())
-	}
-
 	return ProjectDataSource{
 		BuildCommand:                        project.BuildCommand,
 		DevCommand:                          project.DevCommand,
@@ -462,7 +457,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		OptionsAllowlist:                    project.OptionsAllowlist,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
 		ProtectionBypassForAutomation:       project.ProtectionBypassForAutomation,
-		ProtectionBypassForAutomationSecret: protectionBypassForAutomationSecret,
+		ProtectionBypassForAutomationSecret: project.ProtectionBypassForAutomationSecret,
 		GitComments:                         project.GitComments,
 		PreviewComments:                     project.PreviewComments,
 		AutoAssignCustomDomains:             project.AutoAssignCustomDomains,
