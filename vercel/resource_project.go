@@ -387,11 +387,20 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			},
 			"protection_bypass_for_automation": schema.BoolAttribute{
 				Optional:    true,
-				Description: "Allow automation services to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `password_protection_for_automation_secret` field.",
+				Description: "Allow automation services to bypass Deployment Protection for both Preview and Production Deployments on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `password_protection_for_automation_secret` field.",
 			},
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
 				Computed:    true,
-				Description: "If `protection_bypass_for_automation` is enabled, use this value in the `x-vercel-protection-bypass` header to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments.",
+				Optional:    true,
+				Sensitive:   true,
+				Description: "If `protection_bypass_for_automation` is enabled, use this value in the `x-vercel-protection-bypass` header to bypass Deployment Protection for both Preview and Production Deployments.",
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),
+						"Specify `generate` to have the value generated automatically, or specify a 32 character secret.",
+					),
+					validateAutomationBypassSecret(),
+				},
 			},
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
 				Optional:      true,
@@ -1499,6 +1508,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			ProjectID: result.ID.ValueString(),
 			TeamID:    result.TeamID.ValueString(),
 			NewValue:  true,
+			Secret:    plan.ProtectionBypassForAutomationSecret.ValueString(),
 		})
 		if err != nil {
 			resp.Diagnostics.AddError(
@@ -1778,11 +1788,15 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	if state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation {
+		secret := state.ProtectionBypassForAutomationSecret.String()
+		if !plan.ProtectionBypassForAutomationSecret.IsNull() {
+			secret = plan.ProtectionBypassForAutomationSecret.ValueString()
+		}
 		_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
 			ProjectID: plan.ID.ValueString(),
 			TeamID:    plan.TeamID.ValueString(),
 			NewValue:  plan.ProtectionBypassForAutomation.ValueBool(),
-			Secret:    state.ProtectionBypassForAutomationSecret.ValueString(),
+			Secret:    secret,
 		})
 		if err != nil {
 			resp.Diagnostics.AddError(

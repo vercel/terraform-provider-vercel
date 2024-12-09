@@ -260,7 +260,7 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "options_allowlist.paths.#", "1"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "options_allowlist.paths.0.value", "/foo"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation", "true"),
-					resource.TestCheckResourceAttrSet("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
 					testAccProjectExists("vercel_project.disabled_to_start", testTeam()),
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "vercel_authentication.deployment_type", "standard_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "password_protection"),
@@ -516,6 +516,7 @@ resource "vercel_project" "enabled_to_start" {
     ]
   }
   protection_bypass_for_automation = true
+  protection_bypass_for_automation_secret = "12345678912345678912345678912345"
 }
 
 resource "vercel_project" "disabled_to_start" {
