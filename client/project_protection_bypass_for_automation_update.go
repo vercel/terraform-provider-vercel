@@ -19,9 +19,22 @@ type revokeBypassProtectionRequest struct {
 	Secret     string `json:"secret"`
 }
 
+type generateBypassProtectionRequest struct {
+	Secret string `json:"secret"`
+}
+
 func getUpdateBypassProtectionRequestBody(newValue bool, secret string) string {
 	if newValue {
-		return "{}"
+		if secret == "" {
+			return "{}"
+		}
+		return string(mustMarshal(struct {
+			Revoke generateBypassProtectionRequest `json:"generate"`
+		}{
+			Revoke: generateBypassProtectionRequest{
+				Secret: secret,
+			},
+		}))
 	}
 
 	return string(mustMarshal(struct {
