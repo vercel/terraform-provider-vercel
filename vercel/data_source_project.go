@@ -279,12 +279,12 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"protection_bypass_for_automation": schema.BoolAttribute{
 				Computed:    true,
-				Description: "Allows automation services to bypass Deployment Protection for both Preview and Production Deployments on this project when using an HTTP header named `x-vercel-protection-bypass`.",
+				Description: "Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with the value from `protection_bypass_for_automation_secret`.",
 			},
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
 				Sensitive:   true,
 				Computed:    true,
-				Description: "If `protection_bypass_for_automation` is enabled, use this value in the `x-vercel-protection-bypass` header to bypass Deployment Protection for both Preview and Production Deployments.",
+				Description: "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),

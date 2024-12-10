@@ -387,13 +387,13 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			},
 			"protection_bypass_for_automation": schema.BoolAttribute{
 				Optional:    true,
-				Description: "Allow automation services to bypass Deployment Protection for both Preview and Production Deployments on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `password_protection_for_automation_secret` field.",
+				Description: "Allow automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `protection_bypass_for_automation_secret` field.",
 			},
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
 				Computed:    true,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "If `protection_bypass_for_automation` is enabled, use this value in the `x-vercel-protection-bypass` header to bypass Deployment Protection for both Preview and Production Deployments.",
+				Description: "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),
