@@ -1791,7 +1791,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	if state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation {
-		secret := state.ProtectionBypassForAutomationSecret.String()
+		secret := state.ProtectionBypassForAutomationSecret.ValueString()
 		if plan.ProtectionBypassForAutomationSecret.ValueString() != "" {
 			secret = plan.ProtectionBypassForAutomationSecret.ValueString()
 		}

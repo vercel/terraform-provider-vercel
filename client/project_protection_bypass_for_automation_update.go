@@ -70,7 +70,7 @@ func (c *Client) UpdateProtectionBypassForAutomation(ctx context.Context, reques
 	}, &response)
 
 	if err != nil {
-		return s, fmt.Errorf("unable to add protection bypass for automation: %w", err)
+		return s, fmt.Errorf("unable to update protection bypass for automation: %w", err)
 	}
 
 	if !request.NewValue {
