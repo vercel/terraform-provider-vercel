@@ -19,9 +19,22 @@ type revokeBypassProtectionRequest struct {
 	Secret     string `json:"secret"`
 }
 
+type generateBypassProtectionRequest struct {
+	Secret string `json:"secret"`
+}
+
 func getUpdateBypassProtectionRequestBody(newValue bool, secret string) string {
 	if newValue {
-		return "{}"
+		if secret == "" {
+			return "{}"
+		}
+		return string(mustMarshal(struct {
+			Revoke generateBypassProtectionRequest `json:"generate"`
+		}{
+			Revoke: generateBypassProtectionRequest{
+				Secret: secret,
+			},
+		}))
 	}
 
 	return string(mustMarshal(struct {
@@ -57,7 +70,7 @@ func (c *Client) UpdateProtectionBypassForAutomation(ctx context.Context, reques
 	}, &response)
 
 	if err != nil {
-		return s, fmt.Errorf("unable to add protection bypass for automation: %w", err)
+		return s, fmt.Errorf("unable to update protection bypass for automation: %w", err)
 	}
 
 	if !request.NewValue {

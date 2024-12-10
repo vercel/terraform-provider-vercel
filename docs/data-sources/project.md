@@ -59,7 +59,8 @@ data "vercel_project" "example" {
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
 - `preview_comments` (Boolean) Whether comments are enabled on your Preview Deployments.
 - `prioritise_production_builds` (Boolean) If enabled, builds for the Production environment will be prioritized over Preview environments.
-- `protection_bypass_for_automation` (Boolean) Allows automation services to bypass Vercel Authentication and Password Protection for both Preview and Production Deployments on this project when using an HTTP header named `x-vercel-protection-bypass`.
+- `protection_bypass_for_automation` (Boolean) Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with the value from `protection_bypass_for_automation_secret`.
+- `protection_bypass_for_automation_secret` (String, Sensitive) If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.
 - `public_source` (Boolean) Specifies whether the source code and logs of the deployments for this project should be public or not.
 - `resource_config` (Attributes) Resource Configuration for the project. (see [below for nested schema](#nestedatt--resource_config))
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.
