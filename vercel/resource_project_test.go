@@ -339,7 +339,7 @@ func TestAcc_ProjectWithAutomationBypass(t *testing.T) {
 				Config: testAccProjectConfigAutomationBypass(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists("vercel_project.disabled_to_enabled_generated_secret", testTeam()),
-					resource.TestCheckResourceAttr("vercel_project.disabled_to_enabled_generated_secret", "protection_bypass_for_automation", "false"),
+					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_enabled_generated_secret", "protection_bypass_for_automation"),
 					testAccProjectExists("vercel_project.disabled_to_enabled_custom_secret", testTeam()),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_enabled_custom_secret", "protection_bypass_for_automation"),
 					testAccProjectExists("vercel_project.enabled_generated_secret_to_enabled_custom_secret", testTeam()),
