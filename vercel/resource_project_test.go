@@ -671,29 +671,29 @@ resource "vercel_project" "enabled_to_update" {
 func testAccProjectConfigAutomationBypass(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "disabled_to_enabled_generated_secret" {
-  name = "test-acc-protection-one-%[1]s"
+  name = "test-acc-automation-bypass-one-%[1]s"
   %[2]s
 }
 
 resource "vercel_project" "disabled_to_enabled_custom_secret" {
-  name = "test-acc-protection-two-%[1]s"
+  name = "test-acc-automation-bypass-two-%[1]s"
   %[2]s
 }
 
 resource "vercel_project" "enabled_generated_secret_to_enabled_custom_secret" {
-  name = "test-acc-protection-three-%[1]s"
+  name = "test-acc-automation-bypass-three-%[1]s"
   %[2]s
   protection_bypass_for_automation = true
 }
 
 resource "vercel_project" "enabled_generated_secret_to_disabled" {
-  name = "test-acc-protection-three-%[1]s"
+  name = "test-acc-automation-bypass-four-%[1]s"
   %[2]s
   protection_bypass_for_automation = true
 }
 
 resource "vercel_project" "enabled_custom_secret_to_disabled" {
-  name = "test-acc-protection-three-%[1]s"
+  name = "test-acc-automation-bypass-five-%[1]s"
   %[2]s
   protection_bypass_for_automation = true
   protection_bypass_for_automation_secret = "12345678912345678912345678912345"
@@ -704,33 +704,33 @@ resource "vercel_project" "enabled_custom_secret_to_disabled" {
 func testAccProjectConfigAutomationBypassUpdate(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "disabled_to_enabled_generated_secret" {
-  name = "test-acc-protection-one-%[1]s"
+  name = "test-acc-automation-bypass-one-%[1]s"
   %[2]s
   protection_bypass_for_automation = true
 }
 
 resource "vercel_project" "disabled_to_enabled_custom_secret" {
-  name = "test-acc-protection-two-%[1]s"
+  name = "test-acc-automation-bypass-two-%[1]s"
   %[2]s
   protection_bypass_for_automation = true
   protection_bypass_for_automation_secret = "12345678912345678912345678912345"
 }
 
 resource "vercel_project" "enabled_generated_secret_to_enabled_custom_secret" {
-  name = "test-acc-protection-three-%[1]s"
+  name = "test-acc-automation-bypass-three-%[1]s"
   %[2]s
   protection_bypass_for_automation = true
   protection_bypass_for_automation_secret = "12345678912345678912345678912345"
 }
 
 resource "vercel_project" "enabled_generated_secret_to_disabled" {
-  name = "test-acc-protection-three-%[1]s"
+  name = "test-acc-automation-bypass-four-%[1]s"
   %[2]s
   protection_bypass_for_automation = false
 }
 
 resource "vercel_project" "enabled_custom_secret_to_disabled" {
-  name = "test-acc-protection-three-%[1]s"
+  name = "test-acc-automation-bypass-five-%[1]s"
   %[2]s
   protection_bypass_for_automation = false
 }
