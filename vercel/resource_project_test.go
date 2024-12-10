@@ -333,7 +333,7 @@ func TestAcc_ProjectWithAutomationBypass(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.enabled_to_start", testTeam()),
+		CheckDestroy:             testAccProjectDestroy("vercel_project.disabled_to_enabled_generated_secret", testTeam()),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProjectConfigAutomationBypass(projectSuffix, teamIDConfig()),
