@@ -104,6 +104,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "A description of the team.",
 			},
 			"sensitive_environment_variable_policy": schema.StringAttribute{
+				Description:   "Ensures that all environment variables created by members of this team will be created as Sensitive Environment Variables which can only be decrypted by Vercel's deployment system.: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -177,6 +178,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				},
 			},
 			"enable_preview_feedback": schema.StringAttribute{
+				Description:   "Enables the Vercel Toolbar on your preview deployments: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -185,6 +187,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				},
 			},
 			"enable_production_feedback": schema.StringAttribute{
+				Description:   "Enables the Vercel Toolbar on your production deployments: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
