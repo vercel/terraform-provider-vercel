@@ -8,9 +8,6 @@ on:
       - main
     paths-ignore:
       - "README.md"
-  # TODO - periodically run on a cron to detect API drift.
-  # schedule:
-  #   - cron: '0 13 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,6 +18,8 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.result }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,6 +39,20 @@ jobs:
         run: task build
       - name: Format
         run: task lint
+      - uses: actions/github-script@v7
+        id: set-matrix
+        with:
+          script: |
+            return {
+              m: context.eventName === 'push' ? [
+                { os: "ubuntu-latest", terraform: "1.10.*" },
+                { os: "ubuntu-latest", terraform: "1.4.*" },
+                { os: "windows-latest", terraform: "1.10.*" }
+              ] : [
+                { os: "ubuntu-latest", terraform: "1.10.*" }
+              ]
+            };
+          result-encoding: json
 
   docs:
     name: Docs Test
@@ -72,11 +85,7 @@ jobs:
     strategy:
       max-parallel: 1
       fail-fast: false
-      matrix:
-        m:
-          - { os: "ubuntu-latest", terraform: "1.9.*" }
-          - { os: "ubuntu-latest", terraform: "1.4.*" }
-          - { os: "windows-latest", terraform: "1.9.*" }
+      matrix: ${{ fromJson(needs.build.outputs.matrix) }}
     runs-on: ${{ matrix.m.os }}
     steps:
       - name: Checkout code
