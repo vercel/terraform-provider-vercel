@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -93,6 +94,10 @@ func testCheckAccessGroupDoesNotExist(n string) resource.TestCheckFunc {
 		if rs.Primary.ID == "" {
 			return fmt.Errorf("no ID is set")
 		}
+
+		// The access group is deleted asynchronously, so it's eventually consistent. Work around this by sleepin a
+		// small amount of time.
+		time.Sleep(time.Second * 2)
 
 		_, err := testClient().GetAccessGroup(context.TODO(), client.GetAccessGroupRequest{
 			TeamID:        testTeam(),
