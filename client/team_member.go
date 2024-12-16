@@ -127,7 +127,7 @@ func (c *Client) GetTeamMember(ctx context.Context, request GetTeamMemberRequest
 	}
 
 	// Now look up the projects for the member, but only if we need to.
-	if !response.Members[0].Confirmed {
+	if !response.Members[0].Confirmed || (response.Members[0].Role != "DEVELOPER" && response.Members[0].Role != "CONTRIBUTOR") {
 		return response.Members[0], nil
 	}
 	url = fmt.Sprintf("%s/v1/teams/%s/members/%s/projects?limit=100", c.baseURL, request.TeamID, request.UserID)
