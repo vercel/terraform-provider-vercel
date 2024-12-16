@@ -1217,28 +1217,15 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 			}
 		}
 
-		env = append(env, types.ObjectValueMust(
-			map[string]attr.Type{
-				"key":   types.StringType,
-				"value": types.StringType,
-				"target": types.SetType{
-					ElemType: types.StringType,
-				},
-				"git_branch": types.StringType,
-				"id":         types.StringType,
-				"sensitive":  types.BoolType,
-				"comment":    types.StringType,
-			},
-			map[string]attr.Value{
-				"key":        types.StringValue(e.Key),
-				"value":      value,
-				"target":     types.SetValueMust(types.StringType, target),
-				"git_branch": types.StringPointerValue(e.GitBranch),
-				"id":         types.StringValue(e.ID),
-				"sensitive":  types.BoolValue(e.Type == "sensitive"),
-				"comment":    types.StringValue(e.Comment),
-			},
-		))
+		env = append(env, types.ObjectValueMust(envVariableElemType.AttrTypes, map[string]attr.Value{
+			"key":        types.StringValue(e.Key),
+			"value":      value,
+			"target":     types.SetValueMust(types.StringType, target),
+			"git_branch": types.StringPointerValue(e.GitBranch),
+			"id":         types.StringValue(e.ID),
+			"sensitive":  types.BoolValue(e.Type == "sensitive"),
+			"comment":    types.StringValue(e.Comment),
+		}))
 	}
 
 	protectionBypassSecret := types.StringNull()
