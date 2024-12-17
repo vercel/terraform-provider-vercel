@@ -124,10 +124,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"target": schema.SetAttribute{
-							Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
+							Description: "The environments that the Environment Variable should be present on. Valid targets are `production`, `preview`, `development`, or the name of a `vercel_custom_enviroment`.",
 							ElementType: types.StringType,
 							Validators: []validator.Set{
-								setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
 								setvalidator.SizeAtLeast(1),
 							},
 							Required: true,

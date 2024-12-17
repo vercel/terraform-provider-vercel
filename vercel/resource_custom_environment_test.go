@@ -50,17 +50,23 @@ func TestAcc_CustomEnvironmentResource(t *testing.T) {
 					testCheckCustomEnvironmentExists("vercel_custom_environment.test"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "project_id"),
-					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "name"),
+					resource.TestCheckResourceAttr("vercel_custom_environment.test", "name", "test-acc"),
 					resource.TestCheckNoResourceAttr("vercel_custom_environment.test", "branch_tracking"),
 					resource.TestCheckResourceAttr("vercel_custom_environment.test", "description", "without branch tracking"),
 
 					testCheckCustomEnvironmentExists("vercel_custom_environment.test_bt"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test_bt", "id"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test_bt", "project_id"),
-					resource.TestCheckResourceAttrSet("vercel_custom_environment.test_bt", "name"),
+					resource.TestCheckResourceAttr("vercel_custom_environment.test_bt", "name", "test-acc-bt"),
 					resource.TestCheckResourceAttr("vercel_custom_environment.test_bt", "branch_tracking.type", "startsWith"),
 					resource.TestCheckResourceAttr("vercel_custom_environment.test_bt", "branch_tracking.pattern", "staging-"),
 					resource.TestCheckResourceAttr("vercel_custom_environment.test_bt", "description", "with branch tracking"),
+
+					// check project env var
+					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.test", "target.*", "test-acc"),
+
+					// check shared env var
+					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.test", "target.*", "test-acc"),
 				),
 			},
 			{
@@ -110,14 +116,32 @@ resource "vercel_project" "test" {
 resource "vercel_custom_environment" "test" {
   project_id = vercel_project.test.id
   %[2]s
-  name = "test-acc-%[1]s"
+  name = "test-acc"
   description = "without branch tracking"
+}
+
+// Ensure project_environment_variable works
+resource "vercel_project_environment_variable" "test" {
+    project_id = vercel_project.test.id
+    %[2]s
+    key = "foo"
+    value = "test-acc-env-var"
+    target = [vercel_custom_environment.test.name]
+}
+
+// Ensurer shared_environment_variable works
+resource "vercel_shared_environment_variable" "test" {
+    project_ids = [vercel_project.test.id]
+    %[2]s
+    key = "bar"
+    value = "test-acc-shared-env-var"
+    target = [vercel_custom_environment.test.name]
 }
 
 resource "vercel_custom_environment" "test_bt" {
   project_id = vercel_project.test.id
   %[2]s
-  name = "test-acc-bt-%[1]s"
+  name = "test-acc-bt"
   description = "with branch tracking"
   branch_tracking = {
     pattern = "staging-"
@@ -137,7 +161,7 @@ resource "vercel_project" "test" {
 resource "vercel_custom_environment" "test" {
   project_id = vercel_project.test.id
   %[2]s
-  name = "test-acc-%[1]s-updated"
+  name = "test-acc-updated"
   description = "without branch tracking updated"
   branch_tracking = {
       pattern = "staging-"
