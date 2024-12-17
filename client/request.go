@@ -127,7 +127,7 @@ func (c *Client) _doRequest(req *http.Request, v interface{}, errorOnNoContent b
 			Error: &errorResponse,
 		})
 		if err != nil {
-			return fmt.Errorf("error unmarshaling response for status code %d: %w", resp.StatusCode, err)
+			return fmt.Errorf("error unmarshaling response for status code %d: %w: %s", resp.StatusCode, err, string(responseBody))
 		}
 		errorResponse.StatusCode = resp.StatusCode
 		errorResponse.RawMessage = responseBody
