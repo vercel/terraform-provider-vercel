@@ -50,7 +50,7 @@ func TestAcc_CustomEnvironmentResource(t *testing.T) {
 					testCheckCustomEnvironmentExists("vercel_custom_environment.test"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "project_id"),
-					resource.TestCheckResourceAttr("vercel_custom_environment.test", "name", "test-acc"),
+					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "name"),
 					resource.TestCheckNoResourceAttr("vercel_custom_environment.test", "branch_tracking"),
 					resource.TestCheckResourceAttr("vercel_custom_environment.test", "description", "without branch tracking"),
 
@@ -118,7 +118,7 @@ resource "vercel_project" "test" {
 resource "vercel_custom_environment" "test" {
   project_id = vercel_project.test.id
   %[2]s
-  name = "test-acc"
+  name = "test-acc-%[1]s"
   description = "without branch tracking"
 }
 
@@ -144,7 +144,7 @@ resource "vercel_shared_environment_variable" "test" {
 resource "vercel_custom_environment" "test_bt" {
   project_id = vercel_project.test.id
   %[2]s
-  name = "test-acc-bt"
+  name = "test-acc-bt-%[1]s"
   description = "with branch tracking"
   branch_tracking = {
     pattern = "staging-"
@@ -165,7 +165,7 @@ resource "vercel_project" "test" {
 resource "vercel_custom_environment" "test" {
   project_id = vercel_project.test.id
   %[2]s
-  name = "test-acc-updated"
+  name = "test-acc-%[1]s-updated"
   description = "without branch tracking updated"
   branch_tracking = {
       pattern = "staging-"

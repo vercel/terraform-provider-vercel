@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -106,9 +107,12 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"target": schema.SetAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The environments that the Environment Variable should be present on. Valid targets are `production`, `preview`, `development`, or the name of a `vercel_custom_enviroment`.",
+				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
+					setvalidator.ValueStringsAre(
+						stringvalidator.OneOf("production", "preview", "development"),
+					),
 					setvalidator.SizeAtLeast(1),
 				},
 			},
