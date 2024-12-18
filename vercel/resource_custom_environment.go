@@ -163,7 +163,7 @@ func (c CustomEnvironment) toCreateRequest(ctx context.Context) (client.CreateCu
 	}, nil
 }
 
-func (c CustomEnvironment) toUpdateRequest(ctx context.Context) (client.UpdateCustomEnvironmentRequest, diag.Diagnostics) {
+func (c CustomEnvironment) toUpdateRequest(ctx context.Context, name string) (client.UpdateCustomEnvironmentRequest, diag.Diagnostics) {
 	var bm *client.BranchMatcher
 	if !c.BranchTracking.IsNull() && !c.BranchTracking.IsUnknown() {
 		bt, diags := c.branchTracking(ctx)
@@ -178,9 +178,10 @@ func (c CustomEnvironment) toUpdateRequest(ctx context.Context) (client.UpdateCu
 	return client.UpdateCustomEnvironmentRequest{
 		TeamID:        c.TeamID.ValueString(),
 		ProjectID:     c.ProjectID.ValueString(),
-		Slug:          c.Name.ValueString(),
+		Slug:          c.Name.ValueString(), // name is the slug
 		Description:   c.Description.ValueString(),
 		BranchMatcher: bm,
+		OldSlug:       name,
 	}, nil
 }
 
@@ -288,11 +289,13 @@ func (r *customEnvironmentResource) Read(ctx context.Context, req resource.ReadR
 func (r *customEnvironmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan CustomEnvironment
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	var state CustomEnvironment
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	updateRequest, diags := plan.toUpdateRequest(ctx)
+	updateRequest, diags := plan.toUpdateRequest(ctx, state.Name.ValueString())
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return

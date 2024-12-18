@@ -23,15 +23,16 @@ type OIDCTokenConfig struct {
 // EnvironmentVariable defines the information Vercel requires and surfaces about an environment variable
 // that is associated with a project.
 type EnvironmentVariable struct {
-	Key       string   `json:"key"`
-	Value     string   `json:"value"`
-	Target    []string `json:"target"`
-	GitBranch *string  `json:"gitBranch,omitempty"`
-	Type      string   `json:"type"`
-	ID        string   `json:"id,omitempty"`
-	TeamID    string   `json:"-"`
-	Comment   string   `json:"comment"`
-	Decrypted bool     `json:"decrypted"`
+	Key                  string   `json:"key"`
+	Value                string   `json:"value"`
+	Target               []string `json:"target"`
+	CustomEnvironmentIDs []string `json:"customEnvironmentIds"`
+	GitBranch            *string  `json:"gitBranch,omitempty"`
+	Type                 string   `json:"type"`
+	ID                   string   `json:"id,omitempty"`
+	TeamID               string   `json:"-"`
+	Comment              string   `json:"comment"`
+	Decrypted            bool     `json:"decrypted"`
 }
 
 type DeploymentExpiration struct {
@@ -46,7 +47,7 @@ type CreateProjectRequest struct {
 	BuildCommand                *string               `json:"buildCommand"`
 	CommandForIgnoringBuildStep *string               `json:"commandForIgnoringBuildStep,omitempty"`
 	DevCommand                  *string               `json:"devCommand"`
-	EnvironmentVariables        []EnvironmentVariable `json:"environmentVariables"`
+	EnvironmentVariables        []EnvironmentVariable `json:"environmentVariables,omitempty"`
 	Framework                   *string               `json:"framework"`
 	GitRepository               *GitRepository        `json:"gitRepository,omitempty"`
 	InstallCommand              *string               `json:"installCommand"`

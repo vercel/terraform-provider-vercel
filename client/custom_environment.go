@@ -84,13 +84,14 @@ func (c *Client) GetCustomEnvironment(ctx context.Context, request GetCustomEnvi
 type UpdateCustomEnvironmentRequest struct {
 	TeamID        string         `json:"-"`
 	ProjectID     string         `json:"-"`
+	OldSlug       string         `json:"-"` // Needed to get the right URL
 	Slug          string         `json:"slug"`
 	Description   string         `json:"description"`
 	BranchMatcher *BranchMatcher `json:"branchMatcher"`
 }
 
 func (c *Client) UpdateCustomEnvironment(ctx context.Context, request UpdateCustomEnvironmentRequest) (res CustomEnvironmentResponse, err error) {
-	url := fmt.Sprintf("%s/v1/projects/%s/custom-environments/%s", c.baseURL, request.ProjectID, request.Slug)
+	url := fmt.Sprintf("%s/v1/projects/%s/custom-environments/%s", c.baseURL, request.ProjectID, request.OldSlug)
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
