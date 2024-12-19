@@ -124,13 +124,37 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"target": schema.SetAttribute{
-							Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
+							Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.",
 							ElementType: types.StringType,
 							Validators: []validator.Set{
 								setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
 								setvalidator.SizeAtLeast(1),
+								setvalidator.AtLeastOneOf(
+									path.MatchRelative().AtParent().AtName("target"),
+									path.MatchRelative().AtParent().AtName("custom_environment_ids"),
+								),
 							},
-							Required: true,
+							Optional: true,
+							Computed: true,
+							PlanModifiers: []planmodifier.Set{
+								setplanmodifier.UseStateForUnknown(),
+							},
+						},
+						"custom_environment_ids": schema.SetAttribute{
+							Description: "The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.",
+							ElementType: types.StringType,
+							Validators: []validator.Set{
+								setvalidator.SizeAtLeast(1),
+								setvalidator.AtLeastOneOf(
+									path.MatchRelative().AtParent().AtName("target"),
+									path.MatchRelative().AtParent().AtName("custom_environment_ids"),
+								),
+							},
+							Optional: true,
+							Computed: true,
+							PlanModifiers: []planmodifier.Set{
+								setplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"git_branch": schema.StringAttribute{
 							Description: "The git branch of the Environment Variable.",
@@ -630,7 +654,7 @@ var nullProject = Project{
 }
 
 func (p *Project) environment(ctx context.Context) ([]EnvironmentItem, error) {
-	if p.Environment.IsNull() {
+	if p.Environment.IsNull() || p.Environment.IsUnknown() {
 		return nil, nil
 	}
 
@@ -642,16 +666,20 @@ func (p *Project) environment(ctx context.Context) ([]EnvironmentItem, error) {
 	return vars, nil
 }
 
-func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
-	out := []client.EnvironmentVariable{}
+func parseEnvironment(ctx context.Context, vars []EnvironmentItem) (out []client.EnvironmentVariable, diags diag.Diagnostics) {
 	for _, e := range vars {
-		target := []string{}
-		for _, t := range e.Target {
-			target = append(target, t.ValueString())
+		var target []string
+		diags = e.Target.ElementsAs(ctx, &target, true)
+		if diags.HasError() {
+			return out, diags
+		}
+		var customEnvironmentIDs []string
+		diags = e.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
+		if diags.HasError() {
+			return out, diags
 		}
 
 		var envVariableType string
-
 		if e.Sensitive.ValueBool() {
 			envVariableType = "sensitive"
 		} else {
@@ -659,24 +687,26 @@ func parseEnvironment(vars []EnvironmentItem) []client.EnvironmentVariable {
 		}
 
 		out = append(out, client.EnvironmentVariable{
-			Key:       e.Key.ValueString(),
-			Value:     e.Value.ValueString(),
-			Target:    target,
-			GitBranch: e.GitBranch.ValueStringPointer(),
-			Type:      envVariableType,
-			ID:        e.ID.ValueString(),
-			Comment:   e.Comment.ValueString(),
+			Key:                  e.Key.ValueString(),
+			Value:                e.Value.ValueString(),
+			Target:               target,
+			CustomEnvironmentIDs: customEnvironmentIDs,
+			GitBranch:            e.GitBranch.ValueStringPointer(),
+			Type:                 envVariableType,
+			ID:                   e.ID.ValueString(),
+			Comment:              e.Comment.ValueString(),
 		})
 	}
-	return out
+	return out, nil
 }
 
-func (p *Project) toCreateProjectRequest(envs []EnvironmentItem) client.CreateProjectRequest {
+func (p *Project) toCreateProjectRequest(ctx context.Context, envs []EnvironmentItem) (req client.CreateProjectRequest, diags diag.Diagnostics) {
+	clientEnvs, diags := parseEnvironment(ctx, envs)
 	return client.CreateProjectRequest{
 		BuildCommand:                p.BuildCommand.ValueStringPointer(),
 		CommandForIgnoringBuildStep: p.IgnoreCommand.ValueStringPointer(),
 		DevCommand:                  p.DevCommand.ValueStringPointer(),
-		EnvironmentVariables:        parseEnvironment(envs),
+		EnvironmentVariables:        clientEnvs,
 		Framework:                   p.Framework.ValueStringPointer(),
 		GitRepository:               p.GitRepository.toCreateProjectRequest(),
 		InstallCommand:              p.InstallCommand.ValueStringPointer(),
@@ -686,7 +716,7 @@ func (p *Project) toCreateProjectRequest(envs []EnvironmentItem) client.CreatePr
 		PublicSource:                p.PublicSource.ValueBoolPointer(),
 		RootDirectory:               p.RootDirectory.ValueStringPointer(),
 		ServerlessFunctionRegion:    p.ServerlessFunctionRegion.ValueString(),
-	}
+	}, diags
 }
 
 func toSkewProtectionAge(sp types.String) int {
@@ -749,23 +779,39 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 
 // EnvironmentItem reflects the state terraform stores internally for a project's environment variable.
 type EnvironmentItem struct {
-	Target    []types.String `tfsdk:"target"`
-	GitBranch types.String   `tfsdk:"git_branch"`
-	Key       types.String   `tfsdk:"key"`
-	Value     types.String   `tfsdk:"value"`
-	ID        types.String   `tfsdk:"id"`
-	Sensitive types.Bool     `tfsdk:"sensitive"`
-	Comment   types.String   `tfsdk:"comment"`
+	Target               types.Set    `tfsdk:"target"`
+	CustomEnvironmentIDs types.Set    `tfsdk:"custom_environment_ids"`
+	GitBranch            types.String `tfsdk:"git_branch"`
+	Key                  types.String `tfsdk:"key"`
+	Value                types.String `tfsdk:"value"`
+	ID                   types.String `tfsdk:"id"`
+	Sensitive            types.Bool   `tfsdk:"sensitive"`
+	Comment              types.String `tfsdk:"comment"`
 }
 
-func (e *EnvironmentItem) toEnvironmentVariableRequest() client.EnvironmentVariableRequest {
-	target := []string{}
-	for _, t := range e.Target {
-		target = append(target, t.ValueString())
+func (e *EnvironmentItem) equal(other *EnvironmentItem) bool {
+	return e.Key.ValueString() == other.Key.ValueString() &&
+		e.Value.ValueString() == other.Value.ValueString() &&
+		e.Target.Equal(other.Target) &&
+		e.CustomEnvironmentIDs.Equal(other.CustomEnvironmentIDs) &&
+		e.GitBranch.ValueString() == other.GitBranch.ValueString() &&
+		e.Sensitive.ValueBool() == other.Sensitive.ValueBool() &&
+		e.Comment.ValueString() == other.Comment.ValueString()
+}
+
+func (e *EnvironmentItem) toEnvironmentVariableRequest(ctx context.Context) (req client.EnvironmentVariableRequest, diags diag.Diagnostics) {
+	var target []string
+	diags = e.Target.ElementsAs(ctx, &target, true)
+	if diags.HasError() {
+		return req, diags
+	}
+	var customEnvironmentIDs []string
+	diags = e.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
+	if diags.HasError() {
+		return req, diags
 	}
 
 	var envVariableType string
-
 	if e.Sensitive.ValueBool() {
 		envVariableType = "sensitive"
 	} else {
@@ -773,13 +819,14 @@ func (e *EnvironmentItem) toEnvironmentVariableRequest() client.EnvironmentVaria
 	}
 
 	return client.EnvironmentVariableRequest{
-		Key:       e.Key.ValueString(),
-		Value:     e.Value.ValueString(),
-		Target:    target,
-		GitBranch: e.GitBranch.ValueStringPointer(),
-		Type:      envVariableType,
-		Comment:   e.Comment.ValueString(),
-	}
+		Key:                  e.Key.ValueString(),
+		Value:                e.Value.ValueString(),
+		Target:               target,
+		CustomEnvironmentIDs: customEnvironmentIDs,
+		GitBranch:            e.GitBranch.ValueStringPointer(),
+		Type:                 envVariableType,
+		Comment:              e.Comment.ValueString(),
+	}, nil
 }
 
 type DeployHook struct {
@@ -1032,6 +1079,9 @@ var envVariableElemType = types.ObjectType{
 		"target": types.SetType{
 			ElemType: types.StringType,
 		},
+		"custom_environment_ids": types.SetType{
+			ElemType: types.StringType,
+		},
 		"git_branch": types.StringType,
 		"id":         types.StringType,
 		"sensitive":  types.BoolType,
@@ -1044,13 +1094,12 @@ var gitCommentsAttrTypes = map[string]attr.Type{
 	"on_pull_request": types.BoolType,
 }
 
-func hasSameTarget(p EnvironmentItem, target []string) bool {
-	if len(p.Target) != len(target) {
+func isSameStringSet(a []string, b []string) bool {
+	if len(a) != len(b) {
 		return false
 	}
-	for _, t := range p.Target {
-		v := t.ValueString()
-		if !contains(target, v) {
+	for _, v := range a {
+		if !contains(b, v) {
 			return false
 		}
 	}
@@ -1197,9 +1246,26 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 
 	var env []attr.Value
 	for _, e := range environmentVariables {
-		target := []attr.Value{}
-		for _, t := range e.Target {
-			target = append(target, types.StringValue(t))
+		var targetValue attr.Value
+		if len(e.Target) > 0 {
+			target := make([]attr.Value, 0, len(e.Target))
+			for _, t := range e.Target {
+				target = append(target, types.StringValue(t))
+			}
+			targetValue = types.SetValueMust(types.StringType, target)
+		} else {
+			targetValue = types.SetNull(types.StringType)
+		}
+
+		var customEnvIDsValue attr.Value
+		if len(e.CustomEnvironmentIDs) > 0 {
+			customEnvIDs := make([]attr.Value, 0, len(e.CustomEnvironmentIDs))
+			for _, c := range e.CustomEnvironmentIDs {
+				customEnvIDs = append(customEnvIDs, types.StringValue(c))
+			}
+			customEnvIDsValue = types.SetValueMust(types.StringType, customEnvIDs)
+		} else {
+			customEnvIDsValue = types.SetNull(types.StringType)
 		}
 		value := types.StringValue(e.Value)
 		if e.Type == "sensitive" {
@@ -1209,8 +1275,17 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 				return Project{}, fmt.Errorf("error reading project environment variables: %s", err)
 			}
 			for _, p := range environment {
-				if p.Key.ValueString() == e.Key && hasSameTarget(p, e.Target) {
-
+				var target []string
+				diags := p.Target.ElementsAs(ctx, &target, true)
+				if diags.HasError() {
+					return Project{}, fmt.Errorf("error reading project environment variables: %s", diags)
+				}
+				var customEnvironmentIDs []string
+				diags = p.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
+				if diags.HasError() {
+					return Project{}, fmt.Errorf("error reading project environment variables: %s", diags)
+				}
+				if p.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
 					value = p.Value
 					break
 				}
@@ -1218,13 +1293,14 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 
 		env = append(env, types.ObjectValueMust(envVariableElemType.AttrTypes, map[string]attr.Value{
-			"key":        types.StringValue(e.Key),
-			"value":      value,
-			"target":     types.SetValueMust(types.StringType, target),
-			"git_branch": types.StringPointerValue(e.GitBranch),
-			"id":         types.StringValue(e.ID),
-			"sensitive":  types.BoolValue(e.Type == "sensitive"),
-			"comment":    types.StringValue(e.Comment),
+			"key":                    types.StringValue(e.Key),
+			"value":                  value,
+			"target":                 targetValue,
+			"custom_environment_ids": customEnvIDsValue,
+			"git_branch":             types.StringPointerValue(e.GitBranch),
+			"id":                     types.StringValue(e.ID),
+			"sensitive":              types.BoolValue(e.Type == "sensitive"),
+			"comment":                types.StringValue(e.Comment),
 		}))
 	}
 
@@ -1383,7 +1459,12 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	out, err := r.client.CreateProject(ctx, plan.TeamID.ValueString(), plan.toCreateProjectRequest(environment))
+	request, diags := plan.toCreateProjectRequest(ctx, environment)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	out, err := r.client.CreateProject(ctx, plan.TeamID.ValueString(), request)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -1749,7 +1830,12 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	var items []client.EnvironmentVariableRequest
 	for _, v := range toCreate {
-		items = append(items, v.toEnvironmentVariableRequest())
+		vv, diags := v.toEnvironmentVariableRequest(ctx)
+		if diags.HasError() {
+			resp.Diagnostics.Append(diags...)
+			return
+		}
+		items = append(items, vv)
 	}
 
 	if items != nil {

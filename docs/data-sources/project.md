@@ -75,6 +75,7 @@ data "vercel_project" "example" {
 Read-Only:
 
 - `comment` (String) A comment explaining what the environment variable is for.
+- `custom_environment_ids` (Set of String) The IDs of Custom Environments that the Environment Variable should be present on.
 - `git_branch` (String) The git branch of the environment variable.
 - `id` (String) The ID of the environment variable
 - `key` (String) The name of the environment variable.

@@ -104,6 +104,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 							ElementType: types.StringType,
 							Computed:    true,
 						},
+						"custom_environment_ids": schema.SetAttribute{
+							Description: "The IDs of Custom Environments that the Environment Variable should be present on.",
+							ElementType: types.StringType,
+							Computed:    true,
+						},
 						"key": schema.StringAttribute{
 							Description: "The name of the environment variable.",
 							Computed:    true,

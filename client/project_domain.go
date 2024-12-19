@@ -12,10 +12,11 @@ import (
 // used to assign a domain name to any production deployments, but can also be used to configure
 // redirects, or to give specific git branches a domain name.
 type CreateProjectDomainRequest struct {
-	Name               string `json:"name"`
-	GitBranch          string `json:"gitBranch,omitempty"`
-	Redirect           string `json:"redirect,omitempty"`
-	RedirectStatusCode int64  `json:"redirectStatusCode,omitempty"`
+	Name                string `json:"name"`
+	GitBranch           string `json:"gitBranch,omitempty"`
+	CustomEnvironmentID string `json:"customEnvironmentId,omitempty"`
+	Redirect            string `json:"redirect,omitempty"`
+	RedirectStatusCode  int64  `json:"redirectStatusCode,omitempty"`
 }
 
 // CreateProjectDomain creates a project domain within Vercel.
@@ -61,12 +62,13 @@ func (c *Client) DeleteProjectDomain(ctx context.Context, projectID, domain, tea
 // ProjectDomainResponse defines the information that Vercel exposes about a domain that is
 // associated with a vercel project.
 type ProjectDomainResponse struct {
-	Name               string  `json:"name"`
-	ProjectID          string  `json:"projectId"`
-	TeamID             string  `json:"-"`
-	Redirect           *string `json:"redirect"`
-	RedirectStatusCode *int64  `json:"redirectStatusCode"`
-	GitBranch          *string `json:"gitBranch"`
+	Name                string  `json:"name"`
+	ProjectID           string  `json:"projectId"`
+	TeamID              string  `json:"-"`
+	Redirect            *string `json:"redirect"`
+	RedirectStatusCode  *int64  `json:"redirectStatusCode"`
+	GitBranch           *string `json:"gitBranch"`
+	CustomEnvironmentID *string `json:"customEnvironmentId"`
 }
 
 // GetProjectDomain retrieves information about a project domain from Vercel.
@@ -91,9 +93,10 @@ func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID
 
 // UpdateProjectDomainRequest defines the information necessary to update a project domain.
 type UpdateProjectDomainRequest struct {
-	GitBranch          *string `json:"gitBranch"`
-	Redirect           *string `json:"redirect"`
-	RedirectStatusCode *int64  `json:"redirectStatusCode"`
+	GitBranch           *string `json:"gitBranch"`
+	CustomEnvironmentID *string `json:"customEnvironmentId,omitempty"`
+	Redirect            *string `json:"redirect"`
+	RedirectStatusCode  *int64  `json:"redirectStatusCode"`
 }
 
 // UpdateProjectDomain updates an existing project domain within Vercel.
