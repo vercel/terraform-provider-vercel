@@ -88,14 +88,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							Description:   "The ID of the Environment Variable.",
-							PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-							Computed:      true,
+							Description: "The ID of the Environment Variable.",
+							Computed:    true,
 						},
 						"key": schema.StringAttribute{
-							Required:      true,
-							PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
-							Description:   "The name of the Environment Variable.",
+							Required:    true,
+							Description: "The name of the Environment Variable.",
 						},
 						"value": schema.StringAttribute{
 							Required:    true,
@@ -105,13 +103,13 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						"target": schema.SetAttribute{
 							Optional:      true,
 							Computed:      true,
-							Description:   "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 							PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
+							Description:   "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.",
 							ElementType:   types.StringType,
 							Validators: []validator.Set{
 								setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
 								setvalidator.SizeAtLeast(1),
-								setvalidator.ExactlyOneOf(
+								setvalidator.AtLeastOneOf(
 									path.MatchRelative().AtParent().AtName("custom_environment_ids"),
 									path.MatchRelative().AtParent().AtName("target"),
 								),
@@ -121,11 +119,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Optional:      true,
 							Computed:      true,
 							ElementType:   types.StringType,
-							Description:   "The IDs of Custom Environments that the Environment Variable should be present on. Cannot be set in conjuction with `target`.",
 							PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
+							Description:   "The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.",
 							Validators: []validator.Set{
 								setvalidator.SizeAtLeast(1),
-								setvalidator.ExactlyOneOf(
+								setvalidator.AtLeastOneOf(
 									path.MatchRelative().AtParent().AtName("custom_environment_ids"),
 									path.MatchRelative().AtParent().AtName("target"),
 								),
@@ -139,13 +137,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Description:   "Whether the Environment Variable is sensitive or not.",
 							Optional:      true,
 							Computed:      true,
-							PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace(), boolplanmodifier.UseStateForUnknown()},
+							PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 						},
 						"comment": schema.StringAttribute{
-							Description:   "A comment explaining what the environment variable is for.",
-							Optional:      true,
-							Computed:      true,
-							PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+							Description: "A comment explaining what the environment variable is for.",
+							Optional:    true,
+							Computed:    true,
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(0, 1000),
 							},
@@ -296,13 +293,26 @@ func convertResponseToProjectEnvironmentVariables(ctx context.Context, response 
 	var env []attr.Value
 	alreadyPresent := map[string]struct{}{}
 	for _, e := range response {
-		target := []attr.Value{}
-		for _, t := range e.Target {
-			target = append(target, types.StringValue(t))
+		var targetValue attr.Value
+		if len(e.Target) > 0 {
+			target := make([]attr.Value, 0, len(e.Target))
+			for _, t := range e.Target {
+				target = append(target, types.StringValue(t))
+			}
+			targetValue = types.SetValueMust(types.StringType, target)
+		} else {
+			targetValue = types.SetNull(types.StringType)
 		}
-		var customEnvironmentIDs []attr.Value
-		for _, c := range e.CustomEnvironmentIDs {
-			customEnvironmentIDs = append(customEnvironmentIDs, types.StringValue(c))
+
+		var customEnvIDsValue attr.Value
+		if len(e.CustomEnvironmentIDs) > 0 {
+			customEnvIDs := make([]attr.Value, 0, len(e.CustomEnvironmentIDs))
+			for _, c := range e.CustomEnvironmentIDs {
+				customEnvIDs = append(customEnvIDs, types.StringValue(c))
+			}
+			customEnvIDsValue = types.SetValueMust(types.StringType, customEnvIDs)
+		} else {
+			customEnvIDsValue = types.SetNull(types.StringType)
 		}
 		value := types.StringValue(e.Value)
 		if e.Type == "sensitive" {
@@ -351,8 +361,8 @@ func convertResponseToProjectEnvironmentVariables(ctx context.Context, response 
 			map[string]attr.Value{
 				"key":                    types.StringValue(e.Key),
 				"value":                  value,
-				"target":                 types.SetValueMust(types.StringType, target),
-				"custom_environment_ids": types.SetValueMust(types.StringType, customEnvironmentIDs),
+				"target":                 targetValue,
+				"custom_environment_ids": customEnvIDsValue,
 				"git_branch":             types.StringPointerValue(e.GitBranch),
 				"id":                     types.StringValue(e.ID),
 				"sensitive":              types.BoolValue(e.Type == "sensitive"),
@@ -509,19 +519,31 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 		resp.Diagnostics.Append(diags...)
 		return
 	}
-	plannedIDs := map[string]struct{}{}
+	plannedEnvsByID := map[string]EnvironmentItem{}
+	toAdd := []EnvironmentItem{}
 	for _, e := range planEnvs {
-		if e.ID.ValueString() == "" {
-			plannedIDs[e.ID.ValueString()] = struct{}{}
+		if e.ID.ValueString() != "" {
+			plannedEnvsByID[e.ID.ValueString()] = e
+		} else {
+			toAdd = append(toAdd, e)
 		}
 	}
 
 	var toRemove []EnvironmentItem
 	for _, e := range stateEnvs {
-		if _, ok := plannedIDs[e.ID.ValueString()]; !ok {
+		plannedEnv, ok := plannedEnvsByID[e.ID.ValueString()]
+		if !ok {
 			toRemove = append(toRemove, e)
+			continue
+		}
+		if !plannedEnv.equal(&e) {
+			toRemove = append(toRemove, e)
+			toAdd = append(toAdd, plannedEnv)
 		}
 	}
+
+	tflog.Debug(ctx, "Removing environment variables", map[string]interface{}{"to_remove": toRemove})
+	tflog.Debug(ctx, "Adding environment variables", map[string]interface{}{"to_add": toAdd})
 
 	for _, v := range toRemove {
 		err := r.client.DeleteEnvironmentVariable(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString(), v.ID.ValueString())
@@ -544,18 +566,26 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 		})
 	}
 
-	request, diags := plan.toCreateEnvironmentVariablesRequest(ctx)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
-	}
-	response, err := r.client.CreateEnvironmentVariables(ctx, request)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error updating project environment variables",
-			"Could not update project environment variable, unexpected error: "+err.Error(),
-		)
-		return
+	var response []client.EnvironmentVariable
+	var err error
+	if len(toAdd) > 0 {
+		request, diags := plan.toCreateEnvironmentVariablesRequest(ctx)
+		if diags.HasError() {
+			resp.Diagnostics.Append(diags...)
+			return
+		}
+		tflog.Debug(ctx, "create request", map[string]any{
+			"request": request,
+		})
+		response, err = r.client.CreateEnvironmentVariables(ctx, request)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project environment variables",
+				"Could not update project environment variable, unexpected error: "+err.Error(),
+			)
+			return
+		}
+	} else {
 	}
 
 	result, diags := convertResponseToProjectEnvironmentVariables(ctx, response, plan)

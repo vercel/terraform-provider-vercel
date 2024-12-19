@@ -124,12 +124,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"target": schema.SetAttribute{
-							Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. Cannot be set in conjuction with custom_environment_ids",
+							Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.",
 							ElementType: types.StringType,
 							Validators: []validator.Set{
 								setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
 								setvalidator.SizeAtLeast(1),
-								setvalidator.ExactlyOneOf(
+								setvalidator.AtLeastOneOf(
 									path.MatchRelative().AtParent().AtName("target"),
 									path.MatchRelative().AtParent().AtName("custom_environment_ids"),
 								),
@@ -141,11 +141,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							},
 						},
 						"custom_environment_ids": schema.SetAttribute{
-							Description: "The IDs of Custom Environments that the Environment Variable should be present on. Cannot be set in conjuction with `target`.",
+							Description: "The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.",
 							ElementType: types.StringType,
 							Validators: []validator.Set{
 								setvalidator.SizeAtLeast(1),
-								setvalidator.ExactlyOneOf(
+								setvalidator.AtLeastOneOf(
 									path.MatchRelative().AtParent().AtName("target"),
 									path.MatchRelative().AtParent().AtName("custom_environment_ids"),
 								),
@@ -787,6 +787,16 @@ type EnvironmentItem struct {
 	ID                   types.String `tfsdk:"id"`
 	Sensitive            types.Bool   `tfsdk:"sensitive"`
 	Comment              types.String `tfsdk:"comment"`
+}
+
+func (e *EnvironmentItem) equal(other *EnvironmentItem) bool {
+	return e.Key.ValueString() == other.Key.ValueString() &&
+		e.Value.ValueString() == other.Value.ValueString() &&
+		e.Target.Equal(other.Target) &&
+		e.CustomEnvironmentIDs.Equal(other.CustomEnvironmentIDs) &&
+		e.GitBranch.ValueString() == other.GitBranch.ValueString() &&
+		e.Sensitive.ValueBool() == other.Sensitive.ValueBool() &&
+		e.Comment.ValueString() == other.Comment.ValueString()
 }
 
 func (e *EnvironmentItem) toEnvironmentVariableRequest(ctx context.Context) (req client.EnvironmentVariableRequest, diags diag.Diagnostics) {

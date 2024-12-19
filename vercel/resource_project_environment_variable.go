@@ -78,12 +78,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				PlanModifiers: []planmodifier.Set{
 					setplanmodifier.UseStateForUnknown(),
 				},
-				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. Cannot be set in conjuction with custom_environment_ids",
+				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
 					setvalidator.SizeAtLeast(1),
-					setvalidator.ExactlyOneOf(
+					setvalidator.AtLeastOneOf(
 						path.MatchRoot("custom_environment_ids"),
 						path.MatchRoot("target"),
 					),
@@ -93,11 +93,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:      true,
 				Computed:      true,
 				ElementType:   types.StringType,
-				Description:   "The IDs of Custom Environments that the Environment Variable should be present on. Cannot be set in conjuction with `target`.",
+				Description:   "The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.",
 				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace(), setplanmodifier.UseStateForUnknown()},
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
-					setvalidator.ExactlyOneOf(
+					setvalidator.AtLeastOneOf(
 						path.MatchRoot("custom_environment_ids"),
 						path.MatchRoot("target"),
 					),
