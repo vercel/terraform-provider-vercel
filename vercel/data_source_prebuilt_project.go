@@ -194,19 +194,79 @@ func (d *prebuiltProjectDataSource) Read(ctx context.Context, req datasource.Rea
 			if err != nil {
 				return err
 			}
-			if d.IsDir() {
+
+			info, err := d.Info()
+			if err != nil {
+				return fmt.Errorf("could not get file info for %s: %w", path, err)
+			}
+
+			// If it's a symlink, resolve it
+			if info.Mode()&os.ModeSymlink != 0 {
+				dest, err := os.Readlink(path)
+				if err != nil {
+					return fmt.Errorf("could not read symlink %s: %w", path, err)
+				}
+
+				// If the symlink is relative, make it absolute
+				if !filepath.IsAbs(dest) {
+					dest = filepath.Join(filepath.Dir(path), dest)
+				}
+
+				destInfo, err := os.Stat(dest)
+				if err != nil {
+					return fmt.Errorf("could not stat symlink destination %s: %w", dest, err)
+				}
+
+				if destInfo.IsDir() {
+					return filepath.WalkDir(dest, func(subPath string, subD fs.DirEntry, subErr error) error {
+						if subErr != nil {
+							return subErr
+						}
+						if subD.IsDir() {
+							return nil
+						}
+						content, err := os.ReadFile(subPath)
+						if err != nil {
+							return fmt.Errorf("could not read file %s: %w", subPath, err)
+						}
+						rawSha := sha1.Sum(content)
+						sha := hex.EncodeToString(rawSha[:])
+
+						// Get the subpath relative to the symlink's destination directory
+						subRelPath, err := filepath.Rel(dest, subPath)
+						if err != nil {
+							return fmt.Errorf("could not get relative path: %w", err)
+						}
+
+						// Join it with the original symlink path
+						fullPath := filepath.Join(path, subRelPath)
+						config.Output[fullPath] = fmt.Sprintf("%d~%s", len(content), sha)
+						return nil
+					})
+				}
+
+				// If it's a symlink to a file, read that file
+				content, err := os.ReadFile(dest)
+				if err != nil {
+					return fmt.Errorf("could not read symlinked file %s: %w", dest, err)
+				}
+				rawSha := sha1.Sum(content)
+				sha := hex.EncodeToString(rawSha[:])
+				config.Output[path] = fmt.Sprintf("%d~%s", len(content), sha)
 				return nil
 			}
 
-			content, err := os.ReadFile(path)
-			if err != nil {
-				return fmt.Errorf("could not read file %s: %w", path, err)
+			// Handle regular files (non-symlinks)
+			if !info.IsDir() {
+				content, err := os.ReadFile(path)
+				if err != nil {
+					return fmt.Errorf("could not read file %s: %w", path, err)
+				}
+				rawSha := sha1.Sum(content)
+				sha := hex.EncodeToString(rawSha[:])
+				config.Output[path] = fmt.Sprintf("%d~%s", len(content), sha)
 			}
 
-			rawSha := sha1.Sum(content)
-			sha := hex.EncodeToString(rawSha[:])
-
-			config.Output[path] = fmt.Sprintf("%d~%s", len(content), sha)
 			return nil
 		},
 	)
