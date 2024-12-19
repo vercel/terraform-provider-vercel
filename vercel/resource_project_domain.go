@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -94,6 +96,22 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 			"git_branch": schema.StringAttribute{
 				Description: "Git branch to link to the project domain. Deployments from this git branch will be assigned the domain name.",
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.MatchRoot("custom_environment_id"),
+						path.MatchRoot("git_branch"),
+					),
+				},
+			},
+			"custom_environment_id": schema.StringAttribute{
+				Description: "The name of the Custom Environment to link to the Project Domain. Deployments from this custom environment will be assigned the domain name.",
+				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.MatchRoot("custom_environment_id"),
+						path.MatchRoot("git_branch"),
+					),
+				},
 			},
 		},
 	}
@@ -101,41 +119,45 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 
 // ProjectDomain reflects the state terraform stores internally for a project domain.
 type ProjectDomain struct {
-	Domain             types.String `tfsdk:"domain"`
-	GitBranch          types.String `tfsdk:"git_branch"`
-	ID                 types.String `tfsdk:"id"`
-	ProjectID          types.String `tfsdk:"project_id"`
-	Redirect           types.String `tfsdk:"redirect"`
-	RedirectStatusCode types.Int64  `tfsdk:"redirect_status_code"`
-	TeamID             types.String `tfsdk:"team_id"`
+	Domain              types.String `tfsdk:"domain"`
+	GitBranch           types.String `tfsdk:"git_branch"`
+	CustomEnvironmentID types.String `tfsdk:"custom_environment_id"`
+	ID                  types.String `tfsdk:"id"`
+	ProjectID           types.String `tfsdk:"project_id"`
+	Redirect            types.String `tfsdk:"redirect"`
+	RedirectStatusCode  types.Int64  `tfsdk:"redirect_status_code"`
+	TeamID              types.String `tfsdk:"team_id"`
 }
 
 func convertResponseToProjectDomain(response client.ProjectDomainResponse) ProjectDomain {
 	return ProjectDomain{
-		Domain:             types.StringValue(response.Name),
-		GitBranch:          types.StringPointerValue(response.GitBranch),
-		ID:                 types.StringValue(response.Name),
-		ProjectID:          types.StringValue(response.ProjectID),
-		Redirect:           types.StringPointerValue(response.Redirect),
-		RedirectStatusCode: types.Int64PointerValue(response.RedirectStatusCode),
-		TeamID:             toTeamID(response.TeamID),
+		Domain:              types.StringValue(response.Name),
+		GitBranch:           types.StringPointerValue(response.GitBranch),
+		CustomEnvironmentID: types.StringPointerValue(response.CustomEnvironmentID),
+		ID:                  types.StringValue(response.Name),
+		ProjectID:           types.StringValue(response.ProjectID),
+		Redirect:            types.StringPointerValue(response.Redirect),
+		RedirectStatusCode:  types.Int64PointerValue(response.RedirectStatusCode),
+		TeamID:              toTeamID(response.TeamID),
 	}
 }
 
 func (p *ProjectDomain) toCreateRequest() client.CreateProjectDomainRequest {
 	return client.CreateProjectDomainRequest{
-		GitBranch:          p.GitBranch.ValueString(),
-		Name:               p.Domain.ValueString(),
-		Redirect:           p.Redirect.ValueString(),
-		RedirectStatusCode: p.RedirectStatusCode.ValueInt64(),
+		GitBranch:           p.GitBranch.ValueString(),
+		CustomEnvironmentID: p.CustomEnvironmentID.ValueString(),
+		Name:                p.Domain.ValueString(),
+		Redirect:            p.Redirect.ValueString(),
+		RedirectStatusCode:  p.RedirectStatusCode.ValueInt64(),
 	}
 }
 
 func (p *ProjectDomain) toUpdateRequest() client.UpdateProjectDomainRequest {
 	return client.UpdateProjectDomainRequest{
-		GitBranch:          p.GitBranch.ValueStringPointer(),
-		Redirect:           p.Redirect.ValueStringPointer(),
-		RedirectStatusCode: p.RedirectStatusCode.ValueInt64Pointer(),
+		GitBranch:           p.GitBranch.ValueStringPointer(),
+		CustomEnvironmentID: p.CustomEnvironmentID.ValueStringPointer(),
+		Redirect:            p.Redirect.ValueStringPointer(),
+		RedirectStatusCode:  p.RedirectStatusCode.ValueInt64Pointer(),
 	}
 }
 

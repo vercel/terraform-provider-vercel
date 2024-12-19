@@ -10,12 +10,13 @@ import (
 // CreateEnvironmentVariableRequest defines the information that needs to be passed to Vercel in order to
 // create an environment variable.
 type EnvironmentVariableRequest struct {
-	Key       string   `json:"key"`
-	Value     string   `json:"value"`
-	Target    []string `json:"target"`
-	GitBranch *string  `json:"gitBranch,omitempty"`
-	Type      string   `json:"type"`
-	Comment   string   `json:"comment"`
+	Key                  string   `json:"key"`
+	Value                string   `json:"value"`
+	Target               []string `json:"target,omitempty"`
+	CustomEnvironmentIDs []string `json:"customEnvironmentIds,omitempty"`
+	GitBranch            *string  `json:"gitBranch,omitempty"`
+	Type                 string   `json:"type"`
+	Comment              string   `json:"comment"`
 }
 
 type CreateEnvironmentVariableRequest struct {
@@ -58,7 +59,7 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		}
 	}
 	if err != nil {
-		return e, err
+		return e, fmt.Errorf("%w - %s", err, payload)
 	}
 	// The API response returns an encrypted environment variable, but we want to return the decrypted version.
 	e.Value = request.EnvironmentVariable.Value
@@ -127,6 +128,14 @@ type CreateEnvironmentVariablesResponse struct {
 }
 
 func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateEnvironmentVariablesRequest) ([]EnvironmentVariable, error) {
+	if len(request.EnvironmentVariables) == 1 {
+		env, err := c.CreateEnvironmentVariable(ctx, CreateEnvironmentVariableRequest{
+			EnvironmentVariable: request.EnvironmentVariables[0],
+			ProjectID:           request.ProjectID,
+			TeamID:              request.TeamID,
+		})
+		return []EnvironmentVariable{env}, err
+	}
 	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, request.ProjectID)
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
@@ -145,7 +154,7 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		body:   payload,
 	}, &response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w - %s", err, payload)
 	}
 
 	if len(response.Failed) > 0 {
@@ -176,14 +185,15 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 // UpdateEnvironmentVariableRequest defines the information that needs to be passed to Vercel in order to
 // update an environment variable.
 type UpdateEnvironmentVariableRequest struct {
-	Value     string   `json:"value"`
-	Target    []string `json:"target"`
-	GitBranch *string  `json:"gitBranch,omitempty"`
-	Type      string   `json:"type"`
-	Comment   string   `json:"comment"`
-	ProjectID string   `json:"-"`
-	TeamID    string   `json:"-"`
-	EnvID     string   `json:"-"`
+	Value                string   `json:"value"`
+	Target               []string `json:"target"`
+	CustomEnvironmentIDs []string `json:"customEnvironmentIds,omitempty"`
+	GitBranch            *string  `json:"gitBranch,omitempty"`
+	Type                 string   `json:"type"`
+	Comment              string   `json:"comment"`
+	ProjectID            string   `json:"-"`
+	TeamID               string   `json:"-"`
+	EnvID                string   `json:"-"`
 }
 
 // UpdateEnvironmentVariable will update an existing environment variable to the latest information.

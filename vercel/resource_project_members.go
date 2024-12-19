@@ -90,6 +90,7 @@ This, however, means config drift will not be detected for members that are adde
 							},
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
+									path.MatchRelative().AtParent().AtName("user_id"),
 									path.MatchRelative().AtParent().AtName("email"),
 									path.MatchRelative().AtParent().AtName("username"),
 								),
@@ -105,6 +106,7 @@ This, however, means config drift will not be detected for members that are adde
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("user_id"),
+									path.MatchRelative().AtParent().AtName("email"),
 									path.MatchRelative().AtParent().AtName("username"),
 								),
 							},
@@ -120,6 +122,7 @@ This, however, means config drift will not be detected for members that are adde
 								stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("user_id"),
 									path.MatchRelative().AtParent().AtName("email"),
+									path.MatchRelative().AtParent().AtName("username"),
 								),
 							},
 						},

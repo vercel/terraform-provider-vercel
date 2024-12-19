@@ -97,14 +97,15 @@ resource "vercel_project" "example" {
 Required:
 
 - `key` (String) The name of the Environment Variable.
-- `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.
 - `value` (String, Sensitive) The value of the Environment Variable.
 
 Optional:
 
 - `comment` (String) A comment explaining what the environment variable is for.
+- `custom_environment_ids` (Set of String) The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.
 - `git_branch` (String) The git branch of the Environment Variable.
 - `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))
+- `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.
 
 Read-Only:
 

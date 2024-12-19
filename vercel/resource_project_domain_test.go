@@ -14,7 +14,6 @@ import (
 )
 
 func TestAcc_ProjectDomain(t *testing.T) {
-	t.Skip()
 	testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
 	if testTeam() != "" {
 		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam())
@@ -30,32 +29,32 @@ func TestAcc_ProjectDomain(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Check error adding production domain
 			{
-				Config: testAccProjectDomainWithProductionGitBranch(projectSuffix, domain, teamIDConfig()),
+				Config: testAccProjectDomainWithProductionGitBranch(projectSuffix, "1"+domain, teamIDConfig()),
 				ExpectError: regexp.MustCompile(
 					strings.ReplaceAll("the git_branch specified is the production branch. If you want to use this domain as a production domain, please omit the git_branch field.", " ", `\s*`),
 				),
 			},
 			// Create and Read testing
 			{
-				Config: testAccProjectDomainConfig(projectSuffix, domain, teamIDConfig()),
+				Config: testAccProjectDomainConfig(projectSuffix, "2"+domain, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectDomainExists("vercel_project.test", testTeam(), domain),
+					testAccProjectDomainExists("vercel_project.test", testTeam(), "2"+domain),
 					testTeamID,
-					resource.TestCheckResourceAttr("vercel_project_domain.test", "domain", domain),
+					resource.TestCheckResourceAttr("vercel_project_domain.test", "domain", "2"+domain),
 				),
 			},
 			// Update testing
 			{
-				Config: testAccProjectDomainConfigUpdated(projectSuffix, domain, teamIDConfig()),
+				Config: testAccProjectDomainConfigUpdated(projectSuffix, "2"+domain, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("vercel_project_domain.test", "redirect", "test-acc-domain.vercel.app"),
+					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "redirect"),
 				),
 			},
 			// Redirect Update testing
 			{
-				Config: testAccProjectDomainConfigUpdated2(projectSuffix, domain, teamIDConfig()),
+				Config: testAccProjectDomainConfigUpdated2(projectSuffix, "2"+domain, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("vercel_project_domain.test", "redirect", "test-acc-domain.vercel.app"),
+					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "redirect"),
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "redirect_status_code", "307"),
 				),
 			},
@@ -66,7 +65,30 @@ func TestAcc_ProjectDomain(t *testing.T) {
 			},
 		},
 	})
+}
 
+func TestAcc_ProjectDomainCustomEnvironment(t *testing.T) {
+	randomSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			// Ensure we can't have both git_branch and custom_environment_id
+			{
+				Config: testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix),
+				ExpectError: regexp.MustCompile(
+					strings.ReplaceAll("Attribute \"git_branch\" cannot be specified when \"custom_environment_id\" is specified", " ", `\s*`),
+				),
+			},
+			{
+				Config: testAccProjectDomainConfigWithCustomEnvironment(randomSuffix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "custom_environment_id"),
+				),
+			},
+		},
+	})
 }
 
 func testAccProjectDomainExists(n, teamID, domain string) resource.TestCheckFunc {
@@ -154,7 +176,13 @@ resource "vercel_project_domain" "test" {
   project_id = vercel_project.test.id
   %s
 
-  redirect = "test-acc-domain.vercel.app"
+  redirect = vercel_project_domain.redirect_target.domain
+}
+
+resource "vercel_project_domain" "redirect_target" {
+    domain = "redirect-target-1-%[3]s"
+    project_id = vercel_project.test.id
+    %[2]s
 }
 `, projectSuffix, extra, domain, extra)
 }
@@ -162,19 +190,31 @@ resource "vercel_project_domain" "test" {
 func testAccProjectDomainConfigUpdated2(projectSuffix, domain, extra string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "test-acc-domain-%s"
-  %s
+  name = "test-acc-domain-%[1]s"
+  %[2]s
+}
+
+resource "vercel_project_domain" "redirect_target" {
+    domain = "redirect-target-1-%[3]s"
+    project_id = vercel_project.test.id
+    %[2]s
+}
+
+resource "vercel_project_domain" "redirect_target_2" {
+    domain = "redirect-target-2-%[3]s"
+    project_id = vercel_project.test.id
+    %[2]s
 }
 
 resource "vercel_project_domain" "test" {
-  domain = "%s"
+  domain = "%[3]s"
   project_id = vercel_project.test.id
-  %s
+  %[2]s
 
-  redirect = "test-acc-domain.vercel.app"
+  redirect = vercel_project_domain.redirect_target_2.domain
   redirect_status_code = 307
 }
-`, projectSuffix, extra, domain, extra)
+`, projectSuffix, extra, domain)
 }
 
 func testAccProjectDomainConfigDeleted(projectSuffix, extra string) string {
@@ -184,4 +224,53 @@ resource "vercel_project" "test" {
   %s
 }
 `, projectSuffix, extra)
+}
+
+func testAccProjectDomainConfigWithCustomEnvironment(randomSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-domain-%[1]s"
+  %[2]s
+}
+
+resource "vercel_custom_environment" "test" {
+    name = "test-acc-custom-environment"
+    project_id = vercel_project.test.id
+    %[2]s
+}
+
+resource "vercel_project_domain" "test" {
+    domain = "test-acc-domain-%[1]s-foobar.vercel.app"
+    project_id = vercel_project.test.id
+    custom_environment_id = vercel_custom_environment.test.id
+    %[2]s
+}
+`, randomSuffix, teamIDConfig())
+}
+
+func testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-domain-%[1]s"
+  %[2]s
+  git_repository = {
+    type = "github"
+    repo = "%[3]s"
+  }
+}
+
+resource "vercel_custom_environment" "test" {
+    name = "test-acc-custom-environment"
+    project_id = vercel_project.test.id
+    %[2]s
+}
+
+resource "vercel_project_domain" "test" {
+    domain = "test-acc-domain-%[1]s.vercel.app"
+    project_id = vercel_project.test.id
+    custom_environment_id = vercel_custom_environment.test.id
+    git_branch = "staging"
+    %[2]s
+}
+`, randomSuffix, teamIDConfig(), testGithubRepo())
 }

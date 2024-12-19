@@ -131,6 +131,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 						Validators: []validator.Map{
 							// Validate only this attribute or roles is configured.
 							mapvalidator.ExactlyOneOf(path.Expressions{
+								path.MatchRoot("saml.roles"),
 								path.MatchRoot("saml.access_group_id"),
 							}...),
 						},
@@ -143,6 +144,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 							// Validate only this attribute or roles is configured.
 							stringvalidator.ExactlyOneOf(path.Expressions{
 								path.MatchRoot("saml.roles"),
+								path.MatchRoot("saml.access_group_id"),
 							}...),
 						},
 					},

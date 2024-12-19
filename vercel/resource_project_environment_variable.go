@@ -6,11 +6,14 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -70,12 +73,34 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 `,
 		Attributes: map[string]schema.Attribute{
 			"target": schema.SetAttribute{
-				Required:    true,
-				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
+				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
+				},
+				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
 					setvalidator.SizeAtLeast(1),
+					setvalidator.AtLeastOneOf(
+						path.MatchRoot("custom_environment_ids"),
+						path.MatchRoot("target"),
+					),
+				},
+			},
+			"custom_environment_ids": schema.SetAttribute{
+				Optional:      true,
+				Computed:      true,
+				ElementType:   types.StringType,
+				Description:   "The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.",
+				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace(), setplanmodifier.UseStateForUnknown()},
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+					setvalidator.AtLeastOneOf(
+						path.MatchRoot("custom_environment_ids"),
+						path.MatchRoot("target"),
+					),
 				},
 			},
 			"key": schema.StringAttribute{
@@ -129,15 +154,16 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 
 // ProjectEnvironmentVariable reflects the state terraform stores internally for a project environment variable.
 type ProjectEnvironmentVariable struct {
-	Target    []types.String `tfsdk:"target"`
-	GitBranch types.String   `tfsdk:"git_branch"`
-	Key       types.String   `tfsdk:"key"`
-	Value     types.String   `tfsdk:"value"`
-	TeamID    types.String   `tfsdk:"team_id"`
-	ProjectID types.String   `tfsdk:"project_id"`
-	ID        types.String   `tfsdk:"id"`
-	Sensitive types.Bool     `tfsdk:"sensitive"`
-	Comment   types.String   `tfsdk:"comment"`
+	Target               types.Set    `tfsdk:"target"`
+	CustomEnvironmentIDs types.Set    `tfsdk:"custom_environment_ids"`
+	GitBranch            types.String `tfsdk:"git_branch"`
+	Key                  types.String `tfsdk:"key"`
+	Value                types.String `tfsdk:"value"`
+	TeamID               types.String `tfsdk:"team_id"`
+	ProjectID            types.String `tfsdk:"project_id"`
+	ID                   types.String `tfsdk:"id"`
+	Sensitive            types.Bool   `tfsdk:"sensitive"`
+	Comment              types.String `tfsdk:"comment"`
 }
 
 func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
@@ -183,13 +209,18 @@ func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req
 	)
 }
 
-func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client.CreateEnvironmentVariableRequest {
-	target := []string{}
-	for _, t := range e.Target {
-		target = append(target, t.ValueString())
+func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx context.Context) (req client.CreateEnvironmentVariableRequest, diags diag.Diagnostics) {
+	var target []string
+	diags = e.Target.ElementsAs(ctx, &target, true)
+	if diags.HasError() {
+		return req, diags
+	}
+	var customEnvironmentIDs []string
+	diags = e.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
+	if diags.HasError() {
+		return req, diags
 	}
 	var envVariableType string
-
 	if e.Sensitive.ValueBool() {
 		envVariableType = "sensitive"
 	} else {
@@ -198,26 +229,32 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest() client
 
 	return client.CreateEnvironmentVariableRequest{
 		EnvironmentVariable: client.EnvironmentVariableRequest{
-			Key:       e.Key.ValueString(),
-			Value:     e.Value.ValueString(),
-			Target:    target,
-			GitBranch: e.GitBranch.ValueStringPointer(),
-			Type:      envVariableType,
-			Comment:   e.Comment.ValueString(),
+			Key:                  e.Key.ValueString(),
+			Value:                e.Value.ValueString(),
+			Target:               target,
+			CustomEnvironmentIDs: customEnvironmentIDs,
+			GitBranch:            e.GitBranch.ValueStringPointer(),
+			Type:                 envVariableType,
+			Comment:              e.Comment.ValueString(),
 		},
 		ProjectID: e.ProjectID.ValueString(),
 		TeamID:    e.TeamID.ValueString(),
-	}
+	}, nil
 }
 
-func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client.UpdateEnvironmentVariableRequest {
-	target := []string{}
-	for _, t := range e.Target {
-		target = append(target, t.ValueString())
+func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest(ctx context.Context) (r client.UpdateEnvironmentVariableRequest, diags diag.Diagnostics) {
+	var target []string
+	diags = e.Target.ElementsAs(ctx, &target, true)
+	if diags.HasError() {
+		return r, diags
+	}
+	var customEnvironmentIDs []string
+	diags = e.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
+	if diags.HasError() {
+		return r, diags
 	}
 
 	var envVariableType string
-
 	if e.Sensitive.ValueBool() {
 		envVariableType = "sensitive"
 	} else {
@@ -225,22 +262,23 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest() client
 	}
 
 	return client.UpdateEnvironmentVariableRequest{
-		Value:     e.Value.ValueString(),
-		Target:    target,
-		GitBranch: e.GitBranch.ValueStringPointer(),
-		Type:      envVariableType,
-		ProjectID: e.ProjectID.ValueString(),
-		TeamID:    e.TeamID.ValueString(),
-		EnvID:     e.ID.ValueString(),
-		Comment:   e.Comment.ValueString(),
-	}
+		Value:                e.Value.ValueString(),
+		Target:               target,
+		CustomEnvironmentIDs: customEnvironmentIDs,
+		GitBranch:            e.GitBranch.ValueStringPointer(),
+		Type:                 envVariableType,
+		ProjectID:            e.ProjectID.ValueString(),
+		TeamID:               e.TeamID.ValueString(),
+		EnvID:                e.ID.ValueString(),
+		Comment:              e.Comment.ValueString(),
+	}, nil
 }
 
 // convertResponseToProjectEnvironmentVariable is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
 func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVariable, projectID types.String, v types.String) ProjectEnvironmentVariable {
-	target := []types.String{}
+	var target []attr.Value
 	for _, t := range response.Target {
 		target = append(target, types.StringValue(t))
 	}
@@ -250,16 +288,22 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 		value = v
 	}
 
+	var customEnvironmentIDs []attr.Value
+	for _, c := range response.CustomEnvironmentIDs {
+		customEnvironmentIDs = append(customEnvironmentIDs, types.StringValue(c))
+	}
+
 	return ProjectEnvironmentVariable{
-		Target:    target,
-		GitBranch: types.StringPointerValue(response.GitBranch),
-		Key:       types.StringValue(response.Key),
-		Value:     value,
-		TeamID:    toTeamID(response.TeamID),
-		ProjectID: projectID,
-		ID:        types.StringValue(response.ID),
-		Sensitive: types.BoolValue(response.Type == "sensitive"),
-		Comment:   types.StringValue(response.Comment),
+		Target:               types.SetValueMust(types.StringType, target),
+		CustomEnvironmentIDs: types.SetValueMust(types.StringType, customEnvironmentIDs),
+		GitBranch:            types.StringPointerValue(response.GitBranch),
+		Key:                  types.StringValue(response.Key),
+		Value:                value,
+		TeamID:               toTeamID(response.TeamID),
+		ProjectID:            projectID,
+		ID:                   types.StringValue(response.ID),
+		Sensitive:            types.BoolValue(response.Type == "sensitive"),
+		Comment:              types.StringValue(response.Comment),
 	}
 }
 
@@ -282,7 +326,12 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 		return
 	}
 
-	response, err := r.client.CreateEnvironmentVariable(ctx, plan.toCreateEnvironmentVariableRequest())
+	request, diags := plan.toCreateEnvironmentVariableRequest(ctx)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	response, err := r.client.CreateEnvironmentVariable(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project environment variable",
@@ -357,7 +406,12 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 		return
 	}
 
-	response, err := r.client.UpdateEnvironmentVariable(ctx, plan.toUpdateEnvironmentVariableRequest())
+	request, diags := plan.toUpdateEnvironmentVariableRequest(ctx)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	response, err := r.client.UpdateEnvironmentVariable(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project environment variable",

@@ -51,6 +51,7 @@ resource "vercel_project_domain" "example_redirect" {
 
 ### Optional
 
+- `custom_environment_id` (String) The name of the Custom Environment to link to the Project Domain. Deployments from this custom environment will be assigned the domain name.
 - `git_branch` (String) Git branch to link to the project domain. Deployments from this git branch will be assigned the domain name.
 - `redirect` (String) The domain name that serves as a target destination for redirects.
 - `redirect_status_code` (Number) The HTTP status code to use when serving as a redirect.
