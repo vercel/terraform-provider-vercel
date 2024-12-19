@@ -126,6 +126,9 @@ func (c *Client) _doRequest(req *http.Request, v interface{}, errorOnNoContent b
 		}{
 			Error: &errorResponse,
 		})
+		if errorResponse.Code == "" && errorResponse.Message == "" {
+			return fmt.Errorf("error performing API request: %d %s", resp.StatusCode, string(responseBody))
+		}
 		if err != nil {
 			return fmt.Errorf("error unmarshaling response for status code %d: %w: %s", resp.StatusCode, err, string(responseBody))
 		}

@@ -654,7 +654,7 @@ var nullProject = Project{
 }
 
 func (p *Project) environment(ctx context.Context) ([]EnvironmentItem, error) {
-	if p.Environment.IsNull() {
+	if p.Environment.IsNull() || p.Environment.IsUnknown() {
 		return nil, nil
 	}
 
@@ -669,12 +669,12 @@ func (p *Project) environment(ctx context.Context) ([]EnvironmentItem, error) {
 func parseEnvironment(ctx context.Context, vars []EnvironmentItem) (out []client.EnvironmentVariable, diags diag.Diagnostics) {
 	for _, e := range vars {
 		var target []string
-		diags = e.Target.ElementsAs(ctx, &target, false)
+		diags = e.Target.ElementsAs(ctx, &target, true)
 		if diags.HasError() {
 			return out, diags
 		}
 		var customEnvironmentIDs []string
-		diags = e.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, false)
+		diags = e.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
 		if diags.HasError() {
 			return out, diags
 		}
@@ -801,12 +801,12 @@ func (e *EnvironmentItem) equal(other *EnvironmentItem) bool {
 
 func (e *EnvironmentItem) toEnvironmentVariableRequest(ctx context.Context) (req client.EnvironmentVariableRequest, diags diag.Diagnostics) {
 	var target []string
-	diags = e.Target.ElementsAs(ctx, &target, false)
+	diags = e.Target.ElementsAs(ctx, &target, true)
 	if diags.HasError() {
 		return req, diags
 	}
 	var customEnvironmentIDs []string
-	diags = e.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, false)
+	diags = e.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
 	if diags.HasError() {
 		return req, diags
 	}
@@ -1246,13 +1246,26 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 
 	var env []attr.Value
 	for _, e := range environmentVariables {
-		target := []attr.Value{}
-		for _, t := range e.Target {
-			target = append(target, types.StringValue(t))
+		var targetValue attr.Value
+		if len(e.Target) > 0 {
+			target := make([]attr.Value, 0, len(e.Target))
+			for _, t := range e.Target {
+				target = append(target, types.StringValue(t))
+			}
+			targetValue = types.SetValueMust(types.StringType, target)
+		} else {
+			targetValue = types.SetNull(types.StringType)
 		}
-		var customEnvironmentIDs []attr.Value
-		for _, c := range e.CustomEnvironmentIDs {
-			customEnvironmentIDs = append(customEnvironmentIDs, types.StringValue(c))
+
+		var customEnvIDsValue attr.Value
+		if len(e.CustomEnvironmentIDs) > 0 {
+			customEnvIDs := make([]attr.Value, 0, len(e.CustomEnvironmentIDs))
+			for _, c := range e.CustomEnvironmentIDs {
+				customEnvIDs = append(customEnvIDs, types.StringValue(c))
+			}
+			customEnvIDsValue = types.SetValueMust(types.StringType, customEnvIDs)
+		} else {
+			customEnvIDsValue = types.SetNull(types.StringType)
 		}
 		value := types.StringValue(e.Value)
 		if e.Type == "sensitive" {
@@ -1263,11 +1276,16 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 			}
 			for _, p := range environment {
 				var target []string
-				diags := p.Target.ElementsAs(ctx, &target, false)
+				diags := p.Target.ElementsAs(ctx, &target, true)
 				if diags.HasError() {
 					return Project{}, fmt.Errorf("error reading project environment variables: %s", diags)
 				}
-				if p.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) {
+				var customEnvironmentIDs []string
+				diags = p.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
+				if diags.HasError() {
+					return Project{}, fmt.Errorf("error reading project environment variables: %s", diags)
+				}
+				if p.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
 					value = p.Value
 					break
 				}
@@ -1277,8 +1295,8 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		env = append(env, types.ObjectValueMust(envVariableElemType.AttrTypes, map[string]attr.Value{
 			"key":                    types.StringValue(e.Key),
 			"value":                  value,
-			"target":                 types.SetValueMust(types.StringType, target),
-			"custom_environment_ids": types.SetValueMust(types.StringType, customEnvironmentIDs),
+			"target":                 targetValue,
+			"custom_environment_ids": customEnvIDsValue,
 			"git_branch":             types.StringPointerValue(e.GitBranch),
 			"id":                     types.StringValue(e.ID),
 			"sensitive":              types.BoolValue(e.Type == "sensitive"),

@@ -40,7 +40,7 @@ resource "vercel_project" "test" {
 resource "vercel_custom_environment" "test" {
   project_id = vercel_project.test.id
   %[2]s
-  name = "test-acc-custom-env-%[1]s"
+  name = "test-acc-ce-%[1]s"
   description = "oh cool"
   branch_tracking = {
     pattern = "staging-"
@@ -51,7 +51,7 @@ resource "vercel_custom_environment" "test" {
 data "vercel_custom_environment" "test" {
   project_id = vercel_project.test.id
   %[2]s
-  name = "test-acc-custom-env-%[1]s"
+  name = vercel_custom_environment.test.name
 }
 `, projectSuffix, teamIDConfig())
 }
