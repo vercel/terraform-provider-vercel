@@ -128,6 +128,16 @@ func TestAcc_ProjectEnvironmentVariable(t *testing.T) {
 					testAccProjectEnvironmentVariableDoNotExist("vercel_project.example", testTeam()),
 				),
 			},
+			{
+				Config: testAccProjectEnvironmentVariableConfigUpsert(nameSuffix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.upsert_example", testTeam()),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.upsert_example", "key", "foo_upsert"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.upsert_example", "value", "bar_upsert"),
+					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.upsert_example", "target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.upsert_example", "upsert", "true"),
+				),
+			},
 		},
 	})
 }
@@ -251,6 +261,29 @@ resource "vercel_project" "example" {
         type = "github"
         repo = "%[2]s"
     }
+}
+`, projectName, testGithubRepo(), teamIDConfig())
+}
+
+func testAccProjectEnvironmentVariableConfigUpsert(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+	%[3]s
+
+	git_repository = {
+		type = "github"
+		repo = "%[2]s"
+	}
+}
+
+resource "vercel_project_environment_variable" "upsert_example" {
+	project_id = vercel_project.example.id
+	%[3]s
+	key        = "foo_upsert"
+	value      = "bar_upsert"
+	target     = ["production"]
+	upsert     = true
 }
 `, projectName, testGithubRepo(), teamIDConfig())
 }

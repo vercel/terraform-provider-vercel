@@ -58,6 +58,24 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "variables.2.id"),
 				),
 			},
+			{
+				Config: testAccProjectEnvironmentVariablesConfigUpsert(projectName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "variables.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
+						"key":   "TEST_VAR_UPSERT_1",
+						"value": "test_value_upsert_1",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
+						"key":        "TEST_VAR_UPSERT_2",
+						"value":      "test_value_upsert_2",
+						"git_branch": "staging",
+					}),
+					resource.TestCheckResourceAttr(resourceName, "upsert", "true"),
+					resource.TestCheckResourceAttrSet(resourceName, "variables.0.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "variables.1.id"),
+				),
+			},
 		},
 	})
 }
@@ -126,6 +144,37 @@ resource "vercel_project_environment_variables" "test" {
       sensitive = true
     }
   ]
+}
+`, projectName, teamIDConfig(), testGithubRepo())
+}
+
+func testAccProjectEnvironmentVariablesConfigUpsert(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+    name = "%s"
+    %[2]s
+
+    git_repository = {
+        type = "github"
+        repo = "%[3]s"
+    }
+}
+
+resource "vercel_project_environment_variables" "test" {
+    project_id = vercel_project.test.id
+    %[2]s
+    upsert = true
+    variables = [{
+        key   = "TEST_VAR_UPSERT_1"
+        value = "test_value_upsert_1"
+        target = ["production", "preview"]
+    },
+    {
+        key   = "TEST_VAR_UPSERT_2"
+        value = "test_value_upsert_2"
+        git_branch = "staging"
+        target = ["preview"]
+    }]
 }
 `, projectName, teamIDConfig(), testGithubRepo())
 }

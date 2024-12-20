@@ -35,6 +35,7 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_environment_variables" "example" {
   project_id = vercel_project.test.id
+  upsert     = true
   variables = [
     {
       key    = "SOME_VARIABLE"
@@ -68,6 +69,7 @@ resource "vercel_project_environment_variables" "example" {
 ### Optional
 
 - `team_id` (String) The ID of the Vercel team. Required when configuring a team resource if a default team has not been set in the provider.
+- `upsert` (Boolean) Allow override of environment variable if it already exists.
 
 <a id="nestedatt--variables"></a>
 ### Nested Schema for `variables`

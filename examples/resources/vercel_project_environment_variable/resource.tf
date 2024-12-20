@@ -39,3 +39,13 @@ resource "vercel_project_environment_variable" "example_sensitive" {
   comment    = "a sensitive production secret"
 }
 
+# An environment variable that will be created or updated
+# for this project for the "production" environment.
+resource "vercel_project_environment_variable" "example_upsert" {
+  project_id = vercel_project.example.id
+  key        = "foo"
+  value      = "bar"
+  target     = ["production"]
+  upsert     = true
+  comment    = "this will be updated if it already exists"
+}

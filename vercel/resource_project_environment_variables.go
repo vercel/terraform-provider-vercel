@@ -82,6 +82,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "The ID of the Vercel team. Required when configuring a team resource if a default team has not been set in the provider.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
+			"upsert": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Allow override of environment variable if it already exists.",
+			},
 			"variables": schema.SetNestedAttribute{
 				Required:    true,
 				Description: "A set of Environment Variables that should be configured for the project.",
@@ -158,6 +162,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 type ProjectEnvironmentVariables struct {
 	TeamID    types.String `tfsdk:"team_id"`
 	ProjectID types.String `tfsdk:"project_id"`
+	Upsert    types.Bool   `tfsdk:"upsert"`
 	Variables types.Set    `tfsdk:"variables"`
 }
 
@@ -277,6 +282,7 @@ func (e *ProjectEnvironmentVariables) toCreateEnvironmentVariablesRequest(ctx co
 	return client.CreateEnvironmentVariablesRequest{
 		ProjectID:            e.ProjectID.ValueString(),
 		TeamID:               e.TeamID.ValueString(),
+		Upsert:               e.Upsert.ValueBool(),
 		EnvironmentVariables: variables,
 	}, nil
 }
@@ -375,6 +381,7 @@ func convertResponseToProjectEnvironmentVariables(ctx context.Context, response 
 		TeamID:    toTeamID(plan.TeamID.ValueString()),
 		ProjectID: plan.ProjectID,
 		Variables: types.SetValueMust(envVariableElemType, env),
+		Upsert:    plan.Upsert,
 	}, nil
 }
 

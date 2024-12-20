@@ -9,6 +9,7 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_environment_variables" "example" {
   project_id = vercel_project.test.id
+  upsert     = true
   variables = [
     {
       key    = "SOME_VARIABLE"

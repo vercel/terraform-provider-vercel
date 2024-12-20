@@ -23,13 +23,14 @@ type CreateEnvironmentVariableRequest struct {
 	EnvironmentVariable EnvironmentVariableRequest
 	ProjectID           string
 	TeamID              string
+	Upsert              bool
 }
 
 // CreateEnvironmentVariable will create a brand new environment variable if one does not exist.
 func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEnvironmentVariableRequest) (e EnvironmentVariable, err error) {
-	url := fmt.Sprintf("%s/v9/projects/%s/env", c.baseURL, request.ProjectID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env?upsert=%t", c.baseURL, request.ProjectID, request.Upsert)
 	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariable))
 
@@ -112,6 +113,7 @@ type CreateEnvironmentVariablesRequest struct {
 	EnvironmentVariables []EnvironmentVariableRequest
 	ProjectID            string
 	TeamID               string
+	Upsert               bool
 }
 
 type CreateEnvironmentVariablesResponse struct {
@@ -133,12 +135,13 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 			EnvironmentVariable: request.EnvironmentVariables[0],
 			ProjectID:           request.ProjectID,
 			TeamID:              request.TeamID,
+			Upsert:              request.Upsert,
 		})
 		return []EnvironmentVariable{env}, err
 	}
-	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, request.ProjectID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env?upsert=%t", c.baseURL, request.ProjectID, request.Upsert)
 	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariables))
 	tflog.Info(ctx, "creating environment variables", map[string]interface{}{

@@ -148,6 +148,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					stringvalidator.LengthBetween(0, 1000),
 				},
 			},
+			"upsert": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Allow override of environment variable if it already exists.",
+			},
 		},
 	}
 }
@@ -164,6 +168,7 @@ type ProjectEnvironmentVariable struct {
 	ID                   types.String `tfsdk:"id"`
 	Sensitive            types.Bool   `tfsdk:"sensitive"`
 	Comment              types.String `tfsdk:"comment"`
+	Upsert               types.Bool   `tfsdk:"upsert"`
 }
 
 func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
@@ -239,6 +244,7 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx cont
 		},
 		ProjectID: e.ProjectID.ValueString(),
 		TeamID:    e.TeamID.ValueString(),
+		Upsert:    e.Upsert.ValueBool(),
 	}, nil
 }
 
@@ -277,7 +283,7 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest(ctx cont
 // convertResponseToProjectEnvironmentVariable is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
-func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVariable, projectID types.String, v types.String) ProjectEnvironmentVariable {
+func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVariable, projectID types.String, v types.String, upsert types.Bool) ProjectEnvironmentVariable {
 	var target []attr.Value
 	for _, t := range response.Target {
 		target = append(target, types.StringValue(t))
@@ -304,6 +310,7 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 		ID:                   types.StringValue(response.ID),
 		Sensitive:            types.BoolValue(response.Type == "sensitive"),
 		Comment:              types.StringValue(response.Comment),
+		Upsert:               upsert,
 	}
 }
 
@@ -340,7 +347,7 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
+	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value, plan.Upsert)
 
 	tflog.Info(ctx, "created project environment variable", map[string]interface{}{
 		"id":         result.ID.ValueString(),
@@ -383,7 +390,7 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, state.ProjectID, state.Value)
+	result := convertResponseToProjectEnvironmentVariable(out, state.ProjectID, state.Value, state.Upsert)
 	tflog.Info(ctx, "read project environment variable", map[string]interface{}{
 		"id":         result.ID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
@@ -420,7 +427,7 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
+	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value, plan.Upsert)
 
 	tflog.Info(ctx, "updated project environment variable", map[string]interface{}{
 		"id":         result.ID.ValueString(),
@@ -492,7 +499,7 @@ func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, re
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID), types.StringNull())
+	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID), types.StringNull(), types.BoolNull())
 	tflog.Info(ctx, "imported project environment variable", map[string]interface{}{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
