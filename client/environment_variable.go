@@ -12,7 +12,7 @@ import (
 type EnvironmentVariableRequest struct {
 	Key                  string   `json:"key"`
 	Value                string   `json:"value"`
-	Target               []string `json:"target,omitempty"`
+	Target               []string `json:"target"`
 	CustomEnvironmentIDs []string `json:"customEnvironmentIds,omitempty"`
 	GitBranch            *string  `json:"gitBranch,omitempty"`
 	Type                 string   `json:"type"`
@@ -27,7 +27,7 @@ type CreateEnvironmentVariableRequest struct {
 
 // CreateEnvironmentVariable will create a brand new environment variable if one does not exist.
 func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEnvironmentVariableRequest) (e EnvironmentVariable, err error) {
-	url := fmt.Sprintf("%s/v9/projects/%s/env", c.baseURL, request.ProjectID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, request.ProjectID)
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
@@ -37,12 +37,13 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		"url":     url,
 		"payload": payload,
 	})
+	var response CreateEnvironmentVariableResponse
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "POST",
 		url:    url,
 		body:   payload,
-	}, &e)
+	}, &response)
 	if conflictingEnv, isConflicting, err2 := conflictingEnvVar(err); isConflicting {
 		if err2 != nil {
 			return e, err2
@@ -62,13 +63,12 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		return e, fmt.Errorf("%w - %s", err, payload)
 	}
 	// The API response returns an encrypted environment variable, but we want to return the decrypted version.
-	e.Value = request.EnvironmentVariable.Value
 	e.TeamID = c.teamID(request.TeamID)
-	return e, err
+	return response.Created, err
 }
 
 func (c *Client) ListEnvironmentVariables(ctx context.Context, teamID, projectID string) (envs []EnvironmentVariable, err error) {
-	url := fmt.Sprintf("%s/v9/projects/%s/env", c.baseURL, projectID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
@@ -116,6 +116,19 @@ type CreateEnvironmentVariablesRequest struct {
 
 type CreateEnvironmentVariablesResponse struct {
 	Created []EnvironmentVariable `json:"created"`
+	Failed  []struct {
+		Error struct {
+			Code      string   `json:"code"`
+			Message   string   `json:"message"`
+			Key       string   `json:"envVarKey"`
+			GitBranch *string  `json:"gitBranch"`
+			Target    []string `json:"target"`
+		} `json:"error"`
+	} `json:"failed"`
+}
+
+type CreateEnvironmentVariableResponse struct {
+	Created EnvironmentVariable `json:"created"`
 	Failed  []struct {
 		Error struct {
 			Code      string   `json:"code"`
@@ -198,7 +211,7 @@ type UpdateEnvironmentVariableRequest struct {
 
 // UpdateEnvironmentVariable will update an existing environment variable to the latest information.
 func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEnvironmentVariableRequest) (e EnvironmentVariable, err error) {
-	url := fmt.Sprintf("%s/v9/projects/%s/env/%s", c.baseURL, request.ProjectID, request.EnvID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env/%s", c.baseURL, request.ProjectID, request.EnvID)
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
@@ -262,7 +275,7 @@ func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID 
 
 // GetEnvironmentVariable gets a singluar environment variable from Vercel based on its ID.
 func (c *Client) GetEnvironmentVariable(ctx context.Context, projectID, teamID, envID string) (e EnvironmentVariable, err error) {
-	url := fmt.Sprintf("%s/v1/projects/%s/env/%s", c.baseURL, projectID, envID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env/%s", c.baseURL, projectID, envID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
