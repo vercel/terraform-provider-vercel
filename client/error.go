@@ -25,13 +25,14 @@ type EnvConflictError struct {
 	Code      string   `json:"code"`
 	Message   string   `json:"message"`
 	Key       string   `json:"key"`
+	EnvVarKey string   `json:"envVarKey"`
 	Target    []string `json:"target"`
 	GitBranch *string  `json:"gitBranch"`
 }
 
 func conflictingEnvVar(e error) (envConflictError EnvConflictError, ok bool, err error) {
 	var apiErr APIError
-	conflict := e != nil && errors.As(e, &apiErr) && apiErr.StatusCode == 403 && apiErr.Code == "ENV_ALREADY_EXISTS"
+	conflict := e != nil && errors.As(e, &apiErr) && apiErr.StatusCode == 400 && apiErr.Code == "ENV_CONFLICT"
 	if !conflict {
 		return envConflictError, false, err
 	}
