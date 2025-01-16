@@ -24,10 +24,10 @@ func mustHaveEnv(t *testing.T, name string) {
 func testAccPreCheck(t *testing.T) {
 	mustHaveEnv(t, "VERCEL_API_TOKEN")
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_GITHUB_REPO")
-	/*mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_GITLAB_REPO")
+	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_GITLAB_REPO")
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO")
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_DOMAIN")
-	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")*/
+	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
 }
 
 var tc *client.Client
