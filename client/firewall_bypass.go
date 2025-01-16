@@ -79,6 +79,10 @@ func (c *Client) RemoveFirewallBypass(ctx context.Context, teamID, projectID str
 	if tid := c.teamID(teamID); tid != "" {
 		url = fmt.Sprintf("%s&teamId=%s", url, tid)
 	}
+	if request.Domain == "*" {
+		request.Domain = ""
+		request.ProjectScope = true
+	}
 
 	payload := string(mustMarshal(request))
 	var res FirewallBypass
