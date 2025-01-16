@@ -62,6 +62,8 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 	if err != nil {
 		return e, fmt.Errorf("%w - %s", err, payload)
 	}
+	response.Created.Value = request.EnvironmentVariable.Value
+	response.Created.TeamID = c.teamID(request.TeamID)
 	return response.Created, err
 }
 
