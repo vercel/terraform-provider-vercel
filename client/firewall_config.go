@@ -33,11 +33,11 @@ type ConditionGroup struct {
 }
 
 type Condition struct {
-	Type  string `json:"type"`
-	Op    string `json:"op"`
-	Neg   bool   `json:"neg"`
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Type  string      `json:"type"`
+	Op    string      `json:"op"`
+	Neg   bool        `json:"neg"`
+	Key   string      `json:"key"`
+	Value interface{} `json:"value"`
 }
 
 type Action struct {

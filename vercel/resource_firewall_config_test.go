@@ -123,6 +123,14 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"rules.rule.2.action.redirect.permanent",
 						"false"),
 					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom",
+						"rules.rule.4.condition_group.0.conditions.0.values.0",
+						"/test1"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom",
+						"rules.rule.4.condition_group.0.conditions.0.values.1",
+						"/test2"),
+					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.ips",
 						"ip_rules.rule.0.action",
 						"deny"),
@@ -387,6 +395,23 @@ resource "vercel_firewall_config" "custom" {
             }]
           }]
         }
+        rule {
+          name =  "test_list"
+          action = {
+            action = "deny"
+          }
+          condition_group = [{
+            conditions = [{
+                type = "path"
+                op = "inc"
+                values = [
+                    "/test1",
+                    "/test2",
+                    "/test3"
+                ]
+            }]
+          }]
+        }
     }
 }
 
@@ -507,6 +532,23 @@ resource "vercel_firewall_config" "custom" {
                 type = "path"
                 op = "eq"
                 value = "/api"
+            }]
+          }]
+        }
+        rule {
+          name =  "test_list"
+          action = {
+            action = "deny"
+          }
+          condition_group = [{
+            conditions = [{
+                type = "path"
+                op = "inc"
+                values = [
+                    "/api",
+                    "/api2",
+                    "/api3"
+                ]
             }]
           }]
         }
