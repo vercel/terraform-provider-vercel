@@ -193,7 +193,7 @@ Optional:
 
 Read-Only:
 
-- `id` (String) The ID of this resource.
+- `id` (String)
 
 
 
@@ -365,7 +365,7 @@ Optional:
 
 Read-Only:
 
-- `id` (String) The ID of this resource.
+- `id` (String)
 
 <a id="nestedatt--rules--rule--action"></a>
 ### Nested Schema for `rules.rule.action`
