@@ -203,8 +203,6 @@ func (r *firewallBypassResource) Update(ctx context.Context, req resource.Update
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	return
 }
 
 func (r *firewallBypassResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
