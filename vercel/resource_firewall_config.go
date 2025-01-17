@@ -332,6 +332,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 															Validators: []validator.String{
 																stringvalidator.ConflictsWith(
 																	path.MatchRelative().AtParent().AtName("values"),
+																	path.MatchRelative().AtParent().AtName("value"),
 																),
 															},
 															Description: "Value to match against",
@@ -341,6 +342,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 															Validators: []validator.List{
 																listvalidator.ConflictsWith(
 																	path.MatchRelative().AtParent().AtName("value"),
+																	path.MatchRelative().AtParent().AtName("values"),
 																),
 															},
 															ElementType: types.StringType,
@@ -507,14 +509,14 @@ func (r *FirewallRule) Conditions() ([]client.ConditionGroup, error) {
 			}
 			if isListOp(condition.Op.ValueString()) {
 				if condition.Values.IsNull() {
-					return nil, fmt.Errorf("%s conditionGroup.%d.condition.%d, operator requires list values", r.Name.ValueString(), cgIndex, condIndex)
+					return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator requires list values", r.Name.ValueString(), cgIndex, condIndex)
 				}
 				vals := make([]string, len(condition.Values.Elements()))
 				condition.Values.ElementsAs(context.Background(), &vals, false)
 				cond.Value = vals
 			} else {
 				if !condition.Values.IsNull() {
-					return nil, fmt.Errorf("%s conditionGroup.%d.condition.%d, operator does not allow values", r.Name.ValueString(), cgIndex, condIndex)
+					return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator does not allow values", r.Name.ValueString(), cgIndex, condIndex)
 				}
 				cond.Value = condition.Value.ValueString()
 			}
@@ -706,12 +708,17 @@ func fromCondition(condition client.Condition, ref Condition) (Condition, error)
 		Value:  types.StringNull(),
 		Values: types.ListNull(types.StringType),
 	}
-	if valueList, ok := condition.Value.([]interface{}); ok {
-		values, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, valueList)
-		if diags.HasError() {
-			return c, fmt.Errorf("error converting values: %s - %s", diags[0].Summary(), diags[0].Detail())
+	if isListOp(condition.Op) {
+		if valueList, ok := condition.Value.([]interface{}); ok {
+			values, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, valueList)
+			if diags.HasError() {
+				return c, fmt.Errorf("error converting values: %s - %s", diags[0].Summary(), diags[0].Detail())
+			}
+			c.Values = values
+		} else {
+			return c, fmt.Errorf("condition value is not a list")
+
 		}
-		c.Values = values
 	} else {
 		val := condition.Value.(string)
 		c.Value = types.StringValue(val)
@@ -902,7 +909,6 @@ func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 }
 
 func (r *firewallConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-
 	var plan FirewallConfig
 	diags := req.Plan.Get(ctx, &plan)
 	if resp.Diagnostics.HasError() {
@@ -912,6 +918,7 @@ func (r *firewallConfigResource) Create(ctx context.Context, req resource.Create
 	conf, err := plan.toClient()
 	if err != nil {
 		diags.AddError("failed to convert plan to client", err.Error())
+		resp.Diagnostics.Append(diags...)
 		return
 	}
 
@@ -969,6 +976,7 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 	conf, err := plan.toClient()
 	if err != nil {
 		diags.AddError("failed to convert plan to client", err.Error())
+		resp.Diagnostics.Append(diags...)
 		return
 	}
 
