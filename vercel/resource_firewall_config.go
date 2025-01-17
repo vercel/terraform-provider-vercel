@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -320,14 +321,33 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 															},
 														},
 														"neg": schema.BoolAttribute{
-															Optional: true,
+															Description: "Negate the condition",
+															Optional:    true,
 														},
 														"key": schema.StringAttribute{
 															Description: "Key within type to match against",
 															Optional:    true,
 														},
 														"value": schema.StringAttribute{
-															Optional: true,
+															Validators: []validator.String{
+																stringvalidator.ConflictsWith(
+																	path.MatchRelative().AtParent().AtName("values"),
+																	path.MatchRelative().AtParent().AtName("value"),
+																),
+															},
+															Description: "Value to match against",
+															Optional:    true,
+														},
+														"values": schema.ListAttribute{
+															Validators: []validator.List{
+																listvalidator.ConflictsWith(
+																	path.MatchRelative().AtParent().AtName("value"),
+																	path.MatchRelative().AtParent().AtName("values"),
+																),
+															},
+															ElementType: types.StringType,
+															Description: "Values to match against if op is inc, ninc",
+															Optional:    true,
 														},
 													},
 												},
@@ -472,24 +492,41 @@ type FirewallRule struct {
 	Action         Mitigate         `tfsdk:"action"`
 }
 
-func (r *FirewallRule) Conditions() []client.ConditionGroup {
+func isListOp(op string) bool {
+	return op == "inc" || op == "ninc"
+}
+
+func (r *FirewallRule) Conditions() ([]client.ConditionGroup, error) {
 	var groups []client.ConditionGroup
-	for _, group := range r.ConditionGroup {
+	for cgIndex, group := range r.ConditionGroup {
 		var conditions []client.Condition
-		for _, condition := range group.Conditions {
-			conditions = append(conditions, client.Condition{
-				Type:  condition.Type.ValueString(),
-				Op:    condition.Op.ValueString(),
-				Neg:   condition.Neg.ValueBool(),
-				Key:   condition.Key.ValueString(),
-				Value: condition.Value.ValueString(),
-			})
+		for condIndex, condition := range group.Conditions {
+			cond := client.Condition{
+				Type: condition.Type.ValueString(),
+				Op:   condition.Op.ValueString(),
+				Neg:  condition.Neg.ValueBool(),
+				Key:  condition.Key.ValueString(),
+			}
+			if isListOp(condition.Op.ValueString()) {
+				if condition.Values.IsNull() {
+					return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator requires list values", r.Name.ValueString(), cgIndex, condIndex)
+				}
+				vals := make([]string, len(condition.Values.Elements()))
+				condition.Values.ElementsAs(context.Background(), &vals, false)
+				cond.Value = vals
+			} else {
+				if !condition.Values.IsNull() {
+					return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator does not allow values", r.Name.ValueString(), cgIndex, condIndex)
+				}
+				cond.Value = condition.Value.ValueString()
+			}
+			conditions = append(conditions, cond)
 		}
 		groups = append(groups, client.ConditionGroup{
 			Conditions: conditions,
 		})
 	}
-	return groups
+	return groups, nil
 }
 
 func (r *FirewallRule) Mitigate() (client.Mitigate, error) {
@@ -549,7 +586,10 @@ func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) (FirewallRule,
 			if len(ref.ConditionGroup) > j && len(ref.ConditionGroup[j].Conditions) > k {
 				cond = ref.ConditionGroup[j].Conditions[k]
 			}
-			conditions[k] = fromCondition(condition, cond)
+			conditions[k], err = fromCondition(condition, cond)
+			if err != nil {
+				return r, err
+			}
 		}
 		conditionGroups[j] = ConditionGroup{
 			Conditions: conditions,
@@ -651,21 +691,39 @@ type ConditionGroup struct {
 }
 
 type Condition struct {
-	Type  types.String `tfsdk:"type"`
-	Op    types.String `tfsdk:"op"`
-	Neg   types.Bool   `tfsdk:"neg"`
-	Key   types.String `tfsdk:"key"`
-	Value types.String `tfsdk:"value"`
+	Type   types.String `tfsdk:"type"`
+	Op     types.String `tfsdk:"op"`
+	Neg    types.Bool   `tfsdk:"neg"`
+	Key    types.String `tfsdk:"key"`
+	Value  types.String `tfsdk:"value"`
+	Values types.List   `tfsdk:"values"`
 }
 
-func fromCondition(condition client.Condition, ref Condition) Condition {
+func fromCondition(condition client.Condition, ref Condition) (Condition, error) {
 	c := Condition{
-		Type:  types.StringValue(condition.Type),
-		Op:    types.StringValue(condition.Op),
-		Value: types.StringValue(condition.Value),
-		Key:   types.StringValue(condition.Key),
-		Neg:   types.BoolValue(condition.Neg),
+		Type:   types.StringValue(condition.Type),
+		Op:     types.StringValue(condition.Op),
+		Key:    types.StringValue(condition.Key),
+		Neg:    types.BoolValue(condition.Neg),
+		Value:  types.StringNull(),
+		Values: types.ListNull(types.StringType),
 	}
+	if isListOp(condition.Op) {
+		if valueList, ok := condition.Value.([]interface{}); ok {
+			values, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, valueList)
+			if diags.HasError() {
+				return c, fmt.Errorf("error converting values: %s - %s", diags[0].Summary(), diags[0].Detail())
+			}
+			c.Values = values
+		} else {
+			return c, fmt.Errorf("condition value is not a list")
+
+		}
+	} else {
+		val := condition.Value.(string)
+		c.Value = types.StringValue(val)
+	}
+
 	// Neg and Key are optional
 	if ref.Neg == types.BoolNull() {
 		c.Neg = types.BoolNull()
@@ -678,7 +736,7 @@ func fromCondition(condition client.Condition, ref Condition) Condition {
 			c.Value = types.StringNull()
 		}
 	}
-	return c
+	return c, nil
 }
 
 type IPRules struct {
@@ -819,12 +877,16 @@ func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 			if err != nil {
 				return conf, err
 			}
+			condGroup, err := rule.Conditions()
+			if err != nil {
+				return conf, err
+			}
 			conf.Rules = append(conf.Rules, client.FirewallRule{
 				ID:             rule.ID.ValueString(),
 				Name:           rule.Name.ValueString(),
 				Description:    rule.Description.ValueString(),
 				Active:         rule.Active.IsNull() || rule.Active.ValueBool(),
-				ConditionGroup: rule.Conditions(),
+				ConditionGroup: condGroup,
 				Action: client.Action{
 					Mitigate: mit,
 				},
@@ -847,7 +909,6 @@ func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 }
 
 func (r *firewallConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-
 	var plan FirewallConfig
 	diags := req.Plan.Get(ctx, &plan)
 	if resp.Diagnostics.HasError() {
@@ -857,6 +918,7 @@ func (r *firewallConfigResource) Create(ctx context.Context, req resource.Create
 	conf, err := plan.toClient()
 	if err != nil {
 		diags.AddError("failed to convert plan to client", err.Error())
+		resp.Diagnostics.Append(diags...)
 		return
 	}
 
@@ -914,6 +976,7 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 	conf, err := plan.toClient()
 	if err != nil {
 		diags.AddError("failed to convert plan to client", err.Error())
+		resp.Diagnostics.Append(diags...)
 		return
 	}
 

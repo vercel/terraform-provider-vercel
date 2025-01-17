@@ -37,7 +37,7 @@ type Condition struct {
 	Op    string `json:"op"`
 	Neg   bool   `json:"neg"`
 	Key   string `json:"key"`
-	Value string `json:"value"`
+	Value any    `json:"value"`
 }
 
 type Action struct {

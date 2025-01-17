@@ -108,6 +108,34 @@ resource "vercel_firewall_config" "example" {
         action_duration = "5m"
       }
     }
+
+    rule {
+      name = "Known clients"
+      description = "Match known keys in header
+      condition_group = [{
+        conditions = [{
+          type = "header"
+          key = "Authorization"
+          op = "inc"
+          values = [
+            "key1",
+            "key2",
+          ]
+        }]
+      }]
+
+      action = {
+        action = "rate_limit"
+        rate_limit = {
+          limit = 100
+          window = 300
+          keys = ["ip", "ja4"]
+          algo = "fixed_window"
+          action = "deny"
+        }
+        action_duration = "5m"
+      }
+    }
   }
 }
 
@@ -420,8 +448,9 @@ Required:
 Optional:
 
 - `key` (String) Key within type to match against
-- `neg` (Boolean)
-- `value` (String)
+- `neg` (Boolean) Negate the condition
+- `value` (String) Value to match against
+- `values` (List of String) Values to match against if op is inc, ninc
 
 ## Import
 
