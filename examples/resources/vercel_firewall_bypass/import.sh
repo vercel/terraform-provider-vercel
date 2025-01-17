@@ -1,0 +1,4 @@
+terraform import vercel_firewall_bypass.example team_xxxxxxxxxxxxxxxxxxxxxxxx/prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx#mybypasshost.com#3.4.5.0/24
+
+
+terraform import vercel_firewall_bypass.example team_xxxxxxxxxxxxxxxxxxxxxxxx/prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx#3.4.5.0/24
