@@ -27,7 +27,7 @@ type CreateEnvironmentVariableRequest struct {
 
 // CreateEnvironmentVariable will create a brand new environment variable if one does not exist.
 func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEnvironmentVariableRequest) (e EnvironmentVariable, err error) {
-	url := fmt.Sprintf("%s/v9/projects/%s/env", c.baseURL, request.ProjectID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, request.ProjectID)
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
@@ -37,38 +37,38 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		"url":     url,
 		"payload": payload,
 	})
+	var response CreateEnvironmentVariableResponse
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "POST",
 		url:    url,
 		body:   payload,
-	}, &e)
+	}, &response)
+
 	if conflictingEnv, isConflicting, err2 := conflictingEnvVar(err); isConflicting {
 		if err2 != nil {
 			return e, err2
 		}
-
 		envs, err3 := c.ListEnvironmentVariables(ctx, request.TeamID, request.ProjectID)
-		if err != nil {
+		if err3 != nil {
 			return e, fmt.Errorf("%s: unable to list environment variables to detect conflict: %s", err, err3)
 		}
-
 		id, found := findConflictingEnvID(request.TeamID, request.ProjectID, conflictingEnv, envs)
 		if found {
 			return e, fmt.Errorf("%w the conflicting environment variable ID is %s", err, id)
 		}
 	}
+
 	if err != nil {
 		return e, fmt.Errorf("%w - %s", err, payload)
 	}
-	// The API response returns an encrypted environment variable, but we want to return the decrypted version.
-	e.Value = request.EnvironmentVariable.Value
-	e.TeamID = c.teamID(request.TeamID)
-	return e, err
+	response.Created.Value = request.EnvironmentVariable.Value
+	response.Created.TeamID = c.teamID(request.TeamID)
+	return response.Created, err
 }
 
 func (c *Client) ListEnvironmentVariables(ctx context.Context, teamID, projectID string) (envs []EnvironmentVariable, err error) {
-	url := fmt.Sprintf("%s/v9/projects/%s/env", c.baseURL, projectID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
@@ -85,26 +85,39 @@ func (c *Client) ListEnvironmentVariables(ctx context.Context, teamID, projectID
 }
 
 func overlaps(s []string, e []string) bool {
+	set := make(map[string]struct{}, len(s))
 	for _, a := range s {
-		for _, b := range e {
-			if a == b {
-				return true
-			}
+		set[a] = struct{}{}
+	}
+
+	for _, b := range e {
+		if _, exists := set[b]; exists {
+			return true
 		}
 	}
+
 	return false
 }
 
 func findConflictingEnvID(teamID, projectID string, envConflict EnvConflictError, envs []EnvironmentVariable) (string, bool) {
+	checkTargetOverlap := len(envConflict.Target) != 0
+
 	for _, env := range envs {
-		if env.Key == envConflict.Key && overlaps(env.Target, envConflict.Target) && env.GitBranch == envConflict.GitBranch {
-			id := fmt.Sprintf("%s/%s", projectID, env.ID)
-			if teamID != "" {
-				id = fmt.Sprintf("%s/%s", teamID, id)
-			}
-			return id, true
+		if env.Key != envConflict.EnvVarKey || env.GitBranch != envConflict.GitBranch {
+			continue
 		}
+
+		if checkTargetOverlap && !overlaps(env.Target, envConflict.Target) {
+			continue
+		}
+
+		id := fmt.Sprintf("%s/%s", projectID, env.ID)
+		if teamID != "" {
+			id = fmt.Sprintf("%s/%s", teamID, id)
+		}
+		return id, true
 	}
+
 	return "", false
 }
 
@@ -116,15 +129,28 @@ type CreateEnvironmentVariablesRequest struct {
 
 type CreateEnvironmentVariablesResponse struct {
 	Created []EnvironmentVariable `json:"created"`
-	Failed  []struct {
-		Error struct {
-			Code      string   `json:"code"`
-			Message   string   `json:"message"`
-			Key       string   `json:"envVarKey"`
-			GitBranch *string  `json:"gitBranch"`
-			Target    []string `json:"target"`
-		} `json:"error"`
-	} `json:"failed"`
+	Failed  []FailedItem          `json:"failed"`
+}
+
+type FailedItem struct {
+	Error struct {
+		Action    *string  `json:"action,omitempty"`
+		Code      string   `json:"code"`
+		EnvVarID  *string  `json:"envVarId,omitempty"`
+		EnvVarKey *string  `json:"envVarKey,omitempty"`
+		GitBranch *string  `json:"gitBranch,omitempty"`
+		Key       *string  `json:"key,omitempty"`
+		Link      *string  `json:"link,omitempty"`
+		Message   string   `json:"message"`
+		Project   *string  `json:"project,omitempty"`
+		Target    []string `json:"target,omitempty"`
+		Value     *string  `json:"value,omitempty"`
+	} `json:"error"`
+}
+
+type CreateEnvironmentVariableResponse struct {
+	Created EnvironmentVariable `json:"created"`
+	Failed  []FailedItem        `json:"failed"`
 }
 
 func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateEnvironmentVariablesRequest) ([]EnvironmentVariable, error) {
@@ -141,10 +167,6 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariables))
-	tflog.Info(ctx, "creating environment variables", map[string]interface{}{
-		"url":     url,
-		"payload": payload,
-	})
 
 	var response CreateEnvironmentVariablesResponse
 	err := c.doRequest(clientRequest{
@@ -165,7 +187,7 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		for _, failed := range response.Failed {
 			if failed.Error.Code == "ENV_CONFLICT" {
 				id, found := findConflictingEnvID(request.TeamID, request.ProjectID, EnvConflictError{
-					Key:       failed.Error.Key,
+					Key:       *failed.Error.EnvVarKey,
 					Target:    failed.Error.Target,
 					GitBranch: failed.Error.GitBranch,
 				}, envs)
@@ -173,7 +195,11 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 					err = fmt.Errorf("%w, conflicting environment variable ID is %s", err, id)
 				}
 			} else {
-				err = fmt.Errorf("failed to create environment variables, %s %s %s", failed.Error.Message, failed.Error.Key, failed.Error.Target)
+				key := ""
+				if failed.Error.Key != nil {
+					key = *failed.Error.Key
+				}
+				err = fmt.Errorf("failed to create environment variables, %s %s %s", failed.Error.Message, key, failed.Error.Target)
 			}
 		}
 		return response.Created, err
@@ -198,7 +224,7 @@ type UpdateEnvironmentVariableRequest struct {
 
 // UpdateEnvironmentVariable will update an existing environment variable to the latest information.
 func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEnvironmentVariableRequest) (e EnvironmentVariable, err error) {
-	url := fmt.Sprintf("%s/v9/projects/%s/env/%s", c.baseURL, request.ProjectID, request.EnvID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env/%s", c.baseURL, request.ProjectID, request.EnvID)
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
@@ -262,7 +288,7 @@ func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID 
 
 // GetEnvironmentVariable gets a singluar environment variable from Vercel based on its ID.
 func (c *Client) GetEnvironmentVariable(ctx context.Context, projectID, teamID, envID string) (e EnvironmentVariable, err error) {
-	url := fmt.Sprintf("%s/v1/projects/%s/env/%s", c.baseURL, projectID, envID)
+	url := fmt.Sprintf("%s/v10/projects/%s/env/%s", c.baseURL, projectID, envID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}

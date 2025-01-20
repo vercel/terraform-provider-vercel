@@ -82,7 +82,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				ElementType: types.StringType,
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
-					setvalidator.SizeAtLeast(1),
 					setvalidator.AtLeastOneOf(
 						path.MatchRoot("custom_environment_ids"),
 						path.MatchRoot("target"),
