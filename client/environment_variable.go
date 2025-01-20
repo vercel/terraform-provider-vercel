@@ -12,7 +12,7 @@ import (
 type EnvironmentVariableRequest struct {
 	Key                  string   `json:"key"`
 	Value                string   `json:"value"`
-	Target               []string `json:"target"`
+	Target               []string `json:"target,omitempty"`
 	CustomEnvironmentIDs []string `json:"customEnvironmentIds,omitempty"`
 	GitBranch            *string  `json:"gitBranch,omitempty"`
 	Type                 string   `json:"type"`
@@ -195,7 +195,11 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 					err = fmt.Errorf("%w, conflicting environment variable ID is %s", err, id)
 				}
 			} else {
-				err = fmt.Errorf("failed to create environment variables, %s %s %s", failed.Error.Message, failed.Error.Key, failed.Error.Target)
+				key := ""
+				if failed.Error.Key != nil {
+					key = *failed.Error.Key
+				}
+				err = fmt.Errorf("failed to create environment variables, %s %s %s", failed.Error.Message, key, failed.Error.Target)
 			}
 		}
 		return response.Created, err
