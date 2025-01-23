@@ -365,6 +365,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Description: "The default timeout for Serverless Functions.",
 						Computed:    true,
 					},
+					"elastic_concurrency_enabled": schema.BoolAttribute{
+						Description: "Whether to enable elastic builds on the project.",
+						Computed:    true,
+					},
 				},
 			},
 		},
