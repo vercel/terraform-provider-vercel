@@ -286,7 +286,7 @@ func TestAcc_DeploymentWithLargeFile(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() { createRandomFilePreConfig(t) },
-				Config: testAccWithLargeFile(projectSuffix, teamIDConfig()),
+				Config: testAccWithDirectoryUpload(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists("vercel_deployment.test", ""),
 				),
@@ -448,7 +448,7 @@ resource "vercel_deployment" "bitbucket" {
 `, projectSuffix, testGithubRepo(), testBitbucketRepo(), teamID)
 }
 
-func testAccWithLargeFile(projectSuffix, teamID string) string {
+func testAccWithDirectoryUpload(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-deployment-%[1]s"
