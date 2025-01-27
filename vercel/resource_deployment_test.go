@@ -3,6 +3,8 @@ package vercel_test
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"os"
 	"strings"
 	"testing"
 
@@ -249,6 +251,50 @@ func TestAcc_DeploymentWithGitSource(t *testing.T) {
 	})
 }
 
+// This test executes the path where we handle the `missing_files` error.
+// To do that, we need to create a new file with random contents to trigger the
+// `missing_files` error. Otherwise, if the contents do not change, we will use
+// the cached deployments files
+func TestAcc_DeploymentWithLargeFile(t *testing.T) {
+	tmpFilePath := "../vercel/examples/one/random-file.html"
+
+	createRandomFilePreConfig := func(t *testing.T) {
+		min := 1
+		max := 1_000_000
+		randomInt := rand.Intn(max - min) + min
+
+		fileBody := []byte(fmt.Sprintf("<html>\n<body>\nRandom integer: %d\n</body>\n</html>\n", randomInt))
+
+		err := os.WriteFile(tmpFilePath, fileBody, 0644)
+		if err != nil {
+			t.Fatalf("Could not create the temporal file path %s. Error: %s", tmpFilePath, err)
+		}
+	}
+
+	cleanup := func(t *testing.T) {
+		if err := os.Remove(tmpFilePath); err != nil {
+			t.Logf("Could not remove the random file %s. Error: %s", tmpFilePath, err)
+		}
+	}
+	defer cleanup(t)
+
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             noopDestroyCheck,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() { createRandomFilePreConfig(t) },
+				Config: testAccWithLargeFile(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDeploymentExists("vercel_deployment.test", ""),
+				),
+			},
+		},
+	})
+}
+
 func testAccDeploymentConfigWithNoDeployment(projectSuffix, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
@@ -400,4 +446,23 @@ resource "vercel_deployment" "bitbucket" {
   %[4]s
 }
 `, projectSuffix, testGithubRepo(), testBitbucketRepo(), teamID)
+}
+
+func testAccWithLargeFile(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-deployment-%[1]s"
+  %[2]s
+}
+
+data "vercel_project_directory" "test" {
+  path = "../vercel/examples/one"
+ }
+
+resource "vercel_deployment" "test" {
+  project_id    = vercel_project.test.id
+  %[2]s
+  files         = data.vercel_project_directory.test.files
+  path_prefix   = data.vercel_project_directory.test.path
+}`, projectSuffix, teamID)
 }
