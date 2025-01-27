@@ -255,7 +255,7 @@ func TestAcc_DeploymentWithGitSource(t *testing.T) {
 // To do that, we need to create a new file with random contents to trigger the
 // `missing_files` error. Otherwise, if the contents do not change, we will use
 // the cached deployments files
-func TestAcc_DeploymentWithLargeFile(t *testing.T) {
+func TestAcc_DeploymentWithMissingFilesPath(t *testing.T) {
 	tmpFilePath := "../vercel/examples/one/random-file.html"
 
 	createRandomFilePreConfig := func(t *testing.T) {
