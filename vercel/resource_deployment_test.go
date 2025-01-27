@@ -264,7 +264,6 @@ func TestAcc_DeploymentWithMissingFilesPath(t *testing.T) {
 		randomInt := rand.Intn(max - min) + min
 
 		fileBody := []byte(fmt.Sprintf("<html>\n<body>\nRandom integer: %d\n</body>\n</html>\n", randomInt))
-
 		err := os.WriteFile(tmpFilePath, fileBody, 0644)
 		if err != nil {
 			t.Fatalf("Could not create the temporal file path %s. Error: %s", tmpFilePath, err)
