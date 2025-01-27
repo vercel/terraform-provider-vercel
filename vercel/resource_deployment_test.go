@@ -261,7 +261,7 @@ func TestAcc_DeploymentWithMissingFilesPath(t *testing.T) {
 	createRandomFilePreConfig := func(t *testing.T) {
 		min := 1
 		max := 1_000_000
-		randomInt := rand.Intn(max - min) + min
+		randomInt := rand.Intn(max-min) + min
 
 		fileBody := []byte(fmt.Sprintf("<html>\n<body>\nRandom integer: %d\n</body>\n</html>\n", randomInt))
 		err := os.WriteFile(tmpFilePath, fileBody, 0644)
@@ -285,7 +285,7 @@ func TestAcc_DeploymentWithMissingFilesPath(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() { createRandomFilePreConfig(t) },
-				Config: testAccWithDirectoryUpload(projectSuffix, teamIDConfig()),
+				Config:    testAccWithDirectoryUpload(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists("vercel_deployment.test", ""),
 				),
