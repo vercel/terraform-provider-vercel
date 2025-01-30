@@ -17,7 +17,8 @@ func TestGetTeam(t *testing.T) {
 	for _, tc := range []TestCase{
 		{
 			Name:         "SAML",
-			ResponseJSON: `{ "saml": { "roles": { "A": "OWNER", "B": { "accessGroupId": "foo" } } } }`},
+			ResponseJSON: `{ "saml": { "roles": { "A": "OWNER", "B": { "accessGroupId": "foo" } } } }`,
+		},
 	} {
 		t.Run(tc.Name, func(t *testing.T) {
 			h := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

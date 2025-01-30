@@ -24,16 +24,6 @@ type SamlRole struct {
 	AccessGroupID *SamlRoleAccessGroupID
 }
 
-func (f SamlRole) MarshalJSON() ([]byte, error) {
-	if f.Role != nil {
-		return json.Marshal(f.Role)
-	}
-	if f.AccessGroupID != nil {
-		return json.Marshal(f.AccessGroupID)
-	}
-	return nil, fmt.Errorf("config value is neither Role string nor AccessGroupID map")
-}
-
 func (f *SamlRole) UnmarshalJSON(data []byte) error {
 	var role string
 	if err := json.Unmarshal(data, &role); err == nil {
