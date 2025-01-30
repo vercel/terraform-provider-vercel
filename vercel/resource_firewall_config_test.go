@@ -2,6 +2,7 @@ package vercel_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -62,10 +63,15 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.custom",
 						"rules.rule.0.name",
 						"test"),
-					resource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttrWith(
 						"vercel_firewall_config.custom",
 						"rules.rule.0.id",
-						"rule_test"),
+						func(rule_id string) error {
+							if !strings.HasPrefix(rule_id, "rule_test") {
+								return fmt.Errorf("expected id does not match got %s - expected %s", rule_id, "rule_test_...")
+							}
+							return nil
+						}),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
 						"rules.rule.0.action.action",
@@ -78,10 +84,15 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.custom",
 						"rules.rule.0.condition_group.0.conditions.1.value",
 						"POST"),
-					resource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttrWith(
 						"vercel_firewall_config.custom",
 						"rules.rule.1.id",
-						"rule_test2"),
+						func(rule_id string) error {
+							if !strings.HasPrefix(rule_id, "rule_test2") {
+								return fmt.Errorf("expected id does not match got %s - expected %s", rule_id, "rule_test2_...")
+							}
+							return nil
+						}),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
 						"rules.rule.1.action.action",
@@ -110,10 +121,15 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.custom",
 						"rules.rule.1.action.rate_limit.keys.*",
 						"ja4"),
-					resource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttrWith(
 						"vercel_firewall_config.custom",
 						"rules.rule.2.id",
-						"rule_test3"),
+						func(rule_id string) error {
+							if !strings.HasPrefix(rule_id, "rule_test3") {
+								return fmt.Errorf("expected id does not match got %s - expected %s", rule_id, "rule_test3_...")
+							}
+							return nil
+						}),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
 						"rules.rule.2.action.redirect.location",
@@ -207,10 +223,15 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.custom",
 						"rules.rule.0.name",
 						"test1"),
-					resource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttrWith(
 						"vercel_firewall_config.custom",
 						"rules.rule.0.id",
-						"rule_test1"),
+						func(rule_id string) error {
+							if !strings.HasPrefix(rule_id, "rule_test1") {
+								return fmt.Errorf("expected id does not match got %s - expected %s", rule_id, "rule_test1_...")
+							}
+							return nil
+						}),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
 						"rules.rule.0.action.action",
@@ -223,10 +244,15 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.custom",
 						"rules.rule.0.condition_group.0.conditions.1.value",
 						"POST"),
-					resource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttrWith(
 						"vercel_firewall_config.custom",
 						"rules.rule.1.id",
-						"rule_test2"),
+						func(rule_id string) error {
+							if !strings.HasPrefix(rule_id, "rule_test2") {
+								return fmt.Errorf("expected id does not match got %s - expected %s", rule_id, "rule_test2_...")
+							}
+							return nil
+						}),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
 						"rules.rule.1.action.action",
@@ -251,10 +277,15 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.custom",
 						"rules.rule.1.action.rate_limit.keys.*",
 						"ip"),
-					resource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttrWith(
 						"vercel_firewall_config.custom",
 						"rules.rule.2.id",
-						"rule_test3"),
+						func(rule_id string) error {
+							if !strings.HasPrefix(rule_id, "rule_test3") {
+								return fmt.Errorf("expected id does not match got %s - expected %s", rule_id, "rule_test3_...")
+							}
+							return nil
+						}),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
 						"rules.rule.2.action.redirect.location",
