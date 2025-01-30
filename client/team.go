@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -14,9 +15,61 @@ type TeamCreateRequest struct {
 	Plan string `json:"plan"`
 }
 
+type SamlRoleAccessGroupID struct {
+	AccessGroupID string `json:"accessGroupId"`
+}
+
+type SamlRole struct {
+	Role          *string
+	AccessGroupID *SamlRoleAccessGroupID
+}
+
+func (f SamlRole) MarshalJSON() ([]byte, error) {
+	if f.Role != nil {
+		return json.Marshal(f.Role)
+	}
+	if f.AccessGroupID != nil {
+		return json.Marshal(f.AccessGroupID)
+	}
+	return nil, fmt.Errorf("config value is neither Role string nor AccessGroupID map")
+}
+
+func (f *SamlRole) UnmarshalJSON(data []byte) error {
+	var role string
+	if err := json.Unmarshal(data, &role); err == nil {
+		f.Role = &role
+		return nil
+	}
+	var ag SamlRoleAccessGroupID
+	if err := json.Unmarshal(data, &ag); err == nil {
+		f.AccessGroupID = &ag
+		return nil
+	}
+	return fmt.Errorf("received json is neither Role string nor AccessGroupID map")
+}
+
+type SamlRoles map[string]string
+
+func (f *SamlRoles) UnmarshalJSON(data []byte) error {
+	var result map[string]SamlRole
+	if err := json.Unmarshal(data, &result); err != nil {
+		return err
+	}
+	tmp := make(SamlRoles)
+	for k, v := range result {
+		k := k
+		v := v
+		if v.Role != nil {
+			tmp[k] = *(v.Role)
+		}
+	}
+	*f = tmp
+	return nil
+}
+
 type SamlConfig struct {
-	Enforced bool              `json:"enforced,omitempty"`
-	Roles    map[string]string `json:"roles,omitempty"`
+	Enforced bool      `json:"enforced,omitempty"`
+	Roles    SamlRoles `json:"roles,omitempty"`
 }
 
 type TaxID struct {
