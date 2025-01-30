@@ -223,7 +223,7 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.custom",
 						"rules.rule.0.name",
 						"test1"),
-					resource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttrWith(
 						"vercel_firewall_config.custom",
 						"rules.rule.0.id",
 						func(rule_id string) error {
