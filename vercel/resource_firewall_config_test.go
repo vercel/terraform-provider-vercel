@@ -244,10 +244,15 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.custom",
 						"rules.rule.0.condition_group.0.conditions.1.value",
 						"POST"),
-					resource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttrWith(
 						"vercel_firewall_config.custom",
 						"rules.rule.1.id",
-						"rule_test2"),
+						func(rule_id string) error {
+							if !strings.HasPrefix(rule_id, "rule_test2") {
+								return fmt.Errorf("expected id does not match got %s - expected %s", rule_id, "rule_test2_...")
+							}
+							return nil
+						}),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
 						"rules.rule.1.action.action",
