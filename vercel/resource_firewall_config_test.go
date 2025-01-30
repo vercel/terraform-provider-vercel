@@ -226,7 +226,12 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
 						"rules.rule.0.id",
-						"rule_test1"),
+						func(rule_id string) error {
+							if !strings.HasPrefix(rule_id, "rule_test1") {
+								return fmt.Errorf("expected id does not match got %s - expected %s", rule_id, "rule_test1_...")
+							}
+							return nil
+						}),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
 						"rules.rule.0.action.action",
