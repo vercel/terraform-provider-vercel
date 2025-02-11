@@ -58,7 +58,7 @@ func TestAcc_IntegrationProjectAccess(t *testing.T) {
 			{
 				Config: testAccIntegrationProjectAccess(name, teamIDConfig(), testExistingIntegration()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckIntegrationProjectAccessExists(testTeam(), "vercel_integration_project_access.test_integration_access"),
+					testCheckIntegrationProjectAccessExists("vercel_integration_project_access.test_integration_access", testTeam()),
 					resource.TestCheckResourceAttr("vercel_integration_project_access.test_integration_access", "allowed", "true"),
 				),
 			},
@@ -78,7 +78,7 @@ resource "vercel_project" "test" {
 }
 
 resource "vercel_integration_project_access" "test_integration_access" {
-    integration_id = %[3]s
+    integration_id = "%[3]s"
     project_id     = vercel_project.test.id
 		allowed        = true
     %[2]s

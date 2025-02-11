@@ -8,7 +8,7 @@ import (
 )
 
 func (c *Client) GetIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (bool, error) {
-	url := fmt.Sprintf("%s/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
+	url := fmt.Sprintf("%s/v1/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
@@ -34,7 +34,7 @@ func (c *Client) GetIntegrationProjectAccess(ctx context.Context, integrationID,
 }
 
 func (c *Client) GrantIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (bool, error) {
-	url := fmt.Sprintf("%s/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
+	url := fmt.Sprintf("%s/v1/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
@@ -60,7 +60,7 @@ func (c *Client) GrantIntegrationProjectAccess(ctx context.Context, integrationI
 }
 
 func (c *Client) RevokeIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (bool, error) {
-	url := fmt.Sprintf("%s/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
+	url := fmt.Sprintf("%s/v1/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
