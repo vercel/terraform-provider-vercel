@@ -51,7 +51,7 @@ func (r *integrationProjectAccessResource) Configure(ctx context.Context, req re
 
 func (r *integrationProjectAccessResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: `
+		Description: `Provides Project access to an existing Integration. This requires the integration already exists and is already configured for Specific Project access.
 `,
 		Attributes: map[string]schema.Attribute{
 			"integration_id": schema.StringAttribute{
