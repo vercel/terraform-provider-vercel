@@ -62,6 +62,7 @@ The acceptance tests require a few environment variables to be set:
 * `VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO` - a Bitbucket repository in the form 'project/repo' that can be used to trigger deployments
 * `VERCEL_TERRAFORM_TESTING_GITLAB_REPO` - a GitLab repository in the form 'project/repo' that can be used to trigger deployments
 * `VERCEL_TERRAFORM_TESTING_DOMAIN` - a Vercel testing domain that can be used for testing
+* `VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION` - a Vercel integration that can be used for testing
 
 ```sh
 $ task test

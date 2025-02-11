@@ -28,6 +28,7 @@ func testAccPreCheck(t *testing.T) {
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO")
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_DOMAIN")
 	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
+	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION")
 }
 
 var tc *client.Client
@@ -69,4 +70,8 @@ func testDomain() string {
 
 func testAdditionalUser() string {
 	return os.Getenv("VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
+}
+
+func testExistingIntegration() string {
+	return os.Getenv("VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION")
 }
