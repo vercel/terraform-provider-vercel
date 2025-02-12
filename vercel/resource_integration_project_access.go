@@ -64,10 +64,6 @@ func (r *integrationProjectAccessResource) Schema(_ context.Context, req resourc
 				Description:   "The ID of the Vercel project.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"allowed": schema.BoolAttribute{
-				Required:    true,
-				Description: "Whether the project should allow access to the integration or not.",
-			},
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
@@ -82,7 +78,6 @@ type IntegrationProjectAccess struct {
 	TeamID        types.String `tfsdk:"team_id"`
 	ProjectID     types.String `tfsdk:"project_id"`
 	IntegrationID types.String `tfsdk:"integration_id"`
-	Allowed       types.Bool   `tfsdk:"allowed"`
 }
 
 func (r *integrationProjectAccessResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -93,13 +88,7 @@ func (r *integrationProjectAccessResource) Create(ctx context.Context, req resou
 		return
 	}
 
-	var allowed bool
-	var err error
-	if plan.Allowed.ValueBool() {
-		allowed, err = r.client.GrantIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	} else {
-		allowed, err = r.client.RevokeIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	}
+	_, err := r.client.GrantIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error granting integration project access",
@@ -112,14 +101,12 @@ func (r *integrationProjectAccessResource) Create(ctx context.Context, req resou
 		TeamID:        plan.TeamID,
 		IntegrationID: plan.IntegrationID,
 		ProjectID:     plan.ProjectID,
-		Allowed:       types.BoolValue(allowed),
 	}
 
 	tflog.Info(ctx, "granted integration project access", map[string]interface{}{
 		"team_id":        result.TeamID.ValueString(),
 		"integration_id": result.IntegrationID.ValueString(),
 		"project_id":     result.ProjectID.ValueString(),
-		"allowed":        result.Allowed.ValueBool(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -150,20 +137,22 @@ func (r *integrationProjectAccessResource) Read(ctx context.Context, req resourc
 		TeamID:        state.TeamID,
 		IntegrationID: state.IntegrationID,
 		ProjectID:     state.ProjectID,
-		Allowed:       types.BoolValue(allowed),
 	}
-
 	tflog.Info(ctx, "read integration project access", map[string]interface{}{
 		"team_id":        result.TeamID.ValueString(),
 		"integration_id": result.IntegrationID.ValueString(),
 		"project_id":     result.ProjectID.ValueString(),
-		"allowed":        result.Allowed.ValueBool(),
+		"allowed":        allowed,
 	})
 
-	diags = resp.State.Set(ctx, result)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if allowed {
+		diags = resp.State.Set(ctx, result)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		resp.State.RemoveResource(ctx)
 	}
 }
 
@@ -175,13 +164,7 @@ func (r *integrationProjectAccessResource) Update(ctx context.Context, req resou
 		return
 	}
 
-	var allowed bool
-	var err error
-	if plan.Allowed.ValueBool() {
-		allowed, err = r.client.GrantIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	} else {
-		allowed, err = r.client.RevokeIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	}
+	allowed, err := r.client.GrantIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error granting integration project access",
@@ -194,14 +177,13 @@ func (r *integrationProjectAccessResource) Update(ctx context.Context, req resou
 		TeamID:        plan.TeamID,
 		IntegrationID: plan.IntegrationID,
 		ProjectID:     plan.ProjectID,
-		Allowed:       types.BoolValue(allowed),
 	}
 
 	tflog.Info(ctx, "granted integration project access", map[string]interface{}{
 		"team_id":        result.TeamID.ValueString(),
 		"integration_id": result.IntegrationID.ValueString(),
 		"project_id":     result.ProjectID.ValueString(),
-		"allowed":        result.Allowed.ValueBool(),
+		"allowed":        allowed,
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -232,13 +214,12 @@ func (r *integrationProjectAccessResource) Delete(ctx context.Context, req resou
 		TeamID:        plan.TeamID,
 		IntegrationID: plan.IntegrationID,
 		ProjectID:     plan.ProjectID,
-		Allowed:       types.BoolValue(allowed),
 	}
 
 	tflog.Info(ctx, "revoked integration project access", map[string]interface{}{
 		"team_id":        result.TeamID.ValueString(),
 		"integration_id": result.IntegrationID.ValueString(),
 		"project_id":     result.ProjectID.ValueString(),
-		"allowed":        result.Allowed.ValueBool(),
+		"allowed":        allowed,
 	})
 }

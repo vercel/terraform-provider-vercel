@@ -17,7 +17,6 @@ Provides Project access to an existing Integration. This requires the integratio
 
 ### Required
 
-- `allowed` (Boolean) Whether the project should allow access to the integration or not.
 - `integration_id` (String) The ID of the integration.
 - `project_id` (String) The ID of the Vercel project.
 
