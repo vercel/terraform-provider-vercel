@@ -86,10 +86,6 @@ func TestAcc_IntegrationProjectAccessWithoutExplicitTeam(t *testing.T) {
 
 func testAccIntegrationProjectAccess(name, team, integration string) string {
 	return fmt.Sprintf(`
-provider "vercel" {
-	team = "%[4]s"
-}
-
 data "vercel_endpoint_verification" "test" {
     %[2]s
 }
@@ -108,6 +104,7 @@ resource "vercel_integration_project_access" "test_integration_access" {
 }
 
 func testAccIntegrationProjectAccessUsingProvider(name, team, integration string) string {
+	//lintignore:AT004
 	return fmt.Sprintf(`
 provider "vercel" {
 	team = "%[2]s"

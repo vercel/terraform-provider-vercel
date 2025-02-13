@@ -183,7 +183,7 @@ func (r *integrationProjectAccessResource) Read(ctx context.Context, req resourc
 }
 
 func (r *integrationProjectAccessResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	panic("all plans should result in recreation")
+	resp.Diagnostics.AddError("Access should always be recreated", "Something incorrectly caused an Update, this should always be recreated instead of updated.")
 }
 
 func (r *integrationProjectAccessResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
