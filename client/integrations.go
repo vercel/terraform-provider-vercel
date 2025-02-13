@@ -7,7 +7,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-func (c *Client) GetIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (bool, error) {
+type IntegrationProjectAccess struct {
+	Allowed bool
+	TeamID string
+}
+
+func (c *Client) GetIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (IntegrationProjectAccess, error) {
 	url := fmt.Sprintf("%s/v1/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
@@ -28,12 +33,18 @@ func (c *Client) GetIntegrationProjectAccess(ctx context.Context, integrationID,
 		url:    url,
 		body:   "",
 	}, &e); err != nil {
-		return false, err
+		return IntegrationProjectAccess{
+			Allowed: false,
+			TeamID: c.teamID(teamID),
+		}, err
 	}
-	return e.Allowed, nil
+	return IntegrationProjectAccess{
+		Allowed: e.Allowed,
+		TeamID: c.teamID(teamID),
+	}, nil
 }
 
-func (c *Client) GrantIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (bool, error) {
+func (c *Client) GrantIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (IntegrationProjectAccess, error) {
 	url := fmt.Sprintf("%s/v1/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
@@ -54,12 +65,18 @@ func (c *Client) GrantIntegrationProjectAccess(ctx context.Context, integrationI
 		url:    url,
 		body:   `{ "allowed": true }`,
 	}, &e); err != nil {
-		return false, err
+		return IntegrationProjectAccess{
+			Allowed: false,
+			TeamID: c.teamID(teamID),
+		}, err
 	}
-	return true, nil
+	return IntegrationProjectAccess{
+		Allowed: true,
+		TeamID: c.teamID(teamID),
+	}, nil
 }
 
-func (c *Client) RevokeIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (bool, error) {
+func (c *Client) RevokeIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (IntegrationProjectAccess, error) {
 	url := fmt.Sprintf("%s/v1/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
@@ -80,7 +97,13 @@ func (c *Client) RevokeIntegrationProjectAccess(ctx context.Context, integration
 		url:    url,
 		body:   `{ "allowed": false }`,
 	}, &e); err != nil {
-		return false, err
+		return IntegrationProjectAccess{
+			Allowed: false,
+			TeamID: c.teamID(teamID),
+		}, err
 	}
-	return false, nil
+	return IntegrationProjectAccess{
+		Allowed: false,
+		TeamID: c.teamID(teamID),
+	}, nil
 }

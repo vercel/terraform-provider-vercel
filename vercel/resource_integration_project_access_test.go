@@ -17,11 +17,11 @@ func testCheckIntegrationProjectAccessDestroyed(n, teamID string) resource.TestC
 			return fmt.Errorf("not found: %s", n)
 		}
 
-		allowed, err := testClient().GetIntegrationProjectAccess(context.TODO(), rs.Primary.Attributes["integration_id"], rs.Primary.Attributes["project_id"], teamID)
+		ipa, err := testClient().GetIntegrationProjectAccess(context.TODO(), rs.Primary.Attributes["integration_id"], rs.Primary.Attributes["project_id"], teamID)
 		if err != nil {
 			return err
 		}
-		if allowed {
+		if ipa.Allowed {
 			return fmt.Errorf("expected project to not allow access to integration")
 		}
 
@@ -36,11 +36,11 @@ func testCheckIntegrationProjectAccessExists(n, teamID string) resource.TestChec
 			return fmt.Errorf("not found: %s", n)
 		}
 
-		allowed, err := testClient().GetIntegrationProjectAccess(context.TODO(), rs.Primary.Attributes["integration_id"], rs.Primary.Attributes["project_id"], teamID)
+		ipa, err := testClient().GetIntegrationProjectAccess(context.TODO(), rs.Primary.Attributes["integration_id"], rs.Primary.Attributes["project_id"], teamID)
 		if err != nil {
 			return err
 		}
-		if !allowed {
+		if !ipa.Allowed {
 			return fmt.Errorf("expected project to allow access to integration")
 		}
 

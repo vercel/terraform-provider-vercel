@@ -88,20 +88,7 @@ func (r *integrationProjectAccessResource) Create(ctx context.Context, req resou
 		return
 	}
 
-	teamID := plan.TeamID
-	if teamID.ValueString() == "" {
-		t, err := r.client.Team(ctx, "")
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error getting team from provider",
-				"Could not read team from provider, unexpected error: "+err.Error(),
-			)
-			return
-		}
-		teamID = types.StringValue(t.ID)
-	}
-
-	_, err := r.client.GrantIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	ipa, err := r.client.GrantIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error granting integration project access",
@@ -111,7 +98,7 @@ func (r *integrationProjectAccessResource) Create(ctx context.Context, req resou
 	}
 
 	result := IntegrationProjectAccess{
-		TeamID:        teamID,
+		TeamID:        types.StringValue(ipa.TeamID),
 		IntegrationID: plan.IntegrationID,
 		ProjectID:     plan.ProjectID,
 	}
@@ -137,20 +124,7 @@ func (r *integrationProjectAccessResource) Read(ctx context.Context, req resourc
 		return
 	}
 
-	teamID := state.TeamID
-	if teamID.ValueString() == "" {
-		t, err := r.client.Team(ctx, "")
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error getting team from provider",
-				"Could not read team from provider, unexpected error: "+err.Error(),
-			)
-			return
-		}
-		teamID = types.StringValue(t.ID)
-	}
-
-	allowed, err := r.client.GetIntegrationProjectAccess(ctx, state.IntegrationID.ValueString(), state.ProjectID.ValueString(), state.TeamID.ValueString())
+	ipa, err := r.client.GetIntegrationProjectAccess(ctx, state.IntegrationID.ValueString(), state.ProjectID.ValueString(), state.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error granting integration project access",
@@ -160,7 +134,7 @@ func (r *integrationProjectAccessResource) Read(ctx context.Context, req resourc
 	}
 
 	result := IntegrationProjectAccess{
-		TeamID:        teamID,
+		TeamID:        types.StringValue(ipa.TeamID),
 		IntegrationID: state.IntegrationID,
 		ProjectID:     state.ProjectID,
 	}
@@ -168,10 +142,10 @@ func (r *integrationProjectAccessResource) Read(ctx context.Context, req resourc
 		"team_id":        result.TeamID.ValueString(),
 		"integration_id": result.IntegrationID.ValueString(),
 		"project_id":     result.ProjectID.ValueString(),
-		"allowed":        allowed,
+		"allowed":        ipa.Allowed,
 	})
 
-	if allowed {
+	if ipa.Allowed {
 		diags = resp.State.Set(ctx, result)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -194,20 +168,7 @@ func (r *integrationProjectAccessResource) Delete(ctx context.Context, req resou
 		return
 	}
 
-	teamID := plan.TeamID
-	if teamID.ValueString() == "" {
-		t, err := r.client.Team(ctx, "")
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error getting team from provider",
-				"Could not read team from provider, unexpected error: "+err.Error(),
-			)
-			return
-		}
-		teamID = types.StringValue(t.ID)
-	}
-
-	allowed, err := r.client.RevokeIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	ipa, err := r.client.RevokeIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error revoking integration project access",
@@ -217,7 +178,7 @@ func (r *integrationProjectAccessResource) Delete(ctx context.Context, req resou
 	}
 
 	result := IntegrationProjectAccess{
-		TeamID:        teamID,
+		TeamID:        types.StringValue(ipa.TeamID),
 		IntegrationID: plan.IntegrationID,
 		ProjectID:     plan.ProjectID,
 	}
@@ -226,6 +187,6 @@ func (r *integrationProjectAccessResource) Delete(ctx context.Context, req resou
 		"team_id":        result.TeamID.ValueString(),
 		"integration_id": result.IntegrationID.ValueString(),
 		"project_id":     result.ProjectID.ValueString(),
-		"allowed":        allowed,
+		"allowed":        ipa.Allowed,
 	})
 }
