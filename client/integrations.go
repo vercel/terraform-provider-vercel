@@ -9,7 +9,7 @@ import (
 
 type IntegrationProjectAccess struct {
 	Allowed bool
-	TeamID string
+	TeamID  string
 }
 
 func (c *Client) GetIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (IntegrationProjectAccess, error) {
@@ -35,12 +35,12 @@ func (c *Client) GetIntegrationProjectAccess(ctx context.Context, integrationID,
 	}, &e); err != nil {
 		return IntegrationProjectAccess{
 			Allowed: false,
-			TeamID: c.teamID(teamID),
+			TeamID:  c.teamID(teamID),
 		}, err
 	}
 	return IntegrationProjectAccess{
 		Allowed: e.Allowed,
-		TeamID: c.teamID(teamID),
+		TeamID:  c.teamID(teamID),
 	}, nil
 }
 
@@ -67,12 +67,12 @@ func (c *Client) GrantIntegrationProjectAccess(ctx context.Context, integrationI
 	}, &e); err != nil {
 		return IntegrationProjectAccess{
 			Allowed: false,
-			TeamID: c.teamID(teamID),
+			TeamID:  c.teamID(teamID),
 		}, err
 	}
 	return IntegrationProjectAccess{
 		Allowed: true,
-		TeamID: c.teamID(teamID),
+		TeamID:  c.teamID(teamID),
 	}, nil
 }
 
@@ -99,11 +99,11 @@ func (c *Client) RevokeIntegrationProjectAccess(ctx context.Context, integration
 	}, &e); err != nil {
 		return IntegrationProjectAccess{
 			Allowed: false,
-			TeamID: c.teamID(teamID),
+			TeamID:  c.teamID(teamID),
 		}, err
 	}
 	return IntegrationProjectAccess{
 		Allowed: false,
-		TeamID: c.teamID(teamID),
+		TeamID:  c.teamID(teamID),
 	}, nil
 }
