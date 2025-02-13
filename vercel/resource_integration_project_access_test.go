@@ -59,6 +59,25 @@ func TestAcc_IntegrationProjectAccess(t *testing.T) {
 				Config: testAccIntegrationProjectAccess(name, teamIDConfig(), testExistingIntegration()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckIntegrationProjectAccessExists("vercel_integration_project_access.test_integration_access", testTeam()),
+					resource.TestCheckResourceAttr("vercel_integration_project_access.test_integration_access", "team_id", testTeam()),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_IntegrationProjectAccessWithoutExplicitTeam(t *testing.T) {
+	name := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testCheckIntegrationProjectAccessDestroyed("vercel_integration_project_access.test_integration_access", testTeam()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIntegrationProjectAccessUsingProvider(name, testTeam(), testExistingIntegration()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckIntegrationProjectAccessExists("vercel_integration_project_access.test_integration_access", testTeam()),
+					resource.TestCheckResourceAttr("vercel_integration_project_access.test_integration_access", "team_id", testTeam()),
 				),
 			},
 		},
@@ -67,6 +86,10 @@ func TestAcc_IntegrationProjectAccess(t *testing.T) {
 
 func testAccIntegrationProjectAccess(name, team, integration string) string {
 	return fmt.Sprintf(`
+provider "vercel" {
+	team = "%[4]s"
+}
+
 data "vercel_endpoint_verification" "test" {
     %[2]s
 }
@@ -80,6 +103,26 @@ resource "vercel_integration_project_access" "test_integration_access" {
     integration_id = "%[3]s"
     project_id     = vercel_project.test.id
     %[2]s
+}
+`, name, team, integration, testTeam())
+}
+
+func testAccIntegrationProjectAccessUsingProvider(name, team, integration string) string {
+	return fmt.Sprintf(`
+provider "vercel" {
+	team = "%[2]s"
+}
+
+data "vercel_endpoint_verification" "test" {
+}
+
+resource "vercel_project" "test" {
+    name = "test-acc-%[1]s"
+}
+
+resource "vercel_integration_project_access" "test_integration_access" {
+    integration_id = "%[3]s"
+    project_id     = vercel_project.test.id
 }
 `, name, team, integration)
 }

@@ -88,6 +88,19 @@ func (r *integrationProjectAccessResource) Create(ctx context.Context, req resou
 		return
 	}
 
+	teamID := plan.TeamID
+	if teamID.ValueString() == "" {
+		t, err := r.client.Team(ctx, "")
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error getting team from provider",
+				"Could not read team from provider, unexpected error: "+err.Error(),
+			)
+			return
+		}
+		teamID = types.StringValue(t.ID)
+	}
+
 	_, err := r.client.GrantIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -98,7 +111,7 @@ func (r *integrationProjectAccessResource) Create(ctx context.Context, req resou
 	}
 
 	result := IntegrationProjectAccess{
-		TeamID:        plan.TeamID,
+		TeamID:        teamID,
 		IntegrationID: plan.IntegrationID,
 		ProjectID:     plan.ProjectID,
 	}
@@ -124,6 +137,19 @@ func (r *integrationProjectAccessResource) Read(ctx context.Context, req resourc
 		return
 	}
 
+	teamID := state.TeamID
+	if teamID.ValueString() == "" {
+		t, err := r.client.Team(ctx, "")
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error getting team from provider",
+				"Could not read team from provider, unexpected error: "+err.Error(),
+			)
+			return
+		}
+		teamID = types.StringValue(t.ID)
+	}
+
 	allowed, err := r.client.GetIntegrationProjectAccess(ctx, state.IntegrationID.ValueString(), state.ProjectID.ValueString(), state.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -134,7 +160,7 @@ func (r *integrationProjectAccessResource) Read(ctx context.Context, req resourc
 	}
 
 	result := IntegrationProjectAccess{
-		TeamID:        state.TeamID,
+		TeamID:        teamID,
 		IntegrationID: state.IntegrationID,
 		ProjectID:     state.ProjectID,
 	}
@@ -157,40 +183,7 @@ func (r *integrationProjectAccessResource) Read(ctx context.Context, req resourc
 }
 
 func (r *integrationProjectAccessResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan IntegrationProjectAccess
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	allowed, err := r.client.GrantIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error granting integration project access",
-			"Could not grant integration project access, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	result := IntegrationProjectAccess{
-		TeamID:        plan.TeamID,
-		IntegrationID: plan.IntegrationID,
-		ProjectID:     plan.ProjectID,
-	}
-
-	tflog.Info(ctx, "granted integration project access", map[string]interface{}{
-		"team_id":        result.TeamID.ValueString(),
-		"integration_id": result.IntegrationID.ValueString(),
-		"project_id":     result.ProjectID.ValueString(),
-		"allowed":        allowed,
-	})
-
-	diags = resp.State.Set(ctx, result)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	panic("all plans should result in recreation")
 }
 
 func (r *integrationProjectAccessResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -199,6 +192,19 @@ func (r *integrationProjectAccessResource) Delete(ctx context.Context, req resou
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	teamID := plan.TeamID
+	if teamID.ValueString() == "" {
+		t, err := r.client.Team(ctx, "")
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error getting team from provider",
+				"Could not read team from provider, unexpected error: "+err.Error(),
+			)
+			return
+		}
+		teamID = types.StringValue(t.ID)
 	}
 
 	allowed, err := r.client.RevokeIntegrationProjectAccess(ctx, plan.IntegrationID.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
@@ -211,7 +217,7 @@ func (r *integrationProjectAccessResource) Delete(ctx context.Context, req resou
 	}
 
 	result := IntegrationProjectAccess{
-		TeamID:        plan.TeamID,
+		TeamID:        teamID,
 		IntegrationID: plan.IntegrationID,
 		ProjectID:     plan.ProjectID,
 	}
