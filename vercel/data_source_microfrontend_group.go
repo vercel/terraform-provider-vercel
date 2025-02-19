@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
@@ -54,7 +53,6 @@ func (r *microfrontendGroupDataSource) Schema(_ context.Context, req datasource.
 Provides information about an existing Microfrontend Group.
 
 A Microfrontend Group is a definition of a microfrontend belonging to a Vercel Team. 
-Projects are added to a Microfrontend Group.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -74,31 +72,35 @@ Projects are added to a Microfrontend Group.
 				Optional:    true,
 				Computed:    true,
 			},
+			"projects": schema.MapNestedAttribute{
+				Description: "A map of project ids to project configuration that belong to the microfrontend group.",
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"is_default_app": schema.BoolAttribute{
+							Description: "Whether the project is the default app for the microfrontend group. Microfrontend groups must have exactly one default app.",
+							Optional:    true,
+							Computed:    true,
+						},
+						"default_route": schema.StringAttribute{
+							Description: "The default route for the project. Used for the screenshot of deployments.",
+							Optional:    true,
+							Computed:    true,
+						},
+						"route_observability_to_this_project": schema.BoolAttribute{
+							Description: "Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.",
+							Optional:    true,
+							Computed:    true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
 
-type MicrofrontendGroupDataSource struct {
-	ID     types.String `tfsdk:"id"`
-	Name   types.String `tfsdk:"name"`
-	Slug   types.String `tfsdk:"slug"`
-	TeamID types.String `tfsdk:"team_id"`
-}
-
-func convertResponseToMicrofrontendGroupDataSource(in client.MicrofrontendGroupResponse) MicrofrontendGroupDataSource {
-	return MicrofrontendGroupDataSource{
-		ID:     types.StringValue(in.ID),
-		Name:   types.StringValue(in.Name),
-		Slug:   types.StringValue(in.Slug),
-		TeamID: types.StringValue(in.TeamID),
-	}
-}
-
-// Read will read the microfrontendGroup information by requesting it from the Vercel API, and will update terraform
-// with this information.
-// It is called by the provider whenever data source values should be read to update state.
 func (d *microfrontendGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config MicrofrontendGroupDataSource
+	var config MicrofrontendGroup
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -122,7 +124,7 @@ func (d *microfrontendGroupDataSource) Read(ctx context.Context, req datasource.
 		return
 	}
 
-	result := convertResponseToMicrofrontendGroupDataSource(out)
+	result := convertResponseToMicrofrontendGroup(out, out.Projects)
 	tflog.Info(ctx, "read microfrontendGroup", map[string]interface{}{
 		"team_id":  result.TeamID.ValueString(),
 		"group_id": result.ID.ValueString(),

@@ -5,7 +5,18 @@ subcategory: ""
 description: |-
   Provides a Microfrontend Group resource.
   A Microfrontend Group is a definition of a microfrontend belonging to a Vercel Team.
-  Projects are added to a Microfrontend Group.
+  Example:
+  resource "vercel_microfrontend_group" "my-microfrontend-group" {
+  name = "microfrontend test"
+  projects = {
+  (vercel_project.my-parent-project.id) = {
+  is_default_app = true
+  }
+  (vercel_project.my-child-project.id) = {
+  is_default_app = false
+  }
+  }
+  }
 ---
 
 # vercel_microfrontend_group (Resource)
@@ -13,7 +24,20 @@ description: |-
 Provides a Microfrontend Group resource.
 
 A Microfrontend Group is a definition of a microfrontend belonging to a Vercel Team. 
-Projects are added to a Microfrontend Group.
+
+Example:
+
+resource "vercel_microfrontend_group" "my-microfrontend-group" {
+  name = "microfrontend test"
+  projects = {
+    (vercel_project.my-parent-project.id) = {
+      is_default_app = true
+    }
+    (vercel_project.my-child-project.id) = {
+      is_default_app = false
+    }
+  }
+}
 
 
 
@@ -23,6 +47,7 @@ Projects are added to a Microfrontend Group.
 ### Required
 
 - `name` (String) A human readable name for the microfrontends group.
+- `projects` (Attributes Map) A map of project ids to project configuration that belong to the microfrontend group. (see [below for nested schema](#nestedatt--projects))
 
 ### Optional
 
@@ -32,3 +57,12 @@ Projects are added to a Microfrontend Group.
 
 - `id` (String) A unique identifier for the group of microfrontends. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB
 - `slug` (String) A slugified version of the name.
+
+<a id="nestedatt--projects"></a>
+### Nested Schema for `projects`
+
+Optional:
+
+- `default_route` (String) The default route for the project. Used for the screenshot of deployments.
+- `is_default_app` (Boolean) Whether the project is the default app for the microfrontend group. Microfrontend groups must have exactly one default app.
+- `route_observability_to_this_project` (Boolean) Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.
