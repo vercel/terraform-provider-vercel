@@ -421,19 +421,19 @@ func TestAcc_ProjectEnablingAffectedProjectDeployments(t *testing.T) {
 			{
 				Config: testAccProjectConfigWithoutEnableAffectedSet(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckNoResourceAttr("vercel_project.enable_affected_projects_deployments", "enable_affected_projects_deployments"),
+					resource.TestCheckNoResourceAttr("vercel_project.test", "enable_affected_projects_deployments"),
 				),
 			},
 			{
 				Config: testAccProjectConfigWithEnableAffectedTrue(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("vercel_project.enable_affected_projects_deployments", "enable_affected_projects_deployments", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_affected_projects_deployments", "true"),
 				),
 			},
 			{
 				Config: testAccProjectConfigWithEnableAffectedFalse(projectSuffix, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("vercel_project.enable_affected_projects_deployments", "enable_affected_projects_deployments", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_affected_projects_deployments", "false"),
 				),
 			},
 		},
