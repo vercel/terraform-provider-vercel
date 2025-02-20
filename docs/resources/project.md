@@ -61,6 +61,7 @@ resource "vercel_project" "example" {
 - `customer_success_code_visibility` (Boolean) Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.
 - `dev_command` (String) The dev command for this project. If omitted, this value will be automatically detected.
 - `directory_listing` (Boolean) If no index file is present within a directory, the directory contents will be displayed.
+- `enable_affected_projects_deployments` (Boolean) When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.
 - `environment` (Attributes Set) A set of Environment Variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
 - `framework` (String) The framework that is being used for this project. If omitted, no framework is selected.
 - `function_failover` (Boolean) Automatically failover Serverless Functions to the nearest region. You can customize regions through vercel.json. A new Deployment is required for your changes to take effect.
