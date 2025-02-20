@@ -432,6 +432,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				Description:   "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
 			},
+			"enable_affected_projects_deployments": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.",
+			},
 			"git_comments": schema.SingleNestedAttribute{
 				Description: "Configuration for Git Comments.",
 				Optional:    true,
@@ -604,6 +610,7 @@ type Project struct {
 	GitForkProtection                   types.Bool                      `tfsdk:"git_fork_protection"`
 	PrioritiseProductionBuilds          types.Bool                      `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                    types.Bool                      `tfsdk:"directory_listing"`
+	EnableAffectedProjectsDeployments   types.Bool                      `tfsdk:"enable_affected_projects_deployments"`
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
 	ResourceConfig                      *ResourceConfig                 `tfsdk:"resource_config"`
 }
@@ -703,19 +710,20 @@ func parseEnvironment(ctx context.Context, vars []EnvironmentItem) (out []client
 func (p *Project) toCreateProjectRequest(ctx context.Context, envs []EnvironmentItem) (req client.CreateProjectRequest, diags diag.Diagnostics) {
 	clientEnvs, diags := parseEnvironment(ctx, envs)
 	return client.CreateProjectRequest{
-		BuildCommand:                p.BuildCommand.ValueStringPointer(),
-		CommandForIgnoringBuildStep: p.IgnoreCommand.ValueStringPointer(),
-		DevCommand:                  p.DevCommand.ValueStringPointer(),
-		EnvironmentVariables:        clientEnvs,
-		Framework:                   p.Framework.ValueStringPointer(),
-		GitRepository:               p.GitRepository.toCreateProjectRequest(),
-		InstallCommand:              p.InstallCommand.ValueStringPointer(),
-		Name:                        p.Name.ValueString(),
-		OIDCTokenConfig:             p.OIDCTokenConfig.toCreateProjectRequest(),
-		OutputDirectory:             p.OutputDirectory.ValueStringPointer(),
-		PublicSource:                p.PublicSource.ValueBoolPointer(),
-		RootDirectory:               p.RootDirectory.ValueStringPointer(),
-		ServerlessFunctionRegion:    p.ServerlessFunctionRegion.ValueString(),
+		BuildCommand:                      p.BuildCommand.ValueStringPointer(),
+		CommandForIgnoringBuildStep:       p.IgnoreCommand.ValueStringPointer(),
+		DevCommand:                        p.DevCommand.ValueStringPointer(),
+		EnableAffectedProjectsDeployments: p.EnableAffectedProjectsDeployments.ValueBoolPointer(),
+		EnvironmentVariables:              clientEnvs,
+		Framework:                         p.Framework.ValueStringPointer(),
+		GitRepository:                     p.GitRepository.toCreateProjectRequest(),
+		InstallCommand:                    p.InstallCommand.ValueStringPointer(),
+		Name:                              p.Name.ValueString(),
+		OIDCTokenConfig:                   p.OIDCTokenConfig.toCreateProjectRequest(),
+		OutputDirectory:                   p.OutputDirectory.ValueStringPointer(),
+		PublicSource:                      p.PublicSource.ValueBoolPointer(),
+		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
+		ServerlessFunctionRegion:          p.ServerlessFunctionRegion.ValueString(),
 	}, diags
 }
 
@@ -764,6 +772,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		OptionsAllowlist:                     p.OptionsAllowlist.toUpdateProjectRequest(),
 		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
 		EnablePreviewFeedback:                p.PreviewComments.ValueBoolPointer(),
+		EnableAffectedProjectsDeployments:    p.EnableAffectedProjectsDeployments.ValueBoolPointer(),
 		AutoAssignCustomDomains:              p.AutoAssignCustomDomains.ValueBool(),
 		GitLFS:                               p.GitLFS.ValueBool(),
 		ServerlessFunctionZeroConfigFailover: p.FunctionFailover.ValueBool(),
@@ -1361,6 +1370,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
 		PreviewComments:                     types.BoolPointerValue(response.EnablePreviewFeedback),
+		EnableAffectedProjectsDeployments:   types.BoolPointerValue(response.EnableAffectedProjectsDeployments),
 		AutoAssignCustomDomains:             types.BoolValue(response.AutoAssignCustomDomains),
 		GitLFS:                              types.BoolValue(response.GitLFS),
 		FunctionFailover:                    types.BoolValue(response.ServerlessFunctionZeroConfigFailover),
