@@ -432,6 +432,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				Description:   "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
 			},
+			"enable_affected_projects_deployments": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.",
+			},
 			"git_comments": schema.SingleNestedAttribute{
 				Description: "Configuration for Git Comments.",
 				Optional:    true,
