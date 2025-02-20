@@ -411,6 +411,35 @@ func TestAcc_ProjectImport(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectEnablingAffectedProjectDeployments(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectConfigWithoutEnableAffectedSet(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("vercel_project.enable_affected_projects_deployments", "enable_affected_projects_deployments"),
+				),
+			},
+			{
+				Config: testAccProjectConfigWithEnableAffectedTrue(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.enable_affected_projects_deployments", "enable_affected_projects_deployments", "true"),
+				),
+			},
+			{
+				Config: testAccProjectConfigWithEnableAffectedFalse(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.enable_affected_projects_deployments", "enable_affected_projects_deployments", "false"),
+				),
+			},
+		},
+	})
+}
+
 func testAccProjectExists(n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -829,6 +858,104 @@ resource "vercel_project" "test" {
   output_directory = ".output"
   public_source = true
   root_directory = "ui/src"
+}
+`, projectSuffix, teamID)
+}
+
+func testAccProjectConfigWithoutEnableAffectedSet(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-project-%s"
+  %s
+  build_command = "npm run build"
+  dev_command = "npm run serve"
+  ignore_command = "echo 'wat'"
+  serverless_function_region = "syd1"
+  framework = "nextjs"
+  install_command = "npm install"
+  output_directory = ".output"
+  public_source = true
+  root_directory = "ui/src"
+  automatically_expose_system_environment_variables = true
+  git_comments = {
+      on_pull_request = true,
+      on_commit = true
+  }
+  preview_comments = true
+  auto_assign_custom_domains = true
+  git_lfs = true
+  function_failover = true
+  customer_success_code_visibility = true
+  git_fork_protection = true
+  prioritise_production_builds = true
+  directory_listing = true
+  skew_protection = "7 days"
+}
+`, projectSuffix, teamID)
+}
+
+func testAccProjectConfigWithEnableAffectedFalse(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-project-%s"
+  %s
+  build_command = "npm run build"
+  dev_command = "npm run serve"
+  ignore_command = "echo 'wat'"
+  serverless_function_region = "syd1"
+  framework = "nextjs"
+  install_command = "npm install"
+  output_directory = ".output"
+  public_source = true
+  root_directory = "ui/src"
+  automatically_expose_system_environment_variables = true
+  git_comments = {
+      on_pull_request = true,
+      on_commit = true
+  }
+  preview_comments = true
+  auto_assign_custom_domains = true
+  git_lfs = true
+  function_failover = true
+  customer_success_code_visibility = true
+  git_fork_protection = true
+  prioritise_production_builds = true
+  directory_listing = true
+  skew_protection = "7 days"
+  enable_affected_projects_deployments = false
+}
+`, projectSuffix, teamID)
+}
+
+func testAccProjectConfigWithEnableAffectedTrue(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-project-%s"
+  %s
+  build_command = "npm run build"
+  dev_command = "npm run serve"
+  ignore_command = "echo 'wat'"
+  serverless_function_region = "syd1"
+  framework = "nextjs"
+  install_command = "npm install"
+  output_directory = ".output"
+  public_source = true
+  root_directory = "ui/src"
+  automatically_expose_system_environment_variables = true
+  git_comments = {
+      on_pull_request = true,
+      on_commit = true
+  }
+  preview_comments = true
+  auto_assign_custom_domains = true
+  git_lfs = true
+  function_failover = true
+  customer_success_code_visibility = true
+  git_fork_protection = true
+  prioritise_production_builds = true
+  directory_listing = true
+  skew_protection = "7 days"
+  enable_affected_projects_deployments = true
 }
 `, projectSuffix, teamID)
 }
