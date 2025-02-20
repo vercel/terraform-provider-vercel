@@ -47,7 +47,7 @@ type CreateProjectRequest struct {
 	BuildCommand                      *string               `json:"buildCommand"`
 	CommandForIgnoringBuildStep       *string               `json:"commandForIgnoringBuildStep,omitempty"`
 	DevCommand                        *string               `json:"devCommand"`
-	EnableAffectedProjectsDeployments bool                  `json:"enableAffectedProjectsDeployments"`
+	EnableAffectedProjectsDeployments *bool                 `json:"enableAffectedProjectsDeployments"`
 	EnvironmentVariables              []EnvironmentVariable `json:"environmentVariables,omitempty"`
 	Framework                         *string               `json:"framework"`
 	GitRepository                     *GitRepository        `json:"gitRepository,omitempty"`
@@ -192,7 +192,7 @@ type ProjectResponse struct {
 	ProtectionBypass                     map[string]ProtectionBypass `json:"protectionBypass"`
 	AutoExposeSystemEnvVars              *bool                       `json:"autoExposeSystemEnvs"`
 	EnablePreviewFeedback                *bool                       `json:"enablePreviewFeedback"`
-	EnableAffectedProjectsDeployments    bool                        `json:"enableAffectedProjectsDeployments"`
+	EnableAffectedProjectsDeployments    *bool                       `json:"enableAffectedProjectsDeployments"`
 	AutoAssignCustomDomains              bool                        `json:"autoAssignCustomDomains"`
 	GitLFS                               bool                        `json:"gitLFS"`
 	ServerlessFunctionZeroConfigFailover bool                        `json:"serverlessFunctionZeroConfigFailover"`
@@ -293,7 +293,7 @@ type UpdateProjectRequest struct {
 	OptionsAllowlist                     *OptionsAllowlist               `json:"optionsAllowlist"`
 	AutoExposeSystemEnvVars              bool                            `json:"autoExposeSystemEnvs"`
 	EnablePreviewFeedback                *bool                           `json:"enablePreviewFeedback"`
-	EnableAffectedProjectsDeployments    bool                            `json:"enableAffectedProjectsDeployments"`
+	EnableAffectedProjectsDeployments    *bool                           `json:"enableAffectedProjectsDeployments"`
 	AutoAssignCustomDomains              bool                            `json:"autoAssignCustomDomains"`
 	GitLFS                               bool                            `json:"gitLFS"`
 	ServerlessFunctionZeroConfigFailover bool                            `json:"serverlessFunctionZeroConfigFailover"`

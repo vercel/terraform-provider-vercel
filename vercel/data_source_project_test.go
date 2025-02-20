@@ -24,6 +24,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "install_command", "npm install"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "output_directory", ".output"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "public_source", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "enable_affected_projects_deployments", "false"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "root_directory", "ui/src"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "vercel_authentication.deployment_type", "standard_protection"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "password_protection.deployment_type", "standard_protection"),

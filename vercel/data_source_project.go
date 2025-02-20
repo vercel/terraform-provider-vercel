@@ -278,6 +278,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Description: "Specifies whether the source code and logs of the deployments for this project should be public or not.",
 			},
+			"enable_affected_projects_deployments": schema.BoolAttribute{
+				Computed:    true,
+				Description: "When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.",
+			},
 			"root_directory": schema.StringAttribute{
 				Computed:    true,
 				Description: "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.",
