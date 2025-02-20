@@ -604,6 +604,7 @@ type Project struct {
 	GitForkProtection                   types.Bool                      `tfsdk:"git_fork_protection"`
 	PrioritiseProductionBuilds          types.Bool                      `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                    types.Bool                      `tfsdk:"directory_listing"`
+	EnableAffectedProjectsDeployments   types.Bool                      `tfsdk:"enable_affected_projects_deployments"`
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
 	ResourceConfig                      *ResourceConfig                 `tfsdk:"resource_config"`
 }
@@ -703,19 +704,20 @@ func parseEnvironment(ctx context.Context, vars []EnvironmentItem) (out []client
 func (p *Project) toCreateProjectRequest(ctx context.Context, envs []EnvironmentItem) (req client.CreateProjectRequest, diags diag.Diagnostics) {
 	clientEnvs, diags := parseEnvironment(ctx, envs)
 	return client.CreateProjectRequest{
-		BuildCommand:                p.BuildCommand.ValueStringPointer(),
-		CommandForIgnoringBuildStep: p.IgnoreCommand.ValueStringPointer(),
-		DevCommand:                  p.DevCommand.ValueStringPointer(),
-		EnvironmentVariables:        clientEnvs,
-		Framework:                   p.Framework.ValueStringPointer(),
-		GitRepository:               p.GitRepository.toCreateProjectRequest(),
-		InstallCommand:              p.InstallCommand.ValueStringPointer(),
-		Name:                        p.Name.ValueString(),
-		OIDCTokenConfig:             p.OIDCTokenConfig.toCreateProjectRequest(),
-		OutputDirectory:             p.OutputDirectory.ValueStringPointer(),
-		PublicSource:                p.PublicSource.ValueBoolPointer(),
-		RootDirectory:               p.RootDirectory.ValueStringPointer(),
-		ServerlessFunctionRegion:    p.ServerlessFunctionRegion.ValueString(),
+		BuildCommand:                      p.BuildCommand.ValueStringPointer(),
+		CommandForIgnoringBuildStep:       p.IgnoreCommand.ValueStringPointer(),
+		DevCommand:                        p.DevCommand.ValueStringPointer(),
+		EnableAffectedProjectsDeployments: p.EnableAffectedProjectsDeployments.ValueBool(),
+		EnvironmentVariables:              clientEnvs,
+		Framework:                         p.Framework.ValueStringPointer(),
+		GitRepository:                     p.GitRepository.toCreateProjectRequest(),
+		InstallCommand:                    p.InstallCommand.ValueStringPointer(),
+		Name:                              p.Name.ValueString(),
+		OIDCTokenConfig:                   p.OIDCTokenConfig.toCreateProjectRequest(),
+		OutputDirectory:                   p.OutputDirectory.ValueStringPointer(),
+		PublicSource:                      p.PublicSource.ValueBoolPointer(),
+		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
+		ServerlessFunctionRegion:          p.ServerlessFunctionRegion.ValueString(),
 	}, diags
 }
 
@@ -764,6 +766,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		OptionsAllowlist:                     p.OptionsAllowlist.toUpdateProjectRequest(),
 		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
 		EnablePreviewFeedback:                p.PreviewComments.ValueBoolPointer(),
+		EnableAffectedProjectsDeployments:    p.EnableAffectedProjectsDeployments.ValueBool(),
 		AutoAssignCustomDomains:              p.AutoAssignCustomDomains.ValueBool(),
 		GitLFS:                               p.GitLFS.ValueBool(),
 		ServerlessFunctionZeroConfigFailover: p.FunctionFailover.ValueBool(),
@@ -1368,6 +1371,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		GitForkProtection:                   types.BoolValue(response.GitForkProtection),
 		PrioritiseProductionBuilds:          types.BoolValue(response.ProductionDeploymentsFastLane),
 		DirectoryListing:                    types.BoolValue(response.DirectoryListing),
+		EnableAffectedProjectsDeployments:   types.BoolValue(response.EnableAffectedProjectsDeployments),
 		SkewProtection:                      fromSkewProtectionMaxAge(response.SkewProtectionMaxAge),
 		GitComments:                         gitComments,
 		ResourceConfig:                      resourceConfig,

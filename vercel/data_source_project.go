@@ -404,6 +404,7 @@ type ProjectDataSource struct {
 	GitForkProtection                   types.Bool            `tfsdk:"git_fork_protection"`
 	PrioritiseProductionBuilds          types.Bool            `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                    types.Bool            `tfsdk:"directory_listing"`
+	EnableAffectedProjectsDeployments   types.Bool            `tfsdk:"enable_affected_projects_deployments"`
 	SkewProtection                      types.String          `tfsdk:"skew_protection"`
 	ResourceConfig                      *ResourceConfig       `tfsdk:"resource_config"`
 }
@@ -472,6 +473,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		GitForkProtection:                   project.GitForkProtection,
 		PrioritiseProductionBuilds:          project.PrioritiseProductionBuilds,
 		DirectoryListing:                    project.DirectoryListing,
+		EnableAffectedProjectsDeployments:   project.EnableAffectedProjectsDeployments,
 		SkewProtection:                      project.SkewProtection,
 		ResourceConfig:                      project.ResourceConfig,
 	}, nil
