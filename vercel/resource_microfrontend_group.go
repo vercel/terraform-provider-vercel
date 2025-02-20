@@ -103,11 +103,15 @@ resource "vercel_microfrontend_group" "my-microfrontend-group" {
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"is_default_app": schema.BoolAttribute{
-							Description:   "Whether the project is the default app for the microfrontend group. Microfrontend groups must have exactly one default app.",
+							Description:   "Whether the project is the default app for the microfrontend group. Microfrontend groups must have exactly one default app. (Omit false values)",
 							Optional:      true,
 							Computed:      true,
-							Validators:    []validator.Bool{boolvalidator.ExactlyOneOf(path.Expressions{path.MatchRelative()}...)},
 							PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+							Validators: []validator.Bool{
+								boolvalidator.ExactlyOneOf(
+									path.MatchRoot("projects").AtAnyMapKey().AtName("is_default_app"),
+								),
+							},
 						},
 						"default_route": schema.StringAttribute{
 							Description:   "The default route for the project. Used for the screenshot of deployments.",
@@ -124,9 +128,7 @@ resource "vercel_microfrontend_group" "my-microfrontend-group" {
 						},
 					},
 				},
-				Validators: []validator.Map{
-					mapvalidator.SizeAtLeast(1),
-				},
+				Validators:    []validator.Map{mapvalidator.SizeAtLeast(1)},
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 			},
 		},
@@ -176,6 +178,12 @@ func (r *microfrontendGroupResource) Create(ctx context.Context, req resource.Cr
 		)
 		return
 	}
+
+	tflog.Info(ctx, "creating microfrontend group", map[string]interface{}{
+		"team_id": plan.TeamID.ValueString(),
+		"name":    plan.Name.ValueString(),
+		"plan":    plan,
+	})
 
 	cdr := client.MicrofrontendGroup{
 		Name:   plan.Name.ValueString(),

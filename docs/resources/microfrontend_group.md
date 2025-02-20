@@ -64,5 +64,5 @@ resource "vercel_microfrontend_group" "my-microfrontend-group" {
 Optional:
 
 - `default_route` (String) The default route for the project. Used for the screenshot of deployments.
-- `is_default_app` (Boolean) Whether the project is the default app for the microfrontend group. Microfrontend groups must have exactly one default app.
+- `is_default_app` (Boolean) Whether the project is the default app for the microfrontend group. Microfrontend groups must have exactly one default app. (Omit false values)
 - `route_observability_to_this_project` (Boolean) Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.

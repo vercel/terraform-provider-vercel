@@ -25,8 +25,12 @@ type MicrofrontendGroupsAPIResponse struct {
 }
 
 func (c *Client) CreateMicrofrontendGroup(ctx context.Context, request MicrofrontendGroup) (r MicrofrontendGroup, err error) {
+	if c.teamID(request.TeamID) == "" {
+		return r, fmt.Errorf("team_id is required")
+	}
 	tflog.Info(ctx, "creating microfrontend group", map[string]interface{}{
 		"microfrontend_group_name": request.Name,
+		"team_id":                  c.teamID(request.TeamID),
 	})
 	url := fmt.Sprintf("%s/teams/%s/microfrontends", c.baseURL, c.teamID(request.TeamID))
 	payload := string(mustMarshal(struct {
@@ -55,6 +59,9 @@ func (c *Client) CreateMicrofrontendGroup(ctx context.Context, request Microfron
 }
 
 func (c *Client) UpdateMicrofrontendGroup(ctx context.Context, request MicrofrontendGroup) (r MicrofrontendGroup, err error) {
+	if c.teamID(request.TeamID) == "" {
+		return r, fmt.Errorf("team_id is required")
+	}
 	url := fmt.Sprintf("%s/teams/%s/microfrontends/%s", c.baseURL, c.teamID(request.TeamID), request.ID)
 	payload := string(mustMarshal(struct {
 		Name string `json:"name"`
@@ -86,6 +93,9 @@ func (c *Client) UpdateMicrofrontendGroup(ctx context.Context, request Microfron
 }
 
 func (c *Client) DeleteMicrofrontendGroup(ctx context.Context, request MicrofrontendGroup) (r struct{}, err error) {
+	if c.teamID(request.TeamID) == "" {
+		return r, fmt.Errorf("team_id is required")
+	}
 	url := fmt.Sprintf("%s/teams/%s/microfrontends/%s", c.baseURL, c.teamID(request.TeamID), request.ID)
 
 	tflog.Info(ctx, "deleting microfrontend group", map[string]interface{}{
@@ -102,6 +112,9 @@ func (c *Client) DeleteMicrofrontendGroup(ctx context.Context, request Microfron
 }
 
 func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID string, teamID string) (r MicrofrontendGroup, err error) {
+	if c.teamID(teamID) == "" {
+		return r, fmt.Errorf("team_id is required")
+	}
 	url := fmt.Sprintf("%s/v1/microfrontends/groups", c.baseURL)
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
