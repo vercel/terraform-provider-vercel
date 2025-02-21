@@ -1049,20 +1049,22 @@ func (t *OptionsAllowlist) toUpdateProjectRequest() *client.OptionsAllowlist {
 * This is implemented in the below uncoerceString and uncoerceBool functions.
  */
 type projectCoercedFields struct {
-	BuildCommand    types.String
-	DevCommand      types.String
-	InstallCommand  types.String
-	OutputDirectory types.String
-	PublicSource    types.Bool
+	BuildCommand                      types.String
+	DevCommand                        types.String
+	InstallCommand                    types.String
+	OutputDirectory                   types.String
+	PublicSource                      types.Bool
+	EnableAffectedProjectsDeployments types.Bool
 }
 
 func (p *Project) coercedFields() projectCoercedFields {
 	return projectCoercedFields{
-		BuildCommand:    p.BuildCommand,
-		DevCommand:      p.DevCommand,
-		InstallCommand:  p.InstallCommand,
-		OutputDirectory: p.OutputDirectory,
-		PublicSource:    p.PublicSource,
+		BuildCommand:                      p.BuildCommand,
+		DevCommand:                        p.DevCommand,
+		InstallCommand:                    p.InstallCommand,
+		OutputDirectory:                   p.OutputDirectory,
+		PublicSource:                      p.PublicSource,
+		EnableAffectedProjectsDeployments: p.EnableAffectedProjectsDeployments,
 	}
 }
 
@@ -1327,11 +1329,6 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		protectionBypassSecret = types.StringValue(plan.ProtectionBypassForAutomationSecret.ValueString())
 	}
 
-	enableAffectedProjectsDeployments := types.BoolNull()
-	if !plan.EnableAffectedProjectsDeployments.IsNull() {
-		enableAffectedProjectsDeployments = types.BoolValue(plan.EnableAffectedProjectsDeployments.ValueBool())
-	}
-
 	environmentEntry := types.SetValueMust(envVariableElemType, env)
 	if plan.Environment.IsNull() {
 		environmentEntry = types.SetNull(envVariableElemType)
@@ -1373,7 +1370,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
 		PreviewComments:                     types.BoolPointerValue(response.EnablePreviewFeedback),
-		EnableAffectedProjectsDeployments:   enableAffectedProjectsDeployments,
+		EnableAffectedProjectsDeployments:   uncoerceBool(fields.EnableAffectedProjectsDeployments, types.BoolPointerValue(response.EnableAffectedProjectsDeployments)),
 		AutoAssignCustomDomains:             types.BoolValue(response.AutoAssignCustomDomains),
 		GitLFS:                              types.BoolValue(response.GitLFS),
 		FunctionFailover:                    types.BoolValue(response.ServerlessFunctionZeroConfigFailover),
