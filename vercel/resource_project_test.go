@@ -411,6 +411,35 @@ func TestAcc_ProjectImport(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectEnablingAffectedProjectDeployments(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectConfigWithoutEnableAffectedSet(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("vercel_project.test", "enable_affected_projects_deployments"),
+				),
+			},
+			{
+				Config: testAccProjectConfigWithEnableAffectedTrue(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_affected_projects_deployments", "true"),
+				),
+			},
+			{
+				Config: testAccProjectConfigWithEnableAffectedFalse(projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_affected_projects_deployments", "false"),
+				),
+			},
+		},
+	})
+}
+
 func testAccProjectExists(n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -829,6 +858,35 @@ resource "vercel_project" "test" {
   output_directory = ".output"
   public_source = true
   root_directory = "ui/src"
+}
+`, projectSuffix, teamID)
+}
+
+func testAccProjectConfigWithoutEnableAffectedSet(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-project-%s"
+  %s
+}
+`, projectSuffix, teamID)
+}
+
+func testAccProjectConfigWithEnableAffectedFalse(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-project-%s"
+  %s
+  enable_affected_projects_deployments = false
+}
+`, projectSuffix, teamID)
+}
+
+func testAccProjectConfigWithEnableAffectedTrue(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-project-%s"
+  %s
+  enable_affected_projects_deployments = true
 }
 `, projectSuffix, teamID)
 }
