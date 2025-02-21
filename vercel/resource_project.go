@@ -1327,6 +1327,11 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		protectionBypassSecret = types.StringValue(plan.ProtectionBypassForAutomationSecret.ValueString())
 	}
 
+	enableAffectedProjectsDeployments := types.BoolNull()
+	if !plan.EnableAffectedProjectsDeployments.IsNull() {
+		enableAffectedProjectsDeployments = types.BoolValue(plan.EnableAffectedProjectsDeployments.ValueBool())
+	}
+
 	environmentEntry := types.SetValueMust(envVariableElemType, env)
 	if plan.Environment.IsNull() {
 		environmentEntry = types.SetNull(envVariableElemType)
@@ -1368,7 +1373,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
 		PreviewComments:                     types.BoolPointerValue(response.EnablePreviewFeedback),
-		EnableAffectedProjectsDeployments:   types.BoolPointerValue(response.EnableAffectedProjectsDeployments),
+		EnableAffectedProjectsDeployments:   enableAffectedProjectsDeployments,
 		AutoAssignCustomDomains:             types.BoolValue(response.AutoAssignCustomDomains),
 		GitLFS:                              types.BoolValue(response.GitLFS),
 		FunctionFailover:                    types.BoolValue(response.ServerlessFunctionZeroConfigFailover),
