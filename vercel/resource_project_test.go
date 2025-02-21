@@ -867,29 +867,6 @@ func testAccProjectConfigWithoutEnableAffectedSet(projectSuffix, teamID string) 
 resource "vercel_project" "test" {
   name = "test-acc-project-%s"
   %s
-  build_command = "npm run build"
-  dev_command = "npm run serve"
-  ignore_command = "echo 'wat'"
-  serverless_function_region = "syd1"
-  framework = "nextjs"
-  install_command = "npm install"
-  output_directory = ".output"
-  public_source = true
-  root_directory = "ui/src"
-  automatically_expose_system_environment_variables = true
-  git_comments = {
-      on_pull_request = true,
-      on_commit = true
-  }
-  preview_comments = true
-  auto_assign_custom_domains = true
-  git_lfs = true
-  function_failover = true
-  customer_success_code_visibility = true
-  git_fork_protection = true
-  prioritise_production_builds = true
-  directory_listing = true
-  skew_protection = "7 days"
 }
 `, projectSuffix, teamID)
 }
@@ -899,29 +876,6 @@ func testAccProjectConfigWithEnableAffectedFalse(projectSuffix, teamID string) s
 resource "vercel_project" "test" {
   name = "test-acc-project-%s"
   %s
-  build_command = "npm run build"
-  dev_command = "npm run serve"
-  ignore_command = "echo 'wat'"
-  serverless_function_region = "syd1"
-  framework = "nextjs"
-  install_command = "npm install"
-  output_directory = ".output"
-  public_source = true
-  root_directory = "ui/src"
-  automatically_expose_system_environment_variables = true
-  git_comments = {
-      on_pull_request = true,
-      on_commit = true
-  }
-  preview_comments = true
-  auto_assign_custom_domains = true
-  git_lfs = true
-  function_failover = true
-  customer_success_code_visibility = true
-  git_fork_protection = true
-  prioritise_production_builds = true
-  directory_listing = true
-  skew_protection = "7 days"
   enable_affected_projects_deployments = false
 }
 `, projectSuffix, teamID)
@@ -932,29 +886,6 @@ func testAccProjectConfigWithEnableAffectedTrue(projectSuffix, teamID string) st
 resource "vercel_project" "test" {
   name = "test-acc-project-%s"
   %s
-  build_command = "npm run build"
-  dev_command = "npm run serve"
-  ignore_command = "echo 'wat'"
-  serverless_function_region = "syd1"
-  framework = "nextjs"
-  install_command = "npm install"
-  output_directory = ".output"
-  public_source = true
-  root_directory = "ui/src"
-  automatically_expose_system_environment_variables = true
-  git_comments = {
-      on_pull_request = true,
-      on_commit = true
-  }
-  preview_comments = true
-  auto_assign_custom_domains = true
-  git_lfs = true
-  function_failover = true
-  customer_success_code_visibility = true
-  git_fork_protection = true
-  prioritise_production_builds = true
-  directory_listing = true
-  skew_protection = "7 days"
   enable_affected_projects_deployments = true
 }
 `, projectSuffix, teamID)
