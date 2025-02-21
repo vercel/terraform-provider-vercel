@@ -434,7 +434,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			},
 			"enable_affected_projects_deployments": schema.BoolAttribute{
 				Optional:      true,
-				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				Description:   "When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.",
 			},
