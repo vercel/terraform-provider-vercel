@@ -106,7 +106,7 @@ resource "vercel_microfrontend_group" "my-microfrontend-group" {
 							Description:   "Whether the project is the default app for the microfrontend group. Microfrontend groups must have exactly one default app. (Omit false values)",
 							Optional:      true,
 							Computed:      true,
-							PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+							PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown(), boolplanmodifier.RequiresReplace()},
 							Validators: []validator.Bool{
 								boolvalidator.ExactlyOneOf(
 									path.MatchRoot("projects").AtAnyMapKey().AtName("is_default_app"),
