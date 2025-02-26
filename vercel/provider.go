@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
@@ -72,6 +73,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newProjectMembersResource,
 		newProjectResource,
 		newSharedEnvironmentVariableResource,
+		newSharedEnvironmentVariableProjectLinkResource,
 		newTeamConfigResource,
 		newTeamMemberResource,
 		newWebhookResource,

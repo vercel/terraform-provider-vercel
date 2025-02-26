@@ -163,14 +163,20 @@ func (c *Client) ListSharedEnvironmentVariables(ctx context.Context, teamID stri
 	return res.Data, err
 }
 
+type UpdateSharedEnvironmentVariableRequestProjectIDUpdates struct {
+	Link   []string `json:"link,omitempty"`
+	Unlink []string `json:"unlink,omitempty"`
+}
+
 type UpdateSharedEnvironmentVariableRequest struct {
-	Value      string   `json:"value"`
-	Type       string   `json:"type"`
-	ProjectIDs []string `json:"projectId"`
-	Target     []string `json:"target"`
-	Comment    string   `json:"comment"`
-	TeamID     string   `json:"-"`
-	EnvID      string   `json:"-"`
+	Value            string                                                 `json:"value,omitempty"`
+	Type             string                                                 `json:"type,omitempty"`
+	ProjectIDs       []string                                               `json:"projectId,omitempty"`
+	ProjectIDUpdates UpdateSharedEnvironmentVariableRequestProjectIDUpdates `json:"projectIdUpdates,omitempty"`
+	Target           []string                                               `json:"target,omitempty"`
+	Comment          string                                                 `json:"comment,omitempty"`
+	TeamID           string                                                 `json:"-"`
+	EnvID            string                                                 `json:"-"`
 }
 
 func (c *Client) UpdateSharedEnvironmentVariable(ctx context.Context, request UpdateSharedEnvironmentVariableRequest) (e SharedEnvironmentVariableResponse, err error) {
