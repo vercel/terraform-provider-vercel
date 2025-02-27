@@ -8,16 +8,17 @@ import (
 )
 
 type MicrofrontendGroup struct {
-	ID       string                          `json:"id"`
-	Name     string                          `json:"name"`
-	Slug     string                          `json:"slug"`
-	TeamID   string                          `json:"team_id"`
-	Projects map[string]MicrofrontendProject `json:"projects"`
+	ID         string                                  `json:"id"`
+	Name       string                                  `json:"name"`
+	Slug       string                                  `json:"slug"`
+	TeamID     string                                  `json:"team_id"`
+	Projects   map[string]MicrofrontendGroupMembership `json:"projects"`
+	DefaultApp string                                  `json:"defaultApp"`
 }
 
 type MicrofrontendGroupsAPI struct {
-	Group    MicrofrontendGroup                 `json:"group"`
-	Projects []MicrofrontendProjectsResponseAPI `json:"projects"`
+	Group    MicrofrontendGroup                         `json:"group"`
+	Projects []MicrofrontendGroupMembershipsResponseAPI `json:"projects"`
 }
 
 type MicrofrontendGroupsAPIResponse struct {
@@ -141,21 +142,34 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 
 	for i := range res.Groups {
 		if res.Groups[i].Group.ID == microfrontendGroupID {
-			projects := map[string]MicrofrontendProject{}
+			projects := map[string]MicrofrontendGroupMembership{}
+			defaultApp := ""
 			for _, p := range res.Groups[i].Projects {
-				projects[p.ID] = MicrofrontendProject{
+				projects[p.ID] = MicrofrontendGroupMembership{
+					MicrofrontendGroupID:            microfrontendGroupID,
+					ProjectID:                       p.ID,
+					TeamID:                          c.teamID(teamID),
+					Enabled:                         p.Microfrontends.Enabled,
 					IsDefaultApp:                    p.Microfrontends.IsDefaultApp,
 					DefaultRoute:                    p.Microfrontends.DefaultRoute,
 					RouteObservabilityToThisProject: p.Microfrontends.RouteObservabilityToThisProject,
 				}
+				if p.Microfrontends.IsDefaultApp {
+					defaultApp = p.ID
+				}
 			}
-			return MicrofrontendGroup{
-				ID:       res.Groups[i].Group.ID,
-				Name:     res.Groups[i].Group.Name,
-				Slug:     res.Groups[i].Group.Slug,
-				TeamID:   teamID,
-				Projects: projects,
-			}, nil
+			res := MicrofrontendGroup{
+				ID:         res.Groups[i].Group.ID,
+				Name:       res.Groups[i].Group.Name,
+				Slug:       res.Groups[i].Group.Slug,
+				TeamID:     teamID,
+				DefaultApp: defaultApp,
+				Projects:   projects,
+			}
+			tflog.Info(ctx, "returning microfrontend group", map[string]interface{}{
+				"res": res,
+			})
+			return res, nil
 		}
 	}
 

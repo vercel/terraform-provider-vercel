@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type MicrofrontendProject struct {
+type MicrofrontendGroupMembership struct {
 	MicrofrontendGroupID            string `json:"microfrontendsGroupId"`
 	IsDefaultApp                    bool   `json:"isDefaultApp"`
 	DefaultRoute                    string `json:"defaultRoute"`
@@ -17,7 +17,7 @@ type MicrofrontendProject struct {
 	TeamID                          string `json:"team_id"`
 }
 
-type MicrofrontendProjectResponseAPI struct {
+type MicrofrontendGroupMembershipResponseAPI struct {
 	GroupIds                        []string `json:"groupIds"`
 	Enabled                         bool     `json:"enabled"`
 	IsDefaultApp                    bool     `json:"isDefaultApp"`
@@ -27,21 +27,40 @@ type MicrofrontendProjectResponseAPI struct {
 	UpdatedAt                       int      `json:"updatedAt"`
 }
 
-type MicrofrontendProjectsResponseAPI struct {
-	ID             string                          `json:"id"`
-	Microfrontends MicrofrontendProjectResponseAPI `json:"microfrontends"`
+type MicrofrontendGroupMembershipsResponseAPI struct {
+	ID             string                                  `json:"id"`
+	Microfrontends MicrofrontendGroupMembershipResponseAPI `json:"microfrontends"`
 }
 
-func (c *Client) AddOrUpdateMicrofrontendProject(ctx context.Context, request MicrofrontendProject) (r MicrofrontendProject, err error) {
-	tflog.Info(ctx, "adding / updating microfrontend project to group", map[string]interface{}{
+func (c *Client) GetMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership) (r MicrofrontendGroupMembership, err error) {
+	tflog.Info(ctx, "getting microfrontend group", map[string]interface{}{
 		"project_id": request.ProjectID,
 		"group_id":   request.MicrofrontendGroupID,
+		"team_id":    c.teamID(request.TeamID),
 	})
-	p, err := c.PatchMicrofrontendProject(ctx, MicrofrontendProject{
+	group, err := c.GetMicrofrontendGroup(ctx, request.MicrofrontendGroupID, c.teamID(request.TeamID))
+	if err != nil {
+		return r, err
+	}
+	tflog.Info(ctx, "getting microfrontend group membership", map[string]interface{}{
+		"project_id": request.ProjectID,
+		"group":      group,
+	})
+	return group.Projects[request.ProjectID], nil
+}
+
+func (c *Client) AddOrUpdateMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership, group MicrofrontendGroup) (r MicrofrontendGroupMembership, err error) {
+	isDefaultApp := group.DefaultApp == request.ProjectID
+	tflog.Info(ctx, "adding / updating microfrontend project to group", map[string]interface{}{
+		"is_default_app": isDefaultApp,
+		"project_id":     request.ProjectID,
+		"group_id":       request.MicrofrontendGroupID,
+	})
+	p, err := c.PatchMicrofrontendGroupMembership(ctx, MicrofrontendGroupMembership{
 		ProjectID:                       request.ProjectID,
 		TeamID:                          c.teamID(request.TeamID),
 		Enabled:                         true,
-		IsDefaultApp:                    request.IsDefaultApp,
+		IsDefaultApp:                    isDefaultApp,
 		DefaultRoute:                    request.DefaultRoute,
 		RouteObservabilityToThisProject: request.RouteObservabilityToThisProject,
 		MicrofrontendGroupID:            request.MicrofrontendGroupID,
@@ -52,12 +71,18 @@ func (c *Client) AddOrUpdateMicrofrontendProject(ctx context.Context, request Mi
 	return p, nil
 }
 
-func (c *Client) RemoveMicrofrontendProject(ctx context.Context, request MicrofrontendProject) (r MicrofrontendProject, err error) {
+func (c *Client) RemoveMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership, canDeleteDefaultApp bool) (r MicrofrontendGroupMembership, err error) {
+	if request.IsDefaultApp && !canDeleteDefaultApp {
+		// Only delete the default app relationship if the entire group is being deleted
+		return r, nil
+	}
+
 	tflog.Info(ctx, "removing microfrontend project from group", map[string]interface{}{
 		"project_id": request.ProjectID,
 		"group_id":   request.MicrofrontendGroupID,
+		"team_id":    c.teamID(request.TeamID),
 	})
-	p, err := c.PatchMicrofrontendProject(ctx, MicrofrontendProject{
+	p, err := c.PatchMicrofrontendGroupMembership(ctx, MicrofrontendGroupMembership{
 		ProjectID:            request.ProjectID,
 		TeamID:               c.teamID(request.TeamID),
 		Enabled:              false,
@@ -69,9 +94,9 @@ func (c *Client) RemoveMicrofrontendProject(ctx context.Context, request Microfr
 	return p, nil
 }
 
-func (c *Client) PatchMicrofrontendProject(ctx context.Context, request MicrofrontendProject) (r MicrofrontendProject, err error) {
+func (c *Client) PatchMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership) (r MicrofrontendGroupMembership, err error) {
 	url := fmt.Sprintf("%s/projects/%s/microfrontends", c.baseURL, request.ProjectID)
-	payload := string(mustMarshal(MicrofrontendProject{
+	payload := string(mustMarshal(MicrofrontendGroupMembership{
 		IsDefaultApp:                    request.IsDefaultApp,
 		DefaultRoute:                    request.DefaultRoute,
 		RouteObservabilityToThisProject: request.RouteObservabilityToThisProject,
@@ -92,11 +117,11 @@ func (c *Client) PatchMicrofrontendProject(ctx context.Context, request Microfro
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 
-	tflog.Info(ctx, "creating microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "updating microfrontend group membership", map[string]interface{}{
 		"url":     url,
 		"payload": payload,
 	})
-	apiResponse := MicrofrontendProjectsResponseAPI{}
+	apiResponse := MicrofrontendGroupMembershipsResponseAPI{}
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "PATCH",
@@ -106,7 +131,11 @@ func (c *Client) PatchMicrofrontendProject(ctx context.Context, request Microfro
 	if err != nil {
 		return r, err
 	}
-	return MicrofrontendProject{
+	return MicrofrontendGroupMembership{
+		MicrofrontendGroupID:            request.MicrofrontendGroupID,
+		ProjectID:                       request.ProjectID,
+		TeamID:                          c.teamID(request.TeamID),
+		Enabled:                         apiResponse.Microfrontends.Enabled,
 		IsDefaultApp:                    apiResponse.Microfrontends.IsDefaultApp,
 		DefaultRoute:                    apiResponse.Microfrontends.DefaultRoute,
 		RouteObservabilityToThisProject: apiResponse.Microfrontends.RouteObservabilityToThisProject,

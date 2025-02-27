@@ -4,17 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v2/client"
@@ -62,20 +55,6 @@ func (r *microfrontendGroupResource) Schema(_ context.Context, req resource.Sche
 Provides a Microfrontend Group resource.
 
 A Microfrontend Group is a definition of a microfrontend belonging to a Vercel Team. 
-
-Example:
-
-resource "vercel_microfrontend_group" "my-microfrontend-group" {
-  name = "microfrontend test"
-  projects = {
-    (vercel_project.my-parent-project.id) = {
-      is_default_app = true
-    }
-    (vercel_project.my-child-project.id) = {
-      is_default_app = false
-    }
-  }
-}
 `,
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
@@ -97,73 +76,30 @@ resource "vercel_microfrontend_group" "my-microfrontend-group" {
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
-			"projects": schema.MapNestedAttribute{
-				Description: "A map of project ids to project configuration that belong to the microfrontend group.",
-				Required:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"is_default_app": schema.BoolAttribute{
-							Description:   "Whether the project is the default app for the microfrontend group. Microfrontend groups must have exactly one default app. (Omit false values)",
-							Optional:      true,
-							Computed:      true,
-							PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown(), boolplanmodifier.RequiresReplace()},
-							Validators: []validator.Bool{
-								boolvalidator.ExactlyOneOf(
-									path.MatchRoot("projects").AtAnyMapKey().AtName("is_default_app"),
-								),
-							},
-						},
-						"default_route": schema.StringAttribute{
-							Description:   "The default route for the project. Used for the screenshot of deployments.",
-							Optional:      true,
-							Computed:      true,
-							PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-						},
-						"route_observability_to_this_project": schema.BoolAttribute{
-							Description:   "Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.",
-							Optional:      true,
-							Computed:      true,
-							Default:       booldefault.StaticBool(true),
-							PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
-						},
-					},
-				},
-				Validators:    []validator.Map{mapvalidator.SizeAtLeast(1)},
-				PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
+			"default_app": schema.StringAttribute{
+				Description:   "The default app for the project. Used as the entry point for the microfrontend.",
+				Required:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 		},
 	}
 }
 
-type MicrofrontendProject struct {
-	IsDefaultApp                    types.Bool   `tfsdk:"is_default_app"`
-	DefaultRoute                    types.String `tfsdk:"default_route"`
-	RouteObservabilityToThisProject types.Bool   `tfsdk:"route_observability_to_this_project"`
-}
-
 type MicrofrontendGroup struct {
-	TeamID   types.String                    `tfsdk:"team_id"`
-	ID       types.String                    `tfsdk:"id"`
-	Name     types.String                    `tfsdk:"name"`
-	Slug     types.String                    `tfsdk:"slug"`
-	Projects map[string]MicrofrontendProject `tfsdk:"projects"`
+	TeamID     types.String `tfsdk:"team_id"`
+	ID         types.String `tfsdk:"id"`
+	Name       types.String `tfsdk:"name"`
+	Slug       types.String `tfsdk:"slug"`
+	DefaultApp types.String `tfsdk:"default_app"`
 }
 
-func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup, projects map[string]client.MicrofrontendProject) MicrofrontendGroup {
-	projectResponse := map[string]MicrofrontendProject{}
-	for projectID, p := range projects {
-		projectResponse[projectID] = MicrofrontendProject{
-			IsDefaultApp:                    types.BoolValue(p.IsDefaultApp),
-			DefaultRoute:                    types.StringValue(p.DefaultRoute),
-			RouteObservabilityToThisProject: types.BoolValue(p.RouteObservabilityToThisProject),
-		}
-	}
+func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup) MicrofrontendGroup {
 	return MicrofrontendGroup{
-		ID:       types.StringValue(group.ID),
-		Name:     types.StringValue(group.Name),
-		Slug:     types.StringValue(group.Slug),
-		TeamID:   types.StringValue(group.TeamID),
-		Projects: projectResponse,
+		ID:         types.StringValue(group.ID),
+		Name:       types.StringValue(group.Name),
+		Slug:       types.StringValue(group.Slug),
+		TeamID:     types.StringValue(group.TeamID),
+		DefaultApp: types.StringValue(group.DefaultApp),
 	}
 }
 
@@ -182,7 +118,6 @@ func (r *microfrontendGroupResource) Create(ctx context.Context, req resource.Cr
 	tflog.Info(ctx, "creating microfrontend group", map[string]interface{}{
 		"team_id": plan.TeamID.ValueString(),
 		"name":    plan.Name.ValueString(),
-		"plan":    plan,
 	})
 
 	cdr := client.MicrofrontendGroup{
@@ -190,7 +125,7 @@ func (r *microfrontendGroupResource) Create(ctx context.Context, req resource.Cr
 		TeamID: plan.TeamID.ValueString(),
 	}
 
-	groupResponse, err := r.client.CreateMicrofrontendGroup(ctx, cdr)
+	out, err := r.client.CreateMicrofrontendGroup(ctx, cdr)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating microfrontend group",
@@ -199,33 +134,43 @@ func (r *microfrontendGroupResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	projectResponse := map[string]client.MicrofrontendProject{}
-	for projectID, project := range plan.Projects {
-		p, err := r.client.AddOrUpdateMicrofrontendProject(ctx, client.MicrofrontendProject{
-			IsDefaultApp:                    project.IsDefaultApp.ValueBool(),
-			DefaultRoute:                    project.DefaultRoute.ValueString(),
-			RouteObservabilityToThisProject: project.RouteObservabilityToThisProject.ValueBool(),
-			MicrofrontendGroupID:            groupResponse.ID,
-			TeamID:                          plan.TeamID.ValueString(),
-			ProjectID:                       projectID,
-		})
+	tflog.Info(ctx, "creating default group membership", map[string]interface{}{
+		"team_id":     plan.TeamID.ValueString(),
+		"name":        plan.Name.ValueString(),
+		"default_app": plan.DefaultApp.ValueString(),
+	})
 
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error creating microfrontend project",
-				"Could not create microfrontend project, unexpected error: "+err.Error(),
-			)
-			return
-		}
-		projectResponse[projectID] = p
+	group := client.MicrofrontendGroup{
+		ID:         out.ID,
+		Name:       out.Name,
+		Slug:       out.Slug,
+		TeamID:     out.TeamID,
+		DefaultApp: plan.DefaultApp.ValueString(),
+		Projects:   out.Projects,
 	}
 
-	result := convertResponseToMicrofrontendGroup(groupResponse, projectResponse)
+	_, err = r.client.AddOrUpdateMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
+		ProjectID:            plan.DefaultApp.ValueString(),
+		MicrofrontendGroupID: out.ID,
+		TeamID:               plan.TeamID.ValueString(),
+		IsDefaultApp:         true,
+	}, group)
+
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating microfrontend default app group membership",
+			"Could not create microfrontend default app group membership, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	result := convertResponseToMicrofrontendGroup(group)
 	tflog.Info(ctx, "created microfrontend group", map[string]interface{}{
-		"team_id":  result.TeamID.ValueString(),
-		"group_id": result.ID.ValueString(),
-		"slug":     result.Slug.ValueString(),
-		"name":     result.Name.ValueString(),
+		"team_id":     result.TeamID.ValueString(),
+		"group_id":    result.ID.ValueString(),
+		"slug":        result.Slug.ValueString(),
+		"name":        result.Name.ValueString(),
+		"default_app": result.DefaultApp.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -260,7 +205,7 @@ func (r *microfrontendGroupResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	result := convertResponseToMicrofrontendGroup(out, out.Projects)
+	result := convertResponseToMicrofrontendGroup(out)
 	tflog.Info(ctx, "read microfrontend group", map[string]interface{}{
 		"team_id":  result.TeamID.ValueString(),
 		"group_id": result.ID.ValueString(),
@@ -294,53 +239,6 @@ func (r *microfrontendGroupResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	for projectID, project := range state.Projects {
-		_, exists := plan.Projects[projectID]
-		if !exists {
-			tflog.Info(ctx, "removing microfrontend project", map[string]interface{}{
-				"project_id": projectID,
-			})
-			_, err := r.client.RemoveMicrofrontendProject(ctx, client.MicrofrontendProject{
-				ProjectID:                       projectID,
-				IsDefaultApp:                    project.IsDefaultApp.ValueBool(),
-				DefaultRoute:                    project.DefaultRoute.ValueString(),
-				RouteObservabilityToThisProject: project.RouteObservabilityToThisProject.ValueBool(),
-				MicrofrontendGroupID:            state.ID.ValueString(),
-				TeamID:                          state.TeamID.ValueString(),
-			})
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"Error removing microfrontend project "+projectID,
-					"Could not remove microfrontend project, unexpected error: "+err.Error(),
-				)
-				return
-			}
-		}
-	}
-
-	projects := map[string]client.MicrofrontendProject{}
-	for projectID, project := range plan.Projects {
-		tflog.Info(ctx, "adding / updating microfrontend project", map[string]interface{}{
-			"project_id": projectID,
-		})
-		updatedProject, err := r.client.AddOrUpdateMicrofrontendProject(ctx, client.MicrofrontendProject{
-			ProjectID:                       projectID,
-			IsDefaultApp:                    project.IsDefaultApp.ValueBool(),
-			DefaultRoute:                    project.DefaultRoute.ValueString(),
-			RouteObservabilityToThisProject: project.RouteObservabilityToThisProject.ValueBool(),
-			MicrofrontendGroupID:            state.ID.ValueString(),
-			TeamID:                          state.TeamID.ValueString(),
-		})
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error adding microfrontend project "+projectID,
-				"Could not add microfrontend project, unexpected error: "+err.Error(),
-			)
-			return
-		}
-		projects[projectID] = updatedProject
-	}
-
 	out, err := r.client.UpdateMicrofrontendGroup(ctx, client.MicrofrontendGroup{
 		ID:     state.ID.ValueString(),
 		Name:   plan.Name.ValueString(),
@@ -366,7 +264,7 @@ func (r *microfrontendGroupResource) Update(ctx context.Context, req resource.Up
 		"slug":     out.Slug,
 	})
 
-	result := convertResponseToMicrofrontendGroup(out, projects)
+	result := convertResponseToMicrofrontendGroup(out)
 
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -383,26 +281,37 @@ func (r *microfrontendGroupResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	for projectID, project := range state.Projects {
-		tflog.Info(ctx, "removing microfrontend project", map[string]interface{}{
-			"project_id": projectID,
+	if state.DefaultApp.ValueString() != "" {
+		tflog.Info(ctx, "deleting microfrontend default app group membership", map[string]interface{}{
+			"group_id":   state.ID.ValueString(),
+			"project_id": state.DefaultApp.ValueString(),
+			"team_id":    state.TeamID.ValueString(),
 		})
-		_, err := r.client.RemoveMicrofrontendProject(ctx, client.MicrofrontendProject{
-			ProjectID:                       projectID,
-			IsDefaultApp:                    project.IsDefaultApp.ValueBool(),
-			DefaultRoute:                    project.DefaultRoute.ValueString(),
-			RouteObservabilityToThisProject: project.RouteObservabilityToThisProject.ValueBool(),
-			MicrofrontendGroupID:            state.ID.ValueString(),
-			TeamID:                          state.TeamID.ValueString(),
-		})
+
+		_, err := r.client.RemoveMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
+			MicrofrontendGroupID: state.ID.ValueString(),
+			TeamID:               state.TeamID.ValueString(),
+			ProjectID:            state.DefaultApp.ValueString(),
+		}, true)
+
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Error removing microfrontend project "+projectID,
-				"Could not remove microfrontend project, unexpected error: "+err.Error(),
+				"Error deleting microfrontend default app group membership",
+				fmt.Sprintf(
+					"Could not delete microfrontend default app group membership %s %s, unexpected error: %s",
+					state.ID.ValueString(),
+					state.DefaultApp.ValueString(),
+					err,
+				),
 			)
 			return
 		}
 	}
+
+	tflog.Info(ctx, "deleting microfrontend group", map[string]interface{}{
+		"group_id": state.ID.ValueString(),
+	})
+
 	_, err := r.client.DeleteMicrofrontendGroup(ctx, client.MicrofrontendGroup{
 		ID:     state.ID.ValueString(),
 		TeamID: state.TeamID.ValueString(),
@@ -411,9 +320,9 @@ func (r *microfrontendGroupResource) Delete(ctx context.Context, req resource.De
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error deleting microfrontendGroup",
+			"Error deleting microfrontend group",
 			fmt.Sprintf(
-				"Could not delete microfrontendGroup %s, unexpected error: %s",
+				"Could not delete microfrontend group %s, unexpected error: %s",
 				state.ID.ValueString(),
 				err,
 			),

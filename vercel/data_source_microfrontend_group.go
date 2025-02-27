@@ -72,28 +72,9 @@ A Microfrontend Group is a definition of a microfrontend belonging to a Vercel T
 				Optional:    true,
 				Computed:    true,
 			},
-			"projects": schema.MapNestedAttribute{
-				Description: "A map of project ids to project configuration that belong to the microfrontend group.",
+			"default_app": schema.StringAttribute{
+				Description: "The default app for the project. Used as the entry point for the microfrontend.",
 				Computed:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"is_default_app": schema.BoolAttribute{
-							Description: "Whether the project is the default app for the microfrontend group. Microfrontend groups must have exactly one default app.",
-							Optional:    true,
-							Computed:    true,
-						},
-						"default_route": schema.StringAttribute{
-							Description: "The default route for the project. Used for the screenshot of deployments.",
-							Optional:    true,
-							Computed:    true,
-						},
-						"route_observability_to_this_project": schema.BoolAttribute{
-							Description: "Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.",
-							Optional:    true,
-							Computed:    true,
-						},
-					},
-				},
 			},
 		},
 	}
@@ -124,7 +105,7 @@ func (d *microfrontendGroupDataSource) Read(ctx context.Context, req datasource.
 		return
 	}
 
-	result := convertResponseToMicrofrontendGroup(out, out.Projects)
+	result := convertResponseToMicrofrontendGroup(out)
 	tflog.Info(ctx, "read microfrontendGroup", map[string]interface{}{
 		"team_id":  result.TeamID.ValueString(),
 		"group_id": result.ID.ValueString(),
