@@ -22,7 +22,6 @@ func testCheckSharedEnvironmentVariableProjectUnlinked(envVarName, projectName, 
 			return fmt.Errorf("project not found: %s", projectName)
 		}
 
-
 		resp, err := testClient().GetSharedEnvironmentVariable(context.TODO(), teamID, envVar.Primary.Attributes["id"])
 		if err != nil {
 			return err
@@ -45,7 +44,6 @@ func testCheckSharedEnvironmentVariableProjectLinked(envVarName, projectName, te
 			return fmt.Errorf("project not found: %s", projectName)
 		}
 
-
 		resp, err := testClient().GetSharedEnvironmentVariable(context.TODO(), teamID, envVar.Primary.Attributes["id"])
 		if err != nil {
 			return err
@@ -62,7 +60,7 @@ func TestAcc_SharedEnvironmentVariableProjectLink(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             resource.ComposeAggregateTestCheckFunc(
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
 			testCheckSharedEnvironmentVariableProjectUnlinked("data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam()),
 			testCheckSharedEnvironmentVariableProjectUnlinked("data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam()),
 			testCheckSharedEnvironmentVariableProjectUnlinked("data.vercel_shared_environment_variable.test", "vercel_project.test2", testTeam()),
