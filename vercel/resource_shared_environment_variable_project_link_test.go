@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -21,10 +22,8 @@ func testCheckSharedEnvironmentVariableProjectUnlinked(n, teamID string) resourc
 		if err != nil {
 			return err
 		}
-		for _, p := range resp.ProjectIDs {
-			if p == rs.Primary.Attributes["project_id"] {
-				return fmt.Errorf("expected project to be unlinked from shared environment variable")
-			}
+		if slices.Contains(resp.ProjectIDs, rs.Primary.Attributes["project_id"]) {
+			return fmt.Errorf("expected project to be unlinked from shared environment variable %s", n)
 		}
 
 		return nil
@@ -42,13 +41,10 @@ func testCheckSharedEnvironmentVariableProjectLinked(n, teamID string) resource.
 		if err != nil {
 			return err
 		}
-		for _, p := range resp.ProjectIDs {
-			if p == rs.Primary.Attributes["project_id"] {
-				return nil
-			}
+		if !slices.Contains(resp.ProjectIDs, rs.Primary.Attributes["project_id"]) {
+			return fmt.Errorf("expected project to be linked to shared environment variable %s", n)
 		}
-
-		return fmt.Errorf("expected project to be linked to shared environment variable")
+		return nil
 	}
 }
 
@@ -57,40 +53,150 @@ func TestAcc_SharedEnvironmentVariableProjectLink(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckSharedEnvironmentVariableProjectUnlinked("vercel_shared_environment_variable_project_link.test", testTeam()),
+		CheckDestroy:             func (s *terraform.State) error {
+			if err := testCheckSharedEnvironmentVariableProjectUnlinked("vercel_shared_environment_variable_project_link.test0", testTeam())(s); err != nil {
+				return err
+			}
+			if err := testCheckSharedEnvironmentVariableProjectUnlinked("vercel_shared_environment_variable_project_link.test1", testTeam())(s); err != nil {
+				return err
+			}
+			return nil
+		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccSharedEnvironmentVariableProjectLink(name, teamIDConfig()),
+				Config: testAccSharedEnvironmentVariableProjectLinkSetup(name, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckSharedEnvironmentVariableProjectLinked("vercel_shared_environment_variable_project_link.test", testTeam()),
-					resource.TestCheckResourceAttr("vercel_shared_environment_variable_project_link.test", "team_id", testTeam()),
+					testCheckSharedEnvironmentVariableProjectLinked("vercel_shared_environment_variable_project_link.test0", testTeam()),
+					testCheckSharedEnvironmentVariableProjectLinked("vercel_shared_environment_variable_project_link.test1", testTeam()),
+				),
+			},
+			{
+				Config: testAccSharedEnvironmentVariableProjectLinkAdd1(name, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckSharedEnvironmentVariableProjectLinked("vercel_shared_environment_variable_project_link.test0", testTeam()),
+					testCheckSharedEnvironmentVariableProjectLinked("vercel_shared_environment_variable_project_link.test1", testTeam()),
+					testCheckSharedEnvironmentVariableProjectLinked("vercel_shared_environment_variable_project_link.test2", testTeam()),
+				),
+			},
+			{
+				Config: testAccSharedEnvironmentVariableProjectLinkDrop1(name, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckSharedEnvironmentVariableProjectLinked("vercel_shared_environment_variable_project_link.test0", testTeam()),
+					testCheckSharedEnvironmentVariableProjectLinked("vercel_shared_environment_variable_project_link.test1", testTeam()),
+					testCheckSharedEnvironmentVariableProjectUnlinked("vercel_shared_environment_variable_project_link.test2", testTeam()),
 				),
 			},
 		},
 	})
 }
 
-func testAccSharedEnvironmentVariableProjectLink(name, team string) string {
+func testAccSharedEnvironmentVariableProjectLinkSetup(name, team string) string {
 	return fmt.Sprintf(`
-data "vercel_endpoint_verification" "test" {
-    %[2]s
-}
-
 data "vercel_shared_environment_variable" "test" {
     key = "TEST_SHARED_ENV_VAR"
 		target = ["production", "preview", "development"]
     %[2]s
 }
 
-resource "vercel_project" "test" {
-    name = "test-acc-%[1]s"
-		enable_affected_projects_deployments = true
+resource "vercel_project" "test0" {
+    name = "test-acc-shared-env-0-%[1]s"
     %[2]s
 }
 
-resource "vercel_shared_environment_variable_project_link" "test" {
+resource "vercel_project" "test1" {
+    name = "test-acc-shared-env-1-%[1]s"
+    %[2]s
+}
+
+resource "vercel_shared_environment_variable_project_link" "test0" {
     shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
-    project_id                     = vercel_project.test.id
+    project_id                     = vercel_project.test0.id
+    %[2]s
+}
+
+resource "vercel_shared_environment_variable_project_link" "test1" {
+    shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
+    project_id                     = vercel_project.test1.id
+    %[2]s
+}
+`, name, team)
+}
+
+func testAccSharedEnvironmentVariableProjectLinkAdd1(name, team string) string {
+	return fmt.Sprintf(`
+data "vercel_shared_environment_variable" "test" {
+    key = "TEST_SHARED_ENV_VAR"
+		target = ["production", "preview", "development"]
+    %[2]s
+}
+
+resource "vercel_project" "test0" {
+    name = "test-acc-shared-env-0-%[1]s"
+    %[2]s
+}
+
+resource "vercel_project" "test1" {
+    name = "test-acc-shared-env-1-%[1]s"
+    %[2]s
+}
+
+resource "vercel_project" "test2" {
+    name = "test-acc-shared-env-1-%[1]s"
+    %[2]s
+}
+
+resource "vercel_shared_environment_variable_project_link" "test0" {
+    shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
+    project_id                     = vercel_project.test0.id
+    %[2]s
+}
+
+resource "vercel_shared_environment_variable_project_link" "test1" {
+    shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
+    project_id                     = vercel_project.test1.id
+    %[2]s
+}
+
+resource "vercel_shared_environment_variable_project_link" "test2" {
+    shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
+    project_id                     = vercel_project.test1.id
+    %[2]s
+}
+`, name, team)
+}
+
+func testAccSharedEnvironmentVariableProjectLinkDrop1(name, team string) string {
+	return fmt.Sprintf(`
+data "vercel_shared_environment_variable" "test" {
+    key = "TEST_SHARED_ENV_VAR"
+		target = ["production", "preview", "development"]
+    %[2]s
+}
+
+resource "vercel_project" "test0" {
+    name = "test-acc-shared-env-0-%[1]s"
+    %[2]s
+}
+
+resource "vercel_project" "test1" {
+    name = "test-acc-shared-env-1-%[1]s"
+    %[2]s
+}
+
+resource "vercel_project" "test2" {
+    name = "test-acc-shared-env-1-%[1]s"
+    %[2]s
+}
+
+resource "vercel_shared_environment_variable_project_link" "test0" {
+    shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
+    project_id                     = vercel_project.test0.id
+    %[2]s
+}
+
+resource "vercel_shared_environment_variable_project_link" "test1" {
+    shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
+    project_id                     = vercel_project.test1.id
     %[2]s
 }
 `, name, team)

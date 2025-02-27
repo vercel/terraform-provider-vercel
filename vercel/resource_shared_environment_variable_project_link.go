@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -155,33 +156,30 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Read(ctx context.Context,
 		return
 	}
 
+	if !slices.Contains(response.ProjectIDs, state.ProjectID.ValueString()) {
+		tflog.Info(ctx, "failed to read shared environment variable for linked project", map[string]interface{}{
+			"team_id":                        state.TeamID.ValueString(),
+			"shared_environment_variable_id": state.SharedEnvironmentVariableID.ValueString(),
+			"project_id":                     state.ProjectID.ValueString(),
+		})
+
+		// not found, so replace state
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	result := SharedEnvironmentVariableProjectLink{
 		TeamID:                      types.StringValue(response.TeamID),
 		SharedEnvironmentVariableID: types.StringValue(response.ID),
 		ProjectID:                   state.ProjectID,
 	}
-
-	for _, pid := range response.ProjectIDs {
-		if pid == result.ProjectID.ValueString() {
-			tflog.Info(ctx, "read shared environment variable for linked project", map[string]interface{}{
-				"team_id":                        result.TeamID.ValueString(),
-				"shared_environment_variable_id": result.SharedEnvironmentVariableID.ValueString(),
-				"project_id":                     result.ProjectID.ValueString(),
-			})
-			diags = resp.State.Set(ctx, result)
-			resp.Diagnostics.Append(diags...)
-			return
-		}
-	}
-
-	tflog.Info(ctx, "failed to read shared environment variable for linked project", map[string]interface{}{
+	tflog.Info(ctx, "read shared environment variable for linked project", map[string]interface{}{
 		"team_id":                        result.TeamID.ValueString(),
 		"shared_environment_variable_id": result.SharedEnvironmentVariableID.ValueString(),
 		"project_id":                     result.ProjectID.ValueString(),
 	})
-
-	// not found, so replace state
-	resp.State.RemoveResource(ctx)
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r *sharedEnvironmentVariableProjectLinkResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
