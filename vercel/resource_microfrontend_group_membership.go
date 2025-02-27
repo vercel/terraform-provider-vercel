@@ -133,6 +133,7 @@ func (r *microfrontendGroupMembershipResource) Create(ctx context.Context, req r
 		MicrofrontendGroupID:            plan.MicrofrontendGroupID.ValueString(),
 		DefaultRoute:                    plan.DefaultRoute.ValueString(),
 		RouteObservabilityToThisProject: plan.RouteObservabilityToThisProject.ValueBool(),
+		TeamID:                          plan.TeamID.ValueString(),
 	}
 
 	group, err := r.client.GetMicrofrontendGroup(ctx, plan.MicrofrontendGroupID.ValueString(), plan.TeamID.ValueString())
@@ -234,6 +235,7 @@ func (r *microfrontendGroupMembershipResource) Update(ctx context.Context, req r
 		MicrofrontendGroupID:            plan.MicrofrontendGroupID.ValueString(),
 		DefaultRoute:                    plan.DefaultRoute.ValueString(),
 		RouteObservabilityToThisProject: plan.RouteObservabilityToThisProject.ValueBool(),
+		TeamID:                          plan.TeamID.ValueString(),
 	}
 
 	group, err := r.client.GetMicrofrontendGroup(ctx, plan.MicrofrontendGroupID.ValueString(), plan.TeamID.ValueString())

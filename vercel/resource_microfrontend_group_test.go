@@ -3,7 +3,6 @@ package vercel_test
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -58,60 +57,6 @@ func TestAcc_MicrofrontendGroupResource(t *testing.T) {
 		CheckDestroy:             testCheckMicrofrontendGroupDeleted("vercel_microfrontend_group.test", testTeam()),
 		Steps: []resource.TestStep{
 			{
-				Config: `
-                    resource "vercel_microfrontend_group" "test" {
-                        name = "foo"
-                    }
-                `,
-				ExpectError: regexp.MustCompile(`The argument "projects" is required, but no definition was found.`),
-			},
-			{
-				Config: fmt.Sprintf(`
-					resource "vercel_project" "test" {
-						name = "test-acc-project-%[1]s"
-						%[2]s
-					}
-					resource "vercel_project" "test-2" {
-						name = "test-acc-project-2-%[1]s"
-						%[2]s
-					}
-                    resource "vercel_microfrontend_group" "test" {
-                        name = "foo-%[1]s"
-						%[2]s
-						projects = {
-							(vercel_project.test.id) = {}
-							(vercel_project.test-2.id) = {}
-						}
-                    }
-                `, name, teamIDConfig()),
-				ExpectError: regexp.MustCompile(`Invalid Attribute Combination`),
-			},
-			{
-				Config: fmt.Sprintf(`
-					resource "vercel_project" "test" {
-						name = "test-acc-project-%[1]s"
-						%[2]s
-					}
-					resource "vercel_project" "test-2" {
-						name = "test-acc-project-2-%[1]s"
-						%[2]s
-					}
-                    resource "vercel_microfrontend_group" "test" {
-                        name = "foo-%[1]s"
-						%[2]s
-						projects = {
-							(vercel_project.test.id) = {
-								is_default_app = true
-							}
-							(vercel_project.test-2.id) = {
-								is_default_app = true
-							}
-						}
-                    }
-                `, name, teamIDConfig()),
-				ExpectError: regexp.MustCompile(`Invalid Attribute Combination`),
-			},
-			{
 				Config: fmt.Sprintf(`
 				resource "vercel_project" "test" {
 				  name = "test-acc-project-%[1]s"
@@ -123,20 +68,26 @@ func TestAcc_MicrofrontendGroupResource(t *testing.T) {
 				}
 				resource "vercel_microfrontend_group" "test" {
 					name         = "test-acc-microfrontend-group-%[1]s"
+					default_app  = vercel_project.test.id
 					%[2]s
-					projects = {
-						(vercel_project.test.id) = {
-							is_default_app = true
-						}
-						(vercel_project.test-2.id) = {}
-					}
+				}
+				resource "vercel_microfrontend_group_membership" "test" {
+					project_id             = vercel_project.test.id
+					microfrontend_group_id = vercel_microfrontend_group.test.id
+					%[2]s
+				}
+				resource "vercel_microfrontend_group_membership" "test-2" {
+					project_id             = vercel_project.test-2.id
+					microfrontend_group_id = vercel_microfrontend_group.test.id
+					%[2]s
 				}
 				`, name, teamIDConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckMicrofrontendGroupExists(testTeam(), "vercel_microfrontend_group.test"),
 					resource.TestCheckResourceAttr("vercel_microfrontend_group.test", "name", "test-acc-microfrontend-group-"+name),
 					resource.TestCheckResourceAttrSet("vercel_microfrontend_group.test", "id"),
-					resource.TestCheckResourceAttr("vercel_microfrontend_group.test", "projects.%", "2"),
+					resource.TestCheckResourceAttrSet("vercel_microfrontend_group_membership.test", "project_id"),
+					resource.TestCheckResourceAttrSet("vercel_microfrontend_group_membership.test-2", "microfrontend_group_id"),
 				),
 			},
 		},

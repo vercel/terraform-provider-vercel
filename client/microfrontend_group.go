@@ -162,7 +162,7 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 				ID:         res.Groups[i].Group.ID,
 				Name:       res.Groups[i].Group.Name,
 				Slug:       res.Groups[i].Group.Slug,
-				TeamID:     teamID,
+				TeamID:     c.teamID(teamID),
 				DefaultApp: defaultApp,
 				Projects:   projects,
 			}
