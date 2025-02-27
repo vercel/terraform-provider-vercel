@@ -284,7 +284,12 @@ func (e *ProjectEnvironmentVariables) toCreateEnvironmentVariablesRequest(ctx co
 // convertResponseToProjectEnvironmentVariables is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
-func convertResponseToProjectEnvironmentVariables(ctx context.Context, response []client.EnvironmentVariable, plan ProjectEnvironmentVariables) (ProjectEnvironmentVariables, diag.Diagnostics) {
+func convertResponseToProjectEnvironmentVariables(
+	ctx context.Context,
+	response []client.EnvironmentVariable,
+	plan ProjectEnvironmentVariables,
+	unchanged []EnvironmentItem,
+) (ProjectEnvironmentVariables, diag.Diagnostics) {
 	environment, diags := plan.environment(ctx)
 	if diags.HasError() {
 		return ProjectEnvironmentVariables{}, diags
@@ -344,20 +349,7 @@ func convertResponseToProjectEnvironmentVariables(ctx context.Context, response 
 		alreadyPresent[e.ID] = struct{}{}
 
 		env = append(env, types.ObjectValueMust(
-			map[string]attr.Type{
-				"key":   types.StringType,
-				"value": types.StringType,
-				"target": types.SetType{
-					ElemType: types.StringType,
-				},
-				"custom_environment_ids": types.SetType{
-					ElemType: types.StringType,
-				},
-				"git_branch": types.StringType,
-				"id":         types.StringType,
-				"sensitive":  types.BoolType,
-				"comment":    types.StringType,
-			},
+			envVariableElemType.AttrTypes,
 			map[string]attr.Value{
 				"key":                    types.StringValue(e.Key),
 				"value":                  value,
@@ -369,6 +361,10 @@ func convertResponseToProjectEnvironmentVariables(ctx context.Context, response 
 				"comment":                types.StringValue(e.Comment),
 			},
 		))
+	}
+
+	for _, e := range unchanged {
+		env = append(env, e.toAttrValue())
 	}
 
 	return ProjectEnvironmentVariables{
@@ -410,7 +406,7 @@ func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req re
 		)
 	}
 
-	result, diags := convertResponseToProjectEnvironmentVariables(ctx, created, plan)
+	result, diags := convertResponseToProjectEnvironmentVariables(ctx, created, plan, nil)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -475,7 +471,7 @@ func (r *projectEnvironmentVariablesResource) Read(ctx context.Context, req reso
 		}
 	}
 
-	result, diags := convertResponseToProjectEnvironmentVariables(ctx, toUse, state)
+	result, diags := convertResponseToProjectEnvironmentVariables(ctx, toUse, state, nil)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -530,6 +526,7 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 	}
 
 	var toRemove []EnvironmentItem
+	var unchanged []EnvironmentItem
 	for _, e := range stateEnvs {
 		plannedEnv, ok := plannedEnvsByID[e.ID.ValueString()]
 		if !ok {
@@ -539,11 +536,13 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 		if !plannedEnv.equal(&e) {
 			toRemove = append(toRemove, e)
 			toAdd = append(toAdd, plannedEnv)
+			continue
 		}
+		unchanged = append(unchanged, e)
 	}
 
-	tflog.Debug(ctx, "Removing environment variables", map[string]interface{}{"to_remove": toRemove})
-	tflog.Debug(ctx, "Adding environment variables", map[string]interface{}{"to_add": toAdd})
+	tflog.Info(ctx, "Removing environment variables", map[string]interface{}{"to_remove": toRemove})
+	tflog.Info(ctx, "Adding environment variables", map[string]interface{}{"to_add": toAdd})
 
 	for _, v := range toRemove {
 		err := r.client.DeleteEnvironmentVariable(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString(), v.ID.ValueString())
@@ -574,7 +573,7 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 			resp.Diagnostics.Append(diags...)
 			return
 		}
-		tflog.Debug(ctx, "create request", map[string]any{
+		tflog.Info(ctx, "create request", map[string]any{
 			"request": request,
 		})
 		response, err = r.client.CreateEnvironmentVariables(ctx, request)
@@ -585,10 +584,13 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 			)
 			return
 		}
-	} else {
 	}
 
-	result, diags := convertResponseToProjectEnvironmentVariables(ctx, response, plan)
+	tflog.Info(ctx, "project env var response", map[string]any{
+		"response": response,
+	})
+
+	result, diags := convertResponseToProjectEnvironmentVariables(ctx, response, plan, unchanged)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return

@@ -39,7 +39,11 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 			{
 				Config: testAccProjectEnvironmentVariablesConfigUpdated(projectName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "variables.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "variables.#", "4"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
+						"key":   "TEST_VAR_1",
+						"value": "test_value_1",
+					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
 						"key":   "TEST_VAR_2",
 						"value": "test_value_2_updated",
@@ -77,7 +81,8 @@ resource "vercel_project" "test" {
 resource "vercel_project_environment_variables" "test" {
   project_id = vercel_project.test.id
   %[2]s
-  variables = [{
+  variables = [
+    {
       key   = "TEST_VAR_1"
       value = "test_value_1"
       target = ["production", "preview"]
@@ -109,6 +114,11 @@ resource "vercel_project_environment_variables" "test" {
   project_id = vercel_project.test.id
   %[2]s
   variables = [
+    {
+      key   = "TEST_VAR_1" // unchanged
+      value = "test_value_1"
+      target = ["production", "preview"]
+    },
     {
       key    = "TEST_VAR_2"
       value  = "test_value_2_updated"
