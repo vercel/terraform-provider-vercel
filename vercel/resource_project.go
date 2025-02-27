@@ -806,6 +806,19 @@ func (e *EnvironmentItem) equal(other *EnvironmentItem) bool {
 		e.Comment.ValueString() == other.Comment.ValueString()
 }
 
+func (e *EnvironmentItem) toAttrValue() attr.Value {
+	return types.ObjectValueMust(envVariableElemType.AttrTypes, map[string]attr.Value{
+		"id":                     e.ID,
+		"key":                    e.Key,
+		"value":                  e.Value,
+		"target":                 e.Target,
+		"custom_environment_ids": e.CustomEnvironmentIDs,
+		"git_branch":             e.GitBranch,
+		"sensitive":              e.Sensitive,
+		"comment":                e.Comment,
+	})
+}
+
 func (e *EnvironmentItem) toEnvironmentVariableRequest(ctx context.Context) (req client.EnvironmentVariableRequest, diags diag.Diagnostics) {
 	var target []string
 	diags = e.Target.ElementsAs(ctx, &target, true)
