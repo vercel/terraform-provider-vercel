@@ -98,16 +98,22 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "The desired name for the project.",
 			},
 			"build_command": schema.StringAttribute{
-				Optional:    true,
-				Description: "The build command for this project. If omitted, this value will be automatically detected.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "The build command for this project. If omitted, this value will be automatically detected.",
 			},
 			"dev_command": schema.StringAttribute{
-				Optional:    true,
-				Description: "The dev command for this project. If omitted, this value will be automatically detected.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "The dev command for this project. If omitted, this value will be automatically detected.",
 			},
 			"ignore_command": schema.StringAttribute{
-				Optional:    true,
-				Description: "When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.",
 			},
 			"serverless_function_region": schema.StringAttribute{
 				Optional:      true,
@@ -119,8 +125,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"environment": schema.SetNestedAttribute{
-				Description: "A set of Environment Variables that should be configured for the project.",
-				Optional:    true,
+				Description:   "A set of Environment Variables that should be configured for the project.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"target": schema.SetAttribute{
@@ -159,6 +167,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						"git_branch": schema.StringAttribute{
 							Description: "The git branch of the Environment Variable.",
 							Optional:    true,
+							Computed:    true,
 						},
 						"key": schema.StringAttribute{
 							Description: "The name of the Environment Variable.",
@@ -190,16 +199,17 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"framework": schema.StringAttribute{
-				Optional:    true,
-				Description: "The framework that is being used for this project. If omitted, no framework is selected.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "The framework that is being used for this project. If omitted, no framework is selected.",
 				Validators: []validator.String{
 					validateFramework(),
 				},
 			},
 			"git_repository": schema.SingleNestedAttribute{
-				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
-				Optional:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Description: "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
+				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
 						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
@@ -246,10 +256,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"vercel_authentication": schema.SingleNestedAttribute{
-				Description:   "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Description: "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
+				Optional:    true,
 				Default: objectdefault.StaticValue(types.ObjectValueMust(
 					map[string]attr.Type{
 						"deployment_type": types.StringType,
@@ -307,8 +315,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 									Sensitive:   true,
 								},
 								"note": schema.StringAttribute{
-									Description: "A description for the value",
-									Optional:    true,
+									Description:   "A description for the value",
+									Optional:      true,
+									Computed:      true,
+									PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 								},
 							},
 						},
@@ -339,7 +349,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"oidc_token_config": schema.SingleNestedAttribute{
 				Description: "Configuration for OpenID Connect (OIDC) tokens.",
 				Optional:    true,
-				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
 						Description: "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
@@ -394,30 +403,41 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"install_command": schema.StringAttribute{
-				Optional:    true,
-				Description: "The install command for this project. If omitted, this value will be automatically detected.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "The install command for this project. If omitted, this value will be automatically detected.",
 			},
 			"output_directory": schema.StringAttribute{
-				Optional:    true,
-				Description: "The output directory of the project. If omitted, this value will be automatically detected.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "The output directory of the project. If omitted, this value will be automatically detected.",
 			},
 			"public_source": schema.BoolAttribute{
-				Optional:    true,
-				Description: "By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.",
 			},
 			"root_directory": schema.StringAttribute{
-				Optional:    true,
-				Description: "The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.",
 			},
 			"protection_bypass_for_automation": schema.BoolAttribute{
-				Optional:    true,
-				Description: "Allow automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `protection_bypass_for_automation_secret` field.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "Allow automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `protection_bypass_for_automation_secret` field.",
 			},
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
-				Computed:    true,
-				Optional:    true,
-				Sensitive:   true,
-				Description: "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
+				Computed:      true,
+				Optional:      true,
+				Sensitive:     true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),
@@ -433,12 +453,16 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
 			},
 			"enable_affected_projects_deployments": schema.BoolAttribute{
-				Optional:    true,
-				Description: "When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.",
 			},
 			"git_comments": schema.SingleNestedAttribute{
-				Description: "Configuration for Git Comments.",
-				Optional:    true,
+				Description:   "Configuration for Git Comments.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"on_pull_request": schema.BoolAttribute{
 						Description: "Whether Pull Request comments are enabled",
@@ -452,14 +476,16 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			},
 			"preview_comments": schema.BoolAttribute{
 				Optional:      true,
+				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				Description:   "Whether to enable comments on your Preview Deployments. If omitted, comments are controlled at the team level (default behaviour).",
 			},
 			"auto_assign_custom_domains": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "Automatically assign custom production domains after each Production deployment via merge to the production branch or Vercel CLI deploy with --prod. Defaults to `true`",
-				Default:     booldefault.StaticBool(true),
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description:   "Automatically assign custom production domains after each Production deployment via merge to the production branch or Vercel CLI deploy with --prod. Defaults to `true`",
+				Default:       booldefault.StaticBool(true),
 			},
 			"git_lfs": schema.BoolAttribute{
 				Optional:      true,
@@ -498,16 +524,19 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "If no index file is present within a directory, the directory contents will be displayed.",
 			},
 			"skew_protection": schema.StringAttribute{
-				Optional:    true,
-				Description: "Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("30 minutes", "12 hours", "1 day", "7 days"),
 				},
 			},
 			"resource_config": schema.SingleNestedAttribute{
-				Description: "Resource Configuration for the project.",
-				Optional:    true,
-				Computed:    true,
+				Description:   "Resource Configuration for the project.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					// This is actually "function_default_memory_type" in the API schema, but for better convention, we use "cpu" and do translation in the provider.
 					"function_default_cpu_type": schema.StringAttribute{
