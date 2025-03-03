@@ -13,7 +13,7 @@ type MicrofrontendGroup struct {
 	Slug       string                                  `json:"slug"`
 	TeamID     string                                  `json:"team_id"`
 	Projects   map[string]MicrofrontendGroupMembership `json:"projects"`
-	DefaultApp string                                  `json:"defaultApp"`
+	DefaultApp MicrofrontendGroupMembership            `json:"defaultApp"`
 }
 
 type MicrofrontendGroupsAPI struct {
@@ -25,19 +25,19 @@ type MicrofrontendGroupsAPIResponse struct {
 	Groups []MicrofrontendGroupsAPI `json:"groups"`
 }
 
-func (c *Client) CreateMicrofrontendGroup(ctx context.Context, request MicrofrontendGroup) (r MicrofrontendGroup, err error) {
-	if c.teamID(request.TeamID) == "" {
+func (c *Client) CreateMicrofrontendGroup(ctx context.Context, TeamID string, Name string) (r MicrofrontendGroup, err error) {
+	if c.teamID(TeamID) == "" {
 		return r, fmt.Errorf("team_id is required")
 	}
 	tflog.Info(ctx, "creating microfrontend group", map[string]interface{}{
-		"microfrontend_group_name": request.Name,
-		"team_id":                  c.teamID(request.TeamID),
+		"microfrontend_group_name": Name,
+		"team_id":                  c.teamID(TeamID),
 	})
-	url := fmt.Sprintf("%s/teams/%s/microfrontends", c.baseURL, c.teamID(request.TeamID))
+	url := fmt.Sprintf("%s/teams/%s/microfrontends", c.baseURL, c.teamID(TeamID))
 	payload := string(mustMarshal(struct {
 		NewMicrofrontendsGroupName string `json:"newMicrofrontendsGroupName"`
 	}{
-		NewMicrofrontendsGroupName: request.Name,
+		NewMicrofrontendsGroupName: Name,
 	}))
 	apiResponse := struct {
 		NewMicrofrontendGroup MicrofrontendGroup `json:"newMicrofrontendsGroup"`
@@ -55,7 +55,7 @@ func (c *Client) CreateMicrofrontendGroup(ctx context.Context, request Microfron
 		ID:     apiResponse.NewMicrofrontendGroup.ID,
 		Name:   apiResponse.NewMicrofrontendGroup.Name,
 		Slug:   apiResponse.NewMicrofrontendGroup.Slug,
-		TeamID: c.teamID(request.TeamID),
+		TeamID: c.teamID(TeamID),
 	}, nil
 }
 
@@ -143,7 +143,7 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 	for i := range res.Groups {
 		if res.Groups[i].Group.ID == microfrontendGroupID {
 			projects := map[string]MicrofrontendGroupMembership{}
-			defaultApp := ""
+			defaultApp := MicrofrontendGroupMembership{}
 			for _, p := range res.Groups[i].Projects {
 				projects[p.ID] = MicrofrontendGroupMembership{
 					MicrofrontendGroupID:            microfrontendGroupID,
@@ -155,7 +155,7 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 					RouteObservabilityToThisProject: p.Microfrontends.RouteObservabilityToThisProject,
 				}
 				if p.Microfrontends.IsDefaultApp {
-					defaultApp = p.ID
+					defaultApp = projects[p.ID]
 				}
 			}
 			res := MicrofrontendGroup{

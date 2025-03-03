@@ -50,6 +50,45 @@ func (r *microfrontendGroupMembershipResource) Configure(ctx context.Context, re
 	r.client = client
 }
 
+func getMicrofrontendGroupMembershipSchema(isDefaultApp bool) map[string]schema.Attribute {
+	res := map[string]schema.Attribute{}
+
+	res["project_id"] = schema.StringAttribute{
+		Description:   "The ID of the project.",
+		Required:      true,
+		PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+	}
+	res["default_route"] = schema.StringAttribute{
+		Description:   "The default route for the project. Used for the screenshot of deployments.",
+		Optional:      true,
+		Computed:      true,
+		PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+	}
+
+	if !isDefaultApp {
+		res["microfrontend_group_id"] = schema.StringAttribute{
+			Description:   "The ID of the microfrontend group.",
+			Required:      true,
+			PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+		}
+		res["team_id"] = schema.StringAttribute{
+			Description:   "The team ID to add the microfrontend group to. Required when configuring a team resource if a default team has not been set in the provider.",
+			Optional:      true,
+			Computed:      true,
+			PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+		}
+		res["route_observability_to_this_project"] = schema.BoolAttribute{
+			Description:   "Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.",
+			Optional:      true,
+			Computed:      true,
+			Default:       booldefault.StaticBool(true),
+			PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+		}
+	}
+
+	return res
+}
+
 // Schema returns the schema information for a microfrontendGroupMembership resource.
 func (r *microfrontendGroupMembershipResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -58,37 +97,7 @@ Provides a Microfrontend Group Membership resource.
 
 A Microfrontend Group Membership is a definition of a Vercel Project being a part of a Microfrontend Group. 
 `,
-		Attributes: map[string]schema.Attribute{
-			"project_id": schema.StringAttribute{
-				Description:   "The ID of the project.",
-				Required:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
-			},
-			"microfrontend_group_id": schema.StringAttribute{
-				Description:   "The ID of the microfrontend group.",
-				Required:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
-			},
-			"team_id": schema.StringAttribute{
-				Description:   "The team ID to add the microfrontend group to. Required when configuring a team resource if a default team has not been set in the provider.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
-			},
-			"default_route": schema.StringAttribute{
-				Description:   "The default route for the project. Used for the screenshot of deployments.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"route_observability_to_this_project": schema.BoolAttribute{
-				Description:   "Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.",
-				Optional:      true,
-				Computed:      true,
-				Default:       booldefault.StaticBool(true),
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
-			},
-		},
+		Attributes: getMicrofrontendGroupMembershipSchema(false),
 	}
 }
 
@@ -128,25 +137,14 @@ func (r *microfrontendGroupMembershipResource) Create(ctx context.Context, req r
 		"plan":       plan,
 	})
 
-	cdr := client.MicrofrontendGroupMembership{
+	out, err := r.client.AddOrUpdateMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
 		ProjectID:                       plan.ProjectID.ValueString(),
 		MicrofrontendGroupID:            plan.MicrofrontendGroupID.ValueString(),
 		DefaultRoute:                    plan.DefaultRoute.ValueString(),
 		RouteObservabilityToThisProject: plan.RouteObservabilityToThisProject.ValueBool(),
 		TeamID:                          plan.TeamID.ValueString(),
-	}
-
-	group, err := r.client.GetMicrofrontendGroup(ctx, plan.MicrofrontendGroupID.ValueString(), plan.TeamID.ValueString())
-
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting microfrontend group",
-			"Could not get microfrontend group, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	out, err := r.client.AddOrUpdateMicrofrontendGroupMembership(ctx, cdr, group)
+		IsDefaultApp:                    false,
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating microfrontend group membership",
@@ -230,25 +228,14 @@ func (r *microfrontendGroupMembershipResource) Update(ctx context.Context, req r
 		return
 	}
 
-	cdr := client.MicrofrontendGroupMembership{
+	out, err := r.client.AddOrUpdateMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
 		ProjectID:                       plan.ProjectID.ValueString(),
 		MicrofrontendGroupID:            plan.MicrofrontendGroupID.ValueString(),
 		DefaultRoute:                    plan.DefaultRoute.ValueString(),
 		RouteObservabilityToThisProject: plan.RouteObservabilityToThisProject.ValueBool(),
 		TeamID:                          plan.TeamID.ValueString(),
-	}
-
-	group, err := r.client.GetMicrofrontendGroup(ctx, plan.MicrofrontendGroupID.ValueString(), plan.TeamID.ValueString())
-
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting microfrontend group",
-			"Could not get microfrontend group, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	out, err := r.client.AddOrUpdateMicrofrontendGroupMembership(ctx, cdr, group)
+		IsDefaultApp:                    false,
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating microfrontend group membership",
@@ -292,22 +279,12 @@ func (r *microfrontendGroupMembershipResource) Delete(ctx context.Context, req r
 		"team_id":    state.TeamID.ValueString(),
 	})
 
-	group, err := r.client.GetMicrofrontendGroup(ctx, state.MicrofrontendGroupID.ValueString(), state.TeamID.ValueString())
-
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting microfrontend group",
-			"Could not get microfrontend group, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	_, err = r.client.RemoveMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
+	_, err := r.client.RemoveMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
 		MicrofrontendGroupID: state.MicrofrontendGroupID.ValueString(),
 		ProjectID:            state.ProjectID.ValueString(),
 		TeamID:               state.TeamID.ValueString(),
-		IsDefaultApp:         group.DefaultApp == state.ProjectID.ValueString(),
-	}, false)
+		IsDefaultApp:         false,
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting microfrontend group membership",

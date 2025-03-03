@@ -45,7 +45,7 @@ resource "vercel_microfrontend_group_membership" "child-mfe-project-mfe-membersh
 
 ### Required
 
-- `default_app` (String) The default app for the project. Used as the entry point for the microfrontend.
+- `default_app` (Attributes) The default app for the project. Used as the entry point for the microfrontend. (see [below for nested schema](#nestedatt--default_app))
 - `name` (String) A human readable name for the microfrontends group.
 
 ### Optional
@@ -56,3 +56,14 @@ resource "vercel_microfrontend_group_membership" "child-mfe-project-mfe-membersh
 
 - `id` (String) A unique identifier for the group of microfrontends. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB
 - `slug` (String) A slugified version of the name.
+
+<a id="nestedatt--default_app"></a>
+### Nested Schema for `default_app`
+
+Required:
+
+- `project_id` (String) The ID of the project.
+
+Optional:
+
+- `default_route` (String) The default route for the project. Used for the screenshot of deployments.

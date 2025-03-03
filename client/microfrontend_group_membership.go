@@ -49,10 +49,9 @@ func (c *Client) GetMicrofrontendGroupMembership(ctx context.Context, request Mi
 	return group.Projects[request.ProjectID], nil
 }
 
-func (c *Client) AddOrUpdateMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership, group MicrofrontendGroup) (r MicrofrontendGroupMembership, err error) {
-	isDefaultApp := group.DefaultApp == request.ProjectID
+func (c *Client) AddOrUpdateMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership) (r MicrofrontendGroupMembership, err error) {
 	tflog.Info(ctx, "adding / updating microfrontend project to group", map[string]interface{}{
-		"is_default_app": isDefaultApp,
+		"is_default_app": request.IsDefaultApp,
 		"project_id":     request.ProjectID,
 		"group_id":       request.MicrofrontendGroupID,
 	})
@@ -60,7 +59,7 @@ func (c *Client) AddOrUpdateMicrofrontendGroupMembership(ctx context.Context, re
 		ProjectID:                       request.ProjectID,
 		TeamID:                          c.teamID(request.TeamID),
 		Enabled:                         true,
-		IsDefaultApp:                    isDefaultApp,
+		IsDefaultApp:                    request.IsDefaultApp,
 		DefaultRoute:                    request.DefaultRoute,
 		RouteObservabilityToThisProject: request.RouteObservabilityToThisProject,
 		MicrofrontendGroupID:            request.MicrofrontendGroupID,
@@ -71,12 +70,7 @@ func (c *Client) AddOrUpdateMicrofrontendGroupMembership(ctx context.Context, re
 	return p, nil
 }
 
-func (c *Client) RemoveMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership, canDeleteDefaultApp bool) (r MicrofrontendGroupMembership, err error) {
-	if request.IsDefaultApp && !canDeleteDefaultApp {
-		// Only delete the default app relationship if the entire group is being deleted
-		return r, nil
-	}
-
+func (c *Client) RemoveMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership) (r MicrofrontendGroupMembership, err error) {
 	tflog.Info(ctx, "removing microfrontend project from group", map[string]interface{}{
 		"project_id": request.ProjectID,
 		"group_id":   request.MicrofrontendGroupID,
