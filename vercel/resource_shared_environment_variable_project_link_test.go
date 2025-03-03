@@ -162,7 +162,7 @@ resource "vercel_shared_environment_variable_project_link" "test1" {
 
 resource "vercel_shared_environment_variable_project_link" "test2" {
     shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
-    project_id                     = vercel_project.test1.id
+    project_id                     = vercel_project.test2.id
     %[2]s
 }
 `, name, team)
