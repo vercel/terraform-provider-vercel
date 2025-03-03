@@ -108,11 +108,11 @@ type MicrofrontendGroupDefaultApp struct {
 }
 
 type MicrofrontendGroup struct {
-	TeamID     types.String                 `tfsdk:"team_id"`
-	ID         types.String                 `tfsdk:"id"`
-	Name       types.String                 `tfsdk:"name"`
-	Slug       types.String                 `tfsdk:"slug"`
-	DefaultApp MicrofrontendGroupDefaultApp `tfsdk:"default_app"`
+	TeamID     types.String                  `tfsdk:"team_id"`
+	ID         types.String                  `tfsdk:"id"`
+	Name       types.String                  `tfsdk:"name"`
+	Slug       types.String                  `tfsdk:"slug"`
+	DefaultApp *MicrofrontendGroupDefaultApp `tfsdk:"default_app"`
 }
 
 func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup) MicrofrontendGroup {
@@ -121,7 +121,7 @@ func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup) Microf
 		Name:   types.StringValue(group.Name),
 		Slug:   types.StringValue(group.Slug),
 		TeamID: types.StringValue(group.TeamID),
-		DefaultApp: MicrofrontendGroupDefaultApp{
+		DefaultApp: &MicrofrontendGroupDefaultApp{
 			ProjectID:    types.StringValue(group.DefaultApp.ProjectID),
 			DefaultRoute: types.StringValue(group.DefaultApp.DefaultRoute),
 		},
