@@ -16,27 +16,27 @@ A Microfrontend Group Membership is a definition of a Vercel Project being a par
 ## Example Usage
 
 ```terraform
-data "vercel_project" "parent-mfe-project" {
+data "vercel_project" "parent_mfe_project" {
   name = "my parent project"
 }
 
-data "vercel_project" "child-mfe-project" {
+data "vercel_project" "child_mfe_project" {
   name = "my child project"
 }
 
-resource "vercel_microfrontend_group" "example-mfe-group" {
+resource "vercel_microfrontend_group" "example_mfe_group" {
   name        = "my mfe"
-  default_app = vercel_project.parent-mfe-project.id
+  default_app = vercel_project.parent_mfe_project.id
 }
 
-resource "vercel_microfrontend_group_membership" "parent-mfe-project-mfe-membership" {
-  project_id             = vercel_project.parent-mfe-project.id
-  microfrontend_group_id = vercel_microfrontend_group.example-mfe-group.id
+resource "vercel_microfrontend_group_membership" "parent_mfe_project_mfe_membership" {
+  project_id             = vercel_project.parent_mfe_project.id
+  microfrontend_group_id = vercel_microfrontend_group.example_mfe_group.id
 }
 
-resource "vercel_microfrontend_group_membership" "child-mfe-project-mfe-membership" {
-  project_id             = vercel_project.child-mfe-project.id
-  microfrontend_group_id = vercel_microfrontend_group.example-mfe-group.id
+resource "vercel_microfrontend_group_membership" "child_mfe_project_mfe_membership" {
+  project_id             = vercel_project.child_mfe_project.id
+  microfrontend_group_id = vercel_microfrontend_group.example_mfe_group.id
 }
 ```
 
