@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &microfrontendGroupResource{}
-	_ resource.ResourceWithConfigure = &microfrontendGroupResource{}
+	_ resource.Resource                = &microfrontendGroupResource{}
+	_ resource.ResourceWithConfigure   = &microfrontendGroupResource{}
+	_ resource.ResourceWithImportState = &microfrontendGroupResource{}
 )
 
 func newMicrofrontendGroupResource() resource.Resource {
@@ -107,11 +108,11 @@ type MicrofrontendGroupDefaultApp struct {
 }
 
 type MicrofrontendGroup struct {
-	TeamID     types.String                  `tfsdk:"team_id"`
-	ID         types.String                  `tfsdk:"id"`
-	Name       types.String                  `tfsdk:"name"`
-	Slug       types.String                  `tfsdk:"slug"`
-	DefaultApp *MicrofrontendGroupDefaultApp `tfsdk:"default_app"`
+	TeamID     types.String                 `tfsdk:"team_id"`
+	ID         types.String                 `tfsdk:"id"`
+	Name       types.String                 `tfsdk:"name"`
+	Slug       types.String                 `tfsdk:"slug"`
+	DefaultApp MicrofrontendGroupDefaultApp `tfsdk:"default_app"`
 }
 
 func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup) MicrofrontendGroup {
@@ -120,7 +121,7 @@ func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup) Microf
 		Name:   types.StringValue(group.Name),
 		Slug:   types.StringValue(group.Slug),
 		TeamID: types.StringValue(group.TeamID),
-		DefaultApp: &MicrofrontendGroupDefaultApp{
+		DefaultApp: MicrofrontendGroupDefaultApp{
 			ProjectID:    types.StringValue(group.DefaultApp.ProjectID),
 			DefaultRoute: types.StringValue(group.DefaultApp.DefaultRoute),
 		},
@@ -358,4 +359,45 @@ func (r *microfrontendGroupResource) Delete(ctx context.Context, req resource.De
 	tflog.Info(ctx, "deleted microfrontendGroup", map[string]any{
 		"group_id": state.ID.ValueString(),
 	})
+}
+
+func (r *microfrontendGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	teamID, microfrontendID, ok := splitInto1Or2(req.ID)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Error importing Microfrontend Group",
+			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/microfrontend_id\" or \"microfrontend_id\"", req.ID),
+		)
+	}
+	out, err := r.client.GetMicrofrontendGroup(ctx, microfrontendID, teamID)
+	if client.NotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error importing microfrontend group",
+			fmt.Sprintf("Could not import microfrontend group %s %s, unexpected error: %s",
+				teamID,
+				microfrontendID,
+				err,
+			),
+		)
+		return
+	}
+
+	result := convertResponseToMicrofrontendGroup(out)
+	tflog.Info(ctx, "import microfrontend group", map[string]interface{}{
+		"defaultApp": result.DefaultApp.ProjectID.ValueString(),
+		"team_id":    result.TeamID.ValueString(),
+		"group_id":   result.ID.ValueString(),
+		"slug":       result.Slug.ValueString(),
+		"name":       result.Name.ValueString(),
+	})
+
+	diags := resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }

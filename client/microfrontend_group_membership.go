@@ -32,21 +32,21 @@ type MicrofrontendGroupMembershipsResponseAPI struct {
 	Microfrontends MicrofrontendGroupMembershipResponseAPI `json:"microfrontends"`
 }
 
-func (c *Client) GetMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership) (r MicrofrontendGroupMembership, err error) {
+func (c *Client) GetMicrofrontendGroupMembership(ctx context.Context, TeamID string, GroupID string, ProjectID string) (r MicrofrontendGroupMembership, err error) {
 	tflog.Info(ctx, "getting microfrontend group", map[string]interface{}{
-		"project_id": request.ProjectID,
-		"group_id":   request.MicrofrontendGroupID,
-		"team_id":    c.teamID(request.TeamID),
+		"project_id": ProjectID,
+		"group_id":   GroupID,
+		"team_id":    c.teamID(TeamID),
 	})
-	group, err := c.GetMicrofrontendGroup(ctx, request.MicrofrontendGroupID, c.teamID(request.TeamID))
+	group, err := c.GetMicrofrontendGroup(ctx, GroupID, c.teamID(TeamID))
 	if err != nil {
 		return r, err
 	}
 	tflog.Info(ctx, "getting microfrontend group membership", map[string]interface{}{
-		"project_id": request.ProjectID,
+		"project_id": ProjectID,
 		"group":      group,
 	})
-	return group.Projects[request.ProjectID], nil
+	return group.Projects[ProjectID], nil
 }
 
 func (c *Client) AddOrUpdateMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership) (r MicrofrontendGroupMembership, err error) {

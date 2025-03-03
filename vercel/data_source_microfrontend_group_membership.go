@@ -88,11 +88,10 @@ func (d *microfrontendGroupMembershipDataSource) Read(ctx context.Context, req d
 		return
 	}
 
-	out, err := d.client.GetMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
-		ProjectID:            config.ProjectID.ValueString(),
-		MicrofrontendGroupID: config.MicrofrontendGroupID.ValueString(),
-		TeamID:               config.TeamID.ValueString(),
-	})
+	out, err := d.client.GetMicrofrontendGroupMembership(ctx, config.TeamID.ValueString(),
+		config.MicrofrontendGroupID.ValueString(),
+		config.ProjectID.ValueString(),
+	)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return

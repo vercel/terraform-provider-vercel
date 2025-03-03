@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &microfrontendGroupMembershipResource{}
-	_ resource.ResourceWithConfigure = &microfrontendGroupMembershipResource{}
+	_ resource.Resource                = &microfrontendGroupMembershipResource{}
+	_ resource.ResourceWithConfigure   = &microfrontendGroupMembershipResource{}
+	_ resource.ResourceWithImportState = &microfrontendGroupMembershipResource{}
 )
 
 func newMicrofrontendGroupMembershipResource() resource.Resource {
@@ -174,11 +175,16 @@ func (r *microfrontendGroupMembershipResource) Read(ctx context.Context, req res
 		return
 	}
 
-	out, err := r.client.GetMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
-		ProjectID:            state.ProjectID.ValueString(),
-		MicrofrontendGroupID: state.MicrofrontendGroupID.ValueString(),
-		TeamID:               state.TeamID.ValueString(),
-	})
+	if state.ProjectID.ValueString() == "" || state.MicrofrontendGroupID.ValueString() == "" {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	out, err := r.client.GetMicrofrontendGroupMembership(ctx,
+		state.TeamID.ValueString(),
+		state.MicrofrontendGroupID.ValueString(),
+		state.ProjectID.ValueString(),
+	)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -301,4 +307,44 @@ func (r *microfrontendGroupMembershipResource) Delete(ctx context.Context, req r
 		"group_id":   state.MicrofrontendGroupID.ValueString(),
 		"project_id": state.ProjectID.ValueString(),
 	})
+}
+
+func (r *microfrontendGroupMembershipResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	teamID, microfrontendID, projectID, ok := splitInto2Or3(req.ID)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Error importing Microfrontend Group Membership",
+			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/microfrontend_id/project_id\" or \"microfrontend_id/project_id\"", req.ID),
+		)
+	}
+	out, err := r.client.GetMicrofrontendGroupMembership(ctx, teamID, microfrontendID, projectID)
+	if client.NotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error importing microfrontend group membership",
+			fmt.Sprintf("Could not import microfrontend group membership %s %s %s, unexpected error: %s",
+				teamID,
+				microfrontendID,
+				projectID,
+				err,
+			),
+		)
+		return
+	}
+
+	result := convertResponseToMicrofrontendGroupMembership(out)
+	tflog.Info(ctx, "import microfrontend group", map[string]interface{}{
+		"project_id": result.ProjectID.ValueString(),
+		"group_id":   result.MicrofrontendGroupID.ValueString(),
+		"team_id":    result.TeamID.ValueString(),
+	})
+
+	diags := resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }

@@ -53,3 +53,20 @@ resource "vercel_microfrontend_group_membership" "child-mfe-project-mfe-membersh
 - `default_route` (String) The default route for the project. Used for the screenshot of deployments.
 - `route_observability_to_this_project` (Boolean) Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.
 - `team_id` (String) The team ID to add the microfrontend group to. Required when configuring a team resource if a default team has not been set in the provider.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# If importing into a personal account, or with a team configured on the provider, simply use the record id.
+# - the microfrontend ID can be taken from the microfrontend settings page
+# - the project ID can be taken from the project settings page
+terraform import vercel_microfrontend_group_membership.example mfe_xxxxxxxxxxxxxxxxxxxxxxxxxxxx/pid_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Alternatively, you can import via the team_id and microfrontend_id.
+# - team_id can be found in the team `settings` tab in the Vercel UI.
+# - the microfrontend ID can be taken from the microfrontend settings page
+# - the project ID can be taken from the project settings page
+terraform import vercel_microfrontend_group_membership.example team_xxxxxxxxxxxxxxxxxxxxxxxx/mfe_xxxxxxxxxxxxxxxxxxxxxxxxxxxx/pid_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
