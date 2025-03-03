@@ -72,15 +72,26 @@ A Microfrontend Group is a definition of a microfrontend belonging to a Vercel T
 				Optional:    true,
 				Computed:    true,
 			},
-			"default_app": schema.StringAttribute{
+			"default_app": schema.SingleNestedAttribute{
 				Description: "The default app for the project. Used as the entry point for the microfrontend.",
 				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"project_id": schema.StringAttribute{
+						Description: "The ID of the project.",
+						Computed:    true,
+					},
+					"default_route": schema.StringAttribute{
+						Description: "The default route for the project. Used for the screenshot of deployments.",
+						Computed:    true,
+					},
+				},
 			},
 		},
 	}
 }
 
 func (d *microfrontendGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	tflog.Info(ctx, "Reading microfrontend group")
 	var config MicrofrontendGroup
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -95,7 +106,7 @@ func (d *microfrontendGroupDataSource) Read(ctx context.Context, req datasource.
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error reading microfrontendGroup",
+			"Error reading microfrontend group",
 			fmt.Sprintf("Could not get microfrontend group %s %s, unexpected error: %s",
 				config.TeamID.ValueString(),
 				config.ID.ValueString(),
@@ -106,11 +117,8 @@ func (d *microfrontendGroupDataSource) Read(ctx context.Context, req datasource.
 	}
 
 	result := convertResponseToMicrofrontendGroup(out)
-	tflog.Info(ctx, "read microfrontendGroup", map[string]interface{}{
-		"team_id":  result.TeamID.ValueString(),
-		"group_id": result.ID.ValueString(),
-		"slug":     result.Slug.ValueString(),
-		"name":     result.Name.ValueString(),
+	tflog.Info(ctx, "read microfrontend group", map[string]interface{}{
+		"result": result,
 	})
 
 	diags = resp.State.Set(ctx, result)

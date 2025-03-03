@@ -28,6 +28,14 @@ A Microfrontend Group is a definition of a microfrontend belonging to a Vercel T
 
 ### Read-Only
 
-- `default_app` (String) The default app for the project. Used as the entry point for the microfrontend.
+- `default_app` (Attributes) The default app for the project. Used as the entry point for the microfrontend. (see [below for nested schema](#nestedatt--default_app))
 - `name` (String) A human readable name for the microfrontends group.
 - `slug` (String) A slugified version of the name.
+
+<a id="nestedatt--default_app"></a>
+### Nested Schema for `default_app`
+
+Read-Only:
+
+- `default_route` (String) The default route for the project. Used for the screenshot of deployments.
+- `project_id` (String) The ID of the project.

@@ -68,12 +68,9 @@ func TestAcc_MicrofrontendGroupResource(t *testing.T) {
 				}
 				resource "vercel_microfrontend_group" "test" {
 					name         = "test-acc-microfrontend-group-%[1]s"
-					default_app  = vercel_project.test.id
-					%[2]s
-				}
-				resource "vercel_microfrontend_group_membership" "test" {
-					project_id             = vercel_project.test.id
-					microfrontend_group_id = vercel_microfrontend_group.test.id
+					default_app  = {
+						project_id = vercel_project.test.id
+					}
 					%[2]s
 				}
 				resource "vercel_microfrontend_group_membership" "test-2" {
@@ -86,7 +83,7 @@ func TestAcc_MicrofrontendGroupResource(t *testing.T) {
 					testCheckMicrofrontendGroupExists(testTeam(), "vercel_microfrontend_group.test"),
 					resource.TestCheckResourceAttr("vercel_microfrontend_group.test", "name", "test-acc-microfrontend-group-"+name),
 					resource.TestCheckResourceAttrSet("vercel_microfrontend_group.test", "id"),
-					resource.TestCheckResourceAttrSet("vercel_microfrontend_group_membership.test", "project_id"),
+					resource.TestCheckResourceAttrSet("vercel_microfrontend_group.test.default_app", "project_id"),
 					resource.TestCheckResourceAttrSet("vercel_microfrontend_group_membership.test-2", "microfrontend_group_id"),
 				),
 			},

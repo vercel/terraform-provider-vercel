@@ -16,13 +16,23 @@ type MicrofrontendGroup struct {
 	DefaultApp MicrofrontendGroupMembership            `json:"defaultApp"`
 }
 
-type MicrofrontendGroupsAPI struct {
-	Group    MicrofrontendGroup                         `json:"group"`
-	Projects []MicrofrontendGroupMembershipsResponseAPI `json:"projects"`
-}
-
 type MicrofrontendGroupsAPIResponse struct {
-	Groups []MicrofrontendGroupsAPI `json:"groups"`
+	Groups []struct {
+		Group struct {
+			ID       string `json:"id"`
+			Name     string `json:"name"`
+			Slug     string `json:"slug"`
+			TeamID   string `json:"team_id"`
+			Projects map[string]struct {
+				IsDefaultApp                    bool   `json:"isDefaultApp"`
+				DefaultRoute                    string `json:"defaultRoute"`
+				RouteObservabilityToThisProject bool   `json:"routeObservabilityToThisProject"`
+				ProjectID                       string `json:"projectId"`
+				Enabled                         bool   `json:"enabled"`
+			} `json:"projects"`
+		} `json:"group"`
+		Projects []MicrofrontendGroupMembershipsResponseAPI `json:"projects"`
+	} `json:"groups"`
 }
 
 func (c *Client) CreateMicrofrontendGroup(ctx context.Context, TeamID string, Name string) (r MicrofrontendGroup, err error) {
@@ -124,27 +134,27 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 	tflog.Info(ctx, "getting microfrontend group", map[string]interface{}{
 		"url": url,
 	})
-	res := MicrofrontendGroupsAPIResponse{}
+	out := MicrofrontendGroupsAPIResponse{}
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "GET",
 		url:    url,
 		body:   "",
-	}, &res)
+	}, &out)
 
 	if err != nil {
 		return r, err
 	}
 
 	tflog.Info(ctx, "getting microfrontend group", map[string]interface{}{
-		"res": res,
+		"out": out,
 	})
 
-	for i := range res.Groups {
-		if res.Groups[i].Group.ID == microfrontendGroupID {
+	for i := range out.Groups {
+		if out.Groups[i].Group.ID == microfrontendGroupID {
 			projects := map[string]MicrofrontendGroupMembership{}
 			defaultApp := MicrofrontendGroupMembership{}
-			for _, p := range res.Groups[i].Projects {
+			for _, p := range out.Groups[i].Projects {
 				projects[p.ID] = MicrofrontendGroupMembership{
 					MicrofrontendGroupID:            microfrontendGroupID,
 					ProjectID:                       p.ID,
@@ -158,18 +168,18 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 					defaultApp = projects[p.ID]
 				}
 			}
-			res := MicrofrontendGroup{
-				ID:         res.Groups[i].Group.ID,
-				Name:       res.Groups[i].Group.Name,
-				Slug:       res.Groups[i].Group.Slug,
+			r := MicrofrontendGroup{
+				ID:         out.Groups[i].Group.ID,
+				Name:       out.Groups[i].Group.Name,
+				Slug:       out.Groups[i].Group.Slug,
 				TeamID:     c.teamID(teamID),
 				DefaultApp: defaultApp,
 				Projects:   projects,
 			}
 			tflog.Info(ctx, "returning microfrontend group", map[string]interface{}{
-				"res": res,
+				"r": r,
 			})
-			return res, nil
+			return r, nil
 		}
 	}
 

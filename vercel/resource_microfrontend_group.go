@@ -107,11 +107,11 @@ type MicrofrontendGroupDefaultApp struct {
 }
 
 type MicrofrontendGroup struct {
-	TeamID     types.String                 `tfsdk:"team_id"`
-	ID         types.String                 `tfsdk:"id"`
-	Name       types.String                 `tfsdk:"name"`
-	Slug       types.String                 `tfsdk:"slug"`
-	DefaultApp MicrofrontendGroupDefaultApp `tfsdk:"default_app"`
+	TeamID     types.String                  `tfsdk:"team_id"`
+	ID         types.String                  `tfsdk:"id"`
+	Name       types.String                  `tfsdk:"name"`
+	Slug       types.String                  `tfsdk:"slug"`
+	DefaultApp *MicrofrontendGroupDefaultApp `tfsdk:"default_app"`
 }
 
 func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup) MicrofrontendGroup {
@@ -120,7 +120,7 @@ func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup) Microf
 		Name:   types.StringValue(group.Name),
 		Slug:   types.StringValue(group.Slug),
 		TeamID: types.StringValue(group.TeamID),
-		DefaultApp: MicrofrontendGroupDefaultApp{
+		DefaultApp: &MicrofrontendGroupDefaultApp{
 			ProjectID:    types.StringValue(group.DefaultApp.ProjectID),
 			DefaultRoute: types.StringValue(group.DefaultApp.DefaultRoute),
 		},
@@ -234,10 +234,11 @@ func (r *microfrontendGroupResource) Read(ctx context.Context, req resource.Read
 
 	result := convertResponseToMicrofrontendGroup(out)
 	tflog.Info(ctx, "read microfrontend group", map[string]interface{}{
-		"team_id":  result.TeamID.ValueString(),
-		"group_id": result.ID.ValueString(),
-		"slug":     result.Slug.ValueString(),
-		"name":     result.Name.ValueString(),
+		"defaultApp": result.DefaultApp.ProjectID.ValueString(),
+		"team_id":    result.TeamID.ValueString(),
+		"group_id":   result.ID.ValueString(),
+		"slug":       result.Slug.ValueString(),
+		"name":       result.Name.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
