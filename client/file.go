@@ -36,7 +36,7 @@ func (c *Client) CreateFile(ctx context.Context, request CreateFileRequest) erro
 	req.Header.Add("x-vercel-digest", request.SHA)
 	req.Header.Set("Content-Type", "application/octet-stream")
 
-	tflog.Info(ctx, "uploading file", map[string]interface{}{
+	tflog.Info(ctx, "uploading file", map[string]any{
 		"url": url,
 		"sha": request.SHA,
 	})

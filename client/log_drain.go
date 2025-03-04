@@ -38,7 +38,7 @@ func (c *Client) CreateLogDrain(ctx context.Context, request CreateLogDrainReque
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "creating log drain", map[string]interface{}{
+	tflog.Info(ctx, "creating log drain", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -56,7 +56,7 @@ func (c *Client) DeleteLogDrain(ctx context.Context, id, teamID string) error {
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "deleting log drain", map[string]interface{}{
+	tflog.Info(ctx, "deleting log drain", map[string]any{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{
@@ -71,7 +71,7 @@ func (c *Client) GetLogDrain(ctx context.Context, id, teamID string) (l LogDrain
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "reading log drain", map[string]interface{}{
+	tflog.Info(ctx, "reading log drain", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

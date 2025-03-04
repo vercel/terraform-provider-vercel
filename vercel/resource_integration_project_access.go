@@ -103,7 +103,7 @@ func (r *integrationProjectAccessResource) Create(ctx context.Context, req resou
 		ProjectID:     plan.ProjectID,
 	}
 
-	tflog.Info(ctx, "granted integration project access", map[string]interface{}{
+	tflog.Info(ctx, "granted integration project access", map[string]any{
 		"team_id":        result.TeamID.ValueString(),
 		"integration_id": result.IntegrationID.ValueString(),
 		"project_id":     result.ProjectID.ValueString(),
@@ -138,7 +138,7 @@ func (r *integrationProjectAccessResource) Read(ctx context.Context, req resourc
 		IntegrationID: state.IntegrationID,
 		ProjectID:     state.ProjectID,
 	}
-	tflog.Info(ctx, "read integration project access", map[string]interface{}{
+	tflog.Info(ctx, "read integration project access", map[string]any{
 		"team_id":        result.TeamID.ValueString(),
 		"integration_id": result.IntegrationID.ValueString(),
 		"project_id":     result.ProjectID.ValueString(),
@@ -183,7 +183,7 @@ func (r *integrationProjectAccessResource) Delete(ctx context.Context, req resou
 		ProjectID:     plan.ProjectID,
 	}
 
-	tflog.Info(ctx, "revoked integration project access", map[string]interface{}{
+	tflog.Info(ctx, "revoked integration project access", map[string]any{
 		"team_id":        result.TeamID.ValueString(),
 		"integration_id": result.IntegrationID.ValueString(),
 		"project_id":     result.ProjectID.ValueString(),

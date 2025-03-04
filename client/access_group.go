@@ -23,7 +23,7 @@ func (c *Client) GetAccessGroup(ctx context.Context, req GetAccessGroupRequest) 
 	if c.teamID(req.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
 	}
-	tflog.Info(ctx, "getting access group", map[string]interface{}{
+	tflog.Info(ctx, "getting access group", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -57,7 +57,7 @@ func (c *Client) CreateAccessGroup(ctx context.Context, req CreateAccessGroupReq
 			Name: req.Name,
 		},
 	))
-	tflog.Info(ctx, "creating access group", map[string]interface{}{
+	tflog.Info(ctx, "creating access group", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -92,7 +92,7 @@ func (c *Client) UpdateAccessGroup(ctx context.Context, req UpdateAccessGroupReq
 			Name: req.Name,
 		},
 	))
-	tflog.Info(ctx, "updating access group", map[string]interface{}{
+	tflog.Info(ctx, "updating access group", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -119,7 +119,7 @@ func (c *Client) DeleteAccessGroup(ctx context.Context, req DeleteAccessGroupReq
 	if c.teamID(req.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
 	}
-	tflog.Info(ctx, "deleting access group", map[string]interface{}{
+	tflog.Info(ctx, "deleting access group", map[string]any{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{

@@ -68,7 +68,7 @@ func (cr *clientRequest) toHTTPRequest() (*http.Request, error) {
 // - Unmarshaling responses
 // - Parsing a Retry-After header in the case of rate limits being hit
 // - In the case of a rate-limit being hit, trying again aftera period of time
-func (c *Client) doRequest(req clientRequest, v interface{}) error {
+func (c *Client) doRequest(req clientRequest, v any) error {
 	r, err := req.toHTTPRequest()
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func (c *Client) doRequest(req clientRequest, v interface{}) error {
 			apiErr.StatusCode == 429 && // and it was a rate limit
 			apiErr.retryAfter > 0 && // and there was a retry time
 			apiErr.retryAfter < 5*60 { // and the retry time is less than 5 minutes
-			tflog.Error(req.ctx, "Rate limit was hit", map[string]interface{}{
+			tflog.Error(req.ctx, "Rate limit was hit", map[string]any{
 				"error":      apiErr,
 				"retryAfter": apiErr.retryAfter,
 			})
@@ -102,7 +102,7 @@ func (c *Client) doRequest(req clientRequest, v interface{}) error {
 	return err
 }
 
-func (c *Client) _doRequest(req *http.Request, v interface{}, errorOnNoContent bool) error {
+func (c *Client) _doRequest(req *http.Request, v any, errorOnNoContent bool) error {
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.token))
 	resp, err := c.http().Do(req)
 	if err != nil {

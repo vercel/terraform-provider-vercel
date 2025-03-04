@@ -1513,7 +1513,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		)
 		return
 	}
-	tflog.Info(ctx, "created project", map[string]interface{}{
+	tflog.Info(ctx, "created project", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})
@@ -1586,7 +1586,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			)
 			return
 		}
-		tflog.Info(ctx, "updated newly created project", map[string]interface{}{
+		tflog.Info(ctx, "updated newly created project", map[string]any{
 			"team_id":    result.TeamID.ValueString(),
 			"project_id": result.ID.ValueString(),
 		})
@@ -1645,7 +1645,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		)
 		return
 	}
-	tflog.Info(ctx, "updated project production branch", map[string]interface{}{
+	tflog.Info(ctx, "updated project production branch", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})
@@ -1700,7 +1700,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		)
 		return
 	}
-	tflog.Info(ctx, "read project", map[string]interface{}{
+	tflog.Info(ctx, "read project", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})
@@ -1824,7 +1824,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	tflog.Info(ctx, "planEnvs", map[string]interface{}{
+	tflog.Info(ctx, "planEnvs", map[string]any{
 		"plan_envs":  planEnvs,
 		"state_envs": stateEnvs,
 	})
@@ -1844,7 +1844,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			)
 			return
 		}
-		tflog.Info(ctx, "deleted environment variable", map[string]interface{}{
+		tflog.Info(ctx, "deleted environment variable", map[string]any{
 			"team_id":        plan.TeamID.ValueString(),
 			"project_id":     plan.ID.ValueString(),
 			"environment_id": v.ID.ValueString(),
@@ -1880,7 +1880,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 				),
 			)
 		}
-		tflog.Info(ctx, "upserted environment variables", map[string]interface{}{
+		tflog.Info(ctx, "upserted environment variables", map[string]any{
 			"team_id":    plan.TeamID.ValueString(),
 			"project_id": plan.ID.ValueString(),
 		})
@@ -2076,7 +2076,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		)
 		return
 	}
-	tflog.Info(ctx, "updated project", map[string]interface{}{
+	tflog.Info(ctx, "updated project", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})
@@ -2115,7 +2115,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	tflog.Info(ctx, "deleted project", map[string]interface{}{
+	tflog.Info(ctx, "deleted project", map[string]any{
 		"team_id":    state.TeamID.ValueString(),
 		"project_id": state.ID.ValueString(),
 	})
@@ -2161,7 +2161,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		)
 		return
 	}
-	tflog.Info(ctx, "imported project", map[string]interface{}{
+	tflog.Info(ctx, "imported project", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})

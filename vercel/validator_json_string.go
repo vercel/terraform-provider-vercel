@@ -29,7 +29,7 @@ func (v validatorJSON) ValidateString(ctx context.Context, req validator.StringR
 		return
 	}
 
-	var i interface{}
+	var i any
 	if err := json.Unmarshal([]byte(req.ConfigValue.ValueString()), &i); err != nil {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,

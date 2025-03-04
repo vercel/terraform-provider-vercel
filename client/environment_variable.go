@@ -33,7 +33,7 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 	}
 	payload := string(mustMarshal(request.EnvironmentVariable))
 
-	tflog.Info(ctx, "creating environment variable", map[string]interface{}{
+	tflog.Info(ctx, "creating environment variable", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -229,7 +229,7 @@ func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEn
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "updating environment variable", map[string]interface{}{
+	tflog.Info(ctx, "updating environment variable", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -251,7 +251,7 @@ func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamI
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "deleting environment variable", map[string]interface{}{
+	tflog.Info(ctx, "deleting environment variable", map[string]any{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{
@@ -271,7 +271,7 @@ func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID 
 	envResponse := struct {
 		Env []EnvironmentVariable `json:"envs"`
 	}{}
-	tflog.Info(ctx, "getting environment variables", map[string]interface{}{
+	tflog.Info(ctx, "getting environment variables", map[string]any{
 		"url": url,
 	})
 	err := c.doRequest(clientRequest{
@@ -293,7 +293,7 @@ func (c *Client) GetEnvironmentVariable(ctx context.Context, projectID, teamID, 
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "getting environment variable", map[string]interface{}{
+	tflog.Info(ctx, "getting environment variable", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

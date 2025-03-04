@@ -23,7 +23,7 @@ type TeamMemberInviteRequest struct {
 
 func (c *Client) InviteTeamMember(ctx context.Context, request TeamMemberInviteRequest) error {
 	url := fmt.Sprintf("%s/v1/teams/%s/members", c.baseURL, request.TeamID)
-	tflog.Info(ctx, "inviting user", map[string]interface{}{
+	tflog.Info(ctx, "inviting user", map[string]any{
 		"url":   url,
 		"user":  request.UserID,
 		"email": request.Email,
@@ -46,7 +46,7 @@ type TeamMemberRemoveRequest struct {
 
 func (c *Client) RemoveTeamMember(ctx context.Context, request TeamMemberRemoveRequest) error {
 	url := fmt.Sprintf("%s/v2/teams/%s/members/%s", c.baseURL, request.TeamID, request.UserID)
-	tflog.Info(ctx, "removing user", map[string]interface{}{
+	tflog.Info(ctx, "removing user", map[string]any{
 		"url":  url,
 		"user": request.UserID,
 	})
@@ -70,7 +70,7 @@ type TeamMemberUpdateRequest struct {
 
 func (c *Client) UpdateTeamMember(ctx context.Context, request TeamMemberUpdateRequest) error {
 	url := fmt.Sprintf("%s/v1/teams/%s/members/%s", c.baseURL, request.TeamID, request.UserID)
-	tflog.Info(ctx, "updating team member", map[string]interface{}{
+	tflog.Info(ctx, "updating team member", map[string]any{
 		"url":  url,
 		"user": request.UserID,
 		"role": request.Role,
@@ -102,7 +102,7 @@ type TeamMember struct {
 
 func (c *Client) GetTeamMember(ctx context.Context, request GetTeamMemberRequest) (TeamMember, error) {
 	url := fmt.Sprintf("%s/v2/teams/%s/members?limit=1&filterByUserIds=%s", c.baseURL, request.TeamID, request.UserID)
-	tflog.Info(ctx, "getting team member", map[string]interface{}{
+	tflog.Info(ctx, "getting team member", map[string]any{
 		"url": url,
 	})
 

@@ -27,7 +27,7 @@ func (c *Client) CreateProjectDomain(ctx context.Context, projectID, teamID stri
 	}
 
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "creating project domain", map[string]interface{}{
+	tflog.Info(ctx, "creating project domain", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -48,7 +48,7 @@ func (c *Client) DeleteProjectDomain(ctx context.Context, projectID, domain, tea
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "deleting project domain", map[string]interface{}{
+	tflog.Info(ctx, "deleting project domain", map[string]any{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{
@@ -78,7 +78,7 @@ func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "getting project domain", map[string]interface{}{
+	tflog.Info(ctx, "getting project domain", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -107,7 +107,7 @@ func (c *Client) UpdateProjectDomain(ctx context.Context, projectID, domain, tea
 	}
 
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "updating project domain", map[string]interface{}{
+	tflog.Info(ctx, "updating project domain", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})

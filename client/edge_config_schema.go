@@ -19,7 +19,7 @@ func (c *Client) UpsertEdgeConfigSchema(ctx context.Context, request EdgeConfigS
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "creating edge config schema", map[string]interface{}{
+	tflog.Info(ctx, "creating edge config schema", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -39,7 +39,7 @@ func (c *Client) GetEdgeConfigSchema(ctx context.Context, id, teamID string) (e 
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "getting edge config schema", map[string]interface{}{
+	tflog.Info(ctx, "getting edge config schema", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -67,7 +67,7 @@ func (c *Client) DeleteEdgeConfigSchema(ctx context.Context, id, teamID string) 
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "deleting edge config schema", map[string]interface{}{
+	tflog.Info(ctx, "deleting edge config schema", map[string]any{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{

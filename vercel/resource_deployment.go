@@ -208,7 +208,7 @@ type Deployment struct {
 
 // setIfNotUnknown is a helper function to set a value in a map if it is not unknown.
 // Null values are set as nil, and actual values are set directly.
-func setIfNotUnknown(m map[string]interface{}, v types.String, name string) {
+func setIfNotUnknown(m map[string]any, v types.String, name string) {
 	if v.IsNull() {
 		m[name] = nil
 	}
@@ -219,8 +219,8 @@ func setIfNotUnknown(m map[string]interface{}, v types.String, name string) {
 
 // toRequest takes a set of ProjectSettings and converts them into the required
 // format for a CreateDeploymentRequest.
-func (p *ProjectSettings) toRequest() map[string]interface{} {
-	res := map[string]interface{}{
+func (p *ProjectSettings) toRequest() map[string]any {
+	res := map[string]any{
 		/* Source files outside the root directory are required
 		 * for a monorepo style codebase. This allows a root_directory
 		 * to be set, but enables navigating upwards into a parent workspace.
@@ -589,7 +589,7 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	result := convertResponseToDeployment(out, plan)
-	tflog.Info(ctx, "created deployment", map[string]interface{}{
+	tflog.Info(ctx, "created deployment", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})
@@ -629,7 +629,7 @@ func (r *deploymentResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	result := convertResponseToDeployment(out, state)
-	tflog.Info(ctx, "read deployment", map[string]interface{}{
+	tflog.Info(ctx, "read deployment", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})

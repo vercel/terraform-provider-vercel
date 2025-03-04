@@ -137,7 +137,7 @@ func (r *firewallBypassResource) Create(ctx context.Context, req resource.Create
 	}
 
 	result := responseToBypassRule(out)
-	tflog.Info(ctx, "created firewall bypass rule", map[string]interface{}{
+	tflog.Info(ctx, "created firewall bypass rule", map[string]any{
 		"team_id":    plan.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
@@ -183,7 +183,7 @@ func (r *firewallBypassResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	result := responseToBypassRule(out)
-	tflog.Info(ctx, "read firewall bypass rule", map[string]interface{}{
+	tflog.Info(ctx, "read firewall bypass rule", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
@@ -238,7 +238,7 @@ func (r *firewallBypassResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	tflog.Info(ctx, "deleted firewall bypass rule", map[string]interface{}{
+	tflog.Info(ctx, "deleted firewall bypass rule", map[string]any{
 		"team_id":    state.TeamID.ValueString(),
 		"project_id": state.ProjectID.ValueString(),
 	})
@@ -297,7 +297,7 @@ func (r *firewallBypassResource) ImportState(ctx context.Context, req resource.I
 	}
 
 	result := responseToBypassRule(out)
-	tflog.Info(ctx, "import firewall bypass", map[string]interface{}{
+	tflog.Info(ctx, "import firewall bypass", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})

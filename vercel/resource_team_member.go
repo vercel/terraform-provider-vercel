@@ -298,7 +298,7 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	tflog.Info(ctx, "invited Team Member", map[string]interface{}{
+	tflog.Info(ctx, "invited Team Member", map[string]any{
 		"team_id": plan.TeamID.ValueString(),
 		"user_id": plan.UserID.ValueString(),
 	})
@@ -398,7 +398,7 @@ func (r *teamMemberResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	tflog.Info(ctx, "updated Team member", map[string]interface{}{
+	tflog.Info(ctx, "updated Team member", map[string]any{
 		"team_id": request.TeamID,
 		"user_id": request.UserID,
 	})
@@ -456,7 +456,7 @@ func (r *teamMemberResource) ImportState(ctx context.Context, req resource.Impor
 		)
 	}
 
-	tflog.Info(ctx, "import Team Member", map[string]interface{}{
+	tflog.Info(ctx, "import Team Member", map[string]any{
 		"team_id": teamID,
 		"user_id": userID,
 	})

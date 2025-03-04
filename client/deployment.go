@@ -32,20 +32,20 @@ type gitSource struct {
 
 // CreateDeploymentRequest defines the request the Vercel API expects in order to create a deployment.
 type CreateDeploymentRequest struct {
-	Files       []DeploymentFile       `json:"files,omitempty"`
-	Functions   map[string]interface{} `json:"functions,omitempty"`
-	Environment map[string]string      `json:"env,omitempty"`
+	Files       []DeploymentFile  `json:"files,omitempty"`
+	Functions   map[string]any    `json:"functions,omitempty"`
+	Environment map[string]string `json:"env,omitempty"`
 	Build       struct {
 		Environment map[string]string `json:"env,omitempty"`
 	} `json:"build,omitempty"`
-	ProjectID       string                 `json:"project,omitempty"`
-	ProjectSettings map[string]interface{} `json:"projectSettings"`
-	Name            string                 `json:"name"`
-	Regions         []string               `json:"regions,omitempty"`
-	Routes          []interface{}          `json:"routes,omitempty"`
-	Target          string                 `json:"target,omitempty"`
-	GitSource       *gitSource             `json:"gitSource,omitempty"`
-	Ref             string                 `json:"-"`
+	ProjectID       string         `json:"project,omitempty"`
+	ProjectSettings map[string]any `json:"projectSettings"`
+	Name            string         `json:"name"`
+	Regions         []string       `json:"regions,omitempty"`
+	Routes          []any          `json:"routes,omitempty"`
+	Target          string         `json:"target,omitempty"`
+	GitSource       *gitSource     `json:"gitSource,omitempty"`
+	Ref             string         `json:"-"`
 }
 
 // DeploymentResponse defines the response the Vercel API returns when a deployment is created or updated.
@@ -201,7 +201,7 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 	}
 	payload := string(mustMarshal(request))
 
-	tflog.Info(ctx, "creating deployment", map[string]interface{}{
+	tflog.Info(ctx, "creating deployment", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -263,7 +263,7 @@ func (c *Client) DeleteDeployment(ctx context.Context, deploymentID string, team
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "deleting deployment", map[string]interface{}{
+	tflog.Info(ctx, "deleting deployment", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -282,7 +282,7 @@ func (c *Client) GetDeployment(ctx context.Context, deploymentID, teamID string)
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "getting deployment", map[string]interface{}{
+	tflog.Info(ctx, "getting deployment", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

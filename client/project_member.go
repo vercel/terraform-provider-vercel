@@ -25,7 +25,7 @@ func (c *Client) AddProjectMembers(ctx context.Context, request AddProjectMember
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
-	tflog.Info(ctx, "adding project members", map[string]interface{}{
+	tflog.Info(ctx, "adding project members", map[string]any{
 		"url": url,
 	})
 	err := c.doRequest(clientRequest{
@@ -35,7 +35,7 @@ func (c *Client) AddProjectMembers(ctx context.Context, request AddProjectMember
 		body:   string(mustMarshal(request)),
 	}, nil)
 	if err != nil {
-		tflog.Error(ctx, "error adding project members", map[string]interface{}{
+		tflog.Error(ctx, "error adding project members", map[string]any{
 			"url":     url,
 			"members": request.Members,
 		})
@@ -54,7 +54,7 @@ func (c *Client) RemoveProjectMembers(ctx context.Context, request RemoveProject
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
-	tflog.Info(ctx, "removing project members", map[string]interface{}{
+	tflog.Info(ctx, "removing project members", map[string]any{
 		"url": url,
 	})
 	err := c.doRequest(clientRequest{
@@ -64,7 +64,7 @@ func (c *Client) RemoveProjectMembers(ctx context.Context, request RemoveProject
 		body:   string(mustMarshal(request)),
 	}, nil)
 	if err != nil {
-		tflog.Error(ctx, "error removing project members", map[string]interface{}{
+		tflog.Error(ctx, "error removing project members", map[string]any{
 			"url":     url,
 			"members": request.Members,
 		})
@@ -89,7 +89,7 @@ func (c *Client) UpdateProjectMembers(ctx context.Context, request UpdateProject
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "updating project members", map[string]interface{}{
+	tflog.Info(ctx, "updating project members", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -100,7 +100,7 @@ func (c *Client) UpdateProjectMembers(ctx context.Context, request UpdateProject
 		body:   payload,
 	}, nil)
 	if err != nil {
-		tflog.Error(ctx, "error updating project members", map[string]interface{}{
+		tflog.Error(ctx, "error updating project members", map[string]any{
 			"url":     url,
 			"members": request.Members,
 		})
@@ -118,7 +118,7 @@ func (c *Client) ListProjectMembers(ctx context.Context, request GetProjectMembe
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s&limit=100", url, c.teamID(request.TeamID))
 	}
-	tflog.Info(ctx, "listing project members", map[string]interface{}{
+	tflog.Info(ctx, "listing project members", map[string]any{
 		"url": url,
 	})
 
@@ -132,7 +132,7 @@ func (c *Client) ListProjectMembers(ctx context.Context, request GetProjectMembe
 		body:   string(mustMarshal(request)),
 	}, &resp)
 	if err != nil {
-		tflog.Error(ctx, "error getting project members", map[string]interface{}{
+		tflog.Error(ctx, "error getting project members", map[string]any{
 			"url": url,
 		})
 	}

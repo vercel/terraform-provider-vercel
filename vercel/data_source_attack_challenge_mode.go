@@ -100,7 +100,7 @@ func (d *attackChallengeModeDataSource) Read(ctx context.Context, req datasource
 	}
 
 	result := responseToAttackChallengeMode(out)
-	tflog.Info(ctx, "read attack challenge mode", map[string]interface{}{
+	tflog.Info(ctx, "read attack challenge mode", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})

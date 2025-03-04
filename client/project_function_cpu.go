@@ -40,7 +40,7 @@ func (c *Client) GetProjectFunctionCPU(ctx context.Context, projectID, teamID st
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "get project function cpu", map[string]interface{}{
+	tflog.Info(ctx, "get project function cpu", map[string]any{
 		"url": url,
 	})
 	var f functionCPU

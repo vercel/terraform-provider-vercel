@@ -131,7 +131,7 @@ func (r *accessGroupProjectResource) Create(ctx context.Context, req resource.Cr
 		Role:          types.StringValue(out.Role),
 	}
 
-	tflog.Info(ctx, "created Access Group", map[string]interface{}{
+	tflog.Info(ctx, "created Access Group", map[string]any{
 		"team_id":         result.TeamID.ValueString(),
 		"access_group_id": result.AccessGroupID.ValueString(),
 		"project_id":      result.ProjectID.ValueString(),
@@ -181,7 +181,7 @@ func (r *accessGroupProjectResource) Read(ctx context.Context, req resource.Read
 		ProjectID:     types.StringValue(out.ProjectID),
 		Role:          types.StringValue(out.Role),
 	}
-	tflog.Info(ctx, "read Access Group Project", map[string]interface{}{
+	tflog.Info(ctx, "read Access Group Project", map[string]any{
 		"team_id":         state.TeamID.ValueString(),
 		"access_group_id": state.AccessGroupID.ValueString(),
 		"project_id":      state.ProjectID.ValueString(),
@@ -230,7 +230,7 @@ func (r *accessGroupProjectResource) Update(ctx context.Context, req resource.Up
 		Role:          types.StringValue(out.Role),
 	}
 
-	tflog.Info(ctx, "updated Access Group Project", map[string]interface{}{
+	tflog.Info(ctx, "updated Access Group Project", map[string]any{
 		"team_id":         result.TeamID.ValueString(),
 		"access_group_id": result.AccessGroupID.ValueString(),
 		"project_id":      result.ProjectID.ValueString(),
@@ -276,7 +276,7 @@ func (r *accessGroupProjectResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	tflog.Info(ctx, "deleted Access Group", map[string]interface{}{
+	tflog.Info(ctx, "deleted Access Group", map[string]any{
 		"team_id":         state.TeamID.ValueString(),
 		"access_group_id": state.AccessGroupID.ValueString(),
 		"project_id":      state.ProjectID.ValueString(),
@@ -324,7 +324,7 @@ func (r *accessGroupProjectResource) ImportState(ctx context.Context, req resour
 		Role:          types.StringValue(out.Role),
 	}
 
-	tflog.Info(ctx, "import Access Group Project", map[string]interface{}{
+	tflog.Info(ctx, "import Access Group Project", map[string]any{
 		"team_id":         result.TeamID.ValueString(),
 		"access_group_id": result.AccessGroupID.ValueString(),
 		"project_id":      result.ProjectID.ValueString(),

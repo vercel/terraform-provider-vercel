@@ -39,7 +39,7 @@ func (c *Client) CreateMicrofrontendGroup(ctx context.Context, TeamID string, Na
 	if c.teamID(TeamID) == "" {
 		return r, fmt.Errorf("team_id is required")
 	}
-	tflog.Info(ctx, "creating microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "creating microfrontend group", map[string]any{
 		"microfrontend_group_name": Name,
 		"team_id":                  c.teamID(TeamID),
 	})
@@ -79,7 +79,7 @@ func (c *Client) UpdateMicrofrontendGroup(ctx context.Context, request Microfron
 	}{
 		Name: request.Name,
 	}))
-	tflog.Info(ctx, "updating microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "updating microfrontend group", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -109,7 +109,7 @@ func (c *Client) DeleteMicrofrontendGroup(ctx context.Context, request Microfron
 	}
 	url := fmt.Sprintf("%s/teams/%s/microfrontends/%s", c.baseURL, c.teamID(request.TeamID), request.ID)
 
-	tflog.Info(ctx, "deleting microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "deleting microfrontend group", map[string]any{
 		"url": url,
 	})
 
@@ -131,7 +131,7 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "getting microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "getting microfrontend group", map[string]any{
 		"url": url,
 	})
 	out := MicrofrontendGroupsAPIResponse{}
@@ -146,7 +146,7 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 		return r, err
 	}
 
-	tflog.Info(ctx, "getting microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "getting microfrontend group", map[string]any{
 		"out": out,
 	})
 
@@ -176,7 +176,7 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 				DefaultApp: defaultApp,
 				Projects:   projects,
 			}
-			tflog.Info(ctx, "returning microfrontend group", map[string]interface{}{
+			tflog.Info(ctx, "returning microfrontend group", map[string]any{
 				"r": r,
 			})
 			return r, nil

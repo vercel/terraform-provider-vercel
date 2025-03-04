@@ -208,7 +208,7 @@ func (r *projectMembersResource) Create(ctx context.Context, req resource.Create
 		TeamID:    plan.TeamID.ValueString(),
 		ProjectID: plan.ProjectID.ValueString(),
 	})
-	tflog.Trace(ctx, "read project members", map[string]interface{}{
+	tflog.Trace(ctx, "read project members", map[string]any{
 		"team_id":    plan.TeamID.ValueString(),
 		"project_id": plan.ProjectID.ValueString(),
 		"members":    members,
@@ -384,7 +384,7 @@ func (r *projectMembersResource) Update(ctx context.Context, req resource.Update
 	}
 
 	toAdd, toRemove, toUpdate := diffMembers(stateMembers, plannedMembers)
-	tflog.Info(ctx, "update project members", map[string]interface{}{
+	tflog.Info(ctx, "update project members", map[string]any{
 		"toAdd":    toAdd,
 		"toRemove": toRemove,
 		"toUpdate": toUpdate,
@@ -462,7 +462,7 @@ func (r *projectMembersResource) Update(ctx context.Context, req resource.Update
 		TeamID:    state.TeamID.ValueString(),
 		ProjectID: state.ProjectID.ValueString(),
 	})
-	tflog.Info(ctx, "read project members", map[string]interface{}{
+	tflog.Info(ctx, "read project members", map[string]any{
 		"team_id":    state.TeamID.ValueString(),
 		"project_id": state.ProjectID.ValueString(),
 		"members":    members,

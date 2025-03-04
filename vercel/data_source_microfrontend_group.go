@@ -52,7 +52,7 @@ func (r *microfrontendGroupDataSource) Schema(_ context.Context, req datasource.
 		Description: `
 Provides information about an existing Microfrontend Group.
 
-A Microfrontend Group is a definition of a microfrontend belonging to a Vercel Team. 
+A Microfrontend Group is a definition of a microfrontend belonging to a Vercel Team.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -117,7 +117,7 @@ func (d *microfrontendGroupDataSource) Read(ctx context.Context, req datasource.
 	}
 
 	result := convertResponseToMicrofrontendGroup(out)
-	tflog.Info(ctx, "read microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "read microfrontend group", map[string]any{
 		"result": result,
 	})
 

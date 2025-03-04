@@ -479,7 +479,7 @@ func (r *teamConfigResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	jsonResp, _ := json.Marshal(response)
-	tflog.Info(ctx, "created Team Configuration", map[string]interface{}{
+	tflog.Info(ctx, "created Team Configuration", map[string]any{
 		"team_id":  response.ID,
 		"response": string(jsonResp),
 	})
@@ -560,7 +560,7 @@ func (r *teamConfigResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	tflog.Info(ctx, "updated Team configuration", map[string]interface{}{
+	tflog.Info(ctx, "updated Team configuration", map[string]any{
 		"team_id": response.ID,
 	})
 

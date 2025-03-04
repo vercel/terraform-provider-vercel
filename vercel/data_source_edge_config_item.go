@@ -114,7 +114,7 @@ func (d *edgeConfigItemDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	result := responseToEdgeConfigItem(out)
-	tflog.Info(ctx, "read edge config item", map[string]interface{}{
+	tflog.Info(ctx, "read edge config item", map[string]any{
 		"edge_config_id": result.EdgeConfigID.ValueString(),
 		"team_id":        result.TeamID.ValueString(),
 		"key":            result.Key.ValueString(),
