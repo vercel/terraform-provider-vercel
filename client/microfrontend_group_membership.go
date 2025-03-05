@@ -9,9 +9,9 @@ import (
 
 type MicrofrontendGroupMembership struct {
 	MicrofrontendGroupID            string `json:"microfrontendsGroupId"`
-	IsDefaultApp                    bool   `json:"isDefaultApp"`
-	DefaultRoute                    string `json:"defaultRoute"`
-	RouteObservabilityToThisProject bool   `json:"routeObservabilityToThisProject"`
+	IsDefaultApp                    bool   `json:"isDefaultApp,omitempty"`
+	DefaultRoute                    string `json:"defaultRoute,omitempty"`
+	RouteObservabilityToThisProject bool   `json:"routeObservabilityToThisProject,omitempty"`
 	ProjectID                       string `json:"projectId"`
 	Enabled                         bool   `json:"enabled"`
 	TeamID                          string `json:"team_id"`
@@ -20,9 +20,9 @@ type MicrofrontendGroupMembership struct {
 type MicrofrontendGroupMembershipResponseAPI struct {
 	GroupIds                        []string `json:"groupIds"`
 	Enabled                         bool     `json:"enabled"`
-	IsDefaultApp                    bool     `json:"isDefaultApp"`
-	DefaultRoute                    string   `json:"defaultRoute"`
-	RouteObservabilityToThisProject bool     `json:"routeObservabilityToThisProject"`
+	IsDefaultApp                    bool     `json:"isDefaultApp,omitempty"`
+	DefaultRoute                    string   `json:"defaultRoute,omitempty"`
+	RouteObservabilityToThisProject bool     `json:"routeObservabilityToThisProject,omitempty"`
 	TeamID                          string   `json:"team_id"`
 	UpdatedAt                       int      `json:"updatedAt"`
 }
