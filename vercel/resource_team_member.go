@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -71,11 +72,33 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				},
 			},
 			"user_id": schema.StringAttribute{
-				Description: "The ID of the user to add to the team.",
-				Required:    true,
+				Description: "The ID of the user to add to the team. Must specify one of user_id or email.",
+				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(
+						path.MatchRoot("user_id"),
+						path.MatchRoot("email"),
+					),
+				},
+			},
+			"email": schema.StringAttribute{
+				Description: "The email of the user to add to the team. Must specify one of user_id or email.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(
+						path.MatchRoot("user_id"),
+						path.MatchRoot("email"),
+					),
 				},
 			},
 			"role": schema.StringAttribute{
@@ -126,6 +149,7 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 
 type TeamMember struct {
 	UserID       types.String `tfsdk:"user_id"`
+	Email        types.String `tfsdk:"email"`
 	TeamID       types.String `tfsdk:"team_id"`
 	Role         types.String `tfsdk:"role"`
 	Projects     types.Set    `tfsdk:"projects"`
@@ -177,6 +201,7 @@ func (t TeamMember) toInviteTeamMemberRequest(ctx context.Context) (client.TeamM
 	return client.TeamMemberInviteRequest{
 		TeamID:       t.TeamID.ValueString(),
 		UserID:       t.UserID.ValueString(),
+		Email:        t.Email.ValueString(),
 		Role:         t.Role.ValueString(),
 		Projects:     projects,
 		AccessGroups: accessGroups,
@@ -269,6 +294,7 @@ func convertResponseToTeamMember(response client.TeamMember, teamID types.String
 
 	return TeamMember{
 		UserID:       types.StringValue(response.UserID),
+		Email:        types.StringValue(response.Email),
 		TeamID:       teamID,
 		Role:         types.StringValue(response.Role),
 		Projects:     projects,
@@ -289,7 +315,7 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 		resp.Diagnostics.Append(diags...)
 		return
 	}
-	err := r.client.InviteTeamMember(ctx, request)
+	res, err := r.client.InviteTeamMember(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error inviting Team Member",
@@ -303,21 +329,30 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 		"user_id": plan.UserID.ValueString(),
 	})
 
-	projects := types.SetNull(projectsElemType)
-	if !plan.Projects.IsUnknown() && !plan.Projects.IsNull() {
-		projects = plan.Projects
-	}
-	ags := types.SetNull(types.StringType)
-	if !plan.AccessGroups.IsUnknown() && !plan.AccessGroups.IsNull() {
-		ags = plan.AccessGroups
-	}
-	diags = resp.State.Set(ctx, TeamMember{
-		TeamID:       plan.TeamID,
-		UserID:       plan.UserID,
-		Role:         plan.Role,
-		Projects:     projects,
-		AccessGroups: ags,
+	response, err := r.client.GetTeamMember(ctx, client.GetTeamMemberRequest{
+		TeamID: plan.TeamID.ValueString(),
+		UserID: res.UserID,
 	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading Team Member",
+			"Could not read Team Member, unexpected error: "+err.Error(),
+		)
+	}
+	teamMember := convertResponseToTeamMember(response, plan.TeamID)
+	if !response.Confirmed {
+		// The API doesn't return the projects or access groups for unconfirmed members, so we have to
+		// manually set these fields to whatever was in the plan.
+		teamMember.Projects = types.SetNull(projectsElemType)
+		if !plan.Projects.IsUnknown() && !plan.Projects.IsNull() {
+			teamMember.Projects = plan.Projects
+		}
+		teamMember.AccessGroups = types.SetNull(types.StringType)
+		if !plan.AccessGroups.IsUnknown() && !plan.AccessGroups.IsNull() {
+			teamMember.AccessGroups = plan.AccessGroups
+		}
+	}
+	diags = resp.State.Set(ctx, teamMember)
 	resp.Diagnostics.Append(diags...)
 	sleepInTests()
 }
@@ -414,6 +449,7 @@ func (r *teamMemberResource) Update(ctx context.Context, req resource.UpdateRequ
 	diags = resp.State.Set(ctx, TeamMember{
 		TeamID:       plan.TeamID,
 		UserID:       plan.UserID,
+		Email:        plan.Email,
 		Role:         plan.Role,
 		Projects:     projects,
 		AccessGroups: ags,

@@ -64,6 +64,10 @@ func (d *teamMemberDataSource) Schema(_ context.Context, req datasource.SchemaRe
 				Description: "The ID of the existing Vercel Team Member.",
 				Required:    true,
 			},
+			"email": schema.StringAttribute{
+				Description: "The email address of the existing Vercel Team Member.",
+				Computed:    true,
+			},
 			"role": schema.StringAttribute{
 				Description: "The role that the user should have in the project. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. Depending on your Team's plan, some of these roles may be unavailable.",
 				Computed:    true,
@@ -104,6 +108,7 @@ func (d *teamMemberDataSource) Schema(_ context.Context, req datasource.SchemaRe
 
 type TeamMemberWithID struct {
 	UserID       types.String `tfsdk:"user_id"`
+	Email        types.String `tfsdk:"email"`
 	TeamID       types.String `tfsdk:"team_id"`
 	Role         types.String `tfsdk:"role"`
 	Projects     types.Set    `tfsdk:"projects"`
@@ -133,6 +138,7 @@ func (d *teamMemberDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	diags = resp.State.Set(ctx, TeamMemberWithID{
 		UserID:       teamMember.UserID,
 		TeamID:       teamMember.TeamID,
+		Email:        teamMember.Email,
 		Role:         teamMember.Role,
 		Projects:     teamMember.Projects,
 		AccessGroups: teamMember.AccessGroups,

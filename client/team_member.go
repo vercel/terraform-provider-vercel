@@ -21,7 +21,14 @@ type TeamMemberInviteRequest struct {
 	TeamID       string        `json:"-"`
 }
 
-func (c *Client) InviteTeamMember(ctx context.Context, request TeamMemberInviteRequest) error {
+type TeamMemberInviteResponse struct {
+	UserID   string `json:"uid"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+}
+
+func (c *Client) InviteTeamMember(ctx context.Context, request TeamMemberInviteRequest) (TeamMemberInviteResponse, error) {
 	url := fmt.Sprintf("%s/v1/teams/%s/members", c.baseURL, request.TeamID)
 	tflog.Info(ctx, "inviting user", map[string]any{
 		"url":   url,
@@ -30,13 +37,14 @@ func (c *Client) InviteTeamMember(ctx context.Context, request TeamMemberInviteR
 		"role":  request.Role,
 	})
 
+	var res TeamMemberInviteResponse
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "POST",
 		url:    url,
 		body:   string(mustMarshal(request)),
-	}, nil)
-	return err
+	}, &res)
+	return res, err
 }
 
 type TeamMemberRemoveRequest struct {
@@ -93,6 +101,7 @@ type TeamMember struct {
 	Confirmed    bool          `json:"confirmed"`
 	Role         string        `json:"role"`
 	UserID       string        `json:"uid"`
+	Email        string        `json:"email"`
 	Projects     []ProjectRole `json:"projects"`
 	AccessGroups []struct {
 		ID   string `json:"id"`

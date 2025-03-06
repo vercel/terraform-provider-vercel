@@ -13,9 +13,15 @@ Provider a resource for managing a team member.
 ## Example Usage
 
 ```terraform
-resource "vercel_team_member" "example" {
+resource "vercel_team_member" "by_user_id" {
   team_id = "team_xxxxxxxxxxxxxxxxxxxxxxxx"
   user_id = "uuuuuuuuuuuuuuuuuuuuuuuuuu"
+  role    = "MEMBER"
+}
+
+resource "vercel_team_member" "by_email" {
+  team_id = "team_xxxxxxxxxxxxxxxxxxxxxxxx"
+  email   = "example@example.com"
   role    = "MEMBER"
 }
 ```
@@ -27,12 +33,13 @@ resource "vercel_team_member" "example" {
 
 - `role` (String) The role that the user should have in the project. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. Depending on your Team's plan, some of these roles may be unavailable.
 - `team_id` (String) The ID of the existing Vercel Team.
-- `user_id` (String) The ID of the user to add to the team.
 
 ### Optional
 
 - `access_groups` (Set of String) If access groups are enabled on the team, and the user is a CONTRIBUTOR, `projects`, `access_groups` or both must be specified. A set of access groups IDs that the user should be granted access to.
+- `email` (String) The email of the user to add to the team. Must specify one of user_id or email.
 - `projects` (Attributes Set) If access groups are enabled on the team, and the user is a CONTRIBUTOR, `projects`, `access_groups` or both must be specified. A set of projects that the user should be granted access to, along with their role in each project. (see [below for nested schema](#nestedatt--projects))
+- `user_id` (String) The ID of the user to add to the team. Must specify one of user_id or email.
 
 <a id="nestedatt--projects"></a>
 ### Nested Schema for `projects`
