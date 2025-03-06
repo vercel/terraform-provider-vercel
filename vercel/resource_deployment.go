@@ -270,6 +270,13 @@ func (p *ProjectSettings) fillNulls() *ProjectSettings {
 	}
 }
 
+func withSlashAtEndIfNeeded(path string) string {
+	if strings.HasSuffix(path, "/") {
+		return path
+	}
+	return fmt.Sprintf("%s/", path)
+}
+
 /*
  * The files uploaded to Vercel need to have some minor adjustments:
  * - Legacy behaviour was that any upward navigation ("../") was stripped from the
@@ -291,13 +298,13 @@ func normaliseFilename(filename string, pathPrefix types.String) string {
 		}
 	}
 
-	return strings.TrimPrefix(filename, filepath.ToSlash(pathPrefix.ValueString()))
+	return strings.TrimPrefix(filename, withSlashAtEndIfNeeded(filepath.ToSlash(pathPrefix.ValueString())))
 }
 
 // getFiles is a helper for turning the terraform deployment state into a set of client.DeploymentFile
 // structs, ready to hit the API with. It also returns a map of files by sha, which is used to quickly
 // look up any missing SHAs from the create deployment resposnse.
-func getFiles(unparsedFiles map[string]string, pathPrefix types.String) ([]client.DeploymentFile, map[string]client.DeploymentFile, error) {
+func getFiles(unparsedFiles map[string]string) ([]client.DeploymentFile, map[string]client.DeploymentFile, error) {
 	var files []client.DeploymentFile
 	filesBySha := map[string]client.DeploymentFile{}
 
@@ -313,7 +320,7 @@ func getFiles(unparsedFiles map[string]string, pathPrefix types.String) ([]clien
 		sha := sizeSha[1]
 
 		file := client.DeploymentFile{
-			File: normaliseFilename(filename, pathPrefix),
+			File: filename,
 			Sha:  sha,
 			Size: size,
 		}
@@ -491,7 +498,7 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	files, filesBySha, err := getFiles(unparsedFiles, plan.PathPrefix)
+	files, filesBySha, err := getFiles(unparsedFiles)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating deployment",
@@ -515,6 +522,10 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	target := ""
 	if plan.Production.ValueBool() {
 		target = "production"
+	}
+	// normalise filenames.
+	for i := 0; i < len(files); i++ {
+		files[i].File = normaliseFilename(files[i].File, plan.PathPrefix)
 	}
 	cdr := client.CreateDeploymentRequest{
 		Files:           files,
@@ -540,12 +551,14 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 		// Then we need to upload the files, and create the deployment again.
 		for _, sha := range mfErr.Missing {
 			f := filesBySha[sha]
-			content, err := os.ReadFile(f.File)
+
+			// Get file info to check if it's a symlink
+			fileInfo, err := os.Lstat(f.File)
 			if err != nil {
 				resp.Diagnostics.AddError(
-					"Error reading file",
+					"Error checking file",
 					fmt.Sprintf(
-						"Could not read file %s, unexpected error: %s",
+						"Could not get info for file %s, unexpected error: %s",
 						f.File,
 						err,
 					),
@@ -553,11 +566,63 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 				return
 			}
 
+			var content []byte
+
+			if fileInfo.Mode()&os.ModeSymlink != 0 {
+				// It's a symlink - read the target path
+				linkTarget, err := os.Readlink(f.File)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						"Error reading symlink",
+						fmt.Sprintf(
+							"Could not read symlink %s, unexpected error: %s",
+							f.File,
+							err,
+						),
+					)
+					return
+				}
+				// For symlinks, the content is the target path as string
+				err = r.client.CreateFile(ctx, client.CreateFileRequest{
+					Filename: normaliseFilename(f.File, plan.PathPrefix),
+					SHA:      f.Sha,
+					Content:  linkTarget, // Just use the target path as content
+					TeamID:   plan.TeamID.ValueString(),
+				})
+				if err != nil {
+					resp.Diagnostics.AddError(
+						"Error uploading symlink file",
+						fmt.Sprintf(
+							"Could not upload symlink %s, unexpected error: %s",
+							f.File,
+							err,
+						),
+					)
+					return
+				}
+			} else {
+				// Regular file - read its content
+				content, err = os.ReadFile(f.File)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						"Error reading file",
+						fmt.Sprintf(
+							"Could not read file %s, unexpected error: %s",
+							f.File,
+							err,
+						),
+					)
+					return
+				}
+			}
+
 			err = r.client.CreateFile(ctx, client.CreateFileRequest{
 				Filename: normaliseFilename(f.File, plan.PathPrefix),
 				SHA:      f.Sha,
 				Content:  string(content),
 				TeamID:   plan.TeamID.ValueString(),
+				// If we need to preserve the file mode, add it here
+				// Mode:     uint32(fileInfo.Mode()),
 			})
 			if err != nil {
 				resp.Diagnostics.AddError(

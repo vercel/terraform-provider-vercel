@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -181,8 +182,9 @@ func (d *prebuiltProjectDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	outputDir := filepath.Join(config.Path.ValueString(), ".vercel", "output")
-	validatePrebuiltOutput(&resp.Diagnostics, config.Path.ValueString())
+	projectPath := config.Path.ValueString()
+	outputDir := filepath.Join(projectPath, ".vercel", "output")
+	validatePrebuiltOutput(&resp.Diagnostics, projectPath)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -200,71 +202,46 @@ func (d *prebuiltProjectDataSource) Read(ctx context.Context, req datasource.Rea
 				return fmt.Errorf("could not get file info for %s: %w", path, err)
 			}
 
-			// If it's a symlink, resolve it
-			if info.Mode()&os.ModeSymlink != 0 {
-				dest, err := os.Readlink(path)
+			// Handle directories
+			if info.IsDir() {
+				return nil
+			}
+
+			// Check if it's a symlink using Lstat
+			fileInfo, err := os.Lstat(path)
+			if err != nil {
+				return fmt.Errorf("could not lstat file %s: %w", path, err)
+			}
+
+			if fileInfo.Mode()&os.ModeSymlink != 0 {
+				// It's a symlink - read the target path
+				linkTarget, err := os.Readlink(path)
 				if err != nil {
 					return fmt.Errorf("could not read symlink %s: %w", path, err)
 				}
 
-				// If the symlink is relative, make it absolute
-				if !filepath.IsAbs(dest) {
-					dest = filepath.Join(filepath.Dir(path), dest)
-				}
-
-				destInfo, err := os.Stat(dest)
-				if err != nil {
-					return fmt.Errorf("could not stat symlink destination %s: %w", dest, err)
-				}
-
-				if destInfo.IsDir() {
-					return filepath.WalkDir(dest, func(subPath string, subD fs.DirEntry, subErr error) error {
-						if subErr != nil {
-							return subErr
-						}
-						if subD.IsDir() {
-							return nil
-						}
-						content, err := os.ReadFile(subPath)
-						if err != nil {
-							return fmt.Errorf("could not read file %s: %w", subPath, err)
-						}
-						rawSha := sha1.Sum(content)
-						sha := hex.EncodeToString(rawSha[:])
-
-						// Get the subpath relative to the symlink's destination directory
-						subRelPath, err := filepath.Rel(dest, subPath)
-						if err != nil {
-							return fmt.Errorf("could not get relative path: %w", err)
-						}
-
-						// Join it with the original symlink path
-						fullPath := filepath.Join(path, subRelPath)
-						config.Output[fullPath] = fmt.Sprintf("%d~%s", len(content), sha)
-						return nil
-					})
-				}
-
-				// If it's a symlink to a file, read that file
-				content, err := os.ReadFile(dest)
-				if err != nil {
-					return fmt.Errorf("could not read symlinked file %s: %w", dest, err)
-				}
-				rawSha := sha1.Sum(content)
+				// Hash the link target string (just like Vercel does)
+				targetData := []byte(linkTarget)
+				rawSha := sha1.Sum(targetData)
 				sha := hex.EncodeToString(rawSha[:])
-				config.Output[path] = fmt.Sprintf("%d~%s", len(content), sha)
-				return nil
-			}
-
-			// Handle regular files (non-symlinks)
-			if !info.IsDir() {
+				config.Output[path] = fmt.Sprintf("%d~%s", len(targetData), sha)
+			} else {
+				// Regular file - read and hash its content
 				content, err := os.ReadFile(path)
 				if err != nil {
 					return fmt.Errorf("could not read file %s: %w", path, err)
 				}
+
 				rawSha := sha1.Sum(content)
 				sha := hex.EncodeToString(rawSha[:])
 				config.Output[path] = fmt.Sprintf("%d~%s", len(content), sha)
+			}
+
+			// If it's a .vc-config.json file, process it immediately
+			if filepath.Base(path) == ".vc-config.json" {
+				if err := processVCConfigFile(path, projectPath, &config); err != nil {
+					return fmt.Errorf("error processing .vc-config.json at %s: %w", path, err)
+				}
 			}
 
 			return nil
@@ -287,4 +264,71 @@ func (d *prebuiltProjectDataSource) Read(ctx context.Context, req datasource.Rea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+// processVCConfigFile reads the .vc-config.json file and adds all files from filePathMap to the output
+func processVCConfigFile(configPath, projectPath string, config *PrebuiltProjectData) error {
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("could not read .vc-config.json file: %w", err)
+	}
+
+	var vcConfig struct {
+		FilePathMap map[string]string `json:"filePathMap"`
+	}
+
+	if err := json.Unmarshal(content, &vcConfig); err != nil {
+		return fmt.Errorf("could not parse .vc-config.json: %w", err)
+	}
+
+	// Process each file in the filePathMap
+	for filePath := range vcConfig.FilePathMap {
+		// Don't process if we've already added this file
+		if _, exists := config.Output[filePath]; exists {
+			continue
+		}
+
+		// Make sure the path is absolute relative to the project
+		absPath := filePath
+		if !filepath.IsAbs(absPath) {
+			absPath = filepath.Join(projectPath, absPath)
+		}
+
+		// Check if file exists
+		fileInfo, err := os.Lstat(absPath) // Use Lstat to not follow symlinks
+		if err != nil {
+			return fmt.Errorf("could not stat file %s referenced in filePathMap: %w", absPath, err)
+		}
+
+		// Skip directories
+		if fileInfo.IsDir() {
+			continue
+		}
+
+		if fileInfo.Mode()&os.ModeSymlink != 0 {
+			// It's a symlink - read the target path
+			linkTarget, err := os.Readlink(absPath)
+			if err != nil {
+				return fmt.Errorf("could not read symlink %s: %w", absPath, err)
+			}
+
+			// Hash the link target string (just like Vercel does)
+			targetData := []byte(linkTarget)
+			rawSha := sha1.Sum(targetData)
+			sha := hex.EncodeToString(rawSha[:])
+			config.Output[filePath] = fmt.Sprintf("%d~%s", len(targetData), sha)
+		} else {
+			// Regular file - read and hash its content
+			fileContent, err := os.ReadFile(absPath)
+			if err != nil {
+				return fmt.Errorf("could not read file %s referenced in filePathMap: %w", absPath, err)
+			}
+
+			rawSha := sha1.Sum(fileContent)
+			sha := hex.EncodeToString(rawSha[:])
+			config.Output[filePath] = fmt.Sprintf("%d~%s", len(fileContent), sha)
+		}
+	}
+
+	return nil
 }
