@@ -21,7 +21,6 @@ func getTeamMemberImportID(n string) resource.ImportStateIdFunc {
 }
 
 func TestAcc_TeamMemberResource(t *testing.T) {
-	t.Parallel()
 	randomSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
