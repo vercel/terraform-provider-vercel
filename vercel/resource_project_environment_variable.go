@@ -341,7 +341,7 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 
 	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
 
-	tflog.Info(ctx, "created project environment variable", map[string]interface{}{
+	tflog.Info(ctx, "created project environment variable", map[string]any{
 		"id":         result.ID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
@@ -383,7 +383,7 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 	}
 
 	result := convertResponseToProjectEnvironmentVariable(out, state.ProjectID, state.Value)
-	tflog.Info(ctx, "read project environment variable", map[string]interface{}{
+	tflog.Info(ctx, "read project environment variable", map[string]any{
 		"id":         result.ID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
@@ -421,7 +421,7 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 
 	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
 
-	tflog.Info(ctx, "updated project environment variable", map[string]interface{}{
+	tflog.Info(ctx, "updated project environment variable", map[string]any{
 		"id":         result.ID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
@@ -459,7 +459,7 @@ func (r *projectEnvironmentVariableResource) Delete(ctx context.Context, req res
 		return
 	}
 
-	tflog.Info(ctx, "deleted project environment variable", map[string]interface{}{
+	tflog.Info(ctx, "deleted project environment variable", map[string]any{
 		"id":         state.ID.ValueString(),
 		"team_id":    state.TeamID.ValueString(),
 		"project_id": state.ProjectID.ValueString(),
@@ -492,7 +492,7 @@ func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, re
 	}
 
 	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID), types.StringNull())
-	tflog.Info(ctx, "imported project environment variable", map[string]interface{}{
+	tflog.Info(ctx, "imported project environment variable", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 		"env_id":     result.ID.ValueString(),

@@ -33,7 +33,7 @@ type MicrofrontendGroupMembershipsResponseAPI struct {
 }
 
 func (c *Client) GetMicrofrontendGroupMembership(ctx context.Context, TeamID string, GroupID string, ProjectID string) (r MicrofrontendGroupMembership, err error) {
-	tflog.Info(ctx, "getting microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "getting microfrontend group", map[string]any{
 		"project_id": ProjectID,
 		"group_id":   GroupID,
 		"team_id":    c.teamID(TeamID),
@@ -42,7 +42,7 @@ func (c *Client) GetMicrofrontendGroupMembership(ctx context.Context, TeamID str
 	if err != nil {
 		return r, err
 	}
-	tflog.Info(ctx, "getting microfrontend group membership", map[string]interface{}{
+	tflog.Info(ctx, "getting microfrontend group membership", map[string]any{
 		"project_id": ProjectID,
 		"group":      group,
 	})
@@ -50,7 +50,7 @@ func (c *Client) GetMicrofrontendGroupMembership(ctx context.Context, TeamID str
 }
 
 func (c *Client) AddOrUpdateMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership) (r MicrofrontendGroupMembership, err error) {
-	tflog.Info(ctx, "adding / updating microfrontend project to group", map[string]interface{}{
+	tflog.Info(ctx, "adding / updating microfrontend project to group", map[string]any{
 		"is_default_app": request.IsDefaultApp,
 		"project_id":     request.ProjectID,
 		"group_id":       request.MicrofrontendGroupID,
@@ -71,7 +71,7 @@ func (c *Client) AddOrUpdateMicrofrontendGroupMembership(ctx context.Context, re
 }
 
 func (c *Client) RemoveMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership) (r MicrofrontendGroupMembership, err error) {
-	tflog.Info(ctx, "removing microfrontend project from group", map[string]interface{}{
+	tflog.Info(ctx, "removing microfrontend project from group", map[string]any{
 		"project_id": request.ProjectID,
 		"group_id":   request.MicrofrontendGroupID,
 		"team_id":    c.teamID(request.TeamID),
@@ -111,7 +111,7 @@ func (c *Client) PatchMicrofrontendGroupMembership(ctx context.Context, request 
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 
-	tflog.Info(ctx, "updating microfrontend group membership", map[string]interface{}{
+	tflog.Info(ctx, "updating microfrontend group membership", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})

@@ -35,7 +35,7 @@ func (c *Client) CreateAccessGroupProject(ctx context.Context, req CreateAccessG
 			ProjectID: req.ProjectID,
 		},
 	))
-	tflog.Info(ctx, "creating access group project", map[string]interface{}{
+	tflog.Info(ctx, "creating access group project", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -63,7 +63,7 @@ func (c *Client) GetAccessGroupProject(ctx context.Context, req GetAccessGroupPr
 	if c.teamID(req.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
 	}
-	tflog.Info(ctx, "getting access group project", map[string]interface{}{
+	tflog.Info(ctx, "getting access group project", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -98,7 +98,7 @@ func (c *Client) UpdateAccessGroupProject(ctx context.Context, req UpdateAccessG
 			Role: req.Role,
 		},
 	))
-	tflog.Info(ctx, "updating access group project", map[string]interface{}{
+	tflog.Info(ctx, "updating access group project", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -126,7 +126,7 @@ func (c *Client) DeleteAccessGroupProject(ctx context.Context, req DeleteAccessG
 	if c.teamID(req.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
 	}
-	tflog.Info(ctx, "deleting access group project", map[string]interface{}{
+	tflog.Info(ctx, "deleting access group project", map[string]any{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{

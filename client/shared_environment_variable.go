@@ -65,7 +65,7 @@ func (c *Client) CreateSharedEnvironmentVariable(ctx context.Context, request Cr
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariable))
-	tflog.Info(ctx, "creating shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "creating shared environment variable", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -109,7 +109,7 @@ func (c *Client) DeleteSharedEnvironmentVariable(ctx context.Context, teamID, va
 			variableID,
 		},
 	}))
-	tflog.Info(ctx, "deleting shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "deleting shared environment variable", map[string]any{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{
@@ -126,7 +126,7 @@ func (c *Client) GetSharedEnvironmentVariable(ctx context.Context, teamID, envID
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "getting shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "getting shared environment variable", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -145,7 +145,7 @@ func (c *Client) ListSharedEnvironmentVariables(ctx context.Context, teamID stri
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "listing shared environment variables", map[string]interface{}{
+	tflog.Info(ctx, "listing shared environment variables", map[string]any{
 		"url": url,
 	})
 	res := struct {
@@ -192,7 +192,7 @@ func (c *Client) UpdateSharedEnvironmentVariable(ctx context.Context, request Up
 		},
 	}))
 
-	tflog.Info(ctx, "updating shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "updating shared environment variable", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})

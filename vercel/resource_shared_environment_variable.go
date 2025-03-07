@@ -304,7 +304,7 @@ func (r *sharedEnvironmentVariableResource) Create(ctx context.Context, req reso
 
 	result := convertResponseToSharedEnvironmentVariable(response, plan.Value)
 
-	tflog.Info(ctx, "created shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "created shared environment variable", map[string]any{
 		"id":      result.ID.ValueString(),
 		"team_id": result.TeamID.ValueString(),
 	})
@@ -344,7 +344,7 @@ func (r *sharedEnvironmentVariableResource) Read(ctx context.Context, req resour
 	}
 
 	result := convertResponseToSharedEnvironmentVariable(out, state.Value)
-	tflog.Info(ctx, "read shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "read shared environment variable", map[string]any{
 		"id":      result.ID.ValueString(),
 		"team_id": result.TeamID.ValueString(),
 	})
@@ -379,7 +379,7 @@ func (r *sharedEnvironmentVariableResource) Update(ctx context.Context, req reso
 
 	result := convertResponseToSharedEnvironmentVariable(response, plan.Value)
 
-	tflog.Info(ctx, "updated shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "updated shared environment variable", map[string]any{
 		"id":      result.ID.ValueString(),
 		"team_id": result.TeamID.ValueString(),
 	})
@@ -416,7 +416,7 @@ func (r *sharedEnvironmentVariableResource) Delete(ctx context.Context, req reso
 		return
 	}
 
-	tflog.Info(ctx, "deleted shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "deleted shared environment variable", map[string]any{
 		"id":      state.ID.ValueString(),
 		"team_id": state.TeamID.ValueString(),
 	})
@@ -447,7 +447,7 @@ func (r *sharedEnvironmentVariableResource) ImportState(ctx context.Context, req
 	}
 
 	result := convertResponseToSharedEnvironmentVariable(out, types.StringNull())
-	tflog.Info(ctx, "imported shared environment variable", map[string]interface{}{
+	tflog.Info(ctx, "imported shared environment variable", map[string]any{
 		"team_id": result.TeamID.ValueString(),
 		"env_id":  result.ID.ValueString(),
 	})

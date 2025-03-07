@@ -28,7 +28,7 @@ func (c *Client) CreateDeployHook(ctx context.Context, request CreateDeployHookR
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "creating deploy hook", map[string]interface{}{
+	tflog.Info(ctx, "creating deploy hook", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -67,7 +67,7 @@ func (c *Client) DeleteDeployHook(ctx context.Context, request DeleteDeployHookR
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "creating deploy hook", map[string]interface{}{
+	tflog.Info(ctx, "creating deploy hook", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})

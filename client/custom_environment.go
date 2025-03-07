@@ -35,7 +35,7 @@ func (c *Client) CreateCustomEnvironment(ctx context.Context, request CreateCust
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "creating custom environment", map[string]interface{}{
+	tflog.Info(ctx, "creating custom environment", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -64,7 +64,7 @@ func (c *Client) GetCustomEnvironment(ctx context.Context, request GetCustomEnvi
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
-	tflog.Info(ctx, "getting custom environment", map[string]interface{}{
+	tflog.Info(ctx, "getting custom environment", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -96,7 +96,7 @@ func (c *Client) UpdateCustomEnvironment(ctx context.Context, request UpdateCust
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "updating custom environment", map[string]interface{}{
+	tflog.Info(ctx, "updating custom environment", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -125,7 +125,7 @@ func (c *Client) DeleteCustomEnvironment(ctx context.Context, request DeleteCust
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
-	tflog.Info(ctx, "deleting custom environment", map[string]interface{}{
+	tflog.Info(ctx, "deleting custom environment", map[string]any{
 		"url": url,
 	})
 	err := c.doRequest(clientRequest{

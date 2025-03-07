@@ -120,7 +120,7 @@ func (d *customEnvironmentDataSource) Read(ctx context.Context, req datasource.R
 		)
 		return
 	}
-	tflog.Trace(ctx, "read custom environment", map[string]interface{}{
+	tflog.Trace(ctx, "read custom environment", map[string]any{
 		"team_id":               config.TeamID.ValueString(),
 		"project_id":            config.ProjectID.ValueString(),
 		"custom_environment_id": res.ID,

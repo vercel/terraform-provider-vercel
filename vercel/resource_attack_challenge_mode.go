@@ -127,7 +127,7 @@ func (r *attackChallengeModeResource) Create(ctx context.Context, req resource.C
 	}
 
 	result := responseToAttackChallengeMode(out)
-	tflog.Info(ctx, "created attack challenge mode", map[string]interface{}{
+	tflog.Info(ctx, "created attack challenge mode", map[string]any{
 		"team_id":    plan.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
@@ -165,7 +165,7 @@ func (r *attackChallengeModeResource) Read(ctx context.Context, req resource.Rea
 	}
 
 	result := responseToAttackChallengeMode(out)
-	tflog.Info(ctx, "read attack challenge mode", map[string]interface{}{
+	tflog.Info(ctx, "read attack challenge mode", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
@@ -208,7 +208,7 @@ func (r *attackChallengeModeResource) Update(ctx context.Context, req resource.U
 	}
 
 	result := responseToAttackChallengeMode(out)
-	tflog.Trace(ctx, "update attack challenge mode", map[string]interface{}{
+	tflog.Trace(ctx, "update attack challenge mode", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
@@ -250,7 +250,7 @@ func (r *attackChallengeModeResource) Delete(ctx context.Context, req resource.D
 		return
 	}
 
-	tflog.Info(ctx, "deleted attack challenge mode", map[string]interface{}{
+	tflog.Info(ctx, "deleted attack challenge mode", map[string]any{
 		"team_id":    state.TeamID.ValueString(),
 		"project_id": state.ProjectID.ValueString(),
 	})
@@ -283,7 +283,7 @@ func (r *attackChallengeModeResource) ImportState(ctx context.Context, req resou
 	}
 
 	result := responseToAttackChallengeMode(out)
-	tflog.Info(ctx, "import attack challenge mode", map[string]interface{}{
+	tflog.Info(ctx, "import attack challenge mode", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})

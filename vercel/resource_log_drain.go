@@ -266,7 +266,7 @@ func (r *logDrainResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "created Log Drain", map[string]interface{}{
+	tflog.Info(ctx, "created Log Drain", map[string]any{
 		"team_id":      plan.TeamID.ValueString(),
 		"log_drain_id": result.ID.ValueString(),
 	})
@@ -308,7 +308,7 @@ func (r *logDrainResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "read log drain", map[string]interface{}{
+	tflog.Info(ctx, "read log drain", map[string]any{
 		"team_id":      result.TeamID.ValueString(),
 		"log_drain_id": result.ID.ValueString(),
 	})
@@ -352,7 +352,7 @@ func (r *logDrainResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	tflog.Info(ctx, "deleted Log Drain", map[string]interface{}{
+	tflog.Info(ctx, "deleted Log Drain", map[string]any{
 		"team_id":      state.TeamID.ValueString(),
 		"log_drain_id": state.ID.ValueString(),
 	})
@@ -389,7 +389,7 @@ func (r *logDrainResource) ImportState(ctx context.Context, req resource.ImportS
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "import log drain", map[string]interface{}{
+	tflog.Info(ctx, "import log drain", map[string]any{
 		"team_id":      result.TeamID.ValueString(),
 		"log_drain_id": result.ID.ValueString(),
 	})

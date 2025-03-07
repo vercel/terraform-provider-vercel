@@ -182,7 +182,7 @@ func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "created webhook", map[string]interface{}{
+	tflog.Info(ctx, "created webhook", map[string]any{
 		"team_id":    plan.TeamID.ValueString(),
 		"webhook_id": result.ID.ValueString(),
 	})
@@ -228,7 +228,7 @@ func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "read webhook", map[string]interface{}{
+	tflog.Info(ctx, "read webhook", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"webhook_id": result.ID.ValueString(),
 	})
@@ -273,7 +273,7 @@ func (r *webhookResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	tflog.Info(ctx, "deleted Webhook", map[string]interface{}{
+	tflog.Info(ctx, "deleted Webhook", map[string]any{
 		"team_id":    state.TeamID.ValueString(),
 		"webhook_id": state.ID.ValueString(),
 	})

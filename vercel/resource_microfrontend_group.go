@@ -56,7 +56,7 @@ func (r *microfrontendGroupResource) Schema(_ context.Context, req resource.Sche
 		Description: `
 Provides a Microfrontend Group resource.
 
-A Microfrontend Group is a definition of a microfrontend belonging to a Vercel Team. 
+A Microfrontend Group is a definition of a microfrontend belonging to a Vercel Team.
 `,
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
@@ -140,7 +140,7 @@ func (r *microfrontendGroupResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	tflog.Info(ctx, "creating microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "creating microfrontend group", map[string]any{
 		"team_id": plan.TeamID.ValueString(),
 		"name":    plan.Name.ValueString(),
 	})
@@ -154,7 +154,7 @@ func (r *microfrontendGroupResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	tflog.Info(ctx, "creating default group membership", map[string]interface{}{
+	tflog.Info(ctx, "creating default group membership", map[string]any{
 		"team_id":     plan.TeamID.ValueString(),
 		"name":        plan.Name.ValueString(),
 		"default_app": plan.DefaultApp.ProjectID.ValueString(),
@@ -193,7 +193,7 @@ func (r *microfrontendGroupResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	result := convertResponseToMicrofrontendGroup(group)
-	tflog.Info(ctx, "created microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "created microfrontend group", map[string]any{
 		"team_id":     result.TeamID.ValueString(),
 		"group_id":    result.ID.ValueString(),
 		"slug":        result.Slug.ValueString(),
@@ -234,7 +234,7 @@ func (r *microfrontendGroupResource) Read(ctx context.Context, req resource.Read
 	}
 
 	result := convertResponseToMicrofrontendGroup(out)
-	tflog.Info(ctx, "read microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "read microfrontend group", map[string]any{
 		"defaultApp": result.DefaultApp.ProjectID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
 		"group_id":   result.ID.ValueString(),
@@ -286,7 +286,7 @@ func (r *microfrontendGroupResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	tflog.Info(ctx, "updated microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "updated microfrontend group", map[string]any{
 		"team_id":  out.TeamID,
 		"group_id": out.ID,
 		"name":     out.Name,
@@ -310,7 +310,7 @@ func (r *microfrontendGroupResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	tflog.Info(ctx, "deleting microfrontend default app group membership", map[string]interface{}{
+	tflog.Info(ctx, "deleting microfrontend default app group membership", map[string]any{
 		"group_id":   state.ID.ValueString(),
 		"project_id": state.DefaultApp.ProjectID.ValueString(),
 		"team_id":    state.TeamID.ValueString(),
@@ -335,7 +335,7 @@ func (r *microfrontendGroupResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	tflog.Info(ctx, "deleting microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "deleting microfrontend group", map[string]any{
 		"group_id": state.ID.ValueString(),
 	})
 
@@ -387,7 +387,7 @@ func (r *microfrontendGroupResource) ImportState(ctx context.Context, req resour
 	}
 
 	result := convertResponseToMicrofrontendGroup(out)
-	tflog.Info(ctx, "import microfrontend group", map[string]interface{}{
+	tflog.Info(ctx, "import microfrontend group", map[string]any{
 		"defaultApp": result.DefaultApp.ProjectID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
 		"group_id":   result.ID.ValueString(),

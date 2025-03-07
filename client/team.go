@@ -107,7 +107,7 @@ type Team struct {
 // GetTeam returns information about an existing team within vercel.
 func (c *Client) GetTeam(ctx context.Context, idOrSlug string) (t Team, err error) {
 	url := fmt.Sprintf("%s/v2/teams/%s", c.baseURL, idOrSlug)
-	tflog.Info(ctx, "getting team", map[string]interface{}{
+	tflog.Info(ctx, "getting team", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -144,7 +144,7 @@ type UpdateTeamRequest struct {
 func (c *Client) UpdateTeam(ctx context.Context, request UpdateTeamRequest) (t Team, err error) {
 	url := fmt.Sprintf("%s/v2/teams/%s", c.baseURL, request.TeamID)
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "updating team", map[string]interface{}{
+	tflog.Info(ctx, "updating team", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})

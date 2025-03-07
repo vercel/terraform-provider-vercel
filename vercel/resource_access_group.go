@@ -111,7 +111,7 @@ func (r *accessGroupResource) Create(ctx context.Context, req resource.CreateReq
 		TeamID: types.StringValue(out.TeamID),
 	}
 
-	tflog.Info(ctx, "created Access Group", map[string]interface{}{
+	tflog.Info(ctx, "created Access Group", map[string]any{
 		"team_id": result.TeamID.ValueString(),
 		"id":      result.ID.ValueString(),
 	})
@@ -159,7 +159,7 @@ func (r *accessGroupResource) Read(ctx context.Context, req resource.ReadRequest
 		Name:   types.StringValue(out.Name),
 	}
 
-	tflog.Info(ctx, "read Access Group", map[string]interface{}{
+	tflog.Info(ctx, "read Access Group", map[string]any{
 		"team_id": result.TeamID.ValueString(),
 		"id":      result.ID.ValueString(),
 		"name":    result.Name.ValueString(),
@@ -209,7 +209,7 @@ func (r *accessGroupResource) Update(ctx context.Context, req resource.UpdateReq
 		Name:   types.StringValue(out.Name),
 	}
 
-	tflog.Trace(ctx, "update Access Group", map[string]interface{}{
+	tflog.Trace(ctx, "update Access Group", map[string]any{
 		"team_id": result.TeamID.ValueString(),
 		"id":      result.ID.ValueString(),
 	})
@@ -251,7 +251,7 @@ func (r *accessGroupResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	tflog.Info(ctx, "deleted Access Group", map[string]interface{}{
+	tflog.Info(ctx, "deleted Access Group", map[string]any{
 		"team_id": state.TeamID.ValueString(),
 		"id":      state.ID.ValueString(),
 	})
@@ -294,7 +294,7 @@ func (r *accessGroupResource) ImportState(ctx context.Context, req resource.Impo
 		Name:   types.StringValue(out.Name),
 	}
 
-	tflog.Info(ctx, "import Access Group", map[string]interface{}{
+	tflog.Info(ctx, "import Access Group", map[string]any{
 		"team_id": result.TeamID.ValueString(),
 		"id":      result.ID.ValueString(),
 		"name":    result.Name.ValueString(),

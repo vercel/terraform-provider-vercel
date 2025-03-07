@@ -21,7 +21,6 @@ func getTeamMemberImportID(n string) resource.ImportStateIdFunc {
 }
 
 func TestAcc_TeamMemberResource(t *testing.T) {
-	t.Parallel()
 	randomSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -57,20 +56,20 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 			{
 				Config: testAccTeamMemberResourceConfigWithProjects(randomSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("vercel_team_member.test_with_projects", "team_id"),
-					resource.TestCheckResourceAttrSet("vercel_team_member.test_with_projects", "user_id"),
-					resource.TestCheckResourceAttr("vercel_team_member.test_with_projects", "role", "CONTRIBUTOR"),
-					resource.TestCheckResourceAttr("vercel_team_member.test_with_projects", "projects.#", "1"),
+					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
+					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
+					resource.TestCheckResourceAttr("vercel_team_member.test", "role", "CONTRIBUTOR"),
+					resource.TestCheckResourceAttr("vercel_team_member.test", "projects.#", "1"),
 				),
 			},
 			// Test with access groups
 			{
 				Config: testAccTeamMemberResourceConfigWithAccessGroups(randomSuffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("vercel_team_member.test_with_access_groups", "team_id"),
-					resource.TestCheckResourceAttrSet("vercel_team_member.test_with_access_groups", "user_id"),
-					resource.TestCheckResourceAttr("vercel_team_member.test_with_access_groups", "role", "CONTRIBUTOR"),
-					resource.TestCheckResourceAttr("vercel_team_member.test_with_access_groups", "access_groups.#", "1"),
+					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
+					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
+					resource.TestCheckResourceAttr("vercel_team_member.test", "role", "CONTRIBUTOR"),
+					resource.TestCheckResourceAttr("vercel_team_member.test", "access_groups.#", "1"),
 				),
 			},
 		},
@@ -94,7 +93,7 @@ resource "vercel_project" "test" {
   %[2]s
 }
 
-resource "vercel_team_member" "test_with_projects" {
+resource "vercel_team_member" "test" {
   %[2]s
   user_id = "%s"
   role    = "CONTRIBUTOR"
@@ -113,7 +112,7 @@ resource "vercel_access_group" "test" {
     name = "test-acc-access-group-%[3]s"
 }
 
-resource "vercel_team_member" "test_with_access_groups" {
+resource "vercel_team_member" "test" {
   %[1]s
   user_id = "%[2]s"
   role    = "CONTRIBUTOR"

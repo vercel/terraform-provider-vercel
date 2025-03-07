@@ -29,7 +29,7 @@ func (c *Client) CreateWebhook(ctx context.Context, request CreateWebhookRequest
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "creating webhook", map[string]interface{}{
+	tflog.Info(ctx, "creating webhook", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -47,7 +47,7 @@ func (c *Client) DeleteWebhook(ctx context.Context, id, teamID string) error {
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "deleting webhook", map[string]interface{}{
+	tflog.Info(ctx, "deleting webhook", map[string]any{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{
@@ -62,7 +62,7 @@ func (c *Client) GetWebhook(ctx context.Context, id, teamID string) (w Webhook, 
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "getting webhook", map[string]interface{}{
+	tflog.Info(ctx, "getting webhook", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

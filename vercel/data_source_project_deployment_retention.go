@@ -123,7 +123,7 @@ func (r *projectDeploymentRetentionDataSource) Read(ctx context.Context, req dat
 	}
 
 	result := convertResponseToProjectDeploymentRetention(out, config.ProjectID, config.TeamID)
-	tflog.Info(ctx, "read project deployment retention", map[string]interface{}{
+	tflog.Info(ctx, "read project deployment retention", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})

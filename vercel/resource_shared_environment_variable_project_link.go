@@ -126,7 +126,7 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Create(ctx context.Contex
 		ProjectID:                   plan.ProjectID,
 	}
 
-	tflog.Info(ctx, "linked shared environment variable to project", map[string]interface{}{
+	tflog.Info(ctx, "linked shared environment variable to project", map[string]any{
 		"team_id":                        result.TeamID.ValueString(),
 		"shared_environment_variable_id": result.SharedEnvironmentVariableID.ValueString(),
 		"project_id":                     result.ProjectID.ValueString(),
@@ -157,7 +157,7 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Read(ctx context.Context,
 	}
 
 	if !slices.Contains(response.ProjectIDs, state.ProjectID.ValueString()) {
-		tflog.Info(ctx, "failed to read shared environment variable for linked project", map[string]interface{}{
+		tflog.Info(ctx, "failed to read shared environment variable for linked project", map[string]any{
 			"team_id":                        state.TeamID.ValueString(),
 			"shared_environment_variable_id": state.SharedEnvironmentVariableID.ValueString(),
 			"project_id":                     state.ProjectID.ValueString(),
@@ -173,7 +173,7 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Read(ctx context.Context,
 		SharedEnvironmentVariableID: types.StringValue(response.ID),
 		ProjectID:                   state.ProjectID,
 	}
-	tflog.Info(ctx, "read shared environment variable for linked project", map[string]interface{}{
+	tflog.Info(ctx, "read shared environment variable for linked project", map[string]any{
 		"team_id":                        result.TeamID.ValueString(),
 		"shared_environment_variable_id": result.SharedEnvironmentVariableID.ValueString(),
 		"project_id":                     result.ProjectID.ValueString(),
@@ -214,7 +214,7 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Delete(ctx context.Contex
 		ProjectID:                   plan.ProjectID,
 	}
 
-	tflog.Info(ctx, "project unlinked from shared environment", map[string]interface{}{
+	tflog.Info(ctx, "project unlinked from shared environment", map[string]any{
 		"team_id":                        result.TeamID.ValueString(),
 		"shared_environment_variable_id": result.SharedEnvironmentVariableID.ValueString(),
 		"project_id":                     result.ProjectID.ValueString(),

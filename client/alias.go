@@ -27,7 +27,7 @@ func (c *Client) CreateAlias(ctx context.Context, request CreateAliasRequest, de
 	}
 	payload := string(mustMarshal(request))
 
-	tflog.Info(ctx, "creating alias", map[string]interface{}{
+	tflog.Info(ctx, "creating alias", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -62,7 +62,7 @@ func (c *Client) DeleteAlias(ctx context.Context, aliasUID string, teamID string
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "deleting alias", map[string]interface{}{
+	tflog.Info(ctx, "deleting alias", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -88,7 +88,7 @@ func (c *Client) GetAlias(ctx context.Context, alias, teamID string) (r AliasRes
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "getting alias", map[string]interface{}{
+	tflog.Info(ctx, "getting alias", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{

@@ -242,7 +242,7 @@ func (r *customEnvironmentResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	tflog.Info(ctx, "created custom environment", map[string]interface{}{
+	tflog.Info(ctx, "created custom environment", map[string]any{
 		"team_id":               plan.TeamID.ValueString(),
 		"project_id":            plan.ProjectID.ValueString(),
 		"custom_environment_id": res.ID,
@@ -276,7 +276,7 @@ func (r *customEnvironmentResource) Read(ctx context.Context, req resource.ReadR
 		)
 		return
 	}
-	tflog.Trace(ctx, "read custom environment", map[string]interface{}{
+	tflog.Trace(ctx, "read custom environment", map[string]any{
 		"team_id":               state.TeamID.ValueString(),
 		"project_id":            state.ProjectID.ValueString(),
 		"custom_environment_id": res.ID,
@@ -309,7 +309,7 @@ func (r *customEnvironmentResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	tflog.Trace(ctx, "created custom environment", map[string]interface{}{
+	tflog.Trace(ctx, "created custom environment", map[string]any{
 		"team_id":               plan.TeamID.ValueString(),
 		"project_id":            plan.ProjectID.ValueString(),
 		"custom_environment_id": res.ID,
@@ -368,7 +368,7 @@ func (r *customEnvironmentResource) ImportState(ctx context.Context, req resourc
 		)
 		return
 	}
-	tflog.Trace(ctx, "import custom environment", map[string]interface{}{
+	tflog.Trace(ctx, "import custom environment", map[string]any{
 		"team_id":               teamID,
 		"project_id":            projectID,
 		"custom_environment_id": res.ID,

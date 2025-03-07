@@ -18,7 +18,7 @@ func (c *Client) GetIntegrationProjectAccess(ctx context.Context, integrationID,
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "getting integration project access", map[string]interface{}{
+	tflog.Info(ctx, "getting integration project access", map[string]any{
 		"url": url,
 	})
 
@@ -50,7 +50,7 @@ func (c *Client) GrantIntegrationProjectAccess(ctx context.Context, integrationI
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "getting integration project access", map[string]interface{}{
+	tflog.Info(ctx, "getting integration project access", map[string]any{
 		"url": url,
 	})
 
@@ -82,7 +82,7 @@ func (c *Client) RevokeIntegrationProjectAccess(ctx context.Context, integration
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "getting integration project access", map[string]interface{}{
+	tflog.Info(ctx, "getting integration project access", map[string]any{
 		"url": url,
 	})
 

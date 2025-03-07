@@ -709,7 +709,7 @@ func fromCondition(condition client.Condition, ref Condition) (Condition, error)
 		Values: types.ListNull(types.StringType),
 	}
 	if isListOp(condition.Op) {
-		if valueList, ok := condition.Value.([]interface{}); ok {
+		if valueList, ok := condition.Value.([]any); ok {
 			values, diags := basetypes.NewListValueFrom(context.Background(), types.StringType, valueList)
 			if diags.HasError() {
 				return c, fmt.Errorf("error converting values: %s - %s", diags[0].Summary(), diags[0].Detail())
@@ -1016,7 +1016,7 @@ func (r *firewallConfigResource) Delete(ctx context.Context, req resource.Delete
 		resp.Diagnostics.AddError("failed to delete firewall config", err.Error())
 		return
 	}
-	tflog.Info(ctx, "deleted firewall config", map[string]interface{}{
+	tflog.Info(ctx, "deleted firewall config", map[string]any{
 		"project_id": state.ProjectID.ValueString(),
 		"team_id":    state.TeamID.ValueString(),
 	})
@@ -1043,7 +1043,7 @@ func (r *firewallConfigResource) ImportState(ctx context.Context, req resource.I
 		resp.Diagnostics.AddError("failed to read firewall config", err.Error())
 		return
 	}
-	tflog.Info(ctx, "imported firewall config", map[string]interface{}{
+	tflog.Info(ctx, "imported firewall config", map[string]any{
 		"team_id":    conf.TeamID.ValueString(),
 		"project_id": conf.ProjectID.ValueString(),
 	})

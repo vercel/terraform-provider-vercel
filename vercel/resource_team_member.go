@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -58,6 +59,20 @@ func (r *teamMemberResource) Configure(ctx context.Context, req resource.Configu
 	r.client = client
 }
 
+func (r *teamMemberResource) userIsUnconfirmed(ctx context.Context, req planmodifier.SetRequest, resp *setplanmodifier.RequiresReplaceIfFuncResponse) {
+	if req.PlanValue.IsNull() || req.PlanValue.IsUnknown() {
+		return
+	}
+	var state TeamMember
+	diags := req.Plan.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.RequiresReplace = !state.Confirmed.ValueBool()
+}
+
 func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Provider a resource for managing a team member.",
@@ -71,11 +86,33 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				},
 			},
 			"user_id": schema.StringAttribute{
-				Description: "The ID of the user to add to the team.",
-				Required:    true,
+				Description: "The ID of the user to add to the team. Must specify one of user_id or email.",
+				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(
+						path.MatchRoot("user_id"),
+						path.MatchRoot("email"),
+					),
+				},
+			},
+			"email": schema.StringAttribute{
+				Description: "The email of the user to add to the team. Must specify one of user_id or email.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(
+						path.MatchRoot("user_id"),
+						path.MatchRoot("email"),
+					),
 				},
 			},
 			"role": schema.StringAttribute{
@@ -88,9 +125,8 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 			"projects": schema.SetNestedAttribute{
 				Description: "If access groups are enabled on the team, and the user is a CONTRIBUTOR, `projects`, `access_groups` or both must be specified. A set of projects that the user should be granted access to, along with their role in each project.",
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.UseStateForUnknown(),
+					setplanmodifier.RequiresReplaceIf(r.userIsUnconfirmed, "Can only update projects on confirmed team members", "Can only update projects on confirmed team members"),
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -111,14 +147,14 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 			"access_groups": schema.SetAttribute{
 				Description: "If access groups are enabled on the team, and the user is a CONTRIBUTOR, `projects`, `access_groups` or both must be specified. A set of access groups IDs that the user should be granted access to.",
 				Optional:    true,
-				Computed:    true,
 				ElementType: types.StringType,
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
 				},
-				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.UseStateForUnknown(),
-				},
+			},
+			"confirmed": schema.BoolAttribute{
+				Description: "Whether the user has confirmed their invitation.",
+				Computed:    true,
 			},
 		},
 	}
@@ -126,10 +162,12 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 
 type TeamMember struct {
 	UserID       types.String `tfsdk:"user_id"`
+	Email        types.String `tfsdk:"email"`
 	TeamID       types.String `tfsdk:"team_id"`
 	Role         types.String `tfsdk:"role"`
 	Projects     types.Set    `tfsdk:"projects"`
 	AccessGroups types.Set    `tfsdk:"access_groups"`
+	Confirmed    types.Bool   `tfsdk:"confirmed"`
 }
 
 func (t TeamMember) projects(ctx context.Context) ([]TeamMemberProject, diag.Diagnostics) {
@@ -177,10 +215,28 @@ func (t TeamMember) toInviteTeamMemberRequest(ctx context.Context) (client.TeamM
 	return client.TeamMemberInviteRequest{
 		TeamID:       t.TeamID.ValueString(),
 		UserID:       t.UserID.ValueString(),
+		Email:        t.Email.ValueString(),
 		Role:         t.Role.ValueString(),
 		Projects:     projects,
 		AccessGroups: accessGroups,
 	}, diags
+}
+
+func areSameProjects(oldProjects, newProjects []TeamMemberProject) bool {
+	if len(oldProjects) != len(newProjects) {
+		return false
+	}
+	for _, p := range oldProjects {
+		if !contains(newProjects, p) {
+			return false
+		}
+	}
+	for _, p := range newProjects {
+		if !contains(oldProjects, p) {
+			return false
+		}
+	}
+	return true
 }
 
 func diffAccessGroups(oldAgs, newAgs []string) (toAdd, toRemove []string) {
@@ -245,7 +301,7 @@ var projectsElemType = types.ObjectType{
 	},
 }
 
-func convertResponseToTeamMember(response client.TeamMember, teamID types.String) TeamMember {
+func convertResponseToTeamMember(response client.TeamMember, plan TeamMember) TeamMember {
 	var projectsAttrs []attr.Value
 	for _, p := range response.Projects {
 		projectsAttrs = append(projectsAttrs, types.ObjectValueMust(
@@ -267,13 +323,29 @@ func convertResponseToTeamMember(response client.TeamMember, teamID types.String
 	}
 	accessGroups := types.SetValueMust(types.StringType, ags)
 
-	return TeamMember{
+	teamMember := TeamMember{
 		UserID:       types.StringValue(response.UserID),
-		TeamID:       teamID,
+		Email:        types.StringValue(response.Email),
+		TeamID:       plan.TeamID,
 		Role:         types.StringValue(response.Role),
 		Projects:     projects,
 		AccessGroups: accessGroups,
+		Confirmed:    types.BoolValue(response.Confirmed),
 	}
+
+	if !response.Confirmed {
+		// The API doesn't return the projects or access groups for unconfirmed members, so we have to
+		// manually set these fields to whatever was in the plan.
+		teamMember.Projects = types.SetNull(projectsElemType)
+		if !plan.Projects.IsUnknown() && !plan.Projects.IsNull() {
+			teamMember.Projects = plan.Projects
+		}
+		teamMember.AccessGroups = types.SetNull(types.StringType)
+		if !plan.AccessGroups.IsUnknown() && !plan.AccessGroups.IsNull() {
+			teamMember.AccessGroups = plan.AccessGroups
+		}
+	}
+	return teamMember
 }
 
 func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -289,7 +361,7 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 		resp.Diagnostics.Append(diags...)
 		return
 	}
-	err := r.client.InviteTeamMember(ctx, request)
+	res, err := r.client.InviteTeamMember(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error inviting Team Member",
@@ -298,36 +370,66 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	tflog.Info(ctx, "invited Team Member", map[string]interface{}{
+	tflog.Error(ctx, "Invited Team Member", map[string]any{
 		"team_id": plan.TeamID.ValueString(),
 		"user_id": plan.UserID.ValueString(),
 	})
 
-	projects := types.SetNull(projectsElemType)
-	if !plan.Projects.IsUnknown() && !plan.Projects.IsNull() {
-		projects = plan.Projects
+	planAGs, diags := plan.accessGroups(ctx)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
 	}
-	ags := types.SetNull(types.StringType)
-	if !plan.AccessGroups.IsUnknown() && !plan.AccessGroups.IsNull() {
-		ags = plan.AccessGroups
+	planProjects, diags := plan.projects(ctx)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
 	}
-	diags = resp.State.Set(ctx, TeamMember{
-		TeamID:       plan.TeamID,
-		UserID:       plan.UserID,
-		Role:         plan.Role,
-		Projects:     projects,
-		AccessGroups: ags,
+	var response client.TeamMember
+	getRetry := Retry{
+		Base:     200 * time.Millisecond,
+		Attempts: 7,
+	}
+	err = getRetry.Do(func(attempt int) (shouldRetry bool, err error) {
+		response, err = r.client.GetTeamMember(ctx, client.GetTeamMemberRequest{
+			TeamID: plan.TeamID.ValueString(),
+			UserID: res.UserID,
+		})
+		if client.NotFound(err) {
+			return true, err
+		}
+		teamMember := convertResponseToTeamMember(response, plan)
+		if teamMember.Role != plan.Role {
+			tflog.Error(ctx, "Role has not yet propagated", map[string]any{})
+			return true, fmt.Errorf("role has not yet propagated")
+		}
+		respAGs, _ := teamMember.accessGroups(ctx)
+		if new, old := diffAccessGroups(respAGs, planAGs); len(new) > 0 || len(old) > 0 {
+			tflog.Error(ctx, "AGs have not yet propagated", map[string]any{})
+			return true, fmt.Errorf("access groups have not yet propagated")
+		}
+		respProjects, _ := teamMember.projects(ctx)
+		if !areSameProjects(respProjects, planProjects) {
+			tflog.Error(ctx, "Projects have not yet propagated", map[string]any{})
+			return true, fmt.Errorf("projects have not yet propagated")
+		}
+		return false, err
 	})
-	resp.Diagnostics.Append(diags...)
-	sleepInTests()
-}
-
-func sleepInTests() {
-	if os.Getenv("TF_ACC") == "true" {
-		// Give a couple of seconds for the user to propagate.
-		// This is horrible, but works for now.
-		time.Sleep(5 * time.Second)
+	tflog.Error(ctx, "Read team member after inviting", map[string]any{
+		"team_id": plan.TeamID.ValueString(),
+		"user_id": plan.UserID.ValueString(),
+		"err":     err,
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading Team Member",
+			"Could not read Team Member, unexpected error: "+err.Error(),
+		)
+		return
 	}
+	teamMember := convertResponseToTeamMember(response, plan)
+	diags = resp.State.Set(ctx, teamMember)
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -337,10 +439,19 @@ func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// sleep to allow time for the user to propagate in the Vercel system.
+	if os.Getenv("TF_ACC") == "true" {
+		time.Sleep(5 * time.Second)
+	}
 
 	response, err := r.client.GetTeamMember(ctx, client.GetTeamMemberRequest{
 		TeamID: state.TeamID.ValueString(),
 		UserID: state.UserID.ValueString(),
+	})
+	tflog.Error(ctx, "Read team member", map[string]any{
+		"team_id": state.TeamID.ValueString(),
+		"user_id": state.UserID.ValueString(),
+		"err":     err,
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
@@ -352,19 +463,7 @@ func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest,
 			"Could not read Team Member, unexpected error: "+err.Error(),
 		)
 	}
-	teamMember := convertResponseToTeamMember(response, state.TeamID)
-	if !response.Confirmed {
-		// The API doesn't return the projects or access groups for unconfirmed members, so we have to
-		// manually set these fields to whatever was in state.
-		teamMember.Projects = types.SetNull(projectsElemType)
-		if !state.Projects.IsUnknown() && !state.Projects.IsNull() {
-			teamMember.Projects = state.Projects
-		}
-		teamMember.AccessGroups = types.SetNull(types.StringType)
-		if !state.AccessGroups.IsUnknown() && !state.AccessGroups.IsNull() {
-			teamMember.AccessGroups = state.AccessGroups
-		}
-	}
+	teamMember := convertResponseToTeamMember(response, state)
 	diags = resp.State.Set(ctx, teamMember)
 	resp.Diagnostics.Append(diags...)
 }
@@ -384,6 +483,10 @@ func (r *teamMemberResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
+	tflog.Error(ctx, "updating team member", map[string]any{
+		"state": state,
+		"plan":  plan,
+	})
 	request, diags := plan.toTeamMemberUpdateRequest(ctx, state)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
@@ -397,29 +500,63 @@ func (r *teamMemberResource) Update(ctx context.Context, req resource.UpdateRequ
 		)
 		return
 	}
-
-	tflog.Info(ctx, "updated Team member", map[string]interface{}{
+	var teamMember TeamMember
+	planAGs, diags := plan.accessGroups(ctx)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	planProjects, diags := plan.projects(ctx)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	getRetry := Retry{
+		Base:     200 * time.Millisecond,
+		Attempts: 7,
+	}
+	err = getRetry.Do(func(attempt int) (shouldRetry bool, err error) {
+		response, err := r.client.GetTeamMember(ctx, client.GetTeamMemberRequest{
+			TeamID: plan.TeamID.ValueString(),
+			UserID: plan.UserID.ValueString(),
+		})
+		if client.NotFound(err) {
+			return true, err
+		}
+		tflog.Error(ctx, "Fetched team member", map[string]any{
+			"team_id": plan.TeamID.ValueString(),
+			"user_id": plan.UserID.ValueString(),
+			"role":    response.Role,
+		})
+		teamMember = convertResponseToTeamMember(response, plan)
+		if teamMember.Role != plan.Role {
+			tflog.Error(ctx, "Role has not yet propagated", map[string]any{})
+			return true, fmt.Errorf("role has not yet propagated")
+		}
+		respAGs, _ := teamMember.accessGroups(ctx)
+		if new, old := diffAccessGroups(respAGs, planAGs); len(new) > 0 || len(old) > 0 {
+			tflog.Error(ctx, "AGs have not yet propagated", map[string]any{})
+			return true, fmt.Errorf("access groups have not yet propagated")
+		}
+		respProjects, _ := teamMember.projects(ctx)
+		if !areSameProjects(respProjects, planProjects) {
+			tflog.Error(ctx, "Projects have not yet propagated", map[string]any{})
+			return true, fmt.Errorf("projects have not yet propagated")
+		}
+		return false, err
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading Team Member",
+			"Could not read Team Member, unexpected error: "+err.Error(),
+		)
+	}
+	tflog.Info(ctx, "updated Team member", map[string]any{
 		"team_id": request.TeamID,
 		"user_id": request.UserID,
 	})
-
-	projects := types.SetNull(projectsElemType)
-	if !plan.Projects.IsUnknown() && !plan.Projects.IsNull() {
-		projects = plan.Projects
-	}
-	ags := types.SetNull(types.StringType)
-	if !plan.AccessGroups.IsUnknown() && !plan.AccessGroups.IsNull() {
-		ags = plan.AccessGroups
-	}
-	diags = resp.State.Set(ctx, TeamMember{
-		TeamID:       plan.TeamID,
-		UserID:       plan.UserID,
-		Role:         plan.Role,
-		Projects:     projects,
-		AccessGroups: ags,
-	})
+	diags = resp.State.Set(ctx, teamMember)
 	resp.Diagnostics.Append(diags...)
-	sleepInTests()
 }
 
 func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -429,6 +566,11 @@ func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	tflog.Info(ctx, "Removing team member", map[string]any{
+		"team_id": state.TeamID,
+		"user_id": state.UserID,
+	})
 
 	err := r.client.RemoveTeamMember(ctx, state.toTeamMemberRemoveRequest())
 	if client.NotFound(err) {
@@ -443,7 +585,6 @@ func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequ
 	}
 
 	resp.State.RemoveResource(ctx)
-	sleepInTests()
 }
 
 // ImportState implements resource.ResourceWithImportState.
@@ -456,14 +597,20 @@ func (r *teamMemberResource) ImportState(ctx context.Context, req resource.Impor
 		)
 	}
 
-	tflog.Info(ctx, "import Team Member", map[string]interface{}{
-		"team_id": teamID,
-		"user_id": userID,
-	})
-
-	response, err := r.client.GetTeamMember(ctx, client.GetTeamMemberRequest{
-		TeamID: teamID,
-		UserID: userID,
+	var response client.TeamMember
+	getRetry := Retry{
+		Base:     200 * time.Millisecond,
+		Attempts: 5,
+	}
+	err := getRetry.Do(func(attempt int) (shouldRetry bool, err error) {
+		response, err = r.client.GetTeamMember(ctx, client.GetTeamMemberRequest{
+			TeamID: teamID,
+			UserID: userID,
+		})
+		if client.NotFound(err) {
+			return true, err
+		}
+		return false, err
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -471,7 +618,9 @@ func (r *teamMemberResource) ImportState(ctx context.Context, req resource.Impor
 			"Could not read Team Member, unexpected error: "+err.Error(),
 		)
 	}
-	teamMember := convertResponseToTeamMember(response, types.StringValue(teamID))
+	teamMember := convertResponseToTeamMember(response, TeamMember{
+		TeamID: types.StringValue(teamID),
+	})
 	diags := resp.State.Set(ctx, teamMember)
 	resp.Diagnostics.Append(diags...)
 }

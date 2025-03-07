@@ -412,7 +412,7 @@ func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req re
 		return
 	}
 
-	tflog.Info(ctx, "created project environment variables", map[string]interface{}{
+	tflog.Info(ctx, "created project environment variables", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 		"variables":  created,
@@ -477,7 +477,7 @@ func (r *projectEnvironmentVariablesResource) Read(ctx context.Context, req reso
 		return
 	}
 
-	tflog.Info(ctx, "read project environment variables", map[string]interface{}{
+	tflog.Info(ctx, "read project environment variables", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
@@ -541,8 +541,8 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 		unchanged = append(unchanged, e)
 	}
 
-	tflog.Info(ctx, "Removing environment variables", map[string]interface{}{"to_remove": toRemove})
-	tflog.Info(ctx, "Adding environment variables", map[string]interface{}{"to_add": toAdd})
+	tflog.Info(ctx, "Removing environment variables", map[string]any{"to_remove": toRemove})
+	tflog.Info(ctx, "Adding environment variables", map[string]any{"to_add": toAdd})
 
 	for _, v := range toRemove {
 		err := r.client.DeleteEnvironmentVariable(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString(), v.ID.ValueString())
@@ -558,7 +558,7 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 			)
 			return
 		}
-		tflog.Info(ctx, "deleted environment variable", map[string]interface{}{
+		tflog.Info(ctx, "deleted environment variable", map[string]any{
 			"team_id":        plan.TeamID.ValueString(),
 			"project_id":     plan.ProjectID.ValueString(),
 			"environment_id": v.ID.ValueString(),
@@ -596,7 +596,7 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 		return
 	}
 
-	tflog.Info(ctx, "updated project environment variables", map[string]interface{}{
+	tflog.Info(ctx, "updated project environment variables", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
@@ -636,7 +636,7 @@ func (r *projectEnvironmentVariablesResource) Delete(ctx context.Context, req re
 			)
 			return
 		}
-		tflog.Info(ctx, "deleted environment variable", map[string]interface{}{
+		tflog.Info(ctx, "deleted environment variable", map[string]any{
 			"team_id":        state.TeamID.ValueString(),
 			"project_id":     state.ProjectID.ValueString(),
 			"environment_id": v.ID.ValueString(),

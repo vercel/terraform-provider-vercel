@@ -183,7 +183,7 @@ func (d *logDrainDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "read log drain", map[string]interface{}{
+	tflog.Info(ctx, "read log drain", map[string]any{
 		"team_id":      result.TeamID.ValueString(),
 		"log_drain_id": result.ID.ValueString(),
 	})

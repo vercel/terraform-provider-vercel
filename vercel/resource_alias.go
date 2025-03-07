@@ -122,7 +122,7 @@ func (r *aliasResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	result := convertResponseToAlias(out, plan)
-	tflog.Info(ctx, "created alias", map[string]interface{}{
+	tflog.Info(ctx, "created alias", map[string]any{
 		"team_id":       plan.TeamID.ValueString(),
 		"deployment_id": plan.DeploymentID.ValueString(),
 		"alias_id":      result.ID.ValueString(),
@@ -163,7 +163,7 @@ func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	result := convertResponseToAlias(out, state)
-	tflog.Info(ctx, "read alias", map[string]interface{}{
+	tflog.Info(ctx, "read alias", map[string]any{
 		"team_id":  result.TeamID.ValueString(),
 		"alias_id": result.ID.ValueString(),
 	})
@@ -208,7 +208,7 @@ func (r *aliasResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	tflog.Info(ctx, "deleted alias", map[string]interface{}{
+	tflog.Info(ctx, "deleted alias", map[string]any{
 		"team_id":  state.TeamID.ValueString(),
 		"alias_id": state.ID.ValueString(),
 	})

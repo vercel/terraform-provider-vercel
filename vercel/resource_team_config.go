@@ -130,10 +130,10 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 						ElementType: types.StringType,
 						Validators: []validator.Map{
 							// Validate only this attribute or roles is configured.
-							mapvalidator.ExactlyOneOf(path.Expressions{
+							mapvalidator.ExactlyOneOf(
 								path.MatchRoot("saml.roles"),
 								path.MatchRoot("saml.access_group_id"),
-							}...),
+							),
 						},
 					},
 					"access_group_id": schema.StringAttribute{
@@ -142,10 +142,10 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 						Validators: []validator.String{
 							stringvalidator.RegexMatches(regexp.MustCompile("^ag_[A-z0-9_ -]+$"), "Access group ID must be a valid access group"),
 							// Validate only this attribute or roles is configured.
-							stringvalidator.ExactlyOneOf(path.Expressions{
+							stringvalidator.ExactlyOneOf(
 								path.MatchRoot("saml.roles"),
 								path.MatchRoot("saml.access_group_id"),
-							}...),
+							),
 						},
 					},
 				},
@@ -479,7 +479,7 @@ func (r *teamConfigResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	jsonResp, _ := json.Marshal(response)
-	tflog.Info(ctx, "created Team Configuration", map[string]interface{}{
+	tflog.Info(ctx, "created Team Configuration", map[string]any{
 		"team_id":  response.ID,
 		"response": string(jsonResp),
 	})
@@ -560,7 +560,7 @@ func (r *teamConfigResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	tflog.Info(ctx, "updated Team configuration", map[string]interface{}{
+	tflog.Info(ctx, "updated Team configuration", map[string]any{
 		"team_id": response.ID,
 	})
 

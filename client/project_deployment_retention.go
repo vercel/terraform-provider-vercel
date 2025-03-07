@@ -33,7 +33,7 @@ func (c *Client) DeleteDeploymentRetention(ctx context.Context, projectID, teamI
 	unlimited := "unlimited"
 	payload := string(mustMarshal(DeploymentRetentionRequest{ExpirationPreview: unlimited, ExpirationProduction: unlimited, ExpirationCanceled: unlimited, ExpirationErrored: unlimited}))
 
-	tflog.Info(ctx, "updating deployment expiration", map[string]interface{}{
+	tflog.Info(ctx, "updating deployment expiration", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -94,7 +94,7 @@ func (c *Client) UpdateDeploymentRetention(ctx context.Context, request UpdateDe
 	}
 	payload := string(mustMarshal(request.DeploymentRetention))
 
-	tflog.Info(ctx, "updating deployment expiration", map[string]interface{}{
+	tflog.Info(ctx, "updating deployment expiration", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -115,7 +115,7 @@ func (c *Client) GetDeploymentRetention(ctx context.Context, projectID, teamID s
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 
-	tflog.Info(ctx, "getting deployment retention", map[string]interface{}{
+	tflog.Info(ctx, "getting deployment retention", map[string]any{
 		"url": url,
 	})
 	var p ProjectResponse

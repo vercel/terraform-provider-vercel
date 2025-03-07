@@ -151,7 +151,7 @@ func (d *deploymentDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 
 	result := convertResponseToDeploymentDataSource(out)
-	tflog.Info(ctx, "read deployment", map[string]interface{}{
+	tflog.Info(ctx, "read deployment", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 	})

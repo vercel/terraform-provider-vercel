@@ -54,7 +54,7 @@ func (c *Client) UpdateProtectionBypassForAutomation(ctx context.Context, reques
 	}
 
 	payload := getUpdateBypassProtectionRequestBody(request.NewValue, request.Secret)
-	tflog.Info(ctx, "updating protection bypass", map[string]interface{}{
+	tflog.Info(ctx, "updating protection bypass", map[string]any{
 		"url":      url,
 		"payload":  payload,
 		"newValue": request.NewValue,

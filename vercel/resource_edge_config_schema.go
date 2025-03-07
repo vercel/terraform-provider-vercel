@@ -130,7 +130,7 @@ func (r *edgeConfigSchemaResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	result := responseToEdgeConfigSchema(out, plan.Definition)
-	tflog.Info(ctx, "created Edge Config Schema", map[string]interface{}{
+	tflog.Info(ctx, "created Edge Config Schema", map[string]any{
 		"team_id":        plan.TeamID.ValueString(),
 		"edge_config_id": result.ID.ValueString(),
 	})
@@ -170,7 +170,7 @@ func (r *edgeConfigSchemaResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	result := responseToEdgeConfigSchema(out, state.Definition)
-	tflog.Info(ctx, "read edge config schema", map[string]interface{}{
+	tflog.Info(ctx, "read edge config schema", map[string]any{
 		"team_id":        result.TeamID.ValueString(),
 		"edge_config_id": result.ID.ValueString(),
 	})
@@ -213,7 +213,7 @@ func (r *edgeConfigSchemaResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	result := responseToEdgeConfigSchema(out, plan.Definition)
-	tflog.Info(ctx, "created Edge Config Schema", map[string]interface{}{
+	tflog.Info(ctx, "created Edge Config Schema", map[string]any{
 		"team_id":        plan.TeamID.ValueString(),
 		"edge_config_id": result.ID.ValueString(),
 	})
@@ -251,7 +251,7 @@ func (r *edgeConfigSchemaResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	tflog.Info(ctx, "deleted edge config schema", map[string]interface{}{
+	tflog.Info(ctx, "deleted edge config schema", map[string]any{
 		"team_id":        state.TeamID.ValueString(),
 		"edge_config_id": state.ID.ValueString(),
 	})
@@ -294,7 +294,7 @@ func (r *edgeConfigSchemaResource) ImportState(ctx context.Context, req resource
 		return
 	}
 	result := responseToEdgeConfigSchema(out, types.StringValue(string(def)))
-	tflog.Info(ctx, "import edge config schema", map[string]interface{}{
+	tflog.Info(ctx, "import edge config schema", map[string]any{
 		"team_id":        result.TeamID.ValueString(),
 		"edge_config_id": result.ID.ValueString(),
 	})

@@ -109,7 +109,7 @@ func (d *accessGroupProjectDataSource) Read(ctx context.Context, req datasource.
 		ProjectID:     types.StringValue(out.ProjectID),
 		Role:          types.StringValue(out.Role),
 	}
-	tflog.Info(ctx, "read Access Group Project", map[string]interface{}{
+	tflog.Info(ctx, "read Access Group Project", map[string]any{
 		"team_id":         result.TeamID.ValueString(),
 		"access_group_id": result.AccessGroupID.ValueString(),
 		"project_id":      result.ProjectID.ValueString(),

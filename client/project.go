@@ -69,7 +69,7 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 	}
 
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "creating project", map[string]interface{}{
+	tflog.Info(ctx, "creating project", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -93,7 +93,7 @@ func (c *Client) DeleteProject(ctx context.Context, projectID, teamID string) er
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "deleting project", map[string]interface{}{
+	tflog.Info(ctx, "deleting project", map[string]any{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{
@@ -227,7 +227,7 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r Pr
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "getting project", map[string]interface{}{
+	tflog.Info(ctx, "getting project", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -254,7 +254,7 @@ func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectRe
 	pr := struct {
 		Projects []ProjectResponse `json:"projects"`
 	}{}
-	tflog.Info(ctx, "listing projects", map[string]interface{}{
+	tflog.Info(ctx, "listing projects", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -313,7 +313,7 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "updating project", map[string]interface{}{
+	tflog.Info(ctx, "updating project", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -343,7 +343,7 @@ func (c *Client) UpdateProductionBranch(ctx context.Context, request UpdateProdu
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "updating project production branch", map[string]interface{}{
+	tflog.Info(ctx, "updating project production branch", map[string]any{
 		"url":     url,
 		"payload": payload,
 	})
@@ -365,7 +365,7 @@ func (c *Client) UnlinkGitRepoFromProject(ctx context.Context, projectID, teamID
 	if c.teamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
 	}
-	tflog.Info(ctx, "unlinking project git repo", map[string]interface{}{
+	tflog.Info(ctx, "unlinking project git repo", map[string]any{
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
@@ -392,7 +392,7 @@ func (c *Client) LinkGitRepoToProject(ctx context.Context, request LinkGitRepoTo
 	if c.teamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
-	tflog.Info(ctx, "linking project git repo", map[string]interface{}{
+	tflog.Info(ctx, "linking project git repo", map[string]any{
 		"url": url,
 	})
 	payload := string(mustMarshal(request))

@@ -30,6 +30,7 @@ data "vercel_team_member" "example" {
 ### Read-Only
 
 - `access_groups` (Set of String) If access groups are enabled on the team, and the user is a CONTRIBUTOR, `projects`, `access_groups` or both must be specified. A set of access groups IDs that the user should be granted access to.
+- `email` (String) The email address of the existing Vercel Team Member.
 - `id` (String) The ID of this resource.
 - `projects` (Attributes Set) If access groups are enabled on the team, and the user is a CONTRIBUTOR, `projects`, `access_groups` or both must be specified. A set of projects that the user should be granted access to, along with their role in each project. (see [below for nested schema](#nestedatt--projects))
 - `role` (String) The role that the user should have in the project. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. Depending on your Team's plan, some of these roles may be unavailable.

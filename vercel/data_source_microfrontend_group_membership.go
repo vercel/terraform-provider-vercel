@@ -52,7 +52,7 @@ func (r *microfrontendGroupMembershipDataSource) Schema(_ context.Context, req d
 		Description: `
 Provides information about an existing Microfrontend Group Membership.
 
-A Microfrontend Group Membership is a definition of a Vercel Project being a part of a Microfrontend Group. 
+A Microfrontend Group Membership is a definition of a Vercel Project being a part of a Microfrontend Group.
 `,
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
@@ -109,7 +109,7 @@ func (d *microfrontendGroupMembershipDataSource) Read(ctx context.Context, req d
 	}
 
 	result := convertResponseToMicrofrontendGroupMembership(out)
-	tflog.Info(ctx, "read microfrontend group membership", map[string]interface{}{
+	tflog.Info(ctx, "read microfrontend group membership", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"group_id":   result.MicrofrontendGroupID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),

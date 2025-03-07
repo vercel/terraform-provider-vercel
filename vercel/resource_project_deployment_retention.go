@@ -188,7 +188,7 @@ func (r *projectDeploymentRetentionResource) Create(ctx context.Context, req res
 
 	result := convertResponseToProjectDeploymentRetention(response, plan.ProjectID, plan.TeamID)
 
-	tflog.Info(ctx, "created project deployment retention", map[string]interface{}{
+	tflog.Info(ctx, "created project deployment retention", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
@@ -228,7 +228,7 @@ func (r *projectDeploymentRetentionResource) Read(ctx context.Context, req resou
 	}
 
 	result := convertResponseToProjectDeploymentRetention(out, state.ProjectID, state.TeamID)
-	tflog.Info(ctx, "read project deployment retention", map[string]interface{}{
+	tflog.Info(ctx, "read project deployment retention", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
@@ -265,7 +265,7 @@ func (r *projectDeploymentRetentionResource) Delete(ctx context.Context, req res
 		return
 	}
 
-	tflog.Info(ctx, "deleted project deployment retention", map[string]interface{}{
+	tflog.Info(ctx, "deleted project deployment retention", map[string]any{
 		"team_id":    state.TeamID.ValueString(),
 		"project_id": state.ProjectID.ValueString(),
 	})
@@ -291,7 +291,7 @@ func (r *projectDeploymentRetentionResource) Update(ctx context.Context, req res
 
 	result := convertResponseToProjectDeploymentRetention(response, plan.ProjectID, plan.TeamID)
 
-	tflog.Info(ctx, "updated project deployment retention", map[string]interface{}{
+	tflog.Info(ctx, "updated project deployment retention", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
@@ -328,7 +328,7 @@ func (r *projectDeploymentRetentionResource) ImportState(ctx context.Context, re
 	}
 
 	result := convertResponseToProjectDeploymentRetention(out, types.StringValue(projectID), types.StringValue(teamID))
-	tflog.Info(ctx, "imported project deployment retention", map[string]interface{}{
+	tflog.Info(ctx, "imported project deployment retention", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
