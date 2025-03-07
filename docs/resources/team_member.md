@@ -41,6 +41,10 @@ resource "vercel_team_member" "by_email" {
 - `projects` (Attributes Set) If access groups are enabled on the team, and the user is a CONTRIBUTOR, `projects`, `access_groups` or both must be specified. A set of projects that the user should be granted access to, along with their role in each project. (see [below for nested schema](#nestedatt--projects))
 - `user_id` (String) The ID of the user to add to the team. Must specify one of user_id or email.
 
+### Read-Only
+
+- `confirmed` (Boolean) Whether the user has confirmed their invitation.
+
 <a id="nestedatt--projects"></a>
 ### Nested Schema for `projects`
 
