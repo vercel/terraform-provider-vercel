@@ -1,6 +1,6 @@
 package vercel
 
-func contains(items []string, i string) bool {
+func contains[T comparable](items []T, i T) bool {
 	for _, j := range items {
 		if j == i {
 			return true

@@ -134,7 +134,14 @@ func (d *teamMemberDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			"Could not read Team Member, unexpected error: "+err.Error(),
 		)
 	}
-	teamMember := convertResponseToTeamMember(response, config.TeamID)
+	teamMember := convertResponseToTeamMember(response, TeamMember{
+		UserID:       config.UserID,
+		Email:        config.Email,
+		TeamID:       config.TeamID,
+		Role:         config.Role,
+		Projects:     config.Projects,
+		AccessGroups: config.AccessGroups,
+	})
 	diags = resp.State.Set(ctx, TeamMemberWithID{
 		UserID:       teamMember.UserID,
 		TeamID:       teamMember.TeamID,
