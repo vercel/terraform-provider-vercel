@@ -299,13 +299,17 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"rules.rule.2.action.redirect.permanent",
 						"false"),
 					resource.TestCheckResourceAttr(
-						"vercel_firewall_config.custom_neg",
+						"vercel_firewall_config.neg",
 						"rules.rule.0.condition_group.0.conditions.0.neg",
 						"true"),
 					resource.TestCheckResourceAttr(
-						"vercel_firewall_config.custom_neg",
-						"rules.rule.0.condition_group.0.conditions.0.values",
-						"true"),
+						"vercel_firewall_config.neg",
+						"rules.rule.0.condition_group.0.conditions.0.values.0",
+						"1.2.3.4"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.neg",
+						"rules.rule.0.condition_group.0.conditions.0.values.1",
+						"3.4.5.6"),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.ips",
 						"ip_rules.rule.0.action",
@@ -626,13 +630,13 @@ resource "vercel_firewall_config" "ips" {
     }
 }
 
-resource "vercel_project" "custom_neg" {
-    name = "test-acc-%[1]s-custom_neg"
+resource "vercel_project" "neg" {
+    name = "test-acc-%[1]s-neg"
     %[2]s
 }
 
-resource "vercel_firewall_config" "custom_neg" {
-    project_id = vercel_project.custom_neg.id
+resource "vercel_firewall_config" "neg" {
+    project_id = vercel_project.neg.id
     %[2]s
 
     rules {
