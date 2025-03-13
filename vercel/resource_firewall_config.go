@@ -808,7 +808,7 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfi
 			var stateRule = FirewallRule{
 				Active: types.BoolNull(),
 			}
-			if state.Rules != nil && len(state.Rules.Rules)-1 > i {
+			if state.Rules != nil && len(state.Rules.Rules) > i {
 				stateRule = state.Rules.Rules[i]
 			}
 			rules[i], err = fromFirewallRule(rule, stateRule)

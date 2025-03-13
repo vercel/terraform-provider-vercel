@@ -242,6 +242,10 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"path"),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
+						"rules.rule.0.condition_group.0.conditions.0.neg",
+						""),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom",
 						"rules.rule.0.condition_group.0.conditions.1.value",
 						"POST"),
 					resource.TestCheckResourceAttrWith(
@@ -294,6 +298,14 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.custom",
 						"rules.rule.2.action.redirect.permanent",
 						"false"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom_neg",
+						"rules.rule.0.condition_group.0.conditions.0.neg",
+						"true"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom_neg",
+						"rules.rule.0.condition_group.0.conditions.0.values",
+						"true"),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.ips",
 						"ip_rules.rule.0.action",
@@ -612,5 +624,37 @@ resource "vercel_firewall_config" "ips" {
             hostname = "*"
         }
     }
-}`, name, teamID)
+}
+
+resource "vercel_project" "custom_neg" {
+    name = "test-acc-%[1]s-custom_neg"
+    %[2]s
+}
+
+resource "vercel_firewall_config" "custom_neg" {
+    project_id = vercel_project.custom_neg.id
+    %[2]s
+
+    rules {
+        rule {
+          name =  "test"
+          action = {
+            action = "deny"
+          }
+          condition_group = [{
+            conditions = [{
+                type = "ip_address"
+                op = "inc"
+                neg = true
+                values = [
+                    "1.2.3.4",
+                    "3.4.5.6",
+                    "5.6.7.7",
+                ]
+            }
+          }]
+        }
+    }
+}
+`, name, teamID)
 }
