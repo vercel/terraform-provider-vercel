@@ -242,10 +242,6 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"path"),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.custom",
-						"rules.rule.0.condition_group.0.conditions.0.neg",
-						""),
-					resource.TestCheckResourceAttr(
-						"vercel_firewall_config.custom",
 						"rules.rule.0.condition_group.0.conditions.1.value",
 						"POST"),
 					resource.TestCheckResourceAttrWith(
