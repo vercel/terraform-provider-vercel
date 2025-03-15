@@ -283,21 +283,21 @@ func processVCConfigFile(configPath, projectPath string, config *PrebuiltProject
 
 	// Process each file in the filePathMap
 	for filePath := range vcConfig.FilePathMap {
-		// Don't process if we've already added this file
-		if _, exists := config.Output[filePath]; exists {
-			continue
-		}
-
 		// Make sure the path is absolute relative to the project
 		absPath := filePath
 		if !filepath.IsAbs(absPath) {
 			absPath = filepath.Join(projectPath, absPath)
 		}
 
+		// Don't process if we've already added this file
+		if _, exists := config.Output[absPath]; exists {
+			continue
+		}
+
 		// Check if file exists
 		fileInfo, err := os.Lstat(absPath) // Use Lstat to not follow symlinks
 		if err != nil {
-			return fmt.Errorf("could not stat file %s referenced in filePathMap: %w", absPath, err)
+			return fmt.Errorf("could not stat file %s (%s) referenced in filePathMap: %w", filePath, absPath, err)
 		}
 
 		// Skip directories
@@ -309,24 +309,24 @@ func processVCConfigFile(configPath, projectPath string, config *PrebuiltProject
 			// It's a symlink - read the target path
 			linkTarget, err := os.Readlink(absPath)
 			if err != nil {
-				return fmt.Errorf("could not read symlink %s: %w", absPath, err)
+				return fmt.Errorf("could not read symlink %s (%s): %w", filePath, absPath, err)
 			}
 
 			// Hash the link target string (just like Vercel does)
 			targetData := []byte(linkTarget)
 			rawSha := sha1.Sum(targetData)
 			sha := hex.EncodeToString(rawSha[:])
-			config.Output[filePath] = fmt.Sprintf("%d~%s", len(targetData), sha)
+			config.Output[absPath] = fmt.Sprintf("%d~%s", len(targetData), sha)
 		} else {
 			// Regular file - read and hash its content
 			fileContent, err := os.ReadFile(absPath)
 			if err != nil {
-				return fmt.Errorf("could not read file %s referenced in filePathMap: %w", absPath, err)
+				return fmt.Errorf("could not read file %s (%s) referenced in filePathMap: %w", filePath, absPath, err)
 			}
 
 			rawSha := sha1.Sum(fileContent)
 			sha := hex.EncodeToString(rawSha[:])
-			config.Output[filePath] = fmt.Sprintf("%d~%s", len(fileContent), sha)
+			config.Output[absPath] = fmt.Sprintf("%d~%s", len(fileContent), sha)
 		}
 	}
 
