@@ -529,6 +529,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						},
 						PlanModifiers: []planmodifier.Int64{SuppressDiffIfNotConfigured(), int64planmodifier.UseStateForUnknown()},
 					},
+					"elastic_concurrency_enabled": schema.BoolAttribute{
+						Description:   "Whether to enable elastic builds on the project.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					},
 				},
 				Default: objectdefault.StaticValue(types.ObjectValueMust(
 					map[string]attr.Type{
@@ -610,6 +616,7 @@ type Project struct {
 	DirectoryListing                    types.Bool                      `tfsdk:"directory_listing"`
 	EnableAffectedProjectsDeployments   types.Bool                      `tfsdk:"enable_affected_projects_deployments"`
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
+	ElasticConcurrency                  types.Bool                      `tfsdk:"elastic_concurrency"`
 	ResourceConfig                      *ResourceConfig                 `tfsdk:"resource_config"`
 }
 
@@ -1012,6 +1019,7 @@ func (o *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
 type ResourceConfig struct {
 	FunctionDefaultMemoryType types.String `tfsdk:"function_default_cpu_type"`
 	FunctionDefaultTimeout    types.Int64  `tfsdk:"function_default_timeout"`
+	ElasticConcurrencyEnabled types.Bool   `tfsdk:"elastic_concurrency_enabled"`
 }
 
 func (r *ResourceConfig) toUpdateProjectRequest() *client.ResourceConfig {
@@ -1025,6 +1033,9 @@ func (r *ResourceConfig) toUpdateProjectRequest() *client.ResourceConfig {
 	}
 	if !r.FunctionDefaultTimeout.IsNull() {
 		resourceConfig.FunctionDefaultTimeout = r.FunctionDefaultTimeout.ValueInt64()
+	}
+	if !r.ElasticConcurrencyEnabled.IsNull() {
+		resourceConfig.ElasticConcurrencyEnabled = r.ElasticConcurrencyEnabled.ValueBool()
 	}
 	return resourceConfig
 }
