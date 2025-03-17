@@ -118,6 +118,19 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					validateServerlessFunctionRegion(),
 				},
 			},
+			"node_version": schema.StringAttribute{
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Validators: []validator.String{
+					stringvalidator.OneOf(
+						"18.x",
+						"20.x",
+						"22.x",
+					),
+				},
+				Description: "The version of Node.js that is used in the Build Step and for Serverless Functions. A new Deployment is required for your changes to take effect.",
+			},
 			"environment": schema.SetNestedAttribute{
 				Description: "A set of Environment Variables that should be configured for the project.",
 				Optional:    true,
@@ -586,6 +599,7 @@ type Project struct {
 	IgnoreCommand                       types.String                    `tfsdk:"ignore_command"`
 	InstallCommand                      types.String                    `tfsdk:"install_command"`
 	Name                                types.String                    `tfsdk:"name"`
+	NodeVersion                         types.String                    `tfsdk:"node_version"`
 	OutputDirectory                     types.String                    `tfsdk:"output_directory"`
 	PublicSource                        types.Bool                      `tfsdk:"public_source"`
 	RootDirectory                       types.String                    `tfsdk:"root_directory"`
@@ -645,7 +659,9 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 		!p.PrioritiseProductionBuilds.IsNull() ||
 		!p.DirectoryListing.IsNull() ||
 		!p.SkewProtection.IsNull() ||
-		p.ResourceConfig != nil
+		p.ResourceConfig != nil ||
+		!p.NodeVersion.IsNull()
+
 }
 
 var nullProject = Project{
@@ -781,6 +797,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
 		GitComments:                          gc.toUpdateProjectRequest(),
 		ResourceConfig:                       p.ResourceConfig.toUpdateProjectRequest(),
+		NodeVersion:                          p.NodeVersion.ValueString(),
 	}, nil
 }
 
@@ -1394,6 +1411,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		SkewProtection:                      fromSkewProtectionMaxAge(response.SkewProtectionMaxAge),
 		GitComments:                         gitComments,
 		ResourceConfig:                      resourceConfig,
+		NodeVersion:                         types.StringValue(response.NodeVersion),
 	}, nil
 }
 

@@ -205,6 +205,7 @@ type ProjectResponse struct {
 	Security                             *Security                   `json:"security"`
 	DeploymentExpiration                 *DeploymentExpiration       `json:"deploymentExpiration"`
 	ResourceConfig                       *ResourceConfig             `json:"resourceConfig"`
+	NodeVersion                          string                      `json:"nodeVersion"`
 }
 
 type GitComments struct {
@@ -304,6 +305,7 @@ type UpdateProjectRequest struct {
 	SkewProtectionMaxAge                 int                             `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                    `json:"gitComments"`
 	ResourceConfig                       *ResourceConfig                 `json:"resourceConfig,omitempty"`
+	NodeVersion                          string                          `json:"nodeVersion,omitempty"`
 }
 
 // UpdateProject updates an existing projects configuration within Vercel.
