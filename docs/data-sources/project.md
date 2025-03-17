@@ -54,6 +54,7 @@ data "vercel_project" "example" {
 - `id` (String) The ID of this resource.
 - `ignore_command` (String) When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.
 - `install_command` (String) The install command for this project. If omitted, this value will be automatically detected.
+- `node_version` (String) The version of Node.js that is used in the Build Step and for Serverless Functions.
 - `oidc_token_config` (Attributes) Configuration for OpenID Connect (OIDC) tokens. (see [below for nested schema](#nestedatt--oidc_token_config))
 - `options_allowlist` (Attributes) Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths. (see [below for nested schema](#nestedatt--options_allowlist))
 - `output_directory` (String) The output directory of the project. When null is used this value will be automatically detected.

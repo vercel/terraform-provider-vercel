@@ -94,6 +94,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Description: "The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.",
 			},
+			"node_version": schema.StringAttribute{
+				Computed:    true,
+				Description: "The version of Node.js that is used in the Build Step and for Serverless Functions.",
+			},
 			"environment": schema.SetNestedAttribute{
 				Description: "A list of environment variables that should be configured for the project.",
 				Computed:    true,
@@ -411,6 +415,7 @@ type ProjectDataSource struct {
 	EnableAffectedProjectsDeployments   types.Bool            `tfsdk:"enable_affected_projects_deployments"`
 	SkewProtection                      types.String          `tfsdk:"skew_protection"`
 	ResourceConfig                      *ResourceConfig       `tfsdk:"resource_config"`
+	NodeVersion                         types.String          `tfsdk:"node_version"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
@@ -480,6 +485,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		EnableAffectedProjectsDeployments:   project.EnableAffectedProjectsDeployments,
 		SkewProtection:                      project.SkewProtection,
 		ResourceConfig:                      project.ResourceConfig,
+		NodeVersion:                         project.NodeVersion,
 	}, nil
 }
 
