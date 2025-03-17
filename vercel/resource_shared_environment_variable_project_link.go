@@ -82,7 +82,7 @@ type SharedEnvironmentVariableProjectLink struct {
 	TeamID                      types.String `tfsdk:"team_id"`
 }
 
-func (e *SharedEnvironmentVariableProjectLink) toUpdateSharedEnvironmentVariableRequest(ctx context.Context, link bool) (req client.UpdateSharedEnvironmentVariableRequest, ok bool) {
+func (e *SharedEnvironmentVariableProjectLink) toUpdateSharedEnvironmentVariableRequest(link bool) (req client.UpdateSharedEnvironmentVariableRequest, ok bool) {
 	upd := client.UpdateSharedEnvironmentVariableRequestProjectIDUpdates{}
 
 	if link {
@@ -106,7 +106,7 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Create(ctx context.Contex
 		return
 	}
 
-	request, ok := plan.toUpdateSharedEnvironmentVariableRequest(ctx, true)
+	request, ok := plan.toUpdateSharedEnvironmentVariableRequest(true)
 	if !ok {
 		return
 	}
@@ -194,7 +194,7 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Delete(ctx context.Contex
 		return
 	}
 
-	request, ok := plan.toUpdateSharedEnvironmentVariableRequest(ctx, false)
+	request, ok := plan.toUpdateSharedEnvironmentVariableRequest(false)
 	if !ok {
 		return
 	}
