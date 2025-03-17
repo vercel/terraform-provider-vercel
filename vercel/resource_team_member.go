@@ -316,12 +316,18 @@ func convertResponseToTeamMember(response client.TeamMember, plan TeamMember) Te
 		))
 	}
 	projects := types.SetValueMust(projectsElemType, projectsAttrs)
+	if len(projectsAttrs) == 0 {
+		projects = types.SetNull(projectsElemType)
+	}
 
 	var ags []attr.Value
 	for _, ag := range response.AccessGroups {
 		ags = append(ags, types.StringValue(ag.ID))
 	}
 	accessGroups := types.SetValueMust(types.StringType, ags)
+	if len(ags) == 0 {
+		accessGroups = types.SetNull(types.StringType)
+	}
 
 	teamMember := TeamMember{
 		UserID:       types.StringValue(response.UserID),
@@ -448,10 +454,11 @@ func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest,
 		TeamID: state.TeamID.ValueString(),
 		UserID: state.UserID.ValueString(),
 	})
-	tflog.Error(ctx, "Read team member", map[string]any{
-		"team_id": state.TeamID.ValueString(),
-		"user_id": state.UserID.ValueString(),
-		"err":     err,
+	tflog.Info(ctx, "Read team member", map[string]any{
+		"team_id":  state.TeamID.ValueString(),
+		"user_id":  state.UserID.ValueString(),
+		"err":      err,
+		"response": response,
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
