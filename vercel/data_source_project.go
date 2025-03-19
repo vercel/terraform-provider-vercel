@@ -414,7 +414,7 @@ type ProjectDataSource struct {
 	DirectoryListing                    types.Bool            `tfsdk:"directory_listing"`
 	EnableAffectedProjectsDeployments   types.Bool            `tfsdk:"enable_affected_projects_deployments"`
 	SkewProtection                      types.String          `tfsdk:"skew_protection"`
-	ResourceConfig                      *ResourceConfig       `tfsdk:"resource_config"`
+	ResourceConfig                      types.Object          `tfsdk:"resource_config"`
 	NodeVersion                         types.String          `tfsdk:"node_version"`
 }
 
@@ -429,13 +429,6 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 			"on_pull_request": types.BoolValue(response.GitComments.OnPullRequest),
 			"on_commit":       types.BoolValue(response.GitComments.OnCommit),
 		})
-	}
-
-	if response.ResourceConfig != nil {
-		plan.ResourceConfig = &ResourceConfig{
-			FunctionDefaultMemoryType: types.StringValue(response.ResourceConfig.FunctionDefaultMemoryType),
-			FunctionDefaultTimeout:    types.Int64Value(response.ResourceConfig.FunctionDefaultTimeout),
-		}
 	}
 
 	project, err := convertResponseToProject(ctx, response, plan, environmentVariables)

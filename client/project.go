@@ -218,8 +218,8 @@ type Security struct {
 }
 
 type ResourceConfig struct {
-	FunctionDefaultMemoryType string `json:"functionDefaultMemoryType,omitempty"`
-	FunctionDefaultTimeout    int64  `json:"functionDefaultTimeout,omitempty"`
+	FunctionDefaultMemoryType *string `json:"functionDefaultMemoryType,omitempty"`
+	FunctionDefaultTimeout    *int64  `json:"functionDefaultTimeout,omitempty"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.
