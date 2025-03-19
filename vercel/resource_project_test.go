@@ -104,7 +104,7 @@ func TestAcc_Project(t *testing.T) {
 	})
 }
 
-func TestAccProject_FluidCompute(t *testing.T) {
+func TestAcc_ProjectFluidCompute(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 
 	resource.Test(t, resource.TestCase{
