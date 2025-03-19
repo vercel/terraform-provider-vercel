@@ -204,7 +204,7 @@ type ProjectResponse struct {
 	GitComments                          *GitComments                `json:"gitComments"`
 	Security                             *Security                   `json:"security"`
 	DeploymentExpiration                 *DeploymentExpiration       `json:"deploymentExpiration"`
-	ResourceConfig                       *ResourceConfig             `json:"resourceConfig"`
+	ResourceConfig                       *ResourceConfigResponse     `json:"resourceConfig"`
 	NodeVersion                          string                      `json:"nodeVersion"`
 }
 
@@ -217,9 +217,16 @@ type Security struct {
 	AttackModeEnabled bool `json:"attackModeEnabled"`
 }
 
+type ResourceConfigResponse struct {
+	FunctionDefaultMemoryType *string `json:"functionDefaultMemoryType"`
+	FunctionDefaultTimeout    *int64  `json:"functionDefaultTimeout"`
+	Fluid                     bool    `json:"fluid"`
+}
+
 type ResourceConfig struct {
 	FunctionDefaultMemoryType *string `json:"functionDefaultMemoryType,omitempty"`
 	FunctionDefaultTimeout    *int64  `json:"functionDefaultTimeout,omitempty"`
+	Fluid                     *bool   `json:"fluid,omitempty"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.
