@@ -82,6 +82,8 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "skew_protection", "7 days"),
 					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.issuer_mode", "team"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_cpu_type", "standard"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_timeout", "60"),
 				),
 			},
 			// Update testing
@@ -922,6 +924,10 @@ resource "vercel_project" "test" {
   oidc_token_config = {
     enabled = true
     issuer_mode = "team"
+  }
+  resource_config = {
+      function_default_cpu_type = "standard"
+      function_default_timeout = 60
   }
   environment = [
     {
