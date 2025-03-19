@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -97,6 +98,78 @@ func TestAcc_Project(t *testing.T) {
 						"value": "baz",
 					}),
 					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "false"),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_ProjectFluidCompute(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		Steps: []resource.TestStep{
+			{
+				// check we get a sensible error if fluid + invalid CPU combination.
+				Config: `
+                resource "vercel_project" "test" {
+                    name = "foo"
+                    resource_config = {
+                        fluid = true
+                        function_default_cpu_type = "standard_legacy"
+                    }
+                }
+                `,
+				ExpectError: regexp.MustCompile(strings.ReplaceAll("Fluid compute is only supported with the standard or performance CPU types.", " ", `\s*`)),
+			},
+			{
+				// check creating a project with Fluid
+				Config: fmt.Sprintf(`
+                    resource "vercel_project" "test" {
+                        name = "test-acc-fluid-%[1]s"
+                        %[2]s
+
+                        resource_config = {
+                            fluid = true
+                        }
+                    }
+                `, projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-fluid-%s", projectSuffix)),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.fluid", "true"),
+				),
+			},
+			{
+				// check updating Fluid on a project
+				Config: fmt.Sprintf(`
+                    resource "vercel_project" "test" {
+                        name = "test-acc-fluid-%[1]s"
+                        %[2]s
+
+                        resource_config = {
+                            fluid = false
+                        }
+                    }
+                `, projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-fluid-%s", projectSuffix)),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.fluid", "false"),
+				),
+			},
+			{
+				// check new projects without fluid specified shows fluid as false
+				Config: fmt.Sprintf(`
+                    resource "vercel_project" "test" {
+                        name = "test-acc-fluid-disabled-%[1]s"
+                        %[2]s
+                    }
+                `, projectSuffix, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-fluid-disabled-%s", projectSuffix)),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.fluid", "false"),
 				),
 			},
 		},

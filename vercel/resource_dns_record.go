@@ -20,8 +20,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &dnsRecordResource{}
-	_ resource.ResourceWithConfigure = &dnsRecordResource{}
+	_ resource.Resource                   = &dnsRecordResource{}
+	_ resource.ResourceWithConfigure      = &dnsRecordResource{}
+	_ resource.ResourceWithValidateConfig = &dnsRecordResource{}
 )
 
 func newDNSRecordResource() resource.Resource {

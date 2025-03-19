@@ -30,10 +30,11 @@ import (
 )
 
 var (
-	_ resource.Resource                = &projectResource{}
-	_ resource.ResourceWithConfigure   = &projectResource{}
-	_ resource.ResourceWithImportState = &projectResource{}
-	_ resource.ResourceWithModifyPlan  = &projectResource{}
+	_ resource.Resource                     = &projectResource{}
+	_ resource.ResourceWithConfigure        = &projectResource{}
+	_ resource.ResourceWithImportState      = &projectResource{}
+	_ resource.ResourceWithModifyPlan       = &projectResource{}
+	_ resource.ResourceWithConfigValidators = &projectResource{}
 )
 
 func newProjectResource() resource.Resource {
@@ -543,9 +544,21 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						},
 						PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 					},
+					"fluid": schema.BoolAttribute{
+						Description:   "Enable fluid compute for your Vercel Functions to automatically manage concurrency and optimize performance. Vercel will handle the defaults to ensure the best experience for your workload.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					},
 				},
 			},
 		},
+	}
+}
+
+func (r *projectResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		&fluidComputeBasicCPUValidator{},
 	}
 }
 
@@ -1003,12 +1016,14 @@ var resourceConfigAttrType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
 		"function_default_cpu_type": types.StringType,
 		"function_default_timeout":  types.Int64Type,
+		"fluid":                     types.BoolType,
 	},
 }
 
 type ResourceConfig struct {
 	FunctionDefaultCPUType types.String `tfsdk:"function_default_cpu_type"`
 	FunctionDefaultTimeout types.Int64  `tfsdk:"function_default_timeout"`
+	Fluid                  types.Bool   `tfsdk:"fluid"`
 }
 
 func (p *Project) resourceConfig(ctx context.Context) (rc *ResourceConfig, diags diag.Diagnostics) {
@@ -1030,6 +1045,9 @@ func (r *ResourceConfig) toClientResourceConfig() *client.ResourceConfig {
 	}
 	if !r.FunctionDefaultTimeout.IsUnknown() {
 		resourceConfig.FunctionDefaultTimeout = r.FunctionDefaultTimeout.ValueInt64Pointer()
+	}
+	if !r.Fluid.IsUnknown() {
+		resourceConfig.Fluid = r.Fluid.ValueBoolPointer()
 	}
 	return resourceConfig
 }
@@ -1253,6 +1271,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		resourceConfig = types.ObjectValueMust(resourceConfigAttrType.AttrTypes, map[string]attr.Value{
 			"function_default_cpu_type": types.StringPointerValue(response.ResourceConfig.FunctionDefaultMemoryType),
 			"function_default_timeout":  types.Int64PointerValue(response.ResourceConfig.FunctionDefaultTimeout),
+			"fluid":                     types.BoolValue(response.ResourceConfig.Fluid),
 		})
 	}
 

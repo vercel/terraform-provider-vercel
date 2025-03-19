@@ -193,6 +193,7 @@ Required:
 
 Optional:
 
+- `fluid` (Boolean) Enable fluid compute for your Vercel Functions to automatically manage concurrency and optimize performance. Vercel will handle the defaults to ensure the best experience for your workload.
 - `function_default_cpu_type` (String) The amount of CPU available to your Serverless Functions. Should be one of 'standard_legacy' (0.6vCPU), 'standard' (1vCPU) or 'performance' (1.7vCPUs).
 - `function_default_timeout` (Number) The default timeout for Serverless Functions.
 
