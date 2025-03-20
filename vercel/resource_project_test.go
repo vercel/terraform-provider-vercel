@@ -114,16 +114,17 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// check we get a sensible error if fluid + invalid CPU combination.
-				Config: `
+				Config: fmt.Sprintf(`
                 resource "vercel_project" "test" {
-                    name = "foo"
+                    name = "test-acc-fluid-%[1]s"
+                    %[2]s
                     resource_config = {
                         fluid = true
                         function_default_cpu_type = "standard_legacy"
                     }
                 }
-                `,
-				ExpectError: regexp.MustCompile(strings.ReplaceAll("Fluid compute is only supported with the standard or performance CPU types.", " ", `\s*`)),
+                `, projectSuffix, teamIDConfig()),
+				ExpectError: regexp.MustCompile(strings.ReplaceAll("\"standard_legacy\" is not a valid memory type for Fluid compute", " ", `\s*`)),
 			},
 			{
 				// check creating a project with Fluid
