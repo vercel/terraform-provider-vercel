@@ -29,9 +29,9 @@ func getUpdateBypassProtectionRequestBody(newValue bool, secret string) string {
 			return "{}"
 		}
 		return string(mustMarshal(struct {
-			Revoke generateBypassProtectionRequest `json:"generate"`
+			Generate generateBypassProtectionRequest `json:"generate"`
 		}{
-			Revoke: generateBypassProtectionRequest{
+			Generate: generateBypassProtectionRequest{
 				Secret: secret,
 			},
 		}))
