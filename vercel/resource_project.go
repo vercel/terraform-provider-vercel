@@ -1912,16 +1912,14 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		})
 	}
 
-	if state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation {
-		secret := state.ProtectionBypassForAutomationSecret.ValueString()
-		if plan.ProtectionBypassForAutomationSecret.ValueString() != "" {
-			secret = plan.ProtectionBypassForAutomationSecret.ValueString()
-		}
+	currentSecret := state.ProtectionBypassForAutomationSecret.ValueString()
+	plannedSecret := plan.ProtectionBypassForAutomationSecret.ValueString()
+	if state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation && currentSecret != plannedSecret {
 		_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
 			ProjectID: plan.ID.ValueString(),
 			TeamID:    plan.TeamID.ValueString(),
 			NewValue:  plan.ProtectionBypassForAutomation.ValueBool(),
-			Secret:    secret,
+			Secret:    plannedSecret,
 		})
 		if err != nil {
 			resp.Diagnostics.AddError(
