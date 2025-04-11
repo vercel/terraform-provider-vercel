@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -124,28 +122,18 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 						Description: "Indicates if SAML is enforced for the team.",
 						Required:    true,
 					},
-					"roles": schema.MapAttribute{
+					"roles": schema.SingleNestedAttribute{
 						Description: "Directory groups to role or access group mappings.",
 						Optional:    true,
-						ElementType: types.StringType,
-						Validators: []validator.Map{
-							// Validate only this attribute or roles is configured.
-							mapvalidator.ExactlyOneOf(
-								path.MatchRoot("saml.roles"),
-								path.MatchRoot("saml.access_group_id"),
-							),
-						},
-					},
-					"access_group_id": schema.StringAttribute{
-						Description: "The ID of the access group to use for the team.",
-						Optional:    true,
-						Validators: []validator.String{
-							stringvalidator.RegexMatches(regexp.MustCompile("^ag_[A-z0-9_ -]+$"), "Access group ID must be a valid access group"),
-							// Validate only this attribute or roles is configured.
-							stringvalidator.ExactlyOneOf(
-								path.MatchRoot("saml.roles"),
-								path.MatchRoot("saml.access_group_id"),
-							),
+						Attributes: map[string]schema.Attribute{
+							"role": schema.StringAttribute{
+								Description: "The role that the user should have in the project. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. Depending on your Team's plan, some of these roles may be unavailable.",
+								Required:    true,
+							},
+							"access_group_id": schema.StringAttribute{
+								Description: "The ID of the access group to use for the team.",
+								Optional:    true,
+							},
 						},
 					},
 				},
@@ -222,16 +210,27 @@ type SamlDirectory struct {
 	State types.String `tfsdk:"state"`
 }
 
+// only one of these is non-nil
+type SamlRoles struct {
+	Role          *types.String `tfsdk:"role"`
+	AccessGroupID *types.String `tfsdk:"access_group_id"`
+}
+
 type Saml struct {
-	Enforced      types.Bool   `tfsdk:"enforced"`
-	Roles         types.Map    `tfsdk:"roles"`
-	AccessGroupId types.String `tfsdk:"access_group_id"`
+	Enforced types.Bool   `tfsdk:"enforced"`
+	Roles    types.Object `tfsdk:"roles"`
+}
+
+var samlRoleType = map[string]attr.Type{
+	"role":            types.StringType,
+	"access_group_id": types.StringType,
 }
 
 var samlAttrTypes = map[string]attr.Type{
-	"enforced":        types.BoolType,
-	"roles":           types.MapType{ElemType: types.StringType},
-	"access_group_id": types.StringType,
+	"enforced": types.BoolType,
+	"roles": types.ObjectType{
+		AttrTypes: samlRoleType,
+	},
 }
 
 func (s *Saml) toUpdateSamlConfig(ctx context.Context) *client.UpdateSamlConfig {
@@ -242,13 +241,8 @@ func (s *Saml) toUpdateSamlConfig(ctx context.Context) *client.UpdateSamlConfig 
 	config := &client.UpdateSamlConfig{
 		Enforced: s.Enforced.ValueBool(),
 	}
-	roles := map[string]string{}
-	if !s.AccessGroupId.IsNull() {
-		roles["accessGroupId"] = s.AccessGroupId.ValueString()
-	} else {
-		s.Roles.ElementsAs(ctx, &roles, false)
-	}
-	config.Roles = roles
+
+	// TODO convert
 
 	return config
 }
@@ -359,20 +353,19 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 	saml := types.ObjectNull(samlAttrTypes)
 	if response.Saml != nil && response.Saml.Roles != nil {
 		samlValue := map[string]attr.Value{
-			"enforced":        types.BoolValue(response.Saml.Enforced),
-			"roles":           types.MapNull(types.StringType),
-			"access_group_id": types.StringNull(),
+			"enforced": types.BoolValue(response.Saml.Enforced),
+			"roles":    types.ObjectNull(samlRoleType),
 		}
-		if response.Saml.Roles["accessGroupId"] != "" {
-			samlValue["access_group_id"] = types.StringValue(response.Saml.Roles["accessGroupId"])
-		} else {
-			roles, diags := types.MapValueFrom(ctx, types.StringType, response.Saml.Roles)
-			if diags.HasError() {
-				return TeamConfig{}, diags
-			}
-			samlValue["roles"] = roles
+
+		roles, diags := types.ObjectValue(samlRoleType, map[string]attr.Value{
+			"role":            types.StringValue(response.Saml.Roles["role"]),
+			"access_group_id": types.StringValue(response.Saml.Roles["accessGroupId"]),
+		})
+		if diags.HasError() {
+			return TeamConfig{}, diags
 		}
-		var diags diag.Diagnostics
+		samlValue["roles"] = roles
+
 		saml, diags = types.ObjectValue(samlAttrTypes, samlValue)
 		if diags.HasError() {
 			return TeamConfig{}, diags

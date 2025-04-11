@@ -112,14 +112,19 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 						Description: "Indicates if SAML is enforced for the team.",
 						Computed:    true,
 					},
-					"roles": schema.MapAttribute{
+					"roles": schema.SingleNestedAttribute{
 						Description: "Directory groups to role or access group mappings.",
-						Computed:    true,
-						ElementType: types.StringType,
-					},
-					"access_group_id": schema.StringAttribute{
-						Description: "The ID of the access group to use for the team.",
-						Computed:    true,
+						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"role": schema.StringAttribute{
+								Description: "The role that the user should have in the project. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. Depending on your Team's plan, some of these roles may be unavailable.",
+								Computed:    true,
+							},
+							"access_group_id": schema.StringAttribute{
+								Description: "The ID of the access group to use for the team.",
+								Computed:    true,
+							},
+						},
 					},
 				},
 				Computed:    true,
