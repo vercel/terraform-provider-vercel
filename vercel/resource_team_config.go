@@ -244,9 +244,9 @@ var samlAttrTypes = map[string]attr.Type{
 	"roles":    samlRolesType,
 }
 
-func (s *Saml) toUpdateSamlConfig() *client.UpdateSamlConfig {
+func (s *Saml) toUpdateSamlConfig() (*client.UpdateSamlConfig, diag.Diagnostics) {
 	if s == nil {
-		return nil
+		return nil, nil
 	}
 
 	config := &client.UpdateSamlConfig{
@@ -254,11 +254,14 @@ func (s *Saml) toUpdateSamlConfig() *client.UpdateSamlConfig {
 	}
 	roles := map[string]any{}
 	for k, v := range s.Roles {
+		var diags diag.Diagnostics
 		if v.Role.IsNull() && v.AccessGroupID.IsNull() {
-			panic("SAML roles must specify either a role or access group id: " + k)
+			diags.AddError("SAML roles must specify either a role or access group id: %s", k)
+			return nil, diags
 		}
 		if !v.Role.IsNull() && !v.AccessGroupID.IsNull() {
-			panic("SAML roles must specify either a role or access group id, not both: " + k)
+			diags.AddError("SAML roles must specify either a role or access group id, not both: %s", k)
+			return nil, diags
 		}
 		if !v.Role.IsNull() {
 			roles[k] = v.Role.ValueString()
@@ -270,7 +273,7 @@ func (s *Saml) toUpdateSamlConfig() *client.UpdateSamlConfig {
 	}
 	config.Roles = roles
 
-	return config
+	return config, nil
 }
 
 type EnableConfig struct {
@@ -335,6 +338,10 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 	if diags.HasError() {
 		return client.UpdateTeamRequest{}, diags
 	}
+	updateSamlConfig, diags := saml.toUpdateSamlConfig()
+	if diags.HasError() {
+		return client.UpdateTeamRequest{}, diags
+	}
 
 	var hideIPAddressses *bool
 	if !t.HideIPAddresses.IsUnknown() && !t.HideIPAddresses.IsNull() {
@@ -360,7 +367,7 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		RemoteCaching:                      rc.toUpdateTeamRequest(),
 		HideIPAddresses:                    hideIPAddressses,
 		HideIPAddressesInLogDrains:         hideIPAddresssesInLogDrains,
-		Saml:                               saml.toUpdateSamlConfig(),
+		Saml:                               updateSamlConfig,
 	}, nil
 }
 
