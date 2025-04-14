@@ -54,6 +54,13 @@ Read-Only:
 
 Read-Only:
 
-- `access_group_id` (String) The ID of the access group to use for the team.
 - `enforced` (Boolean) Indicates if SAML is enforced for the team.
-- `roles` (Map of String) Directory groups to role or access group mappings.
+- `roles` (Map of Object) Directory groups to role or access group mappings. For each directory key, either a role or access group id is specified. The role is one of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. The access group id is the id of an access group. (see [below for nested schema](#nestedatt--saml--roles))
+
+<a id="nestedatt--saml--roles"></a>
+### Nested Schema for `saml.roles`
+
+Read-Only:
+
+- `access_group_id` (String)
+- `role` (String)

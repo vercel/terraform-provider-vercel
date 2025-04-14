@@ -19,12 +19,21 @@ type SamlRoleAccessGroupID struct {
 	AccessGroupID string `json:"accessGroupId"`
 }
 
-type SamlRole struct {
+type SamlRoleAPI struct {
 	Role          *string
 	AccessGroupID *SamlRoleAccessGroupID
 }
 
-func (f *SamlRole) UnmarshalJSON(data []byte) error {
+type SamlRolesAPI map[string]SamlRoleAPI
+
+type SamlRole struct {
+	Role          *string `json:"role"`
+	AccessGroupID *string `json:"access_group_id"`
+}
+
+type SamlRoles map[string]SamlRole
+
+func (f *SamlRoleAPI) UnmarshalJSON(data []byte) error {
 	var role string
 	if err := json.Unmarshal(data, &role); err == nil {
 		f.Role = &role
@@ -38,10 +47,8 @@ func (f *SamlRole) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("received json is neither Role string nor AccessGroupID map")
 }
 
-type SamlRoles map[string]string
-
 func (f *SamlRoles) UnmarshalJSON(data []byte) error {
-	var result map[string]SamlRole
+	var result SamlRolesAPI
 	if err := json.Unmarshal(data, &result); err != nil {
 		return err
 	}
@@ -50,7 +57,14 @@ func (f *SamlRoles) UnmarshalJSON(data []byte) error {
 		k := k
 		v := v
 		if v.Role != nil {
-			tmp[k] = *(v.Role)
+			tmp[k] = SamlRole{
+				Role: v.Role,
+			}
+		}
+		if v.AccessGroupID != nil {
+			tmp[k] = SamlRole{
+				AccessGroupID: &v.AccessGroupID.AccessGroupID,
+			}
 		}
 	}
 	*f = tmp
@@ -120,8 +134,8 @@ func (c *Client) GetTeam(ctx context.Context, idOrSlug string) (t Team, err erro
 }
 
 type UpdateSamlConfig struct {
-	Enforced bool              `json:"enforced"`
-	Roles    map[string]string `json:"roles"`
+	Enforced bool           `json:"enforced"`
+	Roles    map[string]any `json:"roles"`
 }
 
 type UpdateTeamRequest struct {

@@ -122,19 +122,16 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 						Description: "Indicates if SAML is enforced for the team.",
 						Required:    true,
 					},
-					"roles": schema.SingleNestedAttribute{
-						Description: "Directory groups to role or access group mappings.",
+					"roles": schema.MapAttribute{
+						Description: "Directory groups to role or access group mappings. For each directory key, specify either a role or access group id. The role should be one of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. The access group id should be the id of an access group.",
 						Optional:    true,
-						Attributes: map[string]schema.Attribute{
-							"role": schema.StringAttribute{
-								Description: "The role that the user should have in the project. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. Depending on your Team's plan, some of these roles may be unavailable.",
-								Required:    true,
-							},
-							"access_group_id": schema.StringAttribute{
-								Description: "The ID of the access group to use for the team.",
-								Optional:    true,
+						ElementType: types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"role":            types.StringType,
+								"access_group_id": types.StringType,
 							},
 						},
+						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 					},
 				},
 				Optional:      true,
@@ -212,28 +209,34 @@ type SamlDirectory struct {
 
 // only one of these is non-nil
 type SamlRoles struct {
-	Role          *types.String `tfsdk:"role"`
-	AccessGroupID *types.String `tfsdk:"access_group_id"`
+	Role          types.String `tfsdk:"role"`
+	AccessGroupID types.String `tfsdk:"access_group_id"`
 }
 
 type Saml struct {
-	Enforced types.Bool   `tfsdk:"enforced"`
-	Roles    types.Object `tfsdk:"roles"`
+	Enforced types.Bool           `tfsdk:"enforced"`
+	Roles    map[string]SamlRoles `tfsdk:"roles"`
 }
 
-var samlRoleType = map[string]attr.Type{
+var samlRoleAttrType = map[string]attr.Type{
 	"role":            types.StringType,
 	"access_group_id": types.StringType,
 }
 
-var samlAttrTypes = map[string]attr.Type{
-	"enforced": types.BoolType,
-	"roles": types.ObjectType{
-		AttrTypes: samlRoleType,
-	},
+var samlRoleType = types.ObjectType{
+	AttrTypes: samlRoleAttrType,
 }
 
-func (s *Saml) toUpdateSamlConfig(ctx context.Context) *client.UpdateSamlConfig {
+var samlRolesType = types.MapType{
+	ElemType: samlRoleType,
+}
+
+var samlAttrTypes = map[string]attr.Type{
+	"enforced": types.BoolType,
+	"roles":    samlRolesType,
+}
+
+func (s *Saml) toUpdateSamlConfig() *client.UpdateSamlConfig {
 	if s == nil {
 		return nil
 	}
@@ -241,8 +244,17 @@ func (s *Saml) toUpdateSamlConfig(ctx context.Context) *client.UpdateSamlConfig 
 	config := &client.UpdateSamlConfig{
 		Enforced: s.Enforced.ValueBool(),
 	}
-
-	// TODO convert
+	roles := map[string]any{}
+	for k, v := range s.Roles {
+		if !v.Role.IsNull() {
+			roles[k] = v.Role.ValueString()
+		} else {
+			roles[k] = map[string]string{
+				"accessGroupId": v.AccessGroupID.ValueString(),
+			}
+		}
+	}
+	config.Roles = roles
 
 	return config
 }
@@ -334,7 +346,7 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		RemoteCaching:                      rc.toUpdateTeamRequest(),
 		HideIPAddresses:                    hideIPAddressses,
 		HideIPAddressesInLogDrains:         hideIPAddresssesInLogDrains,
-		Saml:                               saml.toUpdateSamlConfig(ctx),
+		Saml:                               saml.toUpdateSamlConfig(),
 	}, nil
 }
 
@@ -352,21 +364,21 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 
 	saml := types.ObjectNull(samlAttrTypes)
 	if response.Saml != nil && response.Saml.Roles != nil {
-		samlValue := map[string]attr.Value{
-			"enforced": types.BoolValue(response.Saml.Enforced),
-			"roles":    types.ObjectNull(samlRoleType),
+		roles := map[string]SamlRoles{}
+		for k, v := range response.Saml.Roles {
+			role := SamlRoles{
+				Role:          types.StringPointerValue(v.Role),
+				AccessGroupID: types.StringPointerValue(v.AccessGroupID),
+			}
+			roles[k] = role
 		}
 
-		roles, diags := types.ObjectValue(samlRoleType, map[string]attr.Value{
-			"role":            types.StringValue(response.Saml.Roles["role"]),
-			"access_group_id": types.StringValue(response.Saml.Roles["accessGroupId"]),
+		var diags diag.Diagnostics
+		saml, diags = types.ObjectValueFrom(ctx, samlAttrTypes, &Saml{
+			Enforced: types.BoolValue(response.Saml.Enforced),
+			Roles:    roles,
 		})
-		if diags.HasError() {
-			return TeamConfig{}, diags
-		}
-		samlValue["roles"] = roles
 
-		saml, diags = types.ObjectValue(samlAttrTypes, samlValue)
 		if diags.HasError() {
 			return TeamConfig{}, diags
 		}
