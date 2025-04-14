@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -125,12 +126,19 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 					"roles": schema.MapAttribute{
 						Description: "Directory groups to role or access group mappings. For each directory key, specify either a role or access group id. The role should be one of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. The access group id should be the id of an access group.",
 						Optional:    true,
+						Computed:    true,
 						ElementType: types.ObjectType{
 							AttrTypes: map[string]attr.Type{
 								"role":            types.StringType,
 								"access_group_id": types.StringType,
 							},
 						},
+						Default: mapdefault.StaticValue(types.MapValueMust(types.ObjectType{
+							AttrTypes: map[string]attr.Type{
+								"role":            types.StringType,
+								"access_group_id": types.StringType,
+							},
+						}, map[string]attr.Value{})),
 						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 					},
 				},
@@ -246,6 +254,12 @@ func (s *Saml) toUpdateSamlConfig() *client.UpdateSamlConfig {
 	}
 	roles := map[string]any{}
 	for k, v := range s.Roles {
+		if v.Role.IsNull() && v.AccessGroupID.IsNull() {
+			panic("SAML roles must specify either a role or access group id: " + k)
+		}
+		if !v.Role.IsNull() && !v.AccessGroupID.IsNull() {
+			panic("SAML roles must specify either a role or access group id, not both: " + k)
+		}
 		if !v.Role.IsNull() {
 			roles[k] = v.Role.ValueString()
 		} else {
@@ -363,7 +377,7 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 	}
 
 	saml := types.ObjectNull(samlAttrTypes)
-	if response.Saml != nil && response.Saml.Roles != nil {
+	if response.Saml != nil {
 		roles := map[string]SamlRoles{}
 		for k, v := range response.Saml.Roles {
 			role := SamlRoles{

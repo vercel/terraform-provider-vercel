@@ -28,7 +28,7 @@ type SamlRolesAPI map[string]SamlRoleAPI
 
 type SamlRole struct {
 	Role          *string `json:"role"`
-	AccessGroupID *string `json:"access_group_id"`
+	AccessGroupID *string `json:"accessGroupId"`
 }
 
 type SamlRoles map[string]SamlRole
