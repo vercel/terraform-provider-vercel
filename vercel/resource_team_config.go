@@ -123,15 +123,31 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 						Description: "Indicates if SAML is enforced for the team.",
 						Required:    true,
 					},
-					"roles": schema.MapAttribute{
+					"roles": schema.MapNestedAttribute{
 						Description: "Directory groups to role or access group mappings. For each directory key, specify either a role or access group id. The role should be one of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. The access group id should be the id of an access group.",
 						Optional:    true,
 						Computed:    true,
-						ElementType: types.ObjectType{
-							AttrTypes: map[string]attr.Type{
-								"role":            types.StringType,
-								"access_group_id": types.StringType,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"role": schema.StringAttribute{
+									Description: "The role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.",
+									Optional:    true,
+									Validators: []validator.String{
+										stringvalidator.OneOf("MEMBER", "OWNER", "VIEWER", "DEVELOPER", "BILLING", "CONTRIBUTOR"),
+									},
+								},
+								"access_group_id": schema.StringAttribute{
+									Description: "The access group id to assign to the user.",
+									Optional:    true,
+								},
 							},
+							// Not sure why, but this does not work
+							// Validators: []validator.Object{
+							// 	objectvalidator.ExactlyOneOf(
+							// 		path.MatchRelative().AtName("role"),
+							// 		path.MatchRelative().AtName("access_group_id"),
+							// 	),
+							// },
 						},
 						Default: mapdefault.StaticValue(types.MapValueMust(types.ObjectType{
 							AttrTypes: map[string]attr.Type{
@@ -387,9 +403,16 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 	if response.Saml != nil {
 		roles := map[string]SamlRoles{}
 		for k, v := range response.Saml.Roles {
-			role := SamlRoles{
-				Role:          types.StringPointerValue(v.Role),
-				AccessGroupID: types.StringPointerValue(v.AccessGroupID),
+			role := SamlRoles{}
+			if v.Role != nil {
+				role = SamlRoles{
+					Role: types.StringPointerValue(v.Role),
+				}
+			}
+			if v.AccessGroupID != nil {
+				role = SamlRoles{
+					AccessGroupID: types.StringPointerValue(v.AccessGroupID),
+				}
 			}
 			roles[k] = role
 		}
