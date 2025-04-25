@@ -260,38 +260,6 @@ var samlAttrTypes = map[string]attr.Type{
 	"roles":    samlRolesType,
 }
 
-func (s *Saml) toUpdateSamlConfig() (*client.UpdateSamlConfig, diag.Diagnostics) {
-	if s == nil {
-		return nil, nil
-	}
-
-	config := &client.UpdateSamlConfig{
-		Enforced: s.Enforced.ValueBool(),
-	}
-	roles := map[string]any{}
-	for k, v := range s.Roles {
-		var diags diag.Diagnostics
-		if v.Role.IsNull() && v.AccessGroupID.IsNull() {
-			diags.AddError("SAML roles must specify either a role or access group id: %s", k)
-			return nil, diags
-		}
-		if !v.Role.IsNull() && !v.AccessGroupID.IsNull() {
-			diags.AddError("SAML roles must specify either a role or access group id, not both: %s", k)
-			return nil, diags
-		}
-		if !v.Role.IsNull() {
-			roles[k] = v.Role.ValueString()
-		} else {
-			roles[k] = map[string]string{
-				"accessGroupId": v.AccessGroupID.ValueString(),
-			}
-		}
-	}
-	config.Roles = roles
-
-	return config, nil
-}
-
 type EnableConfig struct {
 	Enabled types.Bool `tfsdk:"enabled"`
 }
@@ -331,6 +299,23 @@ func (r *RemoteCaching) toUpdateTeamRequest() *client.RemoteCaching {
 	}
 }
 
+func (r *Saml) toUpdateTeamRequest() *client.UpdateSamlConfig {
+	if r == nil {
+		return nil
+	}
+	roles := map[string]client.UpdateSamlConfigRole{}
+	for k, v := range r.Roles {
+		roles[k] = client.UpdateSamlConfigRole{
+			Role:          v.Role.ValueStringPointer(),
+			AccessGroupID: v.AccessGroupID.ValueStringPointer(),
+		}
+	}
+	return &client.UpdateSamlConfig{
+		Enforced: r.Enforced.ValueBool(),
+		Roles:    roles,
+	}
+}
+
 func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, stateSlug types.String) (client.UpdateTeamRequest, diag.Diagnostics) {
 	slug := t.Slug.ValueString()
 	if stateSlug.ValueString() == t.Slug.ValueString() {
@@ -351,10 +336,6 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		UnhandledNullAsEmpty:    true,
 		UnhandledUnknownAsEmpty: true,
 	})
-	if diags.HasError() {
-		return client.UpdateTeamRequest{}, diags
-	}
-	updateSamlConfig, diags := saml.toUpdateSamlConfig()
 	if diags.HasError() {
 		return client.UpdateTeamRequest{}, diags
 	}
@@ -383,7 +364,7 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		RemoteCaching:                      rc.toUpdateTeamRequest(),
 		HideIPAddresses:                    hideIPAddressses,
 		HideIPAddressesInLogDrains:         hideIPAddresssesInLogDrains,
-		Saml:                               updateSamlConfig,
+		Saml:                               saml.toUpdateTeamRequest(),
 	}, nil
 }
 

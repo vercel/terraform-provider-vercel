@@ -133,9 +133,37 @@ func (c *Client) GetTeam(ctx context.Context, idOrSlug string) (t Team, err erro
 	return t, err
 }
 
+type UpdateSamlConfigRole struct {
+	Role          *string `json:"role"`
+	AccessGroupID *string `json:"accessGroupId"`
+}
+
 type UpdateSamlConfig struct {
-	Enforced bool           `json:"enforced"`
-	Roles    map[string]any `json:"roles"`
+	Enforced bool                            `json:"enforced"`
+	Roles    map[string]UpdateSamlConfigRole `json:"roles"`
+}
+
+func (r *UpdateSamlConfig) MarshalJSON() ([]byte, error) {
+	roles := map[string]any{}
+	for k, v := range r.Roles {
+		if v.Role != nil && v.AccessGroupID != nil {
+			return nil, fmt.Errorf("bad union")
+		}
+		if v.Role != nil {
+			roles[k] = v.Role
+		} else if v.AccessGroupID != nil {
+			roles[k] = map[string]any{
+				"accessGroupId": v.AccessGroupID,
+			}
+		} else {
+			return nil, fmt.Errorf("bad union")
+		}
+
+	}
+	return json.Marshal(map[string]any{
+		"enforced": r.Enforced,
+		"roles":    roles,
+	})
 }
 
 type UpdateTeamRequest struct {

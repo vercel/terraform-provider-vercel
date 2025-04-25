@@ -78,12 +78,12 @@ Required:
 
 Optional:
 
-- `roles` (Map of Object) Directory groups to role or access group mappings. For each directory key, specify either a role or access group id. The role should be one of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. The access group id should be the id of an access group. (see [below for nested schema](#nestedatt--saml--roles))
+- `roles` (Attributes Map) Directory groups to role or access group mappings. For each directory key, specify either a role or access group id. The role should be one of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. The access group id should be the id of an access group. (see [below for nested schema](#nestedatt--saml--roles))
 
 <a id="nestedatt--saml--roles"></a>
 ### Nested Schema for `saml.roles`
 
 Optional:
 
-- `access_group_id` (String)
-- `role` (String)
+- `access_group_id` (String) The access group id to assign to the user.
+- `role` (String) The role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.
