@@ -132,6 +132,7 @@ resource "vercel_project" "test" {
   resource_config = {
     function_default_cpu_type = "standard_legacy"
     function_default_timeout = 30
+	fluid = false
   }
   oidc_token_config = {
     enabled = true

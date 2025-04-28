@@ -570,7 +570,8 @@ resource "vercel_project" "test" {
   name = "test-acc-two-%s"
   resource_config = {
     function_default_cpu_type = "standard_legacy"
-	function_default_timeout = 30
+    function_default_timeout = 30
+    fluid = false
   }
   %s
 }
