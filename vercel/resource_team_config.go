@@ -141,14 +141,8 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 									Optional:    true,
 								},
 							},
-							// Not sure why, but this does not work
-							// Validators: []validator.Object{
-							// 	objectvalidator.ExactlyOneOf(
-							// 		path.MatchRelative().AtName("role"),
-							// 		path.MatchRelative().AtName("access_group_id"),
-							// 	),
-							// },
 						},
+						Validators: []validator.Map{validateSamlRoles()},
 						Default: mapdefault.StaticValue(types.MapValueMust(types.ObjectType{
 							AttrTypes: map[string]attr.Type{
 								"role":            types.StringType,
