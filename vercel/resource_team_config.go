@@ -7,10 +7,13 @@ import (
 	"os"
 	"strings"
 
+	"regexp"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -28,8 +31,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &teamConfigResource{}
-	_ resource.ResourceWithConfigure = &teamConfigResource{}
+	_ resource.Resource                 = &teamConfigResource{}
+	_ resource.ResourceWithConfigure    = &teamConfigResource{}
+	_ resource.ResourceWithUpgradeState = &teamConfigResource{}
 )
 
 func newTeamConfigResource() resource.Resource {
@@ -64,6 +68,7 @@ func (r *teamConfigResource) Configure(ctx context.Context, req resource.Configu
 
 func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     1,
 		Description: "Manages the configuration of an existing Vercel Team.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -234,6 +239,13 @@ type SamlRoles struct {
 type Saml struct {
 	Enforced types.Bool           `tfsdk:"enforced"`
 	Roles    map[string]SamlRoles `tfsdk:"roles"`
+}
+
+// for backwards compatibility
+type SamlV0 struct {
+	Enforced      types.Bool   `tfsdk:"enforced"`
+	Roles         types.Map    `tfsdk:"roles"`
+	AccessGroupId types.String `tfsdk:"access_group_id"`
 }
 
 var samlRoleAttrType = map[string]attr.Type{
@@ -607,4 +619,218 @@ func (r *teamConfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	// We don't actually delete the team, just remove it from state
 	resp.State.RemoveResource(ctx)
+}
+
+// https://developer.hashicorp.com/terraform/plugin/framework/resources/state-upgrade#implementing-state-upgrade-support
+func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return map[int64]resource.StateUpgrader{
+		// State upgrade implementation from 0 to 1.
+		// roles.saml.access_group_id has been removed
+		// roles.saml.roles is now a map of objects with role and access_group_id, instead of a map of strings
+		0: {
+			PriorSchema: &schema.Schema{
+				Description: "Manages the configuration of an existing Vercel Team.",
+				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						Description: "The ID of the existing Vercel Team.",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"name": schema.StringAttribute{
+						Description:   "The name of the team.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+					"slug": schema.StringAttribute{
+						Description:   "The slug of the team. Will be used in the URL of the team's dashboard.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+					"avatar": schema.MapAttribute{
+						Description:   "The `avatar` should be a the 'file' attribute from a vercel_file data source.",
+						Optional:      true,
+						PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+						ElementType:   types.StringType,
+						Validators: []validator.Map{
+							mapvalidator.SizeAtLeast(1),
+							mapvalidator.SizeAtMost(1),
+						},
+					},
+					"description": schema.StringAttribute{
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Description:   "A description of the team.",
+					},
+					"sensitive_environment_variable_policy": schema.StringAttribute{
+						Description:   "Ensures that all environment variables created by members of this team will be created as Sensitive Environment Variables which can only be decrypted by Vercel's deployment system.: one of on, off or default.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Validators: []validator.String{
+							stringvalidator.OneOf("on", "off"),
+						},
+					},
+					"email_domain": schema.StringAttribute{
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Description:   "Hostname that'll be matched with emails on sign-up to automatically join the Team.",
+					},
+					"saml": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"enforced": schema.BoolAttribute{
+								Description: "Indicates if SAML is enforced for the team.",
+								Required:    true,
+							},
+							"roles": schema.MapAttribute{
+								Description: "Directory groups to role or access group mappings.",
+								Optional:    true,
+								ElementType: types.StringType,
+								Validators: []validator.Map{
+									// Validate only this attribute or roles is configured.
+									mapvalidator.ExactlyOneOf(
+										path.MatchRoot("saml.roles"),
+										path.MatchRoot("saml.access_group_id"),
+									),
+								},
+							},
+							"access_group_id": schema.StringAttribute{
+								Description: "The ID of the access group to use for the team.",
+								Optional:    true,
+								Validators: []validator.String{
+									stringvalidator.RegexMatches(regexp.MustCompile("^ag_[A-z0-9_ -]+$"), "Access group ID must be a valid access group"),
+									// Validate only this attribute or roles is configured.
+									stringvalidator.ExactlyOneOf(
+										path.MatchRoot("saml.roles"),
+										path.MatchRoot("saml.access_group_id"),
+									),
+								},
+							},
+						},
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+						Description:   "Configuration for SAML authentication.",
+					},
+					"invite_code": schema.StringAttribute{
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Description:   "A code that can be used to join this team. Only visible to Team owners.",
+					},
+					"preview_deployment_suffix": schema.StringAttribute{
+						Optional:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Computed:      true,
+						Description:   "The hostname that is used as the preview deployment suffix.",
+					},
+					"remote_caching": schema.SingleNestedAttribute{
+						Description:   "Configuration for Remote Caching.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description:   "Indicates if Remote Caching is enabled.",
+								Optional:      true,
+								Computed:      true,
+								PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+							},
+						},
+					},
+					"enable_preview_feedback": schema.StringAttribute{
+						Description:   "Enables the Vercel Toolbar on your preview deployments: one of on, off or default.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Validators: []validator.String{
+							stringvalidator.OneOf("default", "on", "off"),
+						},
+					},
+					"enable_production_feedback": schema.StringAttribute{
+						Description:   "Enables the Vercel Toolbar on your production deployments: one of on, off or default.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						Validators: []validator.String{
+							stringvalidator.OneOf("default", "on", "off"),
+						},
+					},
+					"hide_ip_addresses": schema.BoolAttribute{
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+						Description:   "Indicates if ip addresses should be accessible in o11y tooling.",
+					},
+					"hide_ip_addresses_in_log_drains": schema.BoolAttribute{
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+						Description:   "Indicates if ip addresses should be accessible in log drains.",
+					},
+				},
+			},
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var priorStateData TeamConfig
+
+				resp.Diagnostics.Append(req.State.Get(ctx, &priorStateData)...)
+
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				upgradedStateData := TeamConfig{
+					ID:                                 priorStateData.ID,
+					Avatar:                             priorStateData.Avatar,
+					Name:                               priorStateData.Name,
+					Slug:                               priorStateData.Slug,
+					Description:                        priorStateData.Description,
+					InviteCode:                         priorStateData.InviteCode,
+					SensitiveEnvironmentVariablePolicy: priorStateData.SensitiveEnvironmentVariablePolicy,
+					EmailDomain:                        priorStateData.EmailDomain,
+					PreviewDeploymentSuffix:            priorStateData.PreviewDeploymentSuffix,
+					RemoteCaching:                      priorStateData.RemoteCaching,
+					EnablePreviewFeedback:              priorStateData.EnablePreviewFeedback,
+					EnableProductionFeedback:           priorStateData.EnableProductionFeedback,
+					HideIPAddresses:                    priorStateData.HideIPAddresses,
+					HideIPAddressesInLogDrains:         priorStateData.HideIPAddressesInLogDrains,
+				}
+
+				if !priorStateData.Saml.IsNull() {
+					var samlV0 *SamlV0
+					diags := priorStateData.Saml.As(ctx, &samlV0, basetypes.ObjectAsOptions{
+						UnhandledNullAsEmpty:    true,
+						UnhandledUnknownAsEmpty: true,
+					})
+					if diags.HasError() {
+						return
+					}
+					// samlV0 did not correctly handle access groups, so don't need to upgrade them.
+					// we do need to upgrade the roles object to the new format.
+					roles := map[string]SamlRoles{}
+					for k, v := range samlV0.Roles.Elements() {
+						role := v.String()
+						roles[k] = SamlRoles{
+							Role: types.StringPointerValue(&role),
+						}
+					}
+					saml, diags := types.ObjectValueFrom(ctx, samlAttrTypes, &Saml{
+						Enforced: samlV0.Enforced,
+						Roles:    roles,
+					})
+					if diags.HasError() {
+						return
+					}
+					upgradedStateData.Saml = saml
+				}
+
+				resp.Diagnostics.Append(resp.State.Set(ctx, upgradedStateData)...)
+			},
+		},
+	}
 }
