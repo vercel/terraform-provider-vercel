@@ -7,23 +7,24 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// CreateAliasRequest defines the request the Vercel API expects in order to create an alias.
-type CreateAliasRequest struct {
-	Alias string `json:"alias"`
+// UpsertAliasRequest defines the request the Vercel API expects in order to create an alias.
+type UpsertAliasRequest struct {
+	Alias        string `json:"alias"`
+	DeploymentID string `json:"-"`
+	TeamID       string `json:"-"`
 }
 
 // The create Alias endpoint does not return the full AliasResponse, only the UID and Alias.
 type createAliasResponse struct {
-	UID    string `json:"uid"`
-	Alias  string `json:"alias"`
-	TeamID string `json:"-"`
+	UID   string `json:"uid"`
+	Alias string `json:"alias"`
 }
 
-// CreateAlias creates an alias within Vercel.
-func (c *Client) CreateAlias(ctx context.Context, request CreateAliasRequest, deploymentID string, teamID string) (r AliasResponse, err error) {
-	url := fmt.Sprintf("%s/v2/deployments/%s/aliases", c.baseURL, deploymentID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+// UpsertAlias creates an alias within Vercel.
+func (c *Client) UpsertAlias(ctx context.Context, request UpsertAliasRequest) (r AliasResponse, err error) {
+	url := fmt.Sprintf("%s/v2/deployments/%s/aliases", c.baseURL, request.DeploymentID)
+	if c.teamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 
@@ -45,8 +46,8 @@ func (c *Client) CreateAlias(ctx context.Context, request CreateAliasRequest, de
 	return AliasResponse{
 		UID:          aliasResponse.UID,
 		Alias:        aliasResponse.Alias,
-		DeploymentID: deploymentID,
-		TeamID:       c.teamID(teamID),
+		DeploymentID: request.DeploymentID,
+		TeamID:       c.teamID(request.TeamID),
 	}, nil
 }
 

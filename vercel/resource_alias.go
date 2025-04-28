@@ -58,14 +58,12 @@ Provides an Alias resource.
 An Alias allows a ` + "`vercel_deployment` to be accessed through a different URL.",
 		Attributes: map[string]schema.Attribute{
 			"alias": schema.StringAttribute{
-				Description:   "The Alias we want to assign to the deployment defined in the URL.",
-				Required:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Description: "The Alias we want to assign to the deployment defined in the URL.",
+				Required:    true,
 			},
 			"deployment_id": schema.StringAttribute{
-				Description:   "The id of the Deployment the Alias should be associated with.",
-				Required:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Description: "The id of the Deployment the Alias should be associated with.",
+				Required:    true,
 			},
 			"team_id": schema.StringAttribute{
 				Optional:      true,
@@ -110,9 +108,12 @@ func (r *aliasResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	out, err := r.client.CreateAlias(ctx, client.CreateAliasRequest{
-		Alias: plan.Alias.ValueString(),
-	}, plan.DeploymentID.ValueString(), plan.TeamID.ValueString())
+	// Use the update function to create and update aliases, as the API is an upsert
+	out, err := r.client.UpsertAlias(ctx, client.UpsertAliasRequest{
+		Alias:        plan.Alias.ValueString(),
+		DeploymentID: plan.DeploymentID.ValueString(),
+		TeamID:       plan.TeamID.ValueString(),
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating alias",
@@ -176,11 +177,41 @@ func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp
 }
 
 // Update updates the Alias state.
+// The Vercel API for creating an alias is an upsert. We can simply call the create method again to update.
 func (r *aliasResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError(
-		"Updating an Alias is not supported",
-		"Updating an Alias is not supported",
-	)
+	var plan Alias
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Use the update function to create and update aliases, as the API is an upsert
+	out, err := r.client.UpsertAlias(ctx, client.UpsertAliasRequest{
+		Alias:        plan.Alias.ValueString(),
+		DeploymentID: plan.DeploymentID.ValueString(),
+		TeamID:       plan.TeamID.ValueString(),
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating alias",
+			fmt.Sprintf("Could not update alias %s, unexpected error: %s", plan.Alias.ValueString(), err.Error()),
+		)
+		return
+	}
+
+	result := convertResponseToAlias(out, plan)
+	tflog.Info(ctx, "updated alias", map[string]any{
+		"team_id":       plan.TeamID.ValueString(),
+		"deployment_id": plan.DeploymentID.ValueString(),
+		"alias_id":      result.ID.ValueString(),
+	})
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Delete deletes an Alias.

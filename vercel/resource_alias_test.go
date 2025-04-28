@@ -57,6 +57,15 @@ func TestAcc_AliasResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "deployment_id"),
 				),
 			},
+			{
+				Config: testAccAliasResourceConfigUpdated(name, teamIDConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckAliasExists(testTeam(), fmt.Sprintf("test-acc-%s.vercel.app", name)),
+					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
+					resource.TestCheckResourceAttrSet("vercel_alias.test", "id"),
+					resource.TestCheckResourceAttrSet("vercel_alias.test", "deployment_id"),
+				),
+			},
 		},
 	})
 }
@@ -81,6 +90,31 @@ resource "vercel_deployment" "test" {
 resource "vercel_alias" "test" {
     alias         = "test-acc-%[1]s.vercel.app"
     deployment_id = vercel_deployment.test.id
+    %[2]s
+}
+`, name, team, testGithubRepo())
+}
+
+func testAccAliasResourceConfigUpdated(name, team string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+    name = "test-acc-%[1]s"
+    %[2]s
+    git_repository = {
+        type = "github"
+        repo = "%[3]s"
+    }
+}
+
+resource "vercel_deployment" "test_two" {
+    project_id = vercel_project.test.id
+    ref        = "main"
+    %[2]s
+}
+
+resource "vercel_alias" "test" {
+    alias         = "test-acc-%[1]s.vercel.app"
+    deployment_id = vercel_deployment.test_two.id
     %[2]s
 }
 `, name, team, testGithubRepo())
