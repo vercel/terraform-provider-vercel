@@ -105,7 +105,7 @@ func getCustomEnvImportID(n string) resource.ImportStateIdFunc {
 	}
 }
 
-func testAccCustomEnvironment(projectSuffix string, teamIdConfig string) string {
+func testAccCustomEnvironment(projectSuffix string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-custom-env-%[1]s"
@@ -152,7 +152,7 @@ resource "vercel_custom_environment" "test_bt" {
 `, projectSuffix, teamIDConfig)
 }
 
-func testAccCustomEnvironmentUpdated(projectSuffix string, teamIdConfig string) string {
+func testAccCustomEnvironmentUpdated(projectSuffix string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-custom-env-%[1]s"

@@ -224,7 +224,7 @@ resource "vercel_project" "test" {
 `, projectSuffix, extra)
 }
 
-func testAccProjectDomainConfigWithCustomEnvironment(randomSuffix string, teamIdConfig string) string {
+func testAccProjectDomainConfigWithCustomEnvironment(randomSuffix string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-domain-%[1]s"
@@ -246,7 +246,7 @@ resource "vercel_project_domain" "test" {
 `, randomSuffix, teamIDConfig)
 }
 
-func testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix string, teamIdConfig string, githubRepo string) string {
+func testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix string, teamIDConfig string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-domain-%[1]s"
@@ -270,5 +270,5 @@ resource "vercel_project_domain" "test" {
     git_branch = "staging"
     %[2]s
 }
-`, randomSuffix, teamIdConfig, githubRepo)
+`, randomSuffix, teamIDConfig, githubRepo)
 }

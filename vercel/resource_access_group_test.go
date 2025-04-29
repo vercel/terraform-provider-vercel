@@ -113,7 +113,7 @@ func testCheckAccessGroupDoesNotExist(testClient *client.Client, teamID string, 
 	}
 }
 
-func testAccResourceAccessGroup(teamIdConfig string, name string) string {
+func testAccResourceAccessGroup(teamIDConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
   %[1]s
@@ -122,11 +122,11 @@ resource "vercel_access_group" "test" {
 `, teamIDConfig, name)
 }
 
-func testAccResourceAccessGroupUpdated(teamIdConfig string, name string) string {
+func testAccResourceAccessGroupUpdated(teamIDConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
   %[1]s
   name  = "test-acc-%[2]s-updated"
 }
-`, teamIdConfig, name)
+`, teamIDConfig, name)
 }

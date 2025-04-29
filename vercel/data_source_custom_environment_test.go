@@ -29,7 +29,7 @@ func TestAcc_CustomEnvironmentDataSource(t *testing.T) {
 	})
 }
 
-func testAccCustomEnvironmentDataSource(projectSuffix, teamIdConfig string) string {
+func testAccCustomEnvironmentDataSource(projectSuffix, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-custom-env-data-source-%[1]s"
@@ -52,5 +52,5 @@ data "vercel_custom_environment" "test" {
   %[2]s
   name = vercel_custom_environment.test.name
 }
-`, projectSuffix, teamIdConfig)
+`, projectSuffix, teamIDConfig)
 }

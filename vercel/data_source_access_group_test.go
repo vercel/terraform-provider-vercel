@@ -23,7 +23,7 @@ func TestAcc_AccessGroupDataSource(t *testing.T) {
 	})
 }
 
-func testAccAccessGroupDataSource(teamIdConfig string, name string) string {
+func testAccAccessGroupDataSource(teamIDConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
   name = "test-acc-%[2]s"
@@ -34,5 +34,5 @@ data "vercel_access_group" "test" {
 	id = vercel_access_group.test.id
 	%[1]s
 }
-`, teamIdConfig, name)
+`, teamIDConfig, name)
 }

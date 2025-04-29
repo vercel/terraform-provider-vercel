@@ -100,7 +100,7 @@ func testAccAccessGroupProjectDoesNotExist(testClient *client.Client, teamID str
 	}
 }
 
-func testAccResourceAccessGroupProject(teamIdConfig string, name string) string {
+func testAccResourceAccessGroupProject(teamIDConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   %[1]s
@@ -121,7 +121,7 @@ resource "vercel_access_group_project" "test" {
 `, teamIDConfig, name)
 }
 
-func testAccResourceAccessGroupProjectUpdated(teamIdConfig string, name string) string {
+func testAccResourceAccessGroupProjectUpdated(teamIDConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   %[1]s
@@ -139,5 +139,5 @@ resource "vercel_access_group_project" "test" {
 	access_group_id = vercel_access_group.test.id
 	role = "PROJECT_DEVELOPER"
 }
-`, teamIdConfig, name)
+`, teamIDConfig, name)
 }

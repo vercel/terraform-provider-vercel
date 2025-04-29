@@ -23,7 +23,7 @@ func TestAcc_TeamMemberDataSource(t *testing.T) {
 	})
 }
 
-func testAccTeamMemberDataSourceConfig(teamIdConfig string, user string) string {
+func testAccTeamMemberDataSourceConfig(teamIDConfig string, user string) string {
 	return fmt.Sprintf(`
 resource "vercel_team_member" "test" {
   %[1]s
@@ -35,5 +35,5 @@ data "vercel_team_member" "test" {
     user_id = vercel_team_member.test.user_id
     team_id = vercel_team_member.test.team_id
 }
-`, teamIdConfig, user)
+`, teamIDConfig, user)
 }

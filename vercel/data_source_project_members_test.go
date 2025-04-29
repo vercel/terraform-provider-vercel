@@ -25,7 +25,7 @@ func TestAcc_ProjectMembersDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectMembersDataSourceConfig(projectSuffix string, teamIdConfig string) string {
+func testAccProjectMembersDataSourceConfig(projectSuffix string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-project-members-%[1]s"
@@ -46,5 +46,5 @@ data "vercel_project_members" "test" {
   project_id = vercel_project_members.test.project_id
   %[2]s
 }
-`, projectSuffix, teamIdConfig)
+`, projectSuffix, teamIDConfig)
 }

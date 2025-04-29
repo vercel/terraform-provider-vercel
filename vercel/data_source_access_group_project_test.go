@@ -23,7 +23,7 @@ func TestAcc_AccessGroupProjectDataSource(t *testing.T) {
 	})
 }
 
-func testAccAccessGroupProjectDataSource(teamIdConfig string, name string) string {
+func testAccAccessGroupProjectDataSource(teamIDConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
 	%[1]s
@@ -50,5 +50,5 @@ data "vercel_access_group_project" "test" {
       vercel_access_group_project.test
   ]
 }
-`, teamIdConfig, name)
+`, teamIDConfig, name)
 }
