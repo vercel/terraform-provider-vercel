@@ -11,14 +11,13 @@ import (
 func TestAcc_AliasDataSource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAliasDataSourceConfig(name, teamIDConfig()),
+				Config: testAccAliasDataSourceConfig(name, teamIDConfig(t), testGithubRepo(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
-					resource.TestCheckResourceAttr("data.vercel_alias.test", "team_id", testTeam()),
+					resource.TestCheckResourceAttr("data.vercel_alias.test", "team_id", testTeam(t)),
 					resource.TestCheckResourceAttrSet("data.vercel_alias.test", "id"),
 					resource.TestCheckResourceAttrSet("data.vercel_alias.test", "deployment_id"),
 				),
@@ -27,7 +26,7 @@ func TestAcc_AliasDataSource(t *testing.T) {
 	})
 }
 
-func testAccAliasDataSourceConfig(name, team string) string {
+func testAccAliasDataSourceConfig(name, team string, testGithubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
     name = "test-acc-%[1]s"
@@ -54,5 +53,5 @@ data "vercel_alias" "test" {
     alias = vercel_alias.test.alias
     %[2]s
 }
-`, name, team, testGithubRepo())
+`, name, team, testGithubRepo)
 }

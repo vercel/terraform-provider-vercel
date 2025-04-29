@@ -11,14 +11,14 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testCheckAliasExists(teamID, alias string) resource.TestCheckFunc {
+func testCheckAliasExists(testClient *client.Client, teamID, alias string) resource.TestCheckFunc {
 	return func(*terraform.State) error {
-		_, err := testClient().GetAlias(context.TODO(), alias, teamID)
+		_, err := testClient.GetAlias(context.TODO(), alias, teamID)
 		return err
 	}
 }
 
-func testCheckAliasDestroyed(n, teamID string) resource.TestCheckFunc {
+func testCheckAliasDestroyed(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -29,7 +29,7 @@ func testCheckAliasDestroyed(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no alias is set")
 		}
 
-		_, err := testClient().GetAlias(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetAlias(context.TODO(), rs.Primary.ID, teamID)
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
@@ -44,23 +44,22 @@ func testCheckAliasDestroyed(n, teamID string) resource.TestCheckFunc {
 func TestAcc_AliasResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckAliasDestroyed("vercel_alias.test", testTeam()),
+		CheckDestroy:             testCheckAliasDestroyed(testClient(t), "vercel_alias.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAliasResourceConfig(name, teamIDConfig()),
+				Config: testAccAliasResourceConfig(name, teamIDConfig(t), testGithubRepo(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAliasExists(testTeam(), fmt.Sprintf("test-acc-%s.vercel.app", name)),
+					testCheckAliasExists(testClient(t), testTeam(t), fmt.Sprintf("test-acc-%s.vercel.app", name)),
 					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "deployment_id"),
 				),
 			},
 			{
-				Config: testAccAliasResourceConfigUpdated(name, teamIDConfig()),
+				Config: testAccAliasResourceConfigUpdated(name, teamIDConfig(t), testGithubRepo(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAliasExists(testTeam(), fmt.Sprintf("test-acc-%s.vercel.app", name)),
+					testCheckAliasExists(testClient(t), testTeam(t), fmt.Sprintf("test-acc-%s.vercel.app", name)),
 					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "deployment_id"),
@@ -70,7 +69,7 @@ func TestAcc_AliasResource(t *testing.T) {
 	})
 }
 
-func testAccAliasResourceConfig(name, team string) string {
+func testAccAliasResourceConfig(name, team string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
     name = "test-acc-%[1]s"
@@ -92,10 +91,10 @@ resource "vercel_alias" "test" {
     deployment_id = vercel_deployment.test.id
     %[2]s
 }
-`, name, team, testGithubRepo())
+`, name, team, githubRepo)
 }
 
-func testAccAliasResourceConfigUpdated(name, team string) string {
+func testAccAliasResourceConfigUpdated(name, team string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
     name = "test-acc-%[1]s"
@@ -117,5 +116,5 @@ resource "vercel_alias" "test" {
     deployment_id = vercel_deployment.test_two.id
     %[2]s
 }
-`, name, team, testGithubRepo())
+`, name, team, githubRepo)
 }

@@ -15,16 +15,15 @@ import (
 func TestAcc_AccessGroupResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testCheckAccessGroupDoesNotExist("vercel_access_group.test"),
+			testCheckAccessGroupDoesNotExist(testClient(t), testTeam(t), "vercel_access_group.test"),
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceAccessGroup(name),
+				Config: testAccResourceAccessGroup(teamIDConfig(t), name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAccessGroupExists("vercel_access_group.test"),
+					testCheckAccessGroupExists(testClient(t), testTeam(t), "vercel_access_group.test"),
 					resource.TestCheckResourceAttrSet("vercel_access_group.test", "id"),
 					resource.TestCheckResourceAttr("vercel_access_group.test", "name", fmt.Sprintf("test-acc-%s", name)),
 				),
@@ -35,9 +34,9 @@ func TestAcc_AccessGroupResource(t *testing.T) {
 				ImportStateIdFunc: getAccessGroupImportID("vercel_access_group.test"),
 			},
 			{
-				Config: testAccResourceAccessGroupUpdated(name),
+				Config: testAccResourceAccessGroupUpdated(teamIDConfig(t), name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAccessGroupExists("vercel_access_group.test"),
+					testCheckAccessGroupExists(testClient(t), testTeam(t), "vercel_access_group.test"),
 					resource.TestCheckResourceAttrSet("vercel_access_group.test", "id"),
 					resource.TestCheckResourceAttr("vercel_access_group.test", "name", fmt.Sprintf("test-acc-%s-updated", name)),
 				),
@@ -65,7 +64,7 @@ func getAccessGroupImportID(n string) resource.ImportStateIdFunc {
 	}
 }
 
-func testCheckAccessGroupExists(n string) resource.TestCheckFunc {
+func testCheckAccessGroupExists(testClient *client.Client, teamID string, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -76,15 +75,15 @@ func testCheckAccessGroupExists(n string) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetAccessGroup(context.TODO(), client.GetAccessGroupRequest{
-			TeamID:        testTeam(),
+		_, err := testClient.GetAccessGroup(context.TODO(), client.GetAccessGroupRequest{
+			TeamID:        teamID,
 			AccessGroupID: rs.Primary.ID,
 		})
 		return err
 	}
 }
 
-func testCheckAccessGroupDoesNotExist(n string) resource.TestCheckFunc {
+func testCheckAccessGroupDoesNotExist(testClient *client.Client, teamID string, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -99,8 +98,8 @@ func testCheckAccessGroupDoesNotExist(n string) resource.TestCheckFunc {
 		// small amount of time.
 		time.Sleep(time.Second * 2)
 
-		_, err := testClient().GetAccessGroup(context.TODO(), client.GetAccessGroupRequest{
-			TeamID:        testTeam(),
+		_, err := testClient.GetAccessGroup(context.TODO(), client.GetAccessGroupRequest{
+			TeamID:        teamID,
 			AccessGroupID: rs.Primary.ID,
 		})
 		if err == nil {
@@ -114,20 +113,20 @@ func testCheckAccessGroupDoesNotExist(n string) resource.TestCheckFunc {
 	}
 }
 
-func testAccResourceAccessGroup(name string) string {
+func testAccResourceAccessGroup(teamIDConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
   %[1]s
   name = "test-acc-%[2]s"
 }
-`, teamIDConfig(), name)
+`, teamIDConfig, name)
 }
 
-func testAccResourceAccessGroupUpdated(name string) string {
+func testAccResourceAccessGroupUpdated(teamIDConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
   %[1]s
   name  = "test-acc-%[2]s-updated"
 }
-`, teamIDConfig(), name)
+`, teamIDConfig, name)
 }

@@ -11,12 +11,11 @@ import (
 func TestAcc_CustomEnvironmentDataSource(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCustomEnvironmentDataSource(projectSuffix),
+				Config: testAccCustomEnvironmentDataSource(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vercel_custom_environment.test", "id"),
 					resource.TestCheckResourceAttrSet("data.vercel_custom_environment.test", "project_id"),
@@ -30,7 +29,7 @@ func TestAcc_CustomEnvironmentDataSource(t *testing.T) {
 	})
 }
 
-func testAccCustomEnvironmentDataSource(projectSuffix string) string {
+func testAccCustomEnvironmentDataSource(projectSuffix, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-custom-env-data-source-%[1]s"
@@ -53,5 +52,5 @@ data "vercel_custom_environment" "test" {
   %[2]s
   name = vercel_custom_environment.test.name
 }
-`, projectSuffix, teamIDConfig())
+`, projectSuffix, teamIDConfig)
 }

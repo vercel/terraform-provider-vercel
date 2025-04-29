@@ -11,11 +11,10 @@ import (
 func TestAcc_AttackChallengeModeDataSource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAttackChallengeModeConfig(name, teamIDConfig()),
+				Config: testAccAttackChallengeModeConfig(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_attack_challenge_mode.never_enabled", "enabled", "false"),
 					resource.TestCheckResourceAttr("data.vercel_attack_challenge_mode.enabled", "enabled", "true"),

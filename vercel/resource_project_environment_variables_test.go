@@ -13,14 +13,13 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 	resourceName := "vercel_project_environment_variables.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccProjectDestroy("vercel_project.test", testTeam()),
+			testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectEnvironmentVariablesConfig(projectName),
+				Config: testAccProjectEnvironmentVariablesConfig(projectName, teamIDConfig(t), testGithubRepo(t)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "variables.#", "2"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
@@ -37,7 +36,7 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccProjectEnvironmentVariablesConfigUpdated(projectName),
+				Config: testAccProjectEnvironmentVariablesConfigUpdated(projectName, teamIDConfig(t), testGithubRepo(t)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "variables.#", "4"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
@@ -66,7 +65,7 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 	})
 }
 
-func testAccProjectEnvironmentVariablesConfig(projectName string) string {
+func testAccProjectEnvironmentVariablesConfig(projectName string, teamIDConfig string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "%s"
@@ -95,10 +94,10 @@ resource "vercel_project_environment_variables" "test" {
     }
   ]
 }
-`, projectName, teamIDConfig(), testGithubRepo())
+`, projectName, teamIDConfig, githubRepo)
 }
 
-func testAccProjectEnvironmentVariablesConfigUpdated(projectName string) string {
+func testAccProjectEnvironmentVariablesConfigUpdated(projectName string, teamIDConfig string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "%s"
@@ -137,5 +136,5 @@ resource "vercel_project_environment_variables" "test" {
     }
   ]
 }
-`, projectName, teamIDConfig(), testGithubRepo())
+`, projectName, teamIDConfig, githubRepo)
 }

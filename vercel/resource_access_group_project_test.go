@@ -15,14 +15,13 @@ func TestAcc_AccessGroupProjectResource(t *testing.T) {
 	name := acctest.RandString(16)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccAccessGroupProjectDoesNotExist("vercel_access_group_project.test"),
+		CheckDestroy:             testAccAccessGroupProjectDoesNotExist(testClient(t), testTeam(t), "vercel_access_group_project.test"),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceAccessGroupProject(name),
+				Config: testAccResourceAccessGroupProject(teamIDConfig(t), name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAccessGroupProjectExists("vercel_access_group_project.test"),
+					testCheckAccessGroupProjectExists(testClient(t), testTeam(t), "vercel_access_group_project.test"),
 					resource.TestCheckResourceAttrSet("vercel_access_group_project.test", "access_group_id"),
 					resource.TestCheckResourceAttrSet("vercel_access_group_project.test", "project_id"),
 					resource.TestCheckResourceAttr("vercel_access_group_project.test", "role", "ADMIN"),
@@ -34,9 +33,9 @@ func TestAcc_AccessGroupProjectResource(t *testing.T) {
 				ImportStateIdFunc: getAccessGroupProjectImportID("vercel_access_group_project.test"),
 			},
 			{
-				Config: testAccResourceAccessGroupProjectUpdated(name),
+				Config: testAccResourceAccessGroupProjectUpdated(teamIDConfig(t), name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAccessGroupProjectExists("vercel_access_group_project.test"),
+					testCheckAccessGroupProjectExists(testClient(t), testTeam(t), "vercel_access_group_project.test"),
 					resource.TestCheckResourceAttrSet("vercel_access_group_project.test", "project_id"),
 					resource.TestCheckResourceAttrSet("vercel_access_group_project.test", "access_group_id"),
 					resource.TestCheckResourceAttr("vercel_access_group_project.test", "role", "PROJECT_DEVELOPER"),
@@ -62,15 +61,15 @@ func getAccessGroupProjectImportID(n string) resource.ImportStateIdFunc {
 	}
 }
 
-func testCheckAccessGroupProjectExists(n string) resource.TestCheckFunc {
+func testCheckAccessGroupProjectExists(testClient *client.Client, teamID string, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
 			return fmt.Errorf("not found: %s", n)
 		}
 
-		_, err := testClient().GetAccessGroupProject(context.TODO(), client.GetAccessGroupProjectRequest{
-			TeamID:        testTeam(),
+		_, err := testClient.GetAccessGroupProject(context.TODO(), client.GetAccessGroupProjectRequest{
+			TeamID:        teamID,
 			AccessGroupID: rs.Primary.Attributes["access_group_id"],
 			ProjectID:     rs.Primary.Attributes["project_id"],
 		})
@@ -78,15 +77,15 @@ func testCheckAccessGroupProjectExists(n string) resource.TestCheckFunc {
 	}
 }
 
-func testAccAccessGroupProjectDoesNotExist(n string) resource.TestCheckFunc {
+func testAccAccessGroupProjectDoesNotExist(testClient *client.Client, teamID string, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
 			return fmt.Errorf("not found: %s", n)
 		}
 
-		_, err := testClient().GetAccessGroupProject(context.TODO(), client.GetAccessGroupProjectRequest{
-			TeamID:        testTeam(),
+		_, err := testClient.GetAccessGroupProject(context.TODO(), client.GetAccessGroupProjectRequest{
+			TeamID:        teamID,
 			AccessGroupID: rs.Primary.Attributes["access_group_id"],
 			ProjectID:     rs.Primary.Attributes["project_id"],
 		})
@@ -101,7 +100,7 @@ func testAccAccessGroupProjectDoesNotExist(n string) resource.TestCheckFunc {
 	}
 }
 
-func testAccResourceAccessGroupProject(name string) string {
+func testAccResourceAccessGroupProject(teamIDConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   %[1]s
@@ -119,10 +118,10 @@ resource "vercel_access_group_project" "test" {
 	access_group_id = vercel_access_group.test.id
 	role = "ADMIN"
 }
-`, teamIDConfig(), name)
+`, teamIDConfig, name)
 }
 
-func testAccResourceAccessGroupProjectUpdated(name string) string {
+func testAccResourceAccessGroupProjectUpdated(teamIDConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   %[1]s
@@ -140,5 +139,5 @@ resource "vercel_access_group_project" "test" {
 	access_group_id = vercel_access_group.test.id
 	role = "PROJECT_DEVELOPER"
 }
-`, teamIDConfig(), name)
+`, teamIDConfig, name)
 }

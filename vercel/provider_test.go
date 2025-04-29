@@ -15,64 +15,72 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	"vercel": providerserver.NewProtocol6WithError(vercel.New()),
 }
 
-func mustHaveEnv(t *testing.T, name string) {
-	if os.Getenv(name) == "" {
-		t.Fatalf("%s environment variable must be set for acceptance tests", name)
-	}
-}
-
-func testAccPreCheck(t *testing.T) {
-	mustHaveEnv(t, "VERCEL_API_TOKEN")
-	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_TEAM")
-	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_GITHUB_REPO")
-	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_GITLAB_REPO")
-	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO")
-	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_DOMAIN")
-	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
-	mustHaveEnv(t, "VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION")
-}
-
 var tc *client.Client
 
-func testClient() *client.Client {
+func testClient(t *testing.T) *client.Client {
 	if tc == nil {
-		tc = client.New(apiToken())
+		tc = client.New(apiToken(t))
 	}
 
 	return tc
 }
 
-func apiToken() string {
-	return os.Getenv("VERCEL_API_TOKEN")
-}
-
-func testGithubRepo() string {
-	return os.Getenv("VERCEL_TERRAFORM_TESTING_GITHUB_REPO")
-}
-
-func testBitbucketRepo() string {
-	return os.Getenv("VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO")
-}
-
-func testTeam() string {
-	return os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM")
-}
-
-func teamIDConfig() string {
-	if testTeam() == "" {
-		return ""
+func apiToken(t *testing.T) string {
+	value := os.Getenv("VERCEL_API_TOKEN")
+	if value == "" {
+		t.Fatalf("Missing required environment variable VERCEL_API_TOKEN")
 	}
-	return fmt.Sprintf("team_id = \"%s\"", testTeam())
+	return value
 }
 
-func testDomain() string {
-	return os.Getenv("VERCEL_TERRAFORM_TESTING_DOMAIN")
+func testGithubRepo(t *testing.T) string {
+	value := os.Getenv("VERCEL_TERRAFORM_TESTING_GITHUB_REPO")
+	if value == "" {
+		t.Fatalf("Missing required environment variable VERCEL_TERRAFORM_TESTING_GITHUB_REPO")
+	}
+	return value
 }
 
-func testAdditionalUser() string {
-	return os.Getenv("VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
+func testBitbucketRepo(t *testing.T) string {
+	value := os.Getenv("VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO")
+	if value == "" {
+		t.Fatalf("Missing required environment variable VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO")
+	}
+	return value
 }
 
-func testExistingIntegration() string {
-	return os.Getenv("VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION")
+func testTeam(t *testing.T) string {
+	value := os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM")
+	if value == "" {
+		t.Fatalf("Missing required environment variable VERCEL_TERRAFORM_TESTING_TEAM")
+	}
+	return value
+}
+
+func teamIDConfig(t *testing.T) string {
+	return fmt.Sprintf("team_id = \"%s\"", testTeam(t))
+}
+
+func testDomain(t *testing.T) string {
+	value := os.Getenv("VERCEL_TERRAFORM_TESTING_DOMAIN")
+	if value == "" {
+		t.Fatalf("Missing required environment variable VERCEL_TERRAFORM_TESTING_DOMAIN")
+	}
+	return value
+}
+
+func testAdditionalUser(t *testing.T) string {
+	value := os.Getenv("VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
+	if value == "" {
+		t.Fatalf("Missing required environment variable VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
+	}
+	return value
+}
+
+func testExistingIntegration(t *testing.T) string {
+	value := os.Getenv("VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION")
+	if value == "" {
+		t.Fatalf("Missing required environment variable VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION")
+	}
+	return value
 }

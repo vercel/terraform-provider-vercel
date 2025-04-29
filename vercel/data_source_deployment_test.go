@@ -11,11 +11,10 @@ import (
 func TestAcc_DeploymentDataSource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentDataSourceConfig(name, teamIDConfig()),
+				Config: testAccDeploymentDataSourceConfig(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_id", "id"),
 					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_id", "project_id"),

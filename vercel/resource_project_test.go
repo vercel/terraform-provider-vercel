@@ -19,15 +19,14 @@ import (
 
 func TestAcc_Project(t *testing.T) {
 	testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
-	if testTeam() != "" {
-		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam())
+	if testTeam(t) != "" {
+		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam(t))
 	}
 	projectSuffix := acctest.RandString(16)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			// Ensure we get nice framework / serverless_function_region errors
 			{
@@ -50,9 +49,9 @@ func TestAcc_Project(t *testing.T) {
 			},
 			// Create and Read testing
 			{
-				Config: testAccProjectConfig(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfig(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 					testTeamID,
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-project-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
@@ -89,7 +88,7 @@ func TestAcc_Project(t *testing.T) {
 			},
 			// Update testing
 			{
-				Config: testAccProjectConfigUpdated(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigUpdated(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-two-%s", projectSuffix)),
 					resource.TestCheckNoResourceAttr("vercel_project.test", "build_command"),
@@ -108,9 +107,9 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
 				// check we get a sensible error if fluid + invalid CPU combination.
@@ -123,7 +122,7 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
                         function_default_cpu_type = "standard_legacy"
                     }
                 }
-                `, projectSuffix, teamIDConfig()),
+                `, projectSuffix, teamIDConfig(t)),
 				ExpectError: regexp.MustCompile(strings.ReplaceAll("\"standard_legacy\" is not a valid memory type for Fluid compute", " ", `\s*`)),
 			},
 			{
@@ -137,7 +136,7 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
                             fluid = true
                         }
                     }
-                `, projectSuffix, teamIDConfig()),
+                `, projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-fluid-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.fluid", "true"),
@@ -154,7 +153,7 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
                             fluid = false
                         }
                     }
-                `, projectSuffix, teamIDConfig()),
+                `, projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-fluid-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.fluid", "false"),
@@ -167,7 +166,7 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
                         name = "test-acc-fluid-disabled-%[1]s"
                         %[2]s
                     }
-                `, projectSuffix, teamIDConfig()),
+                `, projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-fluid-disabled-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.fluid", "false"),
@@ -180,20 +179,19 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
 func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfigWithoutEnv(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithoutEnv(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 				),
 			},
 			{
-				Config: testAccProjectConfigUpdated(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigUpdated(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 				),
 			},
 		},
@@ -203,14 +201,13 @@ func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
 func TestAcc_ProjectUpdateResourceConfig(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfigBase(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigBase(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
@@ -226,9 +223,9 @@ func TestAcc_ProjectUpdateResourceConfig(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccProjectConfigBase(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigBase(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -237,9 +234,9 @@ func TestAcc_ProjectUpdateResourceConfig(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccProjectConfigWithResourceConfig(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithResourceConfig(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
@@ -255,9 +252,9 @@ func TestAcc_ProjectUpdateResourceConfig(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccProjectConfigWithResourceConfig(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithResourceConfig(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -272,16 +269,16 @@ func TestAcc_ProjectUpdateResourceConfig(t *testing.T) {
 func TestAcc_ProjectWithGitRepository(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test_git", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test_git", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfigWithGitRepo(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithGitRepo(projectSuffix, teamIDConfig(t), testGithubRepo(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test_git", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test_git", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.type", "github"),
-					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", testGithubRepo()),
+					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.repo", testGithubRepo(t)),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test_git", "environment.*", map[string]string{
 						"key":        "foo",
 						"value":      "bar",
@@ -291,9 +288,9 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccProjectConfigWithGitRepoUpdated(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithGitRepoUpdated(projectSuffix, teamIDConfig(t), testGithubRepo(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test_git", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test_git", testTeam(t)),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test_git", "environment.*", map[string]string{
 						"key":     "foo",
 						"value":   "bar2",
@@ -302,9 +299,9 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccProjectConfigWithGitRepoRemoved(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithGitRepoRemoved(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test_git", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test_git", testTeam(t)),
 					resource.TestCheckNoResourceAttr("vercel_project.test_git", "git_repository"),
 				),
 			},
@@ -315,14 +312,14 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.enabled_to_start", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.enabled_to_start", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsAndOptionsAllowlist(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsAndOptionsAllowlist(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.enabled_to_start", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.enabled_to_start", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.deployment_type", "all_deployments"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "password_protection.deployment_type", "all_deployments"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "password_protection.password", "password"),
@@ -337,13 +334,13 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "options_allowlist.paths.0.value", "/foo"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret"),
-					testAccProjectExists("vercel_project.disabled_to_start", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.disabled_to_start", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "vercel_authentication.deployment_type", "standard_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "password_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "trusted_ips"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation_secret"),
-					testAccProjectExists("vercel_project.enabled_to_update", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.enabled_to_update", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "vercel_authentication.deployment_type", "only_preview_deployments"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.deployment_type", "only_preview_deployments"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "password_protection.password", "password"),
@@ -361,7 +358,7 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 				),
 			},
 			{
-				Config: testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsAndOptionsAllowlistUpdated(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsAndOptionsAllowlistUpdated(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.deployment_type", "standard_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "password_protection"),
@@ -407,30 +404,30 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 func TestAcc_ProjectWithAutomationBypass(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.disabled_to_enabled_generated_secret", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.disabled_to_enabled_generated_secret", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfigAutomationBypass(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigAutomationBypass(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.disabled_to_enabled_generated_secret", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.disabled_to_enabled_generated_secret", testTeam(t)),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_enabled_generated_secret", "protection_bypass_for_automation"),
-					testAccProjectExists("vercel_project.disabled_to_enabled_custom_secret", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.disabled_to_enabled_custom_secret", testTeam(t)),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_enabled_custom_secret", "protection_bypass_for_automation"),
-					testAccProjectExists("vercel_project.enabled_generated_secret_to_enabled_custom_secret", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.enabled_generated_secret_to_enabled_custom_secret", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.enabled_generated_secret_to_enabled_custom_secret", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.enabled_generated_secret_to_enabled_custom_secret", "protection_bypass_for_automation_secret"),
-					testAccProjectExists("vercel_project.enabled_generated_secret_to_disabled", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.enabled_generated_secret_to_disabled", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.enabled_generated_secret_to_disabled", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.enabled_generated_secret_to_disabled", "protection_bypass_for_automation_secret"),
-					testAccProjectExists("vercel_project.enabled_custom_secret_to_disabled", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.enabled_custom_secret_to_disabled", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_disabled", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_disabled", "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
 				),
 			},
 			{
-				Config: testAccProjectConfigAutomationBypassUpdate(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigAutomationBypassUpdate(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.disabled_to_enabled_generated_secret", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.disabled_to_enabled_generated_secret", "protection_bypass_for_automation_secret"),
@@ -467,14 +464,14 @@ func getProjectImportID(n string) resource.ImportStateIdFunc {
 func TestAcc_ProjectImport(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: projectConfigWithoutEnv(projectSuffix, teamIDConfig()),
+				Config: projectConfigWithoutEnv(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists("vercel_project.test", testTeam()),
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 				),
 			},
 			{
@@ -490,24 +487,24 @@ func TestAcc_ProjectImport(t *testing.T) {
 func TestAcc_ProjectEnablingAffectedProjectDeployments(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfigWithoutEnableAffectedSet(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithoutEnableAffectedSet(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckNoResourceAttr("vercel_project.test", "enable_affected_projects_deployments"),
 				),
 			},
 			{
-				Config: testAccProjectConfigWithEnableAffectedTrue(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithEnableAffectedTrue(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_affected_projects_deployments", "true"),
 				),
 			},
 			{
-				Config: testAccProjectConfigWithEnableAffectedFalse(projectSuffix, teamIDConfig()),
+				Config: testAccProjectConfigWithEnableAffectedFalse(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_affected_projects_deployments", "false"),
 				),
@@ -516,7 +513,7 @@ func TestAcc_ProjectEnablingAffectedProjectDeployments(t *testing.T) {
 	})
 }
 
-func testAccProjectExists(n, teamID string) resource.TestCheckFunc {
+func testAccProjectExists(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -527,12 +524,12 @@ func testAccProjectExists(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no projectID is set")
 		}
 
-		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetProject(context.TODO(), rs.Primary.ID, teamID)
 		return err
 	}
 }
 
-func testAccProjectDestroy(n, teamID string) resource.TestCheckFunc {
+func testAccProjectDestroy(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -543,7 +540,7 @@ func testAccProjectDestroy(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no projectID is set")
 		}
 
-		_, err := testClient().GetProject(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetProject(context.TODO(), rs.Primary.ID, teamID)
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
@@ -843,7 +840,7 @@ resource "vercel_project" "enabled_custom_secret_to_disabled" {
     `, projectSuffix, teamID)
 }
 
-func testAccProjectConfigWithGitRepo(projectSuffix, teamID string) string {
+func testAccProjectConfigWithGitRepo(projectSuffix, teamID string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test_git" {
   name = "test-acc-two-%s"
@@ -868,10 +865,10 @@ resource "vercel_project" "test_git" {
     }
   ]
 }
-    `, projectSuffix, teamID, testGithubRepo())
+    `, projectSuffix, teamID, githubRepo)
 }
 
-func testAccProjectConfigWithGitRepoUpdated(projectSuffix, teamID string) string {
+func testAccProjectConfigWithGitRepoUpdated(projectSuffix, teamID string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test_git" {
   name = "test-acc-two-%s"
@@ -901,7 +898,7 @@ resource "vercel_project" "test_git" {
     }
   ]
 }
-    `, projectSuffix, teamID, testGithubRepo())
+    `, projectSuffix, teamID, githubRepo)
 }
 
 func testAccProjectConfigWithGitRepoRemoved(projectSuffix, teamID string) string {

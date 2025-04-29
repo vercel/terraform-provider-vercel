@@ -14,7 +14,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testAccDeploymentExists(n, teamID string) resource.TestCheckFunc {
+func testAccDeploymentExists(testClient *client.Client, n string, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -25,7 +25,7 @@ func testAccDeploymentExists(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no DeploymentID is set")
 		}
 
-		_, err := testClient().GetDeployment(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetDeployment(context.TODO(), rs.Primary.ID, teamID)
 		return err
 	}
 }
@@ -39,7 +39,7 @@ func contains(items []string, i string) bool {
 	return false
 }
 
-func testAccEnvironmentSet(n, teamID string, envs ...string) resource.TestCheckFunc {
+func testAccEnvironmentSet(testClient *client.Client, n, teamID string, envs ...string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -49,7 +49,7 @@ func testAccEnvironmentSet(n, teamID string, envs ...string) resource.TestCheckF
 			return fmt.Errorf("no DeploymentID is set")
 		}
 
-		dpl, err := testClient().GetDeployment(context.TODO(), rs.Primary.ID, teamID)
+		dpl, err := testClient.GetDeployment(context.TODO(), rs.Primary.ID, teamID)
 		if err != nil {
 			return err
 		}
@@ -73,28 +73,27 @@ func TestAcc_Deployment(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 
 	testTeamID := resource.TestCheckNoResourceAttr("vercel_deployment.test", "team_id")
-	if testTeam() != "" {
-		testTeamID = resource.TestCheckResourceAttr("vercel_deployment.test", "team_id", testTeam())
+	if testTeam(t) != "" {
+		testTeamID = resource.TestCheckResourceAttr("vercel_deployment.test", "team_id", testTeam(t))
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             noopDestroyCheck,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(), ""),
+				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(t), ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testTeamID,
-					testAccDeploymentExists("vercel_deployment.test", ""),
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
 				),
 			},
 			{
-				Config: deploymentWithPrebuiltProject(projectSuffix, teamIDConfig()),
+				Config: deploymentWithPrebuiltProject(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testTeamID,
-					testAccDeploymentExists("vercel_deployment.test", ""),
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 				),
 			},
 		},
@@ -104,19 +103,18 @@ func TestAcc_Deployment(t *testing.T) {
 func TestAcc_DeploymentWithEnvironment(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             noopDestroyCheck,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(), `environment = {
+				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(t), `environment = {
                     FOO = "baz",
                     BAR = "qux",
                     BAZ = null
                 }`),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccDeploymentExists("vercel_deployment.test", ""),
-					testAccEnvironmentSet("vercel_deployment.test", "", "FOO", "BAR"),
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
+					testAccEnvironmentSet(testClient(t), "vercel_deployment.test", "", "FOO", "BAR"),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "environment.FOO", "baz"),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "environment.BAR", "qux"),
 				),
@@ -128,16 +126,16 @@ func TestAcc_DeploymentWithEnvironment(t *testing.T) {
 func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+
 		CheckDestroy:             noopDestroyCheck,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(), `project_settings = {
+				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(t), `project_settings = {
                     output_directory = ".",
                 }`),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccDeploymentExists("vercel_deployment.test", ""),
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "project_settings.output_directory", "."),
 					// resource.TestCheckResourceAttr("vercel_deployment.test", "project_settings.build_command", "npm run build"),
@@ -150,14 +148,13 @@ func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
 func TestAcc_DeploymentWithRootDirectoryOverride(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             noopDestroyCheck,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRootDirectoryOverride(projectSuffix, teamIDConfig()),
+				Config: testAccRootDirectoryOverride(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccDeploymentExists("vercel_deployment.test", ""),
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
 				),
 			},
@@ -168,14 +165,13 @@ func TestAcc_DeploymentWithRootDirectoryOverride(t *testing.T) {
 func TestAcc_DeploymentWithPathPrefix(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             noopDestroyCheck,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRootDirectoryWithPathPrefix(projectSuffix, teamIDConfig()),
+				Config: testAccRootDirectoryWithPathPrefix(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccDeploymentExists("vercel_deployment.test", ""),
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 				),
 			},
 		},
@@ -198,7 +194,7 @@ func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
 	}
 	testDeploymentGone := func() resource.TestCheckFunc {
 		return func(*terraform.State) error {
-			_, err := testClient().GetDeployment(context.TODO(), deploymentID, "")
+			_, err := testClient(t).GetDeployment(context.TODO(), deploymentID, "")
 			if err == nil {
 				return fmt.Errorf("expected not_found error, but got no error")
 			}
@@ -210,21 +206,20 @@ func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
 		}
 	}
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
 		CheckDestroy: func(s *terraform.State) error {
 			return nil
 		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(), extraConfig),
+				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(t), extraConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccDeploymentExists("vercel_deployment.test", ""),
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 					storeDeploymentID("vercel_deployment.test", &deploymentID),
 				),
 			},
 			{
-				Config: testAccDeploymentConfigWithNoDeployment(projectSuffix, teamIDConfig()),
+				Config: testAccDeploymentConfigWithNoDeployment(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testDeploymentGone(),
 				),
@@ -236,15 +231,14 @@ func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
 func TestAcc_DeploymentWithGitSource(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             noopDestroyCheck,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeployFromGitSource(projectSuffix, teamIDConfig()),
+				Config: testAccDeployFromGitSource(projectSuffix, teamIDConfig(t), testGithubRepo(t), testBitbucketRepo(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccDeploymentExists("vercel_deployment.bitbucket", testTeam()),
-					testAccDeploymentExists("vercel_deployment.github", testTeam()),
+					testAccDeploymentExists(testClient(t), "vercel_deployment.bitbucket", testTeam(t)),
+					testAccDeploymentExists(testClient(t), "vercel_deployment.github", testTeam(t)),
 				),
 			},
 		},
@@ -279,15 +273,14 @@ func TestAcc_DeploymentWithMissingFilesPath(t *testing.T) {
 
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             noopDestroyCheck,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() { createRandomFilePreConfig(t) },
-				Config:    testAccWithDirectoryUpload(projectSuffix, teamIDConfig()),
+				Config:    testAccWithDirectoryUpload(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccDeploymentExists("vercel_deployment.test", ""),
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 				),
 			},
 		},
@@ -416,7 +409,7 @@ resource "vercel_deployment" "test" {
 }`, projectSuffix, teamID)
 }
 
-func testAccDeployFromGitSource(projectSuffix, teamID string) string {
+func testAccDeployFromGitSource(projectSuffix, teamID string, githubRepo string, bitbucketRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "github" {
   name = "test-acc-deployment-%[1]s-github"
@@ -444,7 +437,7 @@ resource "vercel_deployment" "bitbucket" {
   ref        = "main"
   %[4]s
 }
-`, projectSuffix, testGithubRepo(), testBitbucketRepo(), teamID)
+`, projectSuffix, githubRepo, bitbucketRepo, teamID)
 }
 
 func testAccWithDirectoryUpload(projectSuffix, teamID string) string {

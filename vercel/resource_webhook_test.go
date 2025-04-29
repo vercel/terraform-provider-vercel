@@ -11,7 +11,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testCheckWebhookExists(teamID, n string) resource.TestCheckFunc {
+func testCheckWebhookExists(testClient *client.Client, teamID, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -22,12 +22,12 @@ func testCheckWebhookExists(teamID, n string) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetWebhook(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetWebhook(context.TODO(), rs.Primary.ID, teamID)
 		return err
 	}
 }
 
-func testCheckWebhooksDeleted(n1, n2, teamID string) resource.TestCheckFunc {
+func testCheckWebhooksDeleted(testClient *client.Client, n1, n2, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		for _, n := range []string{n1, n2} {
 			rs, ok := s.RootModule().Resources[n]
@@ -39,7 +39,7 @@ func testCheckWebhooksDeleted(n1, n2, teamID string) resource.TestCheckFunc {
 				return fmt.Errorf("no ID is set")
 			}
 
-			_, err := testClient().GetWebhook(context.TODO(), rs.Primary.ID, teamID)
+			_, err := testClient.GetWebhook(context.TODO(), rs.Primary.ID, teamID)
 			if err == nil {
 				return fmt.Errorf("expected not_found error, but got no error")
 			}
@@ -54,20 +54,19 @@ func testCheckWebhooksDeleted(n1, n2, teamID string) resource.TestCheckFunc {
 func TestAcc_WebhookResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckWebhooksDeleted("vercel_webhook.with_project_ids", "vercel_webhook.without_project_ids", testTeam()),
+		CheckDestroy:             testCheckWebhooksDeleted(testClient(t), "vercel_webhook.with_project_ids", "vercel_webhook.without_project_ids", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceWebhook(name, teamIDConfig()),
+				Config: testAccResourceWebhook(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckWebhookExists(testTeam(), "vercel_webhook.with_project_ids"),
+					testCheckWebhookExists(testClient(t), testTeam(t), "vercel_webhook.with_project_ids"),
 					resource.TestCheckTypeSetElemAttr("vercel_webhook.with_project_ids", "events.*", "deployment.created"),
 					resource.TestCheckTypeSetElemAttr("vercel_webhook.with_project_ids", "events.*", "deployment.succeeded"),
 					resource.TestCheckResourceAttrSet("vercel_webhook.with_project_ids", "id"),
 					resource.TestCheckResourceAttrSet("vercel_webhook.with_project_ids", "secret"),
 
-					testCheckWebhookExists(testTeam(), "vercel_webhook.without_project_ids"),
+					testCheckWebhookExists(testClient(t), testTeam(t), "vercel_webhook.without_project_ids"),
 					resource.TestCheckTypeSetElemAttr("vercel_webhook.without_project_ids", "events.*", "deployment.created"),
 					resource.TestCheckTypeSetElemAttr("vercel_webhook.without_project_ids", "events.*", "deployment.succeeded"),
 					resource.TestCheckResourceAttrSet("vercel_webhook.without_project_ids", "id"),
