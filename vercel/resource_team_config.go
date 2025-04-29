@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
-
 	"regexp"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -129,7 +128,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 						Required:    true,
 					},
 					"roles": schema.MapNestedAttribute{
-						Description: "Directory groups to role or access group mappings. For each directory key, specify either a role or access group id. The role should be one of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. The access group id should be the id of an access group.",
+						Description: "Directory groups to role or access group mappings. For each directory key, specify either a role or access group id.",
 						Optional:    true,
 						Computed:    true,
 						NestedObject: schema.NestedAttributeObject{

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -113,13 +112,19 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 						Description: "Indicates if SAML is enforced for the team.",
 						Computed:    true,
 					},
-					"roles": schema.MapAttribute{
-						Description: "Directory groups to role or access group mappings. For each directory key, either a role or access group id is specified. The role is one of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. The access group id is the id of an access group.",
+					"roles": schema.MapNestedAttribute{
+						Description: "Directory groups to role or access group mappings. For each directory key, specify either a role or access group id.",
 						Computed:    true,
-						ElementType: types.ObjectType{
-							AttrTypes: map[string]attr.Type{
-								"role":            types.StringType,
-								"access_group_id": types.StringType,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"role": schema.StringAttribute{
+									Description: "The role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.",
+									Computed:    true,
+								},
+								"access_group_id": schema.StringAttribute{
+									Description: "The access group id to assign to the user.",
+									Computed:    true,
+								},
 							},
 						},
 					},
