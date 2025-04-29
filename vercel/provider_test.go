@@ -49,14 +49,6 @@ func testBitbucketRepo(t *testing.T) string {
 	return value
 }
 
-func testGitlabRepo(t *testing.T) string {
-	value := os.Getenv("VERCEL_TERRAFORM_TESTING_GITLAB_REPO")
-	if value == "" {
-		t.Fatalf("Missing required environment variable VERCEL_TERRAFORM_TESTING_GITLAB_REPO")
-	}
-	return value
-}
-
 func testTeam(t *testing.T) string {
 	value := os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM")
 	if value == "" {
