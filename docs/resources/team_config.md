@@ -78,5 +78,12 @@ Required:
 
 Optional:
 
-- `access_group_id` (String) The ID of the access group to use for the team.
-- `roles` (Map of String) Directory groups to role or access group mappings.
+- `roles` (Attributes Map) Directory groups to role or access group mappings. For each directory group, specify either a role or access group id. (see [below for nested schema](#nestedatt--saml--roles))
+
+<a id="nestedatt--saml--roles"></a>
+### Nested Schema for `saml.roles`
+
+Optional:
+
+- `access_group_id` (String) The access group id to assign to the user.
+- `role` (String) The team level role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.
