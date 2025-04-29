@@ -128,13 +128,13 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 						Required:    true,
 					},
 					"roles": schema.MapNestedAttribute{
-						Description: "Directory groups to role or access group mappings. For each directory key, specify either a role or access group id.",
+						Description: "Directory groups to role or access group mappings. For each directory group, specify either a role or access group id.",
 						Optional:    true,
 						Computed:    true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"role": schema.StringAttribute{
-									Description: "The role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.",
+									Description: "The team level role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.",
 									Optional:    true,
 									Validators: []validator.String{
 										stringvalidator.OneOf("MEMBER", "OWNER", "VIEWER", "DEVELOPER", "BILLING", "CONTRIBUTOR"),

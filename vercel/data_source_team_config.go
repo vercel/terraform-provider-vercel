@@ -113,16 +113,16 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 						Computed:    true,
 					},
 					"roles": schema.MapNestedAttribute{
-						Description: "Directory groups to role or access group mappings. For each directory key, specify either a role or access group id.",
+						Description: "Directory groups to role or access group mappings. For each directory group, either a role or access group id is specified.",
 						Computed:    true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"role": schema.StringAttribute{
-									Description: "The role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.",
+									Description: "The team level role the user is assigned. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.",
 									Computed:    true,
 								},
 								"access_group_id": schema.StringAttribute{
-									Description: "The access group id to assign to the user.",
+									Description: "The access group the assign is assigned to.",
 									Computed:    true,
 								},
 							},
