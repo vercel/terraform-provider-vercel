@@ -26,7 +26,7 @@ func getEdgeConfigItemImportID(n string) resource.ImportStateIdFunc {
 	}
 }
 
-func testCheckEdgeConfigItemDeleted(n, key, teamID string) resource.TestCheckFunc {
+func testCheckEdgeConfigItemDeleted(testClient *client.Client, n, key, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -37,7 +37,7 @@ func testCheckEdgeConfigItemDeleted(n, key, teamID string) resource.TestCheckFun
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetEdgeConfigItem(context.TODO(), client.EdgeConfigItemRequest{
+		_, err := testClient.GetEdgeConfigItem(context.TODO(), client.EdgeConfigItemRequest{
 			TeamID:       teamID,
 			EdgeConfigID: rs.Primary.ID,
 			Key:          key,
@@ -56,14 +56,13 @@ func testCheckEdgeConfigItemDeleted(n, key, teamID string) resource.TestCheckFun
 func TestAcc_EdgeConfigItemResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckEdgeConfigDeleted("vercel_edge_config.test_item", testTeam()),
+		CheckDestroy:             testCheckEdgeConfigDeleted(testClient(t), "vercel_edge_config.test_item", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceEdgeConfigItem(name, teamIDConfig()),
+				Config: testAccResourceEdgeConfigItem(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckEdgeConfigExists(testTeam(), "vercel_edge_config.test_item"),
+					testCheckEdgeConfigExists(testClient(t), testTeam(t), "vercel_edge_config.test_item"),
 					resource.TestCheckResourceAttr("vercel_edge_config_item.test", "key", "foobar"),
 					resource.TestCheckResourceAttr("vercel_edge_config_item.test", "value", "baz"),
 				),
@@ -74,10 +73,10 @@ func TestAcc_EdgeConfigItemResource(t *testing.T) {
 				ImportStateIdFunc: getEdgeConfigItemImportID("vercel_edge_config_item.test"),
 			},
 			{
-				Config: testAccResourceEdgeConfigItemDeleted(name, teamIDConfig()),
+				Config: testAccResourceEdgeConfigItemDeleted(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckEdgeConfigExists(testTeam(), "vercel_edge_config.test_item"),
-					testCheckEdgeConfigItemDeleted("vercel_edge_config.test_item", "foobar", testTeam()),
+					testCheckEdgeConfigExists(testClient(t), testTeam(t), "vercel_edge_config.test_item"),
+					testCheckEdgeConfigItemDeleted(testClient(t), "vercel_edge_config.test_item", "foobar", testTeam(t)),
 				),
 			},
 		},

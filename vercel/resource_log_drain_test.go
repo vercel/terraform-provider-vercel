@@ -11,7 +11,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testCheckLogDrainExists(teamID, n string) resource.TestCheckFunc {
+func testCheckLogDrainExists(testClient *client.Client, teamID, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -22,12 +22,12 @@ func testCheckLogDrainExists(teamID, n string) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetLogDrain(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetLogDrain(context.TODO(), rs.Primary.ID, teamID)
 		return err
 	}
 }
 
-func testCheckLogDrainDeleted(n, teamID string) resource.TestCheckFunc {
+func testCheckLogDrainDeleted(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -38,7 +38,7 @@ func testCheckLogDrainDeleted(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetLogDrain(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetLogDrain(context.TODO(), rs.Primary.ID, teamID)
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
@@ -53,14 +53,13 @@ func testCheckLogDrainDeleted(n, teamID string) resource.TestCheckFunc {
 func TestAcc_LogDrainResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckLogDrainDeleted("vercel_log_drain.minimal", testTeam()),
+		CheckDestroy:             testCheckLogDrainDeleted(testClient(t), "vercel_log_drain.minimal", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceLogDrain(name, teamIDConfig()),
+				Config: testAccResourceLogDrain(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckLogDrainExists(testTeam(), "vercel_log_drain.minimal"),
+					testCheckLogDrainExists(testClient(t), testTeam(t), "vercel_log_drain.minimal"),
 					resource.TestCheckResourceAttr("vercel_log_drain.minimal", "delivery_format", "json"),
 					resource.TestCheckResourceAttr("vercel_log_drain.minimal", "environments.#", "1"),
 					resource.TestCheckResourceAttr("vercel_log_drain.minimal", "environments.0", "production"),
@@ -71,7 +70,7 @@ func TestAcc_LogDrainResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_log_drain.minimal", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_log_drain.maximal", "secret"),
 
-					testCheckLogDrainExists(testTeam(), "vercel_log_drain.maximal"),
+					testCheckLogDrainExists(testClient(t), testTeam(t), "vercel_log_drain.maximal"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "delivery_format", "json"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "environments.#", "2"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "environments.0", "preview"),

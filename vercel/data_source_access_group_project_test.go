@@ -11,11 +11,10 @@ import (
 func TestAcc_AccessGroupProjectDataSource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAccessGroupProjectDataSource(name),
+				Config: testAccAccessGroupProjectDataSource(teamIDConfig(t), name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_access_group_project.test", "role", "ADMIN"),
 				),
@@ -24,7 +23,7 @@ func TestAcc_AccessGroupProjectDataSource(t *testing.T) {
 	})
 }
 
-func testAccAccessGroupProjectDataSource(name string) string {
+func testAccAccessGroupProjectDataSource(teamIdConfig string, name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
 	%[1]s
@@ -51,5 +50,5 @@ data "vercel_access_group_project" "test" {
       vercel_access_group_project.test
   ]
 }
-`, teamIDConfig(), name)
+`, teamIdConfig, name)
 }

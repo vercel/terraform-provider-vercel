@@ -11,11 +11,10 @@ func TestAcc_TeamConfigDataSource(t *testing.T) {
 	resourceName := "data.vercel_team_config.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccVercelTeamConfigDataSource(testTeam()),
+				Config: testAccVercelTeamConfigDataSource(testTeam(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "name"),

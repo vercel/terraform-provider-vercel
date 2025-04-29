@@ -8,16 +8,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testCheckIntegrationProjectAccessDestroyed(n, teamID string) resource.TestCheckFunc {
+func testCheckIntegrationProjectAccessDestroyed(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
 			return fmt.Errorf("not found: %s", n)
 		}
 
-		ipa, err := testClient().GetIntegrationProjectAccess(context.TODO(), rs.Primary.Attributes["integration_id"], rs.Primary.Attributes["project_id"], teamID)
+		ipa, err := testClient.GetIntegrationProjectAccess(context.TODO(), rs.Primary.Attributes["integration_id"], rs.Primary.Attributes["project_id"], teamID)
 		if err != nil {
 			return err
 		}
@@ -29,14 +30,14 @@ func testCheckIntegrationProjectAccessDestroyed(n, teamID string) resource.TestC
 	}
 }
 
-func testCheckIntegrationProjectAccessExists(n, teamID string) resource.TestCheckFunc {
+func testCheckIntegrationProjectAccessExists(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
 			return fmt.Errorf("not found: %s", n)
 		}
 
-		ipa, err := testClient().GetIntegrationProjectAccess(context.TODO(), rs.Primary.Attributes["integration_id"], rs.Primary.Attributes["project_id"], teamID)
+		ipa, err := testClient.GetIntegrationProjectAccess(context.TODO(), rs.Primary.Attributes["integration_id"], rs.Primary.Attributes["project_id"], teamID)
 		if err != nil {
 			return err
 		}
@@ -51,15 +52,14 @@ func testCheckIntegrationProjectAccessExists(n, teamID string) resource.TestChec
 func TestAcc_IntegrationProjectAccess(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckIntegrationProjectAccessDestroyed("vercel_integration_project_access.test_integration_access", testTeam()),
+		CheckDestroy:             testCheckIntegrationProjectAccessDestroyed(testClient(t), "vercel_integration_project_access.test_integration_access", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIntegrationProjectAccess(name, teamIDConfig(), testExistingIntegration()),
+				Config: testAccIntegrationProjectAccess(name, teamIDConfig(t), testExistingIntegration(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckIntegrationProjectAccessExists("vercel_integration_project_access.test_integration_access", testTeam()),
-					resource.TestCheckResourceAttr("vercel_integration_project_access.test_integration_access", "team_id", testTeam()),
+					testCheckIntegrationProjectAccessExists(testClient(t), "vercel_integration_project_access.test_integration_access", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_integration_project_access.test_integration_access", "team_id", testTeam(t)),
 				),
 			},
 		},
@@ -69,15 +69,14 @@ func TestAcc_IntegrationProjectAccess(t *testing.T) {
 func TestAcc_IntegrationProjectAccessWithoutExplicitTeam(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckIntegrationProjectAccessDestroyed("vercel_integration_project_access.test_integration_access", testTeam()),
+		CheckDestroy:             testCheckIntegrationProjectAccessDestroyed(testClient(t), "vercel_integration_project_access.test_integration_access", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIntegrationProjectAccessUsingProvider(name, testTeam(), testExistingIntegration()),
+				Config: testAccIntegrationProjectAccessUsingProvider(name, testTeam(t), testExistingIntegration(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckIntegrationProjectAccessExists("vercel_integration_project_access.test_integration_access", testTeam()),
-					resource.TestCheckResourceAttr("vercel_integration_project_access.test_integration_access", "team_id", testTeam()),
+					testCheckIntegrationProjectAccessExists(testClient(t), "vercel_integration_project_access.test_integration_access", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_integration_project_access.test_integration_access", "team_id", testTeam(t)),
 				),
 			},
 		},
@@ -100,7 +99,7 @@ resource "vercel_integration_project_access" "test_integration_access" {
     project_id     = vercel_project.test.id
     %[2]s
 }
-`, name, team, integration, testTeam())
+`, name, team, integration)
 }
 
 func testAccIntegrationProjectAccessUsingProvider(name, team, integration string) string {

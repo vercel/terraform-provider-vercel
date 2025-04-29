@@ -11,11 +11,10 @@ import (
 func TestAcc_SharedEnvironmentVariableDataSource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccSharedEnvironmentVariableDataSource(name, teamIDConfig()),
+				Config: testAccSharedEnvironmentVariableDataSource(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_shared_environment_variable.test", "key", "test_acc_"+name),
 					resource.TestCheckResourceAttr("data.vercel_shared_environment_variable.test", "value", "foobar"),

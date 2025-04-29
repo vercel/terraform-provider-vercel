@@ -12,11 +12,10 @@ import (
 func TestAcc_EdgeConfigSchemaDataSource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccEdgeConfigSchemaDataSourceConfig(name, teamIDConfig()),
+				Config: testAccEdgeConfigSchemaDataSourceConfig(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vercel_edge_config_schema.test", "id"),
 					resource.TestCheckResourceAttrSet("data.vercel_edge_config_schema.test", "team_id"),
@@ -24,7 +23,7 @@ func TestAcc_EdgeConfigSchemaDataSource(t *testing.T) {
 				),
 			},
 			{
-				Config:      testAccEdgeConfigSchemaDataSourceConfigNoSchema(name, teamIDConfig()),
+				Config:      testAccEdgeConfigSchemaDataSourceConfigNoSchema(name, teamIDConfig(t)),
 				ExpectError: regexp.MustCompile("not_found"),
 			},
 		},

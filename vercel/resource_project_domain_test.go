@@ -15,44 +15,43 @@ import (
 
 func TestAcc_ProjectDomain(t *testing.T) {
 	testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
-	if testTeam() != "" {
-		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam())
+	if testTeam(t) != "" {
+		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam(t))
 	}
 
 	projectSuffix := acctest.RandString(16)
 	domain := acctest.RandString(30) + ".vercel.app"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             noopDestroyCheck,
 		Steps: []resource.TestStep{
 			// Check error adding production domain
 			{
-				Config: testAccProjectDomainWithProductionGitBranch(projectSuffix, "1"+domain, teamIDConfig()),
+				Config: testAccProjectDomainWithProductionGitBranch(projectSuffix, "1"+domain, teamIDConfig(t), testGithubRepo(t)),
 				ExpectError: regexp.MustCompile(
 					strings.ReplaceAll("the git_branch specified is the production branch. If you want to use this domain as a production domain, please omit the git_branch field.", " ", `\s*`),
 				),
 			},
 			// Create and Read testing
 			{
-				Config: testAccProjectDomainConfig(projectSuffix, "2"+domain, teamIDConfig()),
+				Config: testAccProjectDomainConfig(projectSuffix, "2"+domain, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectDomainExists("vercel_project.test", testTeam(), "2"+domain),
+					testAccProjectDomainExists(testClient(t), "vercel_project.test", testTeam(t), "2"+domain),
 					testTeamID,
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "domain", "2"+domain),
 				),
 			},
 			// Update testing
 			{
-				Config: testAccProjectDomainConfigUpdated(projectSuffix, "2"+domain, teamIDConfig()),
+				Config: testAccProjectDomainConfigUpdated(projectSuffix, "2"+domain, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "redirect"),
 				),
 			},
 			// Redirect Update testing
 			{
-				Config: testAccProjectDomainConfigUpdated2(projectSuffix, "2"+domain, teamIDConfig()),
+				Config: testAccProjectDomainConfigUpdated2(projectSuffix, "2"+domain, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "redirect"),
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "redirect_status_code", "307"),
@@ -60,8 +59,8 @@ func TestAcc_ProjectDomain(t *testing.T) {
 			},
 			// Delete testing
 			{
-				Config: testAccProjectDomainConfigDeleted(projectSuffix, teamIDConfig()),
-				Check:  testAccProjectDomainDestroy("vercel_project.test", testTeam(), domain),
+				Config: testAccProjectDomainConfigDeleted(projectSuffix, teamIDConfig(t)),
+				Check:  testAccProjectDomainDestroy(testClient(t), "vercel_project.test", testTeam(t), domain),
 			},
 		},
 	})
@@ -70,19 +69,18 @@ func TestAcc_ProjectDomain(t *testing.T) {
 func TestAcc_ProjectDomainCustomEnvironment(t *testing.T) {
 	randomSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             noopDestroyCheck,
 		Steps: []resource.TestStep{
 			// Ensure we can't have both git_branch and custom_environment_id
 			{
-				Config: testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix),
+				Config: testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix, teamIDConfig(t), testGithubRepo(t)),
 				ExpectError: regexp.MustCompile(
 					strings.ReplaceAll("Attribute \"git_branch\" cannot be specified when \"custom_environment_id\" is specified", " ", `\s*`),
 				),
 			},
 			{
-				Config: testAccProjectDomainConfigWithCustomEnvironment(randomSuffix),
+				Config: testAccProjectDomainConfigWithCustomEnvironment(randomSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "custom_environment_id"),
 				),
@@ -91,7 +89,7 @@ func TestAcc_ProjectDomainCustomEnvironment(t *testing.T) {
 	})
 }
 
-func testAccProjectDomainExists(n, teamID, domain string) resource.TestCheckFunc {
+func testAccProjectDomainExists(testClient *client.Client, n, teamID, domain string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -102,12 +100,12 @@ func testAccProjectDomainExists(n, teamID, domain string) resource.TestCheckFunc
 			return fmt.Errorf("no projectID is set")
 		}
 
-		_, err := testClient().GetProjectDomain(context.TODO(), rs.Primary.ID, domain, teamID)
+		_, err := testClient.GetProjectDomain(context.TODO(), rs.Primary.ID, domain, teamID)
 		return err
 	}
 }
 
-func testAccProjectDomainDestroy(n, teamID, domain string) resource.TestCheckFunc {
+func testAccProjectDomainDestroy(testClient *client.Client, n, teamID, domain string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -118,7 +116,7 @@ func testAccProjectDomainDestroy(n, teamID, domain string) resource.TestCheckFun
 			return fmt.Errorf("no projectID is set")
 		}
 
-		_, err := testClient().GetProjectDomain(context.TODO(), rs.Primary.ID, domain, teamID)
+		_, err := testClient.GetProjectDomain(context.TODO(), rs.Primary.ID, domain, teamID)
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
@@ -129,7 +127,7 @@ func testAccProjectDomainDestroy(n, teamID, domain string) resource.TestCheckFun
 	}
 }
 
-func testAccProjectDomainWithProductionGitBranch(projectSuffix, domain, teamIDConfig string) string {
+func testAccProjectDomainWithProductionGitBranch(projectSuffix, domain, teamIDConfig string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-domain-%[1]s"
@@ -146,7 +144,7 @@ resource "vercel_project_domain" "test" {
   git_branch = "main"
   project_id = vercel_project.test.id
 }
-`, projectSuffix, teamIDConfig, domain, testGithubRepo())
+`, projectSuffix, teamIDConfig, domain, githubRepo)
 }
 
 func testAccProjectDomainConfig(projectSuffix, domain, extra string) string {
@@ -226,7 +224,7 @@ resource "vercel_project" "test" {
 `, projectSuffix, extra)
 }
 
-func testAccProjectDomainConfigWithCustomEnvironment(randomSuffix string) string {
+func testAccProjectDomainConfigWithCustomEnvironment(randomSuffix string, teamIdConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-domain-%[1]s"
@@ -245,10 +243,10 @@ resource "vercel_project_domain" "test" {
     custom_environment_id = vercel_custom_environment.test.id
     %[2]s
 }
-`, randomSuffix, teamIDConfig())
+`, randomSuffix, teamIDConfig)
 }
 
-func testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix string) string {
+func testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix string, teamIdConfig string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-domain-%[1]s"
@@ -272,5 +270,5 @@ resource "vercel_project_domain" "test" {
     git_branch = "staging"
     %[2]s
 }
-`, randomSuffix, teamIDConfig(), testGithubRepo())
+`, randomSuffix, teamIdConfig, githubRepo)
 }

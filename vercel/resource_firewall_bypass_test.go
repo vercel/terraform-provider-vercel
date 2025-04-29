@@ -13,11 +13,10 @@ import (
 func TestAcc_FirewallBypassResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccFirewallBypassConfigResource(name, teamIDConfig()),
+				Config: testAccFirewallBypassConfigResource(name, teamIDConfig(t), testGithubRepo(&testing.T{})),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_firewall_bypass.bypass_one", "domain", "test-acc-domain-"+name+".vercel.app"),
 					resource.TestCheckResourceAttr("vercel_firewall_bypass.bypass_some", "domain", "*"),
@@ -60,7 +59,7 @@ func TestAcc_FirewallBypassResource(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccFirewallBypassConfigResourceUpdated(name, teamIDConfig()),
+				Config: testAccFirewallBypassConfigResourceUpdated(name, teamIDConfig(t), testGithubRepo(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_firewall_bypass.bypass_one", "source_ip", "0.0.0.0/0"),
 					resource.TestCheckResourceAttrWith("vercel_firewall_bypass.bypass_one", "id", func(id string) error {
@@ -75,7 +74,7 @@ func TestAcc_FirewallBypassResource(t *testing.T) {
 	})
 }
 
-func testAccFirewallBypassConfigResource(name, teamID string) string {
+func testAccFirewallBypassConfigResource(name, teamID string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "bypass_project" {
   name = "test-acc-%[1]s-enabled"
@@ -110,10 +109,10 @@ resource "vercel_firewall_bypass" "bypass_some" {
   depends_on = [vercel_project_domain.test]
 }
 
-`, name, teamID, testGithubRepo())
+`, name, teamID, githubRepo)
 }
 
-func testAccFirewallBypassConfigResourceUpdated(name, teamID string) string {
+func testAccFirewallBypassConfigResourceUpdated(name, teamID string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "bypass_project" {
   name = "test-acc-%[1]s-enabled"
@@ -139,5 +138,5 @@ resource "vercel_firewall_bypass" "bypass_one" {
   depends_on = [vercel_project_domain.test]
 }
 
-`, name, teamID, testGithubRepo())
+`, name, teamID, githubRepo)
 }

@@ -11,7 +11,6 @@ import (
 func TestAcc_MicrofrontendGroupDataSource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -45,7 +44,7 @@ func TestAcc_MicrofrontendGroupDataSource(t *testing.T) {
 						project_id = vercel_project.test_project_2.id
 						%[2]s
 					}	
-				`, name, teamIDConfig()),
+				`, name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_microfrontend_group.test_group", "name", "test-acc-microfrontend-group-"+name),
 					resource.TestCheckResourceAttrSet("data.vercel_microfrontend_group.test_group", "default_app.project_id"),

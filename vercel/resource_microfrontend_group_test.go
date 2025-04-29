@@ -8,9 +8,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testCheckMicrofrontendGroupExists(teamID, n string) resource.TestCheckFunc {
+func testCheckMicrofrontendGroupExists(testClient *client.Client, teamID, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -21,12 +22,12 @@ func testCheckMicrofrontendGroupExists(teamID, n string) resource.TestCheckFunc 
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetMicrofrontendGroup(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetMicrofrontendGroup(context.TODO(), rs.Primary.ID, teamID)
 		return err
 	}
 }
 
-func testCheckMicrofrontendGroupDeleted(n, teamID string) resource.TestCheckFunc {
+func testCheckMicrofrontendGroupDeleted(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -37,7 +38,7 @@ func testCheckMicrofrontendGroupDeleted(n, teamID string) resource.TestCheckFunc
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetMicrofrontendGroup(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetMicrofrontendGroup(context.TODO(), rs.Primary.ID, teamID)
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
@@ -52,9 +53,8 @@ func testCheckMicrofrontendGroupDeleted(n, teamID string) resource.TestCheckFunc
 func TestAcc_MicrofrontendGroupResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckMicrofrontendGroupDeleted("vercel_microfrontend_group.test", testTeam()),
+		CheckDestroy:             testCheckMicrofrontendGroupDeleted(testClient(t), "vercel_microfrontend_group.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`
@@ -78,9 +78,9 @@ func TestAcc_MicrofrontendGroupResource(t *testing.T) {
 					microfrontend_group_id = vercel_microfrontend_group.test.id
 					%[2]s
 				}
-				`, name, teamIDConfig()),
+				`, name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckMicrofrontendGroupExists(testTeam(), "vercel_microfrontend_group.test"),
+					testCheckMicrofrontendGroupExists(testClient(t), testTeam(t), "vercel_microfrontend_group.test"),
 					resource.TestCheckResourceAttr("vercel_microfrontend_group.test", "name", "test-acc-microfrontend-group-"+name),
 					resource.TestCheckResourceAttrSet("vercel_microfrontend_group.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_microfrontend_group.test", "default_app.project_id"),

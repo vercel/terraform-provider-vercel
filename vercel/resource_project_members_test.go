@@ -11,26 +11,25 @@ import (
 func TestAcc_ProjectMembers(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectMembersConfig(projectSuffix),
+				Config: testAccProjectMembersConfig(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_members.test", "project_id"),
 					resource.TestCheckResourceAttr("vercel_project_members.test", "members.#", "1"),
 				),
 			},
 			{
-				Config: testAccProjectMembersConfigUpdated(projectSuffix),
+				Config: testAccProjectMembersConfigUpdated(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_members.test", "project_id"),
 					resource.TestCheckResourceAttr("vercel_project_members.test", "members.#", "2"),
 				),
 			},
 			{
-				Config: testAccProjectMembersConfigUpdatedAgain(projectSuffix),
+				Config: testAccProjectMembersConfigUpdatedAgain(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_members.test", "project_id"),
 					resource.TestCheckResourceAttr("vercel_project_members.test", "members.#", "1"),
@@ -40,7 +39,7 @@ func TestAcc_ProjectMembers(t *testing.T) {
 	})
 }
 
-func testAccProjectMembersConfig(projectSuffix string) string {
+func testAccProjectMembersConfig(projectSuffix string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-project-members-%[1]s"
@@ -56,10 +55,10 @@ resource "vercel_project_members" "test" {
     role  = "PROJECT_VIEWER"
   }]
 }
-`, projectSuffix, teamIDConfig())
+`, projectSuffix, teamIDConfig)
 }
 
-func testAccProjectMembersConfigUpdated(projectSuffix string) string {
+func testAccProjectMembersConfigUpdated(projectSuffix string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-project-members-%[1]s"
@@ -80,10 +79,10 @@ resource "vercel_project_members" "test" {
     }
   ]
 }
-`, projectSuffix, teamIDConfig())
+`, projectSuffix, teamIDConfig)
 }
 
-func testAccProjectMembersConfigUpdatedAgain(projectSuffix string) string {
+func testAccProjectMembersConfigUpdatedAgain(projectSuffix string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-project-members-%[1]s"
@@ -101,5 +100,5 @@ resource "vercel_project_members" "test" {
     }
   ]
 }
-`, projectSuffix, teamIDConfig())
+`, projectSuffix, teamIDConfig)
 }

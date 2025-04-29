@@ -11,11 +11,10 @@ import (
 func TestAcc_EdgeConfigDataSource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccEdgeConfigDataSourceConfig(name, teamIDConfig()),
+				Config: testAccEdgeConfigDataSourceConfig(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_edge_config.test", "name", name),
 				),

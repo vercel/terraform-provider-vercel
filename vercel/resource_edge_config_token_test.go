@@ -11,7 +11,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testCheckEdgeConfigTokenExists(teamID, n string) resource.TestCheckFunc {
+func testCheckEdgeConfigTokenExists(testClient *client.Client, teamID, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -22,7 +22,7 @@ func testCheckEdgeConfigTokenExists(teamID, n string) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetEdgeConfigToken(context.TODO(), client.EdgeConfigTokenRequest{
+		_, err := testClient.GetEdgeConfigToken(context.TODO(), client.EdgeConfigTokenRequest{
 			Token:        rs.Primary.Attributes["token"],
 			EdgeConfigID: rs.Primary.Attributes["edge_config_id"],
 			TeamID:       teamID,
@@ -34,7 +34,7 @@ func testCheckEdgeConfigTokenExists(teamID, n string) resource.TestCheckFunc {
 	}
 }
 
-func testCheckEdgeConfigTokenDeleted(n, teamID string) resource.TestCheckFunc {
+func testCheckEdgeConfigTokenDeleted(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -45,7 +45,7 @@ func testCheckEdgeConfigTokenDeleted(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetEdgeConfigToken(context.TODO(), client.EdgeConfigTokenRequest{
+		_, err := testClient.GetEdgeConfigToken(context.TODO(), client.EdgeConfigTokenRequest{
 			Token:        rs.Primary.ID,
 			EdgeConfigID: rs.Primary.Attributes["edge_config_id"],
 			TeamID:       teamID,
@@ -64,14 +64,13 @@ func testCheckEdgeConfigTokenDeleted(n, teamID string) resource.TestCheckFunc {
 func TestAcc_EdgeConfigTokenResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckEdgeConfigTokenDeleted("vercel_edge_config_token.test", testTeam()),
+		CheckDestroy:             testCheckEdgeConfigTokenDeleted(testClient(t), "vercel_edge_config_token.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceEdgeConfigToken(name, teamIDConfig()),
+				Config: testAccResourceEdgeConfigToken(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckEdgeConfigTokenExists(testTeam(), "vercel_edge_config_token.test"),
+					testCheckEdgeConfigTokenExists(testClient(t), testTeam(t), "vercel_edge_config_token.test"),
 					resource.TestCheckResourceAttr("vercel_edge_config_token.test", "label", "test token"),
 					resource.TestCheckResourceAttrSet("vercel_edge_config_token.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_edge_config_token.test", "edge_config_id"),

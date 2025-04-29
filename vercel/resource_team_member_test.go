@@ -23,12 +23,11 @@ func getTeamMemberImportID(n string) resource.ImportStateIdFunc {
 func TestAcc_TeamMemberResource(t *testing.T) {
 	randomSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccTeamMemberResourceConfig("MEMBER"),
+				Config: testAccTeamMemberResourceConfig("MEMBER", teamIDConfig(t), testAdditionalUser(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
@@ -45,7 +44,7 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 			},
 			// Update testing
 			{
-				Config: testAccTeamMemberResourceConfig("VIEWER"),
+				Config: testAccTeamMemberResourceConfig("VIEWER", teamIDConfig(t), testAdditionalUser(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
@@ -54,7 +53,7 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 			},
 			// Test with projects
 			{
-				Config: testAccTeamMemberResourceConfigWithProjects(randomSuffix),
+				Config: testAccTeamMemberResourceConfigWithProjects(randomSuffix, teamIDConfig(t), testAdditionalUser(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
@@ -64,7 +63,7 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 			},
 			// Test with access groups
 			{
-				Config: testAccTeamMemberResourceConfigWithAccessGroups(randomSuffix),
+				Config: testAccTeamMemberResourceConfigWithAccessGroups(randomSuffix, teamIDConfig(t), testAdditionalUser(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
@@ -76,17 +75,17 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 	})
 }
 
-func testAccTeamMemberResourceConfig(role string) string {
+func testAccTeamMemberResourceConfig(role string, teamIDConfig string, user string) string {
 	return fmt.Sprintf(`
 resource "vercel_team_member" "test" {
   %[1]s
   user_id = "%s"
   role    = "%s"
 }
-`, teamIDConfig(), testAdditionalUser(), role)
+`, teamIDConfig, user, role)
 }
 
-func testAccTeamMemberResourceConfigWithProjects(randomSuffix string) string {
+func testAccTeamMemberResourceConfigWithProjects(randomSuffix string, teamIDConfig string, user string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-example-project-%[1]s"
@@ -102,10 +101,10 @@ resource "vercel_team_member" "test" {
     role       = "PROJECT_VIEWER"
   }]
 }
-`, randomSuffix, teamIDConfig(), testAdditionalUser())
+`, randomSuffix, teamIDConfig, user)
 }
 
-func testAccTeamMemberResourceConfigWithAccessGroups(randomSuffix string) string {
+func testAccTeamMemberResourceConfigWithAccessGroups(randomSuffix string, teamIDConfig string, user string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
     %[1]s
@@ -119,5 +118,5 @@ resource "vercel_team_member" "test" {
 
   access_groups = [vercel_access_group.test.id]
 }
-`, teamIDConfig(), testAdditionalUser(), randomSuffix)
+`, teamIDConfig, user, randomSuffix)
 }

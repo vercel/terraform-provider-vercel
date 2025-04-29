@@ -11,11 +11,10 @@ func TestAcc_TeamConfig(t *testing.T) {
 	resourceName := "vercel_team_config.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccVercelTeamConfigBasic(testTeam()),
+				Config: testAccVercelTeamConfigBasic(testTeam(t)),
 				// Added since vercel_team_config schema version upgraded
 				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -25,7 +24,7 @@ func TestAcc_TeamConfig(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccVercelTeamConfigUpdated(testTeam()),
+				Config: testAccVercelTeamConfigUpdated(testTeam(t)),
 				// Added since vercel_team_config schema version upgraded
 				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeAggregateTestCheckFunc(

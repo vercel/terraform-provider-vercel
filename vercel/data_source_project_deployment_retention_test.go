@@ -11,16 +11,15 @@ import (
 func TestAcc_ProjectDeploymentRetentionDataSource(t *testing.T) {
 	nameSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccProjectDestroy("vercel_project.example", testTeam()),
+			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectDeploymentRetentionDataSourceConfig(nameSuffix),
+				Config: testAccProjectDeploymentRetentionDataSourceConfig(nameSuffix, testGithubRepo(t), teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectDeploymentRetentionExists("vercel_project_deployment_retention.example", testTeam()),
+					testAccProjectDeploymentRetentionExists(testClient(t), "vercel_project_deployment_retention.example", testTeam(t)),
 					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_preview", "1m"),
 					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_production", "unlimited"),
 					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_canceled", "unlimited"),
@@ -36,7 +35,7 @@ func TestAcc_ProjectDeploymentRetentionDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectDeploymentRetentionDataSourceConfig(projectName string) string {
+func testAccProjectDeploymentRetentionDataSourceConfig(projectName string, githubRepo string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%[1]s"
@@ -73,5 +72,5 @@ data "vercel_project_deployment_retention" "example_2" {
 	project_id = vercel_project.example_2.id
 	%[3]s
 }
-`, projectName, testGithubRepo(), teamIDConfig())
+`, projectName, githubRepo, teamIDConfig)
 }

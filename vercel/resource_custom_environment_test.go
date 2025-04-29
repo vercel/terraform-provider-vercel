@@ -11,7 +11,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testCheckCustomEnvironmentExists(n string) resource.TestCheckFunc {
+func testCheckCustomEnvironmentExists(testClient *client.Client, teamID string, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -25,13 +25,13 @@ func testCheckCustomEnvironmentExists(n string) resource.TestCheckFunc {
 		projectID := rs.Primary.Attributes["project_id"]
 		name := rs.Primary.Attributes["name"]
 
-		_, err := testClient().GetCustomEnvironment(context.TODO(), client.GetCustomEnvironmentRequest{
-			TeamID:    testTeam(),
+		_, err := testClient.GetCustomEnvironment(context.TODO(), client.GetCustomEnvironmentRequest{
+			TeamID:    teamID,
 			ProjectID: projectID,
 			Slug:      name,
 		})
 		if client.NotFound(err) {
-			return fmt.Errorf("test failed because the custom environment %s %s %s - %s could not be found", testTeam(), projectID, name, rs.Primary.ID)
+			return fmt.Errorf("test failed because the custom environment %s %s %s - %s could not be found", teamID, projectID, name, rs.Primary.ID)
 		}
 		return err
 	}
@@ -40,21 +40,20 @@ func testCheckCustomEnvironmentExists(n string) resource.TestCheckFunc {
 func TestAcc_CustomEnvironmentResource(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy("vercel_project.test", testTeam()),
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCustomEnvironment(projectSuffix),
+				Config: testAccCustomEnvironment(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckCustomEnvironmentExists("vercel_custom_environment.test"),
+					testCheckCustomEnvironmentExists(testClient(t), testTeam(t), "vercel_custom_environment.test"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "project_id"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "name"),
 					resource.TestCheckNoResourceAttr("vercel_custom_environment.test", "branch_tracking"),
 					resource.TestCheckResourceAttr("vercel_custom_environment.test", "description", "without branch tracking"),
 
-					testCheckCustomEnvironmentExists("vercel_custom_environment.test_bt"),
+					testCheckCustomEnvironmentExists(testClient(t), testTeam(t), "vercel_custom_environment.test_bt"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test_bt", "id"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test_bt", "project_id"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test_bt", "name"),
@@ -70,9 +69,9 @@ func TestAcc_CustomEnvironmentResource(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccCustomEnvironmentUpdated(projectSuffix),
+				Config: testAccCustomEnvironmentUpdated(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckCustomEnvironmentExists("vercel_custom_environment.test"),
+					testCheckCustomEnvironmentExists(testClient(t), testTeam(t), "vercel_custom_environment.test"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "project_id"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "name"),
@@ -106,7 +105,7 @@ func getCustomEnvImportID(n string) resource.ImportStateIdFunc {
 	}
 }
 
-func testAccCustomEnvironment(projectSuffix string) string {
+func testAccCustomEnvironment(projectSuffix string, teamIdConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-custom-env-%[1]s"
@@ -150,10 +149,10 @@ resource "vercel_custom_environment" "test_bt" {
     type = "startsWith"
   }
 }
-`, projectSuffix, teamIDConfig())
+`, projectSuffix, teamIDConfig)
 }
 
-func testAccCustomEnvironmentUpdated(projectSuffix string) string {
+func testAccCustomEnvironmentUpdated(projectSuffix string, teamIdConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-custom-env-%[1]s"
@@ -170,5 +169,5 @@ resource "vercel_custom_environment" "test" {
       type = "endsWith"
   }
 }
-`, projectSuffix, teamIDConfig())
+`, projectSuffix, teamIDConfig)
 }

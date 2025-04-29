@@ -8,9 +8,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testAccProjectEnvironmentVariableExists(n, teamID string) resource.TestCheckFunc {
+func testAccProjectEnvironmentVariableExists(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -21,12 +22,12 @@ func testAccProjectEnvironmentVariableExists(n, teamID string) resource.TestChec
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetEnvironmentVariable(context.TODO(), rs.Primary.Attributes["project_id"], teamID, rs.Primary.ID)
+		_, err := testClient.GetEnvironmentVariable(context.TODO(), rs.Primary.Attributes["project_id"], teamID, rs.Primary.ID)
 		return err
 	}
 }
 
-func testAccProjectEnvironmentVariableDoNotExist(n, teamID string) resource.TestCheckFunc {
+func testAccProjectEnvironmentVariableDoNotExist(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -37,7 +38,7 @@ func testAccProjectEnvironmentVariableDoNotExist(n, teamID string) resource.Test
 			return fmt.Errorf("no ID is set")
 		}
 
-		envs, err := testClient().GetEnvironmentVariables(context.TODO(), rs.Primary.ID, teamID)
+		envs, err := testClient.GetEnvironmentVariables(context.TODO(), rs.Primary.ID, teamID)
 		if err != nil {
 			return fmt.Errorf("could not fetch the project: %w", err)
 		}
@@ -53,34 +54,33 @@ func testAccProjectEnvironmentVariableDoNotExist(n, teamID string) resource.Test
 func TestAcc_ProjectEnvironmentVariable(t *testing.T) {
 	nameSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccProjectDestroy("vercel_project.example", testTeam()),
+			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectEnvironmentVariableConfig(nameSuffix),
+				Config: testAccProjectEnvironmentVariableConfig(nameSuffix, testGithubRepo(t), teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example", testTeam()),
+					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "key", "foo"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "value", "bar"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example", "target.*", "production"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "comment", "this is with a comment"),
 
-					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_git_branch", testTeam()),
+					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_git_branch", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "key", "foo"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "value", "bar-staging"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_git_branch", "target.*", "preview"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "git_branch", "production"),
 
-					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_sensitive", testTeam()),
+					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_sensitive", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "key", "foo_sensitive"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "value", "bar-sensitive"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_sensitive", "target.*", "production"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "sensitive", "true"),
 
-					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_not_sensitive", testTeam()),
+					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_not_sensitive", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "key", "foo_not_sensitive"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_not_sensitive", "value", "bar-not-sensitive"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_not_sensitive", "target.*", "production"),
@@ -88,22 +88,22 @@ func TestAcc_ProjectEnvironmentVariable(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccProjectEnvironmentVariableConfigUpdated(nameSuffix),
+				Config: testAccProjectEnvironmentVariableConfigUpdated(nameSuffix, testGithubRepo(t), teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example", testTeam()),
+					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "key", "foo"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "value", "bar-new"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example", "target.*", "production"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example", "target.*", "preview"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "comment", "this is an updated comment"),
 
-					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_git_branch", testTeam()),
+					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_git_branch", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "key", "foo"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "value", "bar-staging"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_git_branch", "target.*", "preview"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_git_branch", "git_branch", "test"),
 
-					testAccProjectEnvironmentVariableExists("vercel_project_environment_variable.example_sensitive", testTeam()),
+					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_sensitive", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "key", "foo_sensitive"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_sensitive", "value", "bar-sensitive-updated"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_sensitive", "target.*", "production"),
@@ -123,9 +123,9 @@ func TestAcc_ProjectEnvironmentVariable(t *testing.T) {
 				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example_git_branch"),
 			},
 			{
-				Config: testAccProjectEnvironmentVariableConfigDeleted(nameSuffix),
+				Config: testAccProjectEnvironmentVariableConfigDeleted(nameSuffix, testGithubRepo(t), teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectEnvironmentVariableDoNotExist("vercel_project.example", testTeam()),
+					testAccProjectEnvironmentVariableDoNotExist(testClient(t), "vercel_project.example", testTeam(t)),
 				),
 			},
 		},
@@ -150,7 +150,7 @@ func getProjectEnvironmentVariableImportID(n string) resource.ImportStateIdFunc 
 	}
 }
 
-func testAccProjectEnvironmentVariableConfig(projectName string) string {
+func testAccProjectEnvironmentVariableConfig(projectName string, githubRepo string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%[1]s"
@@ -197,10 +197,10 @@ resource "vercel_project_environment_variable" "example_not_sensitive" {
 	target     = ["production"]
 	sensitive  = false
 }
-`, projectName, testGithubRepo(), teamIDConfig())
+`, projectName, githubRepo, teamIDConfig)
 }
 
-func testAccProjectEnvironmentVariableConfigUpdated(projectName string) string {
+func testAccProjectEnvironmentVariableConfigUpdated(projectName string, githubRepo string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
     name = "test-acc-example-project-%[1]s"
@@ -238,10 +238,10 @@ resource "vercel_project_environment_variable" "example_sensitive" {
 	target     = ["production"]
 	sensitive  = true
 }
-`, projectName, testGithubRepo(), teamIDConfig())
+`, projectName, githubRepo, teamIDConfig)
 }
 
-func testAccProjectEnvironmentVariableConfigDeleted(projectName string) string {
+func testAccProjectEnvironmentVariableConfigDeleted(projectName string, githubRepo string, teamIDConfig string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
     name = "test-acc-example-project-%[1]s"
@@ -252,5 +252,5 @@ resource "vercel_project" "example" {
         repo = "%[2]s"
     }
 }
-`, projectName, testGithubRepo(), teamIDConfig())
+`, projectName, githubRepo, teamIDConfig)
 }

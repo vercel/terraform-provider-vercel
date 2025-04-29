@@ -12,7 +12,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testCheckEdgeConfigSchemaExists(teamID, n string) resource.TestCheckFunc {
+func testCheckEdgeConfigSchemaExists(testClient *client.Client, teamID, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -23,7 +23,7 @@ func testCheckEdgeConfigSchemaExists(teamID, n string) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetEdgeConfigSchema(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetEdgeConfigSchema(context.TODO(), rs.Primary.ID, teamID)
 		if err != nil {
 			return fmt.Errorf("error getting %s/%s: %w", teamID, rs.Primary.ID, err)
 		}
@@ -31,7 +31,7 @@ func testCheckEdgeConfigSchemaExists(teamID, n string) resource.TestCheckFunc {
 	}
 }
 
-func testCheckEdgeConfigSchemaDeleted(n, teamID string) resource.TestCheckFunc {
+func testCheckEdgeConfigSchemaDeleted(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -42,7 +42,7 @@ func testCheckEdgeConfigSchemaDeleted(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetEdgeConfigSchema(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetEdgeConfigSchema(context.TODO(), rs.Primary.ID, teamID)
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
@@ -57,9 +57,8 @@ func testCheckEdgeConfigSchemaDeleted(n, teamID string) resource.TestCheckFunc {
 func TestAcc_EdgeConfigSchemaResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckEdgeConfigSchemaDeleted("vercel_edge_config_schema.test", testTeam()),
+		CheckDestroy:             testCheckEdgeConfigSchemaDeleted(testClient(t), "vercel_edge_config_schema.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
 				Config: `
@@ -75,17 +74,17 @@ func TestAcc_EdgeConfigSchemaResource(t *testing.T) {
 				ExpectError: regexp.MustCompile("Value must be a valid JSON document"),
 			},
 			{
-				Config: testAccResourceEdgeConfigSchema(name, teamIDConfig()),
+				Config: testAccResourceEdgeConfigSchema(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckEdgeConfigSchemaExists(testTeam(), "vercel_edge_config_schema.test"),
+					testCheckEdgeConfigSchemaExists(testClient(t), testTeam(t), "vercel_edge_config_schema.test"),
 					resource.TestCheckResourceAttrSet("vercel_edge_config_schema.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_edge_config_schema.test", "definition"),
 				),
 			},
 			{
-				Config: testAccResourceEdgeConfigSchemaUpdated(name, teamIDConfig()),
+				Config: testAccResourceEdgeConfigSchemaUpdated(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckEdgeConfigSchemaExists(testTeam(), "vercel_edge_config_schema.test"),
+					testCheckEdgeConfigSchemaExists(testClient(t), testTeam(t), "vercel_edge_config_schema.test"),
 					resource.TestCheckResourceAttrSet("vercel_edge_config_schema.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_edge_config_schema.test", "definition"),
 				),

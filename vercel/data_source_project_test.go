@@ -11,11 +11,10 @@ import (
 func TestAcc_ProjectDataSource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectDataSourceConfig(name, teamIDConfig()),
+				Config: testAccProjectDataSourceConfig(name, teamIDConfig(t), testGithubRepo(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_project.test", "name", "test-acc-"+name),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "build_command", "npm run build"),
@@ -63,7 +62,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectDataSourceConfig(name, teamID string) string {
+func testAccProjectDataSourceConfig(name, teamID, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-%s"
@@ -144,5 +143,5 @@ data "vercel_project" "test" {
     name = vercel_project.test.name
     %[2]s
 }
-`, name, teamID, testGithubRepo())
+`, name, teamID, githubRepo)
 }

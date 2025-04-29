@@ -11,7 +11,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v2/client"
 )
 
-func testCheckEdgeConfigExists(teamID, n string) resource.TestCheckFunc {
+func testCheckEdgeConfigExists(testClient *client.Client, teamID, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -22,12 +22,12 @@ func testCheckEdgeConfigExists(teamID, n string) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetEdgeConfig(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetEdgeConfig(context.TODO(), rs.Primary.ID, teamID)
 		return err
 	}
 }
 
-func testCheckEdgeConfigDeleted(n, teamID string) resource.TestCheckFunc {
+func testCheckEdgeConfigDeleted(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -38,7 +38,7 @@ func testCheckEdgeConfigDeleted(n, teamID string) resource.TestCheckFunc {
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient().GetEdgeConfig(context.TODO(), rs.Primary.ID, teamID)
+		_, err := testClient.GetEdgeConfig(context.TODO(), rs.Primary.ID, teamID)
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
@@ -53,22 +53,21 @@ func testCheckEdgeConfigDeleted(n, teamID string) resource.TestCheckFunc {
 func TestAcc_EdgeConfigResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckEdgeConfigDeleted("vercel_edge_config.test", testTeam()),
+		CheckDestroy:             testCheckEdgeConfigDeleted(testClient(t), "vercel_edge_config.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceEdgeConfig(name, teamIDConfig()),
+				Config: testAccResourceEdgeConfig(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckEdgeConfigExists(testTeam(), "vercel_edge_config.test"),
+					testCheckEdgeConfigExists(testClient(t), testTeam(t), "vercel_edge_config.test"),
 					resource.TestCheckResourceAttr("vercel_edge_config.test", "name", name),
 					resource.TestCheckResourceAttrSet("vercel_edge_config.test", "id"),
 				),
 			},
 			{
-				Config: testAccResourceEdgeConfigUpdated(name, teamIDConfig()),
+				Config: testAccResourceEdgeConfigUpdated(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckEdgeConfigExists(testTeam(), "vercel_edge_config.test"),
+					testCheckEdgeConfigExists(testClient(t), testTeam(t), "vercel_edge_config.test"),
 					resource.TestCheckResourceAttr("vercel_edge_config.test", "name", fmt.Sprintf("%s-updated", name)),
 					resource.TestCheckResourceAttrSet("vercel_edge_config.test", "id"),
 				),

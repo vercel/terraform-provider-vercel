@@ -9,11 +9,10 @@ import (
 
 func TestAcc_TeamMemberDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccTeamMemberDataSourceConfig(),
+				Config: testAccTeamMemberDataSourceConfig(teamIDConfig(t), testAdditionalUser(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vercel_team_member.test", "team_id"),
 					resource.TestCheckResourceAttrSet("data.vercel_team_member.test", "user_id"),
@@ -24,7 +23,7 @@ func TestAcc_TeamMemberDataSource(t *testing.T) {
 	})
 }
 
-func testAccTeamMemberDataSourceConfig() string {
+func testAccTeamMemberDataSourceConfig(teamIdConfig string, user string) string {
 	return fmt.Sprintf(`
 resource "vercel_team_member" "test" {
   %[1]s
@@ -36,5 +35,5 @@ data "vercel_team_member" "test" {
     user_id = vercel_team_member.test.user_id
     team_id = vercel_team_member.test.team_id
 }
-`, teamIDConfig(), testAdditionalUser())
+`, teamIdConfig, user)
 }

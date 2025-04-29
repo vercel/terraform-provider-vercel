@@ -31,11 +31,10 @@ func getFirewallImportID(n string) resource.ImportStateIdFunc {
 func TestAcc_FirewallConfigResource(t *testing.T) {
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccFirewallConfigResource(name, teamIDConfig()),
+				Config: testAccFirewallConfigResource(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.managed",
@@ -188,7 +187,7 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.ips"),
 			},
 			{
-				Config: testAccFirewallConfigResourceUpdated(name, teamIDConfig()),
+				Config: testAccFirewallConfigResourceUpdated(name, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.managed",
