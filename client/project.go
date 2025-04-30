@@ -32,7 +32,7 @@ type EnvironmentVariable struct {
 	ID                   string   `json:"id,omitempty"`
 	TeamID               string   `json:"-"`
 	Comment              string   `json:"comment"`
-	Decrypted            bool     `json:"decrypted"`
+	Decrypted            *bool    `json:"decrypted"`
 }
 
 type DeploymentExpiration struct {
