@@ -18,10 +18,6 @@ import (
 )
 
 func TestAcc_Project(t *testing.T) {
-	testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
-	if testTeam(t) != "" {
-		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam(t))
-	}
 	projectSuffix := acctest.RandString(16)
 
 	resource.Test(t, resource.TestCase{
@@ -31,20 +27,20 @@ func TestAcc_Project(t *testing.T) {
 			// Ensure we get nice framework / serverless_function_region errors
 			{
 				Config: `
-                    resource "vercel_project" "test" {
-                        name = "foo"
-                        serverless_function_region = "notexist"
-                    }
-                `,
+				                    resource "vercel_project" "test" {
+				                        name = "foo"
+				                        serverless_function_region = "notexist"
+				                    }
+				                `,
 				ExpectError: regexp.MustCompile("Invalid Serverless Function Region"),
 			},
 			{
 				Config: `
-                    resource "vercel_project" "test" {
-                        name = "foo"
-                        framework = "notexist"
-                    }
-                `,
+				                    resource "vercel_project" "test" {
+				                        name = "foo"
+				                        framework = "notexist"
+				                    }
+				                `,
 				ExpectError: regexp.MustCompile("Invalid Framework"),
 			},
 			// Create and Read testing
@@ -52,7 +48,7 @@ func TestAcc_Project(t *testing.T) {
 				Config: testAccProjectConfig(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
-					testTeamID,
+					resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-project-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
 					resource.TestCheckResourceAttr("vercel_project.test", "dev_command", "npm run serve"),
@@ -72,6 +68,8 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "git_comments.on_pull_request", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_comments.on_commit", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "auto_assign_custom_domains", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_lfs", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "function_failover", "true"),
@@ -97,6 +95,32 @@ func TestAcc_Project(t *testing.T) {
 						"value": "baz",
 					}),
 					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "true"),
+				),
+			},
+			// Test mutual exclusivity validation
+			{
+				Config: testAccProjectConfigPreviewFeedbackConflict(projectSuffix, teamIDConfig(t)),
+				ExpectError: regexp.MustCompile(
+					strings.ReplaceAll("Attribute \"preview_comments\" cannot be specified when \"enable_preview_feedback\" is specified", " ", `\s*`),
+				),
+			},
+			// Test using only the deprecated field
+			{
+				Config: testAccProjectConfigPreviewCommentsOnly(projectSuffix, teamIDConfig(t)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "true"),
+				),
+			},
+			// Test updating from deprecated field to new field
+			{
+				Config: testAccProjectConfigPreviewFeedbackOnly(projectSuffix, teamIDConfig(t)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "true"),
 				),
 			},
 		},
@@ -627,6 +651,39 @@ resource "vercel_project" "test" {
       sensitive = true
     }
   ]
+  enable_preview_feedback = false
+  enable_production_feedback = true
+}
+`, projectSuffix, teamID)
+}
+
+func testAccProjectConfigPreviewFeedbackConflict(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-two-%s"
+  %s
+  preview_comments = true
+  enable_preview_feedback = true
+}
+`, projectSuffix, teamID)
+}
+
+func testAccProjectConfigPreviewCommentsOnly(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-two-%s"
+  %s
+  preview_comments = true
+}
+`, projectSuffix, teamID)
+}
+
+func testAccProjectConfigPreviewFeedbackOnly(projectSuffix, teamID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-two-%s"
+  %s
+  enable_preview_feedback = true
 }
 `, projectSuffix, teamID)
 }
@@ -984,7 +1041,8 @@ resource "vercel_project" "test" {
       on_pull_request = true,
       on_commit = true
   }
-  preview_comments = true
+  enable_preview_feedback = true
+  enable_production_feedback = false
   auto_assign_custom_domains = true
   git_lfs = true
   function_failover = true

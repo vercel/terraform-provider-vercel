@@ -44,6 +44,8 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "git_comments.on_pull_request", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "git_comments.on_commit", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "preview_comments", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "enable_preview_feedback", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "enable_production_feedback", "false"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "auto_assign_custom_domains", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "git_lfs", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "function_failover", "true"),
@@ -109,7 +111,8 @@ resource "vercel_project" "test" {
       on_pull_request = true,
       on_commit = true
   }
-  preview_comments = true
+  enable_preview_feedback = true
+  enable_production_feedback = false
   auto_assign_custom_domains = true
   git_lfs = true
   function_failover = true
