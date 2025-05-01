@@ -162,6 +162,12 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		return nil, fmt.Errorf("%w - %s", err, payload)
 	}
 
+	decrypted := false
+	for i := 0; i < len(response.Created); i++ {
+		// When env vars are created, their values are encrypted
+		response.Created[i].Decrypted = &decrypted
+	}
+
 	if len(response.Failed) > 0 {
 		envs, err := c.GetEnvironmentVariables(ctx, request.ProjectID, request.TeamID)
 		if err != nil {
