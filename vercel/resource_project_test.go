@@ -31,20 +31,20 @@ func TestAcc_Project(t *testing.T) {
 			// Ensure we get nice framework / serverless_function_region errors
 			{
 				Config: `
-                    resource "vercel_project" "test" {
-                        name = "foo"
-                        serverless_function_region = "notexist"
-                    }
-                `,
+				                    resource "vercel_project" "test" {
+				                        name = "foo"
+				                        serverless_function_region = "notexist"
+				                    }
+				                `,
 				ExpectError: regexp.MustCompile("Invalid Serverless Function Region"),
 			},
 			{
 				Config: `
-                    resource "vercel_project" "test" {
-                        name = "foo"
-                        framework = "notexist"
-                    }
-                `,
+				                    resource "vercel_project" "test" {
+				                        name = "foo"
+				                        framework = "notexist"
+				                    }
+				                `,
 				ExpectError: regexp.MustCompile("Invalid Framework"),
 			},
 			// Create and Read testing
@@ -667,7 +667,7 @@ resource "vercel_project" "test" {
   name = "test-acc-two-%s"
   %s
   preview_comments = true
-  enable_preview_feedback = true"
+  enable_preview_feedback = true
 }
 `, projectSuffix, teamID)
 }
@@ -677,7 +677,7 @@ func testAccProjectConfigPreviewCommentsOnly(projectSuffix, teamID string) strin
 resource "vercel_project" "test" {
   name = "test-acc-two-%s"
   %s
-  preview_comments = true # Use deprecated field
+  preview_comments = true
 }
 `, projectSuffix, teamID)
 }

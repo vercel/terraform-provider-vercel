@@ -746,7 +746,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
 		ServerlessFunctionRegion:          p.ServerlessFunctionRegion.ValueString(),
 		ResourceConfig:                    resourceConfig.toClientResourceConfig(),
-		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback.ValueBoolPointer(), p.PreviewComments.ValueBoolPointer()),
+		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
 	}, diags
 }
@@ -769,11 +769,14 @@ func toSkewProtectionAge(sp types.String) int {
 	return v
 }
 
-func oneBoolPointer(a, b *bool) *bool {
-	if a == nil {
-		return b
+func oneBoolPointer(a, b types.Bool) *bool {
+	if !a.IsNull() && !a.IsUnknown() {
+		return a.ValueBoolPointer()
 	}
-	return a
+	if !b.IsNull() && !b.IsUnknown() {
+		return b.ValueBoolPointer()
+	}
+	return nil
 }
 
 func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (req client.UpdateProjectRequest, diags diag.Diagnostics) {
@@ -811,7 +814,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		OIDCTokenConfig:                      p.OIDCTokenConfig.toUpdateProjectRequest(),
 		OptionsAllowlist:                     p.OptionsAllowlist.toUpdateProjectRequest(),
 		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
-		EnablePreviewFeedback:                oneBoolPointer(p.EnablePreviewFeedback.ValueBoolPointer(), p.PreviewComments.ValueBoolPointer()),
+		EnablePreviewFeedback:                oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:             p.EnableProductionFeedback.ValueBoolPointer(),
 		EnableAffectedProjectsDeployments:    p.EnableAffectedProjectsDeployments.ValueBoolPointer(),
 		AutoAssignCustomDomains:              p.AutoAssignCustomDomains.ValueBool(),
