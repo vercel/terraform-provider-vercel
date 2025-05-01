@@ -22,23 +22,23 @@ resource "vercel_firewall_config" "example" {
 
   rules {
     rule {
-      name = "Bypass Known request"
+      name        = "Bypass Known request"
       description = "Bypass requests using internal bearer tokens"
       # individual condition groups are evaluated as ORs
       condition_group = [
         {
           conditions = [{
-            type = "header"
-            key = "Authorization"
-            op = "eq"
+            type  = "header"
+            key   = "Authorization"
+            op    = "eq"
             value = "Bearer internaltoken"
           }]
         },
         {
           conditions = [{
-            type = "header"
-            key = "Authorization"
-            op = "eq"
+            type  = "header"
+            key   = "Authorization"
+            op    = "eq"
             value = "Bearer internaltoken2"
           }]
         }
@@ -49,12 +49,12 @@ resource "vercel_firewall_config" "example" {
     }
 
     rule {
-      name = "Challenge curl"
+      name        = "Challenge curl"
       description = "Challenge user agents containing 'curl'"
       condition_group = [{
         conditions = [{
-          type = "user_agent"
-          op = "sub"
+          type  = "user_agent"
+          op    = "sub"
           value = "curl"
         }]
       }]
@@ -64,20 +64,20 @@ resource "vercel_firewall_config" "example" {
     }
 
     rule {
-      name = "Deny cookieless requests"
+      name        = "Deny cookieless requests"
       description = "requests to /api that are missing a session cookie"
       # multiple conditions in a single condition group are evaluated as ANDs
       condition_group = [{
         conditions = [{
-          type = "path"
-          op = "eq"
+          type  = "path"
+          op    = "eq"
           value = "/api"
-        },
-        {
-          type = "cookie"
-          key = "_session"
-          neg = true
-          op = "ex"
+          },
+          {
+            type = "cookie"
+            key  = "_session"
+            neg  = true
+            op   = "ex"
         }]
       }]
       action = {
@@ -86,12 +86,12 @@ resource "vercel_firewall_config" "example" {
     }
 
     rule {
-      name = "Rate limit API"
+      name        = "Rate limit API"
       description = "apply ratelimit to requests under /api"
       condition_group = [{
         conditions = [{
-          type = "path"
-          op = "pre"
+          type  = "path"
+          op    = "pre"
           value = "/api"
         }]
       }]
@@ -99,10 +99,10 @@ resource "vercel_firewall_config" "example" {
       action = {
         action = "rate_limit"
         rate_limit = {
-          limit = 100
+          limit  = 100
           window = 300
-          keys = ["ip", "ja4"]
-          algo = "fixed_window"
+          keys   = ["ip", "ja4"]
+          algo   = "fixed_window"
           action = "deny"
         }
         action_duration = "5m"
@@ -110,13 +110,13 @@ resource "vercel_firewall_config" "example" {
     }
 
     rule {
-      name = "Known clients"
-      description = "Match known keys in header
+      name        = "Known clients"
+      description = "Match known keys in header"
       condition_group = [{
         conditions = [{
           type = "header"
-          key = "Authorization"
-          op = "inc"
+          key  = "Authorization"
+          op   = "inc"
           values = [
             "key1",
             "key2",
@@ -127,10 +127,10 @@ resource "vercel_firewall_config" "example" {
       action = {
         action = "rate_limit"
         rate_limit = {
-          limit = 100
+          limit  = 100
           window = 300
-          keys = ["ip", "ja4"]
-          algo = "fixed_window"
+          keys   = ["ip", "ja4"]
+          algo   = "fixed_window"
           action = "deny"
         }
         action_duration = "5m"
@@ -149,13 +149,13 @@ resource "vercel_firewall_config" "managed" {
   managed_rulesets {
     owasp {
       xss  = { action = "deny" }
-      sqli  = { action = "deny" }
-      rce = { action = "deny" }
-      php = { action = "deny" }
+      sqli = { action = "deny" }
+      rce  = { action = "deny" }
+      php  = { action = "deny" }
       java = { action = "deny" }
-      lfi = { action = "deny" }
-      rfi = { action = "deny" }
-      gen = { action = "deny" }
+      lfi  = { action = "deny" }
+      rfi  = { action = "deny" }
+      gen  = { action = "deny" }
     }
   }
 }
@@ -170,14 +170,14 @@ resource "vercel_firewall_config" "ip-blocking" {
   ip_rules {
     # deny this subnet for all my hosts
     rule {
-      action = "deny"
-      ip = "51.85.0.0/16"
-      hostname ="*"
+      action   = "deny"
+      ip       = "51.85.0.0/16"
+      hostname = "*"
     }
 
     rule {
-      action = "challenge"
-      ip = "1.2.3.4"
+      action   = "challenge"
+      ip       = "1.2.3.4"
       hostname = "example.com"
     }
   }
