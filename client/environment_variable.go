@@ -49,7 +49,7 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		if err2 != nil {
 			return e, err2
 		}
-		envs, err3 := c.ListEnvironmentVariables(ctx, request.TeamID, request.ProjectID)
+		envs, err3 := c.GetEnvironmentVariables(ctx, request.ProjectID, request.TeamID)
 		if err3 != nil {
 			return e, fmt.Errorf("%s: unable to list environment variables to detect conflict: %s", err, err3)
 		}
@@ -65,23 +65,6 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 	response.Created.Value = request.EnvironmentVariable.Value
 	response.Created.TeamID = c.teamID(request.TeamID)
 	return response.Created, err
-}
-
-func (c *Client) ListEnvironmentVariables(ctx context.Context, teamID, projectID string) (envs []EnvironmentVariable, err error) {
-	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
-	}
-
-	response := struct {
-		Envs []EnvironmentVariable `json:"envs"`
-	}{}
-	err = c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "GET",
-		url:    url,
-	}, &response)
-	return response.Envs, err
 }
 
 func overlaps(s []string, e []string) bool {
@@ -179,8 +162,14 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		return nil, fmt.Errorf("%w - %s", err, payload)
 	}
 
+	decrypted := false
+	for i := 0; i < len(response.Created); i++ {
+		// When env vars are created, their values are encrypted
+		response.Created[i].Decrypted = &decrypted
+	}
+
 	if len(response.Failed) > 0 {
-		envs, err := c.ListEnvironmentVariables(ctx, request.TeamID, request.ProjectID)
+		envs, err := c.GetEnvironmentVariables(ctx, request.ProjectID, request.TeamID)
 		if err != nil {
 			return response.Created, fmt.Errorf("failed to create environment variables. error detecting conflicting environment variables: %w", err)
 		}
@@ -193,13 +182,11 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 				}, envs)
 				if found {
 					err = fmt.Errorf("%w, conflicting environment variable ID is %s", err, id)
+				} else {
+					err = fmt.Errorf("failed to create environment variables, %s", failed.Error.Message)
 				}
 			} else {
-				key := ""
-				if failed.Error.Key != nil {
-					key = *failed.Error.Key
-				}
-				err = fmt.Errorf("failed to create environment variables, %s %s %s", failed.Error.Message, key, failed.Error.Target)
+				err = fmt.Errorf("failed to create environment variables, %s", failed.Error.Message)
 			}
 		}
 		return response.Created, err
