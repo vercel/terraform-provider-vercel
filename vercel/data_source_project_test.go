@@ -58,6 +58,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "resource_config.function_default_timeout", "30"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "oidc_token_config.enabled", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "oidc_token_config.issuer_mode", "team"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "on_demand_concurrent_builds", "true"),
 				),
 			},
 		},
@@ -140,6 +141,7 @@ resource "vercel_project" "test" {
     enabled = true
     issuer_mode = "team"
   }
+  on_demand_concurrent_builds = true
 }
 
 data "vercel_project" "test" {

@@ -224,12 +224,14 @@ type ResourceConfigResponse struct {
 	FunctionDefaultMemoryType *string `json:"functionDefaultMemoryType"`
 	FunctionDefaultTimeout    *int64  `json:"functionDefaultTimeout"`
 	Fluid                     bool    `json:"fluid"`
+	ElasticConcurrencyEnabled bool    `json:"elasticConcurrencyEnabled"`
 }
 
 type ResourceConfig struct {
 	FunctionDefaultMemoryType *string `json:"functionDefaultMemoryType,omitempty"`
 	FunctionDefaultTimeout    *int64  `json:"functionDefaultTimeout,omitempty"`
 	Fluid                     *bool   `json:"fluid,omitempty"`
+	ElasticConcurrencyEnabled *bool   `json:"elasticConcurrencyEnabled,omitempty"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.

@@ -106,7 +106,7 @@ jobs:
         env:
           TF_ACC: "true"
           VERCEL_API_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
-          VERCEL_TERRAFORM_TESTING_TEAM: "team_RvxIb1z0pi9RSsQ13p3ES4cK"
+          VERCEL_TERRAFORM_TESTING_TEAM: "team_GwBFaTRF7juuJfO2jZzzKRgc"
           VERCEL_TERRAFORM_TESTING_GITHUB_REPO: "dglsparsons/test"
           VERCEL_TERRAFORM_TESTING_GITLAB_REPO: "dglsparsons/test"
           VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO: "dglsparsons-test/test"

@@ -75,6 +75,7 @@ resource "vercel_project" "example" {
 - `install_command` (String) The install command for this project. If omitted, this value will be automatically detected.
 - `node_version` (String) The version of Node.js that is used in the Build Step and for Serverless Functions. A new Deployment is required for your changes to take effect.
 - `oidc_token_config` (Attributes) Configuration for OpenID Connect (OIDC) tokens. (see [below for nested schema](#nestedatt--oidc_token_config))
+- `on_demand_concurrent_builds` (Boolean) Instantly scale build capacity to skip the queue, even if all build slots are in use. You can also choose a larger build machine; charges apply per minute if it exceeds your team's default.
 - `options_allowlist` (Attributes) Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths. (see [below for nested schema](#nestedatt--options_allowlist))
 - `output_directory` (String) The output directory of the project. If omitted, this value will be automatically detected.
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
