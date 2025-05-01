@@ -18,10 +18,6 @@ import (
 )
 
 func TestAcc_Project(t *testing.T) {
-	testTeamID := resource.TestCheckNoResourceAttr("vercel_project.test", "team_id")
-	if testTeam(t) != "" {
-		testTeamID = resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam(t))
-	}
 	projectSuffix := acctest.RandString(16)
 
 	resource.Test(t, resource.TestCase{
@@ -52,7 +48,7 @@ func TestAcc_Project(t *testing.T) {
 				Config: testAccProjectConfig(projectSuffix, teamIDConfig(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
-					testTeamID,
+					resource.TestCheckResourceAttr("vercel_project.test", "team_id", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-project-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
 					resource.TestCheckResourceAttr("vercel_project.test", "dev_command", "npm run serve"),

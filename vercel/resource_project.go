@@ -470,17 +470,15 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				DeprecationMessage: "Use `enable_preview_feedback` instead. This attribute will be removed in a future version.",
 				Optional:           true,
 				Computed:           true,
-				PlanModifiers:      []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				Validators: []validator.Bool{boolvalidator.ConflictsWith(
 					path.MatchRoot("preview_comments"),
 					path.MatchRoot("enable_preview_feedback"),
 				)},
 			},
 			"enable_preview_feedback": schema.BoolAttribute{
-				Description:   "Enables the Vercel Toolbar on your preview deployments.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Description: "Enables the Vercel Toolbar on your preview deployments.",
+				Optional:    true,
+				Computed:    true,
 				Validators: []validator.Bool{boolvalidator.ConflictsWith(
 					path.MatchRoot("preview_comments"),
 					path.MatchRoot("enable_preview_feedback"),
