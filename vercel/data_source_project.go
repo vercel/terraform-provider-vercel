@@ -325,8 +325,17 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				},
 			},
 			"preview_comments": schema.BoolAttribute{
+				Computed:           true,
+				DeprecationMessage: "Use `enable_preview_feedback` instead. This attribute will be removed in a future version.",
+				Description:        "Whether comments are enabled on your Preview Deployments.",
+			},
+			"enable_preview_feedback": schema.BoolAttribute{
 				Computed:    true,
-				Description: "Whether comments are enabled on your Preview Deployments.",
+				Description: "Whether the Vercel Toolbar is enabled on your preview deployments. If unspecified, defaults to team setting.",
+			},
+			"enable_production_feedback": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Whether the Vercel Toolbar is enabled on your production deployments. If unspecified, defaults to team setting.",
 			},
 			"auto_assign_custom_domains": schema.BoolAttribute{
 				Computed:    true,
@@ -409,6 +418,8 @@ type ProjectDataSource struct {
 	AutoExposeSystemEnvVars             types.Bool            `tfsdk:"automatically_expose_system_environment_variables"`
 	GitComments                         types.Object          `tfsdk:"git_comments"`
 	PreviewComments                     types.Bool            `tfsdk:"preview_comments"`
+	EnablePreviewFeedback               types.Bool            `tfsdk:"enable_preview_feedback"`
+	EnableProductionFeedback            types.Bool            `tfsdk:"enable_production_feedback"`
 	AutoAssignCustomDomains             types.Bool            `tfsdk:"auto_assign_custom_domains"`
 	GitLFS                              types.Bool            `tfsdk:"git_lfs"`
 	FunctionFailover                    types.Bool            `tfsdk:"function_failover"`
@@ -472,6 +483,8 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		ProtectionBypassForAutomationSecret: project.ProtectionBypassForAutomationSecret,
 		GitComments:                         project.GitComments,
 		PreviewComments:                     project.PreviewComments,
+		EnablePreviewFeedback:               project.EnablePreviewFeedback,
+		EnableProductionFeedback:            project.EnableProductionFeedback,
 		AutoAssignCustomDomains:             project.AutoAssignCustomDomains,
 		GitLFS:                              project.GitLFS,
 		FunctionFailover:                    project.FunctionFailover,

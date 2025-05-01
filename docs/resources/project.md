@@ -62,6 +62,8 @@ resource "vercel_project" "example" {
 - `dev_command` (String) The dev command for this project. If omitted, this value will be automatically detected.
 - `directory_listing` (Boolean) If no index file is present within a directory, the directory contents will be displayed.
 - `enable_affected_projects_deployments` (Boolean) When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.
+- `enable_preview_feedback` (Boolean) Enables the Vercel Toolbar on your preview deployments.
+- `enable_production_feedback` (Boolean) Enables the Vercel Toolbar on your production deployments: one of on, off or default.
 - `environment` (Attributes Set) A set of Environment Variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
 - `framework` (String) The framework that is being used for this project. If omitted, no framework is selected.
 - `function_failover` (Boolean) Automatically failover Serverless Functions to the nearest region. You can customize regions through vercel.json. A new Deployment is required for your changes to take effect.
@@ -76,7 +78,7 @@ resource "vercel_project" "example" {
 - `options_allowlist` (Attributes) Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths. (see [below for nested schema](#nestedatt--options_allowlist))
 - `output_directory` (String) The output directory of the project. If omitted, this value will be automatically detected.
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
-- `preview_comments` (Boolean) Whether to enable comments on your Preview Deployments. If omitted, comments are controlled at the team level (default behaviour).
+- `preview_comments` (Boolean, Deprecated) Enables the Vercel Toolbar on your preview deployments.
 - `prioritise_production_builds` (Boolean) If enabled, builds for the Production environment will be prioritized over Preview environments.
 - `protection_bypass_for_automation` (Boolean) Allow automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `protection_bypass_for_automation_secret` field.
 - `protection_bypass_for_automation_secret` (String, Sensitive) If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.

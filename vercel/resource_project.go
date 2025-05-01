@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -465,9 +466,31 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"preview_comments": schema.BoolAttribute{
+				Description:        "Enables the Vercel Toolbar on your preview deployments.",
+				DeprecationMessage: "Use `enable_preview_feedback` instead. This attribute will be removed in a future version.",
+				Optional:           true,
+				Computed:           true,
+				PlanModifiers:      []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				Validators: []validator.Bool{boolvalidator.ConflictsWith(
+					path.MatchRoot("preview_comments"),
+					path.MatchRoot("enable_preview_feedback"),
+				)},
+			},
+			"enable_preview_feedback": schema.BoolAttribute{
+				Description:   "Enables the Vercel Toolbar on your preview deployments.",
 				Optional:      true,
+				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
-				Description:   "Whether to enable comments on your Preview Deployments. If omitted, comments are controlled at the team level (default behaviour).",
+				Validators: []validator.Bool{boolvalidator.ConflictsWith(
+					path.MatchRoot("preview_comments"),
+					path.MatchRoot("enable_preview_feedback"),
+				)},
+			},
+			"enable_production_feedback": schema.BoolAttribute{
+				Description:   "Enables the Vercel Toolbar on your production deployments: one of on, off or default.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"auto_assign_custom_domains": schema.BoolAttribute{
 				Optional:    true,
@@ -591,6 +614,8 @@ type Project struct {
 	AutoExposeSystemEnvVars             types.Bool                      `tfsdk:"automatically_expose_system_environment_variables"`
 	GitComments                         types.Object                    `tfsdk:"git_comments"`
 	PreviewComments                     types.Bool                      `tfsdk:"preview_comments"`
+	EnablePreviewFeedback               types.Bool                      `tfsdk:"enable_preview_feedback"`
+	EnableProductionFeedback            types.Bool                      `tfsdk:"enable_production_feedback"`
 	AutoAssignCustomDomains             types.Bool                      `tfsdk:"auto_assign_custom_domains"`
 	GitLFS                              types.Bool                      `tfsdk:"git_lfs"`
 	FunctionFailover                    types.Bool                      `tfsdk:"function_failover"`
@@ -626,7 +651,6 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 		p.OptionsAllowlist != nil ||
 		!p.AutoExposeSystemEnvVars.IsNull() ||
 		p.GitComments.IsNull() ||
-		!p.PreviewComments.IsNull() ||
 		(!p.AutoAssignCustomDomains.IsNull() && !p.AutoAssignCustomDomains.ValueBool()) ||
 		!p.GitLFS.IsNull() ||
 		!p.FunctionFailover.IsNull() ||
@@ -722,6 +746,8 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
 		ServerlessFunctionRegion:          p.ServerlessFunctionRegion.ValueString(),
 		ResourceConfig:                    resourceConfig.toClientResourceConfig(),
+		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback.ValueBoolPointer(), p.PreviewComments.ValueBoolPointer()),
+		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
 	}, diags
 }
 
@@ -735,7 +761,19 @@ func toSkewProtectionAge(sp types.String) int {
 		"1 day":      86400,
 		"7 days":     604800,
 	}
-	return ages[sp.ValueString()]
+	v, ok := ages[sp.ValueString()]
+	if !ok {
+		// Should not happen due to validation
+		return 0
+	}
+	return v
+}
+
+func oneBoolPointer(a, b *bool) *bool {
+	if a == nil {
+		return b
+	}
+	return a
 }
 
 func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (req client.UpdateProjectRequest, diags diag.Diagnostics) {
@@ -773,7 +811,8 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		OIDCTokenConfig:                      p.OIDCTokenConfig.toUpdateProjectRequest(),
 		OptionsAllowlist:                     p.OptionsAllowlist.toUpdateProjectRequest(),
 		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
-		EnablePreviewFeedback:                p.PreviewComments.ValueBoolPointer(),
+		EnablePreviewFeedback:                oneBoolPointer(p.EnablePreviewFeedback.ValueBoolPointer(), p.PreviewComments.ValueBoolPointer()),
+		EnableProductionFeedback:             p.EnableProductionFeedback.ValueBoolPointer(),
 		EnableAffectedProjectsDeployments:    p.EnableAffectedProjectsDeployments.ValueBoolPointer(),
 		AutoAssignCustomDomains:              p.AutoAssignCustomDomains.ValueBool(),
 		GitLFS:                               p.GitLFS.ValueBool(),
@@ -1407,6 +1446,8 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
 		PreviewComments:                     types.BoolPointerValue(response.EnablePreviewFeedback),
+		EnablePreviewFeedback:               types.BoolPointerValue(response.EnablePreviewFeedback),
+		EnableProductionFeedback:            types.BoolPointerValue(response.EnableProductionFeedback),
 		EnableAffectedProjectsDeployments:   uncoerceBool(fields.EnableAffectedProjectsDeployments, types.BoolPointerValue(response.EnableAffectedProjectsDeployments)),
 		AutoAssignCustomDomains:             types.BoolValue(response.AutoAssignCustomDomains),
 		GitLFS:                              types.BoolValue(response.GitLFS),

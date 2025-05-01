@@ -59,6 +59,8 @@ type CreateProjectRequest struct {
 	RootDirectory                     *string               `json:"rootDirectory"`
 	ServerlessFunctionRegion          string                `json:"serverlessFunctionRegion,omitempty"`
 	ResourceConfig                    *ResourceConfig       `json:"resourceConfig,omitempty"`
+	EnablePreviewFeedback             *bool                 `json:"enablePreviewFeedback,omitempty"`
+	EnableProductionFeedback          *bool                 `json:"enableProductionFeedback,omitempty"`
 }
 
 // CreateProject will create a project within Vercel.
@@ -192,6 +194,7 @@ type ProjectResponse struct {
 	ProtectionBypass                     map[string]ProtectionBypass `json:"protectionBypass"`
 	AutoExposeSystemEnvVars              *bool                       `json:"autoExposeSystemEnvs"`
 	EnablePreviewFeedback                *bool                       `json:"enablePreviewFeedback"`
+	EnableProductionFeedback             *bool                       `json:"enableProductionFeedback"`
 	EnableAffectedProjectsDeployments    *bool                       `json:"enableAffectedProjectsDeployments"`
 	AutoAssignCustomDomains              bool                        `json:"autoAssignCustomDomains"`
 	GitLFS                               bool                        `json:"gitLFS"`
@@ -301,6 +304,7 @@ type UpdateProjectRequest struct {
 	OptionsAllowlist                     *OptionsAllowlist               `json:"optionsAllowlist"`
 	AutoExposeSystemEnvVars              bool                            `json:"autoExposeSystemEnvs"`
 	EnablePreviewFeedback                *bool                           `json:"enablePreviewFeedback"`
+	EnableProductionFeedback             *bool                           `json:"enableProductionFeedback"`
 	EnableAffectedProjectsDeployments    *bool                           `json:"enableAffectedProjectsDeployments,omitempty"`
 	AutoAssignCustomDomains              bool                            `json:"autoAssignCustomDomains"`
 	GitLFS                               bool                            `json:"gitLFS"`
