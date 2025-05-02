@@ -255,7 +255,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 											},
 										},
 										"action_duration": schema.StringAttribute{
-											Description: "Forward persistence of a rule aciton",
+											Description: "Forward persistence of a rule action",
 											Optional:    true,
 										},
 									},

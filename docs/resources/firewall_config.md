@@ -404,7 +404,7 @@ Required:
 
 Optional:
 
-- `action_duration` (String) Forward persistence of a rule aciton
+- `action_duration` (String) Forward persistence of a rule action
 - `rate_limit` (Attributes) Behavior or a rate limiting action. Required if action is rate_limit (see [below for nested schema](#nestedatt--rules--rule--action--rate_limit))
 - `redirect` (Attributes) How to redirect a request. Required if action is redirect (see [below for nested schema](#nestedatt--rules--rule--action--redirect))
 
