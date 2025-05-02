@@ -157,6 +157,11 @@ resource "vercel_firewall_config" "managed" {
       rfi  = { action = "deny" }
       gen  = { action = "deny" }
     }
+
+    bot_filter {
+      action = "log"
+      active = true
+    }
   }
 }
 
@@ -230,7 +235,17 @@ Read-Only:
 
 Optional:
 
+- `bot_filter` (Block, Optional) Enable the bot_filter managed ruleset and select action (see [below for nested schema](#nestedblock--managed_rulesets--bot_filter))
 - `owasp` (Block, Optional) Enable the owasp managed rulesets and select ruleset behaviors (see [below for nested schema](#nestedblock--managed_rulesets--owasp))
+
+<a id="nestedblock--managed_rulesets--bot_filter"></a>
+### Nested Schema for `managed_rulesets.bot_filter`
+
+Optional:
+
+- `action` (String)
+- `active` (Boolean)
+
 
 <a id="nestedblock--managed_rulesets--owasp"></a>
 ### Nested Schema for `managed_rulesets.owasp`
@@ -404,7 +419,7 @@ Required:
 
 Optional:
 
-- `action_duration` (String) Forward persistence of a rule aciton
+- `action_duration` (String) Forward persistence of a rule action
 - `rate_limit` (Attributes) Behavior or a rate limiting action. Required if action is rate_limit (see [below for nested schema](#nestedatt--rules--rule--action--rate_limit))
 - `redirect` (Attributes) How to redirect a request. Required if action is redirect (see [below for nested schema](#nestedatt--rules--rule--action--redirect))
 
