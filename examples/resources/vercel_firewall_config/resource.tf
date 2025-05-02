@@ -142,6 +142,11 @@ resource "vercel_firewall_config" "managed" {
       rfi  = { action = "deny" }
       gen  = { action = "deny" }
     }
+
+    bot_filter {
+      action = "log"
+      active = true
+    }
   }
 }
 

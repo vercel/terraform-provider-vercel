@@ -170,6 +170,17 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 							},
 						},
 					},
+					"bot_filter": schema.SingleNestedBlock{
+						Description: "Enable the bot_filter managed rulesets and select action",
+						Attributes: map[string]schema.Attribute{
+							"active": schema.BoolAttribute{
+								Optional: true,
+							},
+							"action": schema.StringAttribute{
+								Optional: true,
+							},
+						},
+					},
 				},
 			},
 			"rules": schema.SingleNestedBlock{
@@ -255,7 +266,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 											},
 										},
 										"action_duration": schema.StringAttribute{
-											Description: "Forward persistence of a rule aciton",
+											Description: "Forward persistence of a rule action",
 											Optional:    true,
 										},
 									},
@@ -443,7 +454,8 @@ type FirewallConfig struct {
 }
 
 type FirewallManagedRulesets struct {
-	OWASP *CRSRule `tfsdk:"owasp"`
+	OWASP     *CRSRule         `tfsdk:"owasp"`
+	BotFilter *BotFilterConfig `tfsdk:"bot_filter"`
 }
 
 type CRSRule struct {
@@ -475,6 +487,11 @@ func (r *CRSRule) ToMap() map[string]*CRSRuleConfig {
 }
 
 type CRSRuleConfig struct {
+	Active types.Bool   `tfsdk:"active"`
+	Action types.String `tfsdk:"action"`
+}
+
+type BotFilterConfig struct {
 	Active types.Bool   `tfsdk:"active"`
 	Action types.String `tfsdk:"action"`
 }
@@ -756,7 +773,7 @@ func fromCRS(conf map[string]client.CoreRuleSet, refMr *FirewallManagedRulesets)
 	if refMr != nil && refMr.OWASP != nil {
 		ref = refMr.OWASP
 	}
-	if conf == nil || ref == nil {
+	if conf == nil || ref == nil || refMr.OWASP == nil {
 		return nil
 	}
 	return &CRSRule{
@@ -838,10 +855,20 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfi
 		cfg.IPRules = &IPRules{Rules: ipRules}
 	}
 
-	managedRulesets := &FirewallManagedRulesets{}
-	if conf.ManagedRulesets != nil && conf.CRS != nil {
+	if len(conf.ManagedRulesets) > 0 {
+		managedRulesets := &FirewallManagedRulesets{}
 		cfg.ManagedRulesets = managedRulesets
-		cfg.ManagedRulesets.OWASP = fromCRS(conf.CRS, state.ManagedRulesets)
+		if conf.CRS != nil {
+			cfg.ManagedRulesets.OWASP = fromCRS(conf.CRS, state.ManagedRulesets)
+		}
+		v, exist := conf.ManagedRulesets["bot_filter"]
+		if exist {
+			botFilterConf := &BotFilterConfig{
+				Active: types.BoolValue(v.Active),
+				Action: types.StringValue(v.Action),
+			}
+			cfg.ManagedRulesets.BotFilter = botFilterConf
+		}
 	}
 
 	return cfg, nil
@@ -868,6 +895,13 @@ func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 						Active: value.Active.IsNull() || value.Active.ValueBool(),
 					}
 				}
+			}
+		}
+		botFilter := f.ManagedRulesets.BotFilter
+		if botFilter != nil {
+			conf.ManagedRulesets["bot_filter"] = client.ManagedRule{
+				Active: botFilter.Active.ValueBool(),
+				Action: botFilter.Action.ValueString(),
 			}
 		}
 	}
