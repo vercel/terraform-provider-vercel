@@ -31,7 +31,7 @@ func TestAcc_TeamConfigDataSource(t *testing.T) {
 func testAccVercelTeamConfigDataSource(teamID string) string {
 	return fmt.Sprintf(`
 data "vercel_team_config" "test" {
-  id   = "%s" // Replace with a valid team ID
+  id   = "%s"
 }
 `, teamID)
 }
