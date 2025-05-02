@@ -27,7 +27,7 @@ func testAccTeamMemberDataSourceConfig(teamIDConfig string, user string) string 
 	return fmt.Sprintf(`
 resource "vercel_team_member" "test" {
   %[1]s
-  user_id = "%s"
+  user_id = "%[2]s"
   role    = "MEMBER"
 }
 
