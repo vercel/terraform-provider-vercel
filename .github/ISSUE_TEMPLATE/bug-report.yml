@@ -1,0 +1,35 @@
+name: 🐛 Bug report
+description: Report an issue you've experienced
+title: "[BUG] <title>"
+assignees:
+  - dglsparsons
+body:
+  - type: textarea
+    attributes:
+      label: Describe the bug
+      description: A short description of what the bug is. Please include what the affected resources and/or data sources are.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: To Reproduce
+      description: Steps to reproduce the behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: tf_version
+    attributes:
+      label: Terraform and Vercel Provider Version
+      description: |
+        Please run `terraform --version` to collect the Terraform and AWS Provider versions and paste the result below. If multiple versions have been tested, feel free to add that additional information here as well.
+      placeholder: |
+        ...output of `terraform --version`...
+      render: console
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Additional Details
+      description: Please add any other context.
+    validations:
+      required: false
