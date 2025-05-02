@@ -15,8 +15,6 @@ func TestAcc_TeamConfig(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccVercelTeamConfigBasic(testTeam(t)),
-				// Added since vercel_team_config schema version upgraded
-				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", "Vercel Terraform Testing"),
 					resource.TestCheckResourceAttr(resourceName, "slug", "terraform-testing-vtest314"),
@@ -25,8 +23,6 @@ func TestAcc_TeamConfig(t *testing.T) {
 			},
 			{
 				Config: testAccVercelTeamConfigUpdated(testTeam(t)),
-				// Added since vercel_team_config schema version upgraded
-				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", "Vercel Terraform Testing o_o"),
