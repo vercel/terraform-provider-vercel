@@ -653,7 +653,7 @@ resource "vercel_project" "test" {
       sensitive = true
     }
   ]
-<<<<<<< HEAD
+  on_demand_concurrent_builds = false
   enable_preview_feedback = false
   enable_production_feedback = true
 }
@@ -687,9 +687,6 @@ resource "vercel_project" "test" {
   name = "test-acc-two-%s"
   %s
   enable_preview_feedback = true
-=======
-  on_demand_concurrent_builds = false
->>>>>>> c72cb10 (Support On-Demand Build Concurrency on vercel_project resource)
 }
 `, projectSuffix, teamID)
 }
