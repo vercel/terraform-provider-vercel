@@ -861,11 +861,11 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfi
 		if conf.CRS != nil {
 			cfg.ManagedRulesets.OWASP = fromCRS(conf.CRS, state.ManagedRulesets)
 		}
-		v, exist := conf.ManagedRulesets["bot_filter"]
-		if exist {
+		botFilter, botFilterExist := conf.ManagedRulesets["bot_filter"]
+		if botFilterExist {
 			botFilterConf := &BotFilterConfig{
-				Active: types.BoolValue(v.Active),
-				Action: types.StringValue(v.Action),
+				Active: types.BoolValue(botFilter.Active),
+				Action: types.StringValue(botFilter.Action),
 			}
 			cfg.ManagedRulesets.BotFilter = botFilterConf
 		}
