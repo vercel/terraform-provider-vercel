@@ -696,6 +696,11 @@ resource "vercel_firewall_config" "neg" {
     }
 }
 
+resource "vercel_project" "botfilter" {
+    name = "test-acc-%[1]s-botfilter"
+    %[2]s
+}
+
 resource "vercel_firewall_config" "botfilter" {
     project_id = vercel_project.botfilter.id
     %[2]s
