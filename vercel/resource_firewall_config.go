@@ -171,7 +171,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 						},
 					},
 					"bot_filter": schema.SingleNestedBlock{
-						Description: "Enable the bot_filter managed rulesets and select action",
+						Description: "Enable the bot_filter managed ruleset and select action",
 						Attributes: map[string]schema.Attribute{
 							"active": schema.BoolAttribute{
 								Optional: true,
