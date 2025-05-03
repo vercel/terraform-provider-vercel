@@ -17,7 +17,7 @@ type FirewallConfig struct {
 }
 type ManagedRule struct {
 	Active bool   `json:"active"`
-	Action string `json:"action"`
+	Action string `json:"action,omitempty"`
 }
 
 type FirewallRule struct {
