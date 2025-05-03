@@ -858,7 +858,7 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfi
 	if len(conf.ManagedRulesets) > 0 {
 		managedRulesets := &FirewallManagedRulesets{}
 		cfg.ManagedRulesets = managedRulesets
-		if conf.CRS != nil {
+		if conf.CRS != nil && state.ManagedRulesets != nil {
 			cfg.ManagedRulesets.OWASP = fromCRS(conf.CRS, state.ManagedRulesets)
 		}
 		botFilter, botFilterExist := conf.ManagedRulesets["bot_filter"]
