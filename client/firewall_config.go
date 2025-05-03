@@ -16,7 +16,8 @@ type FirewallConfig struct {
 	CRS     map[string]CoreRuleSet `json:"crs,omitempty"`
 }
 type ManagedRule struct {
-	Active bool `json:"active"`
+	Active bool   `json:"active"`
+	Action string `json:"action,omitempty"`
 }
 
 type FirewallRule struct {
