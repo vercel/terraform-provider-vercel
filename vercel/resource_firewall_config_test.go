@@ -707,7 +707,7 @@ resource "vercel_firewall_config" "botfilter" {
 
     managed_rulesets {
         bot_filter {
-            action = "log"
+            action = "deny"
             active = false
         }
     }
