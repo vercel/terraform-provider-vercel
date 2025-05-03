@@ -82,6 +82,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.issuer_mode", "team"),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_cpu_type", "standard"),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_timeout", "60"),
+					resource.TestCheckResourceAttr("vercel_project.test", "on_demand_concurrent_builds", "true"),
 				),
 			},
 			// Update testing
@@ -98,6 +99,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "on_demand_concurrent_builds", "false"),
 				),
 			},
 			// Test mutual exclusivity validation
@@ -353,7 +355,7 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 						"note":  "notey note",
 					}),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "trusted_ips.deployment_type", "all_deployments"),
-					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "trusted_ips.protection_mode", "trusted_ip_optional"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "trusted_ips.protection_mode", "trusted_ip_required"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "options_allowlist.paths.#", "1"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "options_allowlist.paths.0.value", "/foo"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation", "true"),
@@ -414,7 +416,7 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 						"note":  "notey notey",
 					}),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.deployment_type", "all_deployments"),
-					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.protection_mode", "trusted_ip_optional"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "trusted_ips.protection_mode", "trusted_ip_required"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "protection_bypass_for_automation", "false"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "options_allowlist.paths.#", "1"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_update", "options_allowlist.paths.0.value", "/bar"),
@@ -651,6 +653,7 @@ resource "vercel_project" "test" {
       sensitive = true
     }
   ]
+  on_demand_concurrent_builds = false
   enable_preview_feedback = false
   enable_production_feedback = true
 }
@@ -708,7 +711,7 @@ resource "vercel_project" "enabled_to_start" {
 		}
 	]
 	deployment_type = "all_deployments"
-	protection_mode = "trusted_ip_optional"
+	protection_mode = "trusted_ip_required"
   }
   options_allowlist = {
     paths = [
@@ -814,7 +817,7 @@ resource "vercel_project" "enabled_to_update" {
 		}
 	]
 	deployment_type = "all_deployments"
-	protection_mode = "trusted_ip_optional"
+	protection_mode = "trusted_ip_required"
   }
   options_allowlist = {
     paths = [
@@ -1097,6 +1100,7 @@ resource "vercel_project" "test" {
       sensitive = true
     }
   ]
+  on_demand_concurrent_builds = true
 }
 `, projectSuffix, teamID)
 }

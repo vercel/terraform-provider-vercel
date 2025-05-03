@@ -388,6 +388,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					},
 				},
 			},
+			"on_demand_concurrent_builds": schema.BoolAttribute{
+				Description: "Instantly scale build capacity to skip the queue, even if all build slots are in use. You can also choose a larger build machine; charges apply per minute if it exceeds your team's default.",
+				Optional:    true,
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -431,6 +436,7 @@ type ProjectDataSource struct {
 	SkewProtection                      types.String          `tfsdk:"skew_protection"`
 	ResourceConfig                      types.Object          `tfsdk:"resource_config"`
 	NodeVersion                         types.String          `tfsdk:"node_version"`
+	OnDemandConcurrentBuilds            types.Bool            `tfsdk:"on_demand_concurrent_builds"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
@@ -496,6 +502,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		SkewProtection:                      project.SkewProtection,
 		ResourceConfig:                      project.ResourceConfig,
 		NodeVersion:                         project.NodeVersion,
+		OnDemandConcurrentBuilds:            project.OnDemandConcurrentBuilds,
 	}, nil
 }
 

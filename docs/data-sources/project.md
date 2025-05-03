@@ -33,6 +33,7 @@ data "vercel_project" "example" {
 
 ### Optional
 
+- `on_demand_concurrent_builds` (Boolean) Instantly scale build capacity to skip the queue, even if all build slots are in use. You can also choose a larger build machine; charges apply per minute if it exceeds your team's default.
 - `team_id` (String) The team ID the project exists beneath. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only

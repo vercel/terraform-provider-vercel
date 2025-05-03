@@ -404,6 +404,9 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 		if client.NotFound(err) {
 			return true, err
 		}
+		if err != nil {
+			return true, fmt.Errorf("unexpected error: %w", err)
+		}
 		teamMember := convertResponseToTeamMember(response, plan)
 		if teamMember.Role != plan.Role {
 			tflog.Error(ctx, "Role has not yet propagated", map[string]any{})
