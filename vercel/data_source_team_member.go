@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -124,9 +125,23 @@ func (d *teamMemberDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	response, err := d.client.GetTeamMember(ctx, client.GetTeamMemberRequest{
-		TeamID: config.TeamID.ValueString(),
-		UserID: config.UserID.ValueString(),
+	var response client.TeamMember
+	getRetry := Retry{
+		Base:     200 * time.Millisecond,
+		Attempts: 7,
+	}
+	err := getRetry.Do(func(attempt int) (shouldRetry bool, err error) {
+		response, err = d.client.GetTeamMember(ctx, client.GetTeamMemberRequest{
+			TeamID: config.TeamID.ValueString(),
+			UserID: config.UserID.ValueString(),
+		})
+		if client.NotFound(err) {
+			return true, err
+		}
+		if err != nil {
+			return true, fmt.Errorf("unexpected error: %w", err)
+		}
+		return false, err
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(

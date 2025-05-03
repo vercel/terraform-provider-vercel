@@ -573,6 +573,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
+			"on_demand_concurrent_builds": schema.BoolAttribute{
+				Description:   "Instantly scale build capacity to skip the queue, even if all build slots are in use. You can also choose a larger build machine; charges apply per minute if it exceeds your team's default.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
 		},
 	}
 }
@@ -624,6 +630,7 @@ type Project struct {
 	EnableAffectedProjectsDeployments   types.Bool                      `tfsdk:"enable_affected_projects_deployments"`
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
 	ResourceConfig                      types.Object                    `tfsdk:"resource_config"`
+	OnDemandConcurrentBuilds            types.Bool                      `tfsdk:"on_demand_concurrent_builds"`
 }
 
 type GitComments struct {
@@ -743,7 +750,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		PublicSource:                      p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
 		ServerlessFunctionRegion:          p.ServerlessFunctionRegion.ValueString(),
-		ResourceConfig:                    resourceConfig.toClientResourceConfig(),
+		ResourceConfig:                    resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
 	}, diags
@@ -824,7 +831,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		DirectoryListing:                     p.DirectoryListing.ValueBool(),
 		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
 		GitComments:                          gc.toUpdateProjectRequest(),
-		ResourceConfig:                       resourceConfig.toClientResourceConfig(),
+		ResourceConfig:                       resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds),
 		NodeVersion:                          p.NodeVersion.ValueString(),
 	}, nil
 }
@@ -1076,7 +1083,7 @@ func (p *Project) resourceConfig(ctx context.Context) (rc *ResourceConfig, diags
 	return rc, diags
 }
 
-func (r *ResourceConfig) toClientResourceConfig() *client.ResourceConfig {
+func (r *ResourceConfig) toClientResourceConfig(onDemandConcurrentBuilds types.Bool) *client.ResourceConfig {
 	if r == nil {
 		return nil
 	}
@@ -1090,6 +1097,9 @@ func (r *ResourceConfig) toClientResourceConfig() *client.ResourceConfig {
 	}
 	if !r.Fluid.IsUnknown() {
 		resourceConfig.Fluid = r.Fluid.ValueBoolPointer()
+	}
+	if !onDemandConcurrentBuilds.IsUnknown() {
+		resourceConfig.ElasticConcurrencyEnabled = onDemandConcurrentBuilds.ValueBoolPointer()
 	}
 	return resourceConfig
 }
@@ -1461,6 +1471,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		GitComments:                         gitComments,
 		ResourceConfig:                      resourceConfig,
 		NodeVersion:                         types.StringValue(response.NodeVersion),
+		OnDemandConcurrentBuilds:            types.BoolValue(response.ResourceConfig.ElasticConcurrencyEnabled),
 	}, nil
 }
 

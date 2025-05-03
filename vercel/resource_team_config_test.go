@@ -15,22 +15,18 @@ func TestAcc_TeamConfig(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccVercelTeamConfigBasic(testTeam(t)),
-				// Added since vercel_team_config schema version upgraded
-				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "vercel-terraform-test"),
-					resource.TestCheckResourceAttr(resourceName, "slug", "vercel-terraform-test-ci"),
+					resource.TestCheckResourceAttr(resourceName, "name", "Vercel Terraform Testing"),
+					resource.TestCheckResourceAttr(resourceName, "slug", "terraform-testing-vtest314"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{
 				Config: testAccVercelTeamConfigUpdated(testTeam(t)),
-				// Added since vercel_team_config schema version upgraded
-				ExpectNonEmptyPlan: true,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "name", "vercel-terraform-test-ci"),
-					resource.TestCheckResourceAttr(resourceName, "slug", "vercel-terraform-test-ci"),
+					resource.TestCheckResourceAttr(resourceName, "name", "Vercel Terraform Testing o_o"),
+					resource.TestCheckResourceAttr(resourceName, "slug", "terraform-testing-vtest314"),
 					resource.TestCheckResourceAttr(resourceName, "description", "Vercel Terraform Testing"),
 					resource.TestCheckResourceAttr(resourceName, "sensitive_environment_variable_policy", "off"),
 					resource.TestCheckResourceAttr(resourceName, "remote_caching.enabled", "true"),
@@ -47,8 +43,8 @@ func TestAcc_TeamConfig(t *testing.T) {
 func testAccVercelTeamConfigBasic(teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_team_config" "test" {
-  id   = "%s" // Replace with a valid team ID
-  name = "vercel-terraform-test"
+  id   = "%s"
+  name = "Vercel Terraform Testing"
 }
 `, teamID)
 }
@@ -62,8 +58,8 @@ data "vercel_file" "test" {
 resource "vercel_team_config" "test" {
   id                                    = "%s"
   avatar                                =  data.vercel_file.test.file
-  name                                  = "vercel-terraform-test-ci"
-  slug                                  = "vercel-terraform-test-ci"
+  name                                  = "Vercel Terraform Testing o_o"
+  slug                                  = "terraform-testing-vtest314"
   description                           = "Vercel Terraform Testing"
   sensitive_environment_variable_policy = "off"
   remote_caching = {
