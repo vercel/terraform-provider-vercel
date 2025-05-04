@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/vercel/terraform-provider-vercel/v2/client"
+	"github.com/vercel/terraform-provider-vercel/v3/client"
 )
 
 func testCheckSharedEnvironmentVariableProjectUnlinked(testClient *client.Client, envVarName, projectName, teamID string) resource.TestCheckFunc {
