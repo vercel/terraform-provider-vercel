@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/vercel/terraform-provider-vercel/v2/client"
-	"github.com/vercel/terraform-provider-vercel/v2/vercel"
+	"github.com/vercel/terraform-provider-vercel/v3/client"
+	"github.com/vercel/terraform-provider-vercel/v3/vercel"
 )
 
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
