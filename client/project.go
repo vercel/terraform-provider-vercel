@@ -225,6 +225,7 @@ type ResourceConfigResponse struct {
 	FunctionDefaultTimeout    *int64  `json:"functionDefaultTimeout"`
 	Fluid                     bool    `json:"fluid"`
 	ElasticConcurrencyEnabled bool    `json:"elasticConcurrencyEnabled"`
+	BuildMachineType          *string `json:"buildMachineType"`
 }
 
 type ResourceConfig struct {
@@ -232,6 +233,7 @@ type ResourceConfig struct {
 	FunctionDefaultTimeout    *int64  `json:"functionDefaultTimeout,omitempty"`
 	Fluid                     *bool   `json:"fluid,omitempty"`
 	ElasticConcurrencyEnabled *bool   `json:"elasticConcurrencyEnabled,omitempty"`
+	BuildMachineType          *string `json:"buildMachineType,omitempty"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.
