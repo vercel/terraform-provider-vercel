@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -87,7 +88,7 @@ func (v validatorServerlessFunctionRegion) ValidateString(ctx context.Context, r
 	}
 
 	for region, regionInfo := range regions {
-		if contains(regionInfo.Caps, "V2_DEPLOYMENT_CREATE") {
+		if slices.Contains(regionInfo.Caps, "V2_DEPLOYMENT_CREATE") {
 			if v.regions == nil {
 				v.regions = map[string]struct{}{}
 			}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -227,12 +228,12 @@ func areSameProjects(oldProjects, newProjects []TeamMemberProject) bool {
 		return false
 	}
 	for _, p := range oldProjects {
-		if !contains(newProjects, p) {
+		if !slices.Contains(newProjects, p) {
 			return false
 		}
 	}
 	for _, p := range newProjects {
-		if !contains(oldProjects, p) {
+		if !slices.Contains(oldProjects, p) {
 			return false
 		}
 	}
@@ -241,12 +242,12 @@ func areSameProjects(oldProjects, newProjects []TeamMemberProject) bool {
 
 func diffAccessGroups(oldAgs, newAgs []string) (toAdd, toRemove []string) {
 	for _, n := range newAgs {
-		if !contains(oldAgs, n) {
+		if !slices.Contains(oldAgs, n) {
 			toAdd = append(toAdd, n)
 		}
 	}
 	for _, n := range oldAgs {
-		if !contains(newAgs, n) {
+		if !slices.Contains(newAgs, n) {
 			toRemove = append(toRemove, n)
 		}
 	}
