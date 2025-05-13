@@ -140,13 +140,13 @@ func (e *ProjectDeploymentRetention) toUpdateDeploymentRetentionRequest() client
 // convertResponseToProjectDeploymentRetention is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
-func convertResponseToProjectDeploymentRetention(response client.DeploymentExpiration, projectID types.String, teamID types.String) ProjectDeploymentRetention {
+func convertResponseToProjectDeploymentRetention(response client.DeploymentExpirationResponse, projectID types.String) ProjectDeploymentRetention {
 	return ProjectDeploymentRetention{
 		ExpirationPreview:    types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationPreview]),
 		ExpirationProduction: types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationProduction]),
 		ExpirationCanceled:   types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationCanceled]),
 		ExpirationErrored:    types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationErrored]),
-		TeamID:               teamID,
+		TeamID:               types.StringValue(response.TeamID),
 		ProjectID:            projectID,
 	}
 }
@@ -186,7 +186,7 @@ func (r *projectDeploymentRetentionResource) Create(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectDeploymentRetention(response, plan.ProjectID, plan.TeamID)
+	result := convertResponseToProjectDeploymentRetention(response, plan.ProjectID)
 
 	tflog.Info(ctx, "created project deployment retention", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
@@ -227,7 +227,7 @@ func (r *projectDeploymentRetentionResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	result := convertResponseToProjectDeploymentRetention(out, state.ProjectID, state.TeamID)
+	result := convertResponseToProjectDeploymentRetention(out, state.ProjectID)
 	tflog.Info(ctx, "read project deployment retention", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
@@ -289,7 +289,7 @@ func (r *projectDeploymentRetentionResource) Update(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectDeploymentRetention(response, plan.ProjectID, plan.TeamID)
+	result := convertResponseToProjectDeploymentRetention(response, plan.ProjectID)
 
 	tflog.Info(ctx, "updated project deployment retention", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
@@ -327,7 +327,7 @@ func (r *projectDeploymentRetentionResource) ImportState(ctx context.Context, re
 		return
 	}
 
-	result := convertResponseToProjectDeploymentRetention(out, types.StringValue(projectID), types.StringValue(teamID))
+	result := convertResponseToProjectDeploymentRetention(out, types.StringValue(projectID))
 	tflog.Info(ctx, "imported project deployment retention", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
