@@ -141,7 +141,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				ElementType:   types.StringType,
 				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()},
 				Validators: []validator.Set{
-					setvalidator.ValueStringsAre(stringvalidator.OneOf("static", "edge", "external", "build", "lambda")),
+					setvalidator.ValueStringsAre(stringvalidator.OneOf("static", "edge", "external", "build", "lambda", "firewall")),
 					setvalidator.SizeAtLeast(1),
 				},
 			},
