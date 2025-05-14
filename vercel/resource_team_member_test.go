@@ -27,7 +27,7 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: cfg(testAccTeamMemberResourceConfig("MEMBER", testAdditionalUser(t))),
+				Config: cfg(testAccTeamMemberResourceConfig("MEMBER", testAdditionalUser(t), testTeam(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
@@ -44,7 +44,7 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 			},
 			// Update testing
 			{
-				Config: cfg(testAccTeamMemberResourceConfig("VIEWER", testAdditionalUser(t))),
+				Config: cfg(testAccTeamMemberResourceConfig("VIEWER", testAdditionalUser(t), testTeam(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
@@ -53,7 +53,7 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 			},
 			// Test with projects
 			{
-				Config: cfg(testAccTeamMemberResourceConfigWithProjects(randomSuffix, testAdditionalUser(t))),
+				Config: cfg(testAccTeamMemberResourceConfigWithProjects(randomSuffix, testAdditionalUser(t), testTeam(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
@@ -63,7 +63,7 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 			},
 			// Test with access groups
 			{
-				Config: cfg(testAccTeamMemberResourceConfigWithAccessGroups(randomSuffix, testAdditionalUser(t))),
+				Config: cfg(testAccTeamMemberResourceConfigWithAccessGroups(randomSuffix, testAdditionalUser(t), testTeam(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
@@ -75,16 +75,17 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 	})
 }
 
-func testAccTeamMemberResourceConfig(role string, user string) string {
+func testAccTeamMemberResourceConfig(role, user, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_team_member" "test" {
-  user_id = "%s"
-  role    = "%s"
+  user_id = "%[1]s"
+  team_id = "%[2]s"
+  role    = "%[3]s"
 }
-`, user, role)
+`, user, teamID, role)
 }
 
-func testAccTeamMemberResourceConfigWithProjects(randomSuffix string, user string) string {
+func testAccTeamMemberResourceConfigWithProjects(randomSuffix, user, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-example-project-%[1]s"
@@ -92,16 +93,17 @@ resource "vercel_project" "test" {
 
 resource "vercel_team_member" "test" {
   user_id = "%[2]s"
+  team_id = "%[3]s"
   role    = "CONTRIBUTOR"
   projects = [{
     project_id = vercel_project.test.id
     role       = "PROJECT_VIEWER"
   }]
 }
-`, randomSuffix, user)
+`, randomSuffix, user, teamID)
 }
 
-func testAccTeamMemberResourceConfigWithAccessGroups(randomSuffix string, user string) string {
+func testAccTeamMemberResourceConfigWithAccessGroups(randomSuffix, user, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
     name = "test-acc-access-group-%[2]s"
@@ -109,9 +111,10 @@ resource "vercel_access_group" "test" {
 
 resource "vercel_team_member" "test" {
   user_id = "%[1]s"
+  team_id = "%[3]s"
   role    = "CONTRIBUTOR"
 
   access_groups = [vercel_access_group.test.id]
 }
-`, user, randomSuffix)
+`, user, randomSuffix, teamID)
 }

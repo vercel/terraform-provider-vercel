@@ -139,7 +139,7 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// check we get a sensible error if fluid + invalid CPU combination.
-				Config: fmt.Sprintf(`
+				Config: cfg(fmt.Sprintf(`
                 resource "vercel_project" "test" {
                     name = "test-acc-fluid-%[1]s"
                     resource_config = {
@@ -147,12 +147,12 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
                         function_default_cpu_type = "standard_legacy"
                     }
                 }
-                `, projectSuffix),
+                `, projectSuffix)),
 				ExpectError: regexp.MustCompile(strings.ReplaceAll("\"standard_legacy\" is not a valid memory type for Fluid compute", " ", `\s*`)),
 			},
 			{
 				// check creating a project with Fluid
-				Config: fmt.Sprintf(`
+				Config: cfg(fmt.Sprintf(`
                     resource "vercel_project" "test" {
                         name = "test-acc-fluid-%[1]s"
 
@@ -160,7 +160,7 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
                             fluid = true
                         }
                     }
-                `, projectSuffix),
+                `, projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-fluid-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.fluid", "true"),
@@ -168,7 +168,7 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
 			},
 			{
 				// check updating Fluid on a project
-				Config: fmt.Sprintf(`
+				Config: cfg(fmt.Sprintf(`
                     resource "vercel_project" "test" {
                         name = "test-acc-fluid-%[1]s"
 
@@ -176,7 +176,7 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
                             fluid = false
                         }
                     }
-                `, projectSuffix),
+                `, projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-fluid-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.fluid", "false"),
@@ -184,11 +184,11 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
 			},
 			{
 				// check new projects without fluid specified shows fluid as false
-				Config: fmt.Sprintf(`
+				Config: cfg(fmt.Sprintf(`
                     resource "vercel_project" "test" {
                         name = "test-acc-fluid-disabled-%[1]s"
                     }
-                `, projectSuffix),
+                `, projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-fluid-disabled-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.fluid", "false"),
