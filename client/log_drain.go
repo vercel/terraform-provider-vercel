@@ -34,8 +34,8 @@ type CreateLogDrainRequest struct {
 
 func (c *Client) CreateLogDrain(ctx context.Context, request CreateLogDrainRequest) (l LogDrain, err error) {
 	url := fmt.Sprintf("%s/v1/log-drains", c.baseURL)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "creating log drain", map[string]any{
@@ -53,8 +53,8 @@ func (c *Client) CreateLogDrain(ctx context.Context, request CreateLogDrainReque
 
 func (c *Client) DeleteLogDrain(ctx context.Context, id, teamID string) error {
 	url := fmt.Sprintf("%s/v1/log-drains/%s", c.baseURL, id)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "deleting log drain", map[string]any{
 		"url": url,
@@ -68,8 +68,8 @@ func (c *Client) DeleteLogDrain(ctx context.Context, id, teamID string) error {
 
 func (c *Client) GetLogDrain(ctx context.Context, id, teamID string) (l LogDrain, err error) {
 	url := fmt.Sprintf("%s/v1/log-drains/%s", c.baseURL, id)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "reading log drain", map[string]any{
 		"url": url,
@@ -84,8 +84,8 @@ func (c *Client) GetLogDrain(ctx context.Context, id, teamID string) (l LogDrain
 
 func (c *Client) GetEndpointVerificationCode(ctx context.Context, teamID string) (code string, err error) {
 	url := fmt.Sprintf("%s/v1/verify-endpoint", c.baseURL)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	var l struct {

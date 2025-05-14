@@ -30,8 +30,8 @@ type CreateDNSRecordRequest struct {
 // CreateDNSRecord creates a DNS record for a specified domain name within Vercel.
 func (c *Client) CreateDNSRecord(ctx context.Context, teamID string, request CreateDNSRecordRequest) (r DNSRecord, err error) {
 	url := fmt.Sprintf("%s/v4/domains/%s/records", c.baseURL, request.Domain)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	var response struct {
@@ -53,8 +53,8 @@ func (c *Client) CreateDNSRecord(ctx context.Context, teamID string, request Cre
 // DeleteDNSRecord removes a DNS domain from Vercel.
 func (c *Client) DeleteDNSRecord(ctx context.Context, domain, recordID, teamID string) error {
 	url := fmt.Sprintf("%s/v2/domains/%s/records/%s", c.baseURL, domain, recordID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	return c.doRequest(clientRequest{
@@ -82,8 +82,8 @@ type DNSRecord struct {
 // GetDNSRecord retrieves information about a DNS domain from Vercel.
 func (c *Client) GetDNSRecord(ctx context.Context, recordID, teamID string) (r DNSRecord, err error) {
 	url := fmt.Sprintf("%s/domains/records/%s", c.baseURL, recordID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	err = c.doRequest(clientRequest{
@@ -92,7 +92,7 @@ func (c *Client) GetDNSRecord(ctx context.Context, recordID, teamID string) (r D
 		url:    url,
 		body:   "",
 	}, &r)
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }
 
@@ -102,8 +102,8 @@ func (c *Client) GetDNSRecord(ctx context.Context, recordID, teamID string) (r D
 // into a production ready function would require some refactoring.
 func (c *Client) ListDNSRecords(ctx context.Context, domain, teamID string) (r []DNSRecord, err error) {
 	url := fmt.Sprintf("%s/v4/domains/%s/records?limit=100", c.baseURL, domain)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s&teamId=%s", url, c.TeamID(teamID))
 	}
 
 	dr := struct {
@@ -116,7 +116,7 @@ func (c *Client) ListDNSRecords(ctx context.Context, domain, teamID string) (r [
 		body:   "",
 	}, &dr)
 	for i := 0; i < len(dr.Records); i++ {
-		dr.Records[i].TeamID = c.teamID(teamID)
+		dr.Records[i].TeamID = c.TeamID(teamID)
 	}
 	return dr.Records, err
 }
@@ -142,8 +142,8 @@ type UpdateDNSRecordRequest struct {
 // UpdateDNSRecord updates a DNS record for a specified domain name within Vercel.
 func (c *Client) UpdateDNSRecord(ctx context.Context, teamID, recordID string, request UpdateDNSRecordRequest) (r DNSRecord, err error) {
 	url := fmt.Sprintf("%s/v4/domains/records/%s", c.baseURL, recordID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	payload := string(mustMarshal(request))
@@ -157,6 +157,6 @@ func (c *Client) UpdateDNSRecord(ctx context.Context, teamID, recordID string, r
 		url:    url,
 		body:   payload,
 	}, &r)
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }

@@ -21,7 +21,7 @@ type FirewallBypass struct {
 
 func (c *Client) GetFirewallBypass(ctx context.Context, teamID, projectID string, request FirewallBypassRule) (a FirewallBypass, err error) {
 	url := fmt.Sprintf("%s/v1/security/firewall/bypass?projectId=%s", c.baseURL, projectID)
-	if tid := c.teamID(teamID); tid != "" {
+	if tid := c.TeamID(teamID); tid != "" {
 		url = fmt.Sprintf("%s&teamId=%s", url, tid)
 	}
 	url = fmt.Sprintf("%s&sourceIp=%s", url, request.SourceIp)
@@ -47,7 +47,7 @@ func (c *Client) GetFirewallBypass(ctx context.Context, teamID, projectID string
 
 func (c *Client) CreateFirewallBypass(ctx context.Context, teamID, projectID string, request FirewallBypassRule) (a FirewallBypass, err error) {
 	url := fmt.Sprintf("%s/v1/security/firewall/bypass?projectId=%s", c.baseURL, projectID)
-	if tid := c.teamID(teamID); tid != "" {
+	if tid := c.TeamID(teamID); tid != "" {
 		url = fmt.Sprintf("%s&teamId=%s", url, tid)
 	}
 	if request.Domain == "*" {
@@ -76,7 +76,7 @@ func (c *Client) CreateFirewallBypass(ctx context.Context, teamID, projectID str
 
 func (c *Client) RemoveFirewallBypass(ctx context.Context, teamID, projectID string, request FirewallBypassRule) (a FirewallBypass, err error) {
 	url := fmt.Sprintf("%s/v1/security/firewall/bypass?projectId=%s", c.baseURL, projectID)
-	if tid := c.teamID(teamID); tid != "" {
+	if tid := c.TeamID(teamID); tid != "" {
 		url = fmt.Sprintf("%s&teamId=%s", url, tid)
 	}
 	if request.Domain == "*" {

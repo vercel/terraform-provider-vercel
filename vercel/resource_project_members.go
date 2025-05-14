@@ -238,6 +238,7 @@ func (r *projectMembersResource) Create(ctx context.Context, req resource.Create
 	}
 
 	plan.Members = types.SetValueMust(memberAttrType, memberItems)
+	plan.TeamID = types.StringValue(r.client.TeamID(plan.TeamID.ValueString()))
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 }
@@ -333,6 +334,7 @@ func (r *projectMembersResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	state.Members = types.SetValueMust(memberAttrType, memberItems)
+	state.TeamID = types.StringValue(r.client.TeamID(state.TeamID.ValueString()))
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }
@@ -489,6 +491,7 @@ func (r *projectMembersResource) Update(ctx context.Context, req resource.Update
 	}
 
 	state.Members = types.SetValueMust(memberAttrType, memberItems)
+	state.TeamID = types.StringValue(r.client.TeamID(state.TeamID.ValueString()))
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }

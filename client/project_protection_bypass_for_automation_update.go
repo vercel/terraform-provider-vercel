@@ -49,8 +49,8 @@ func getUpdateBypassProtectionRequestBody(newValue bool, secret string) string {
 
 func (c *Client) UpdateProtectionBypassForAutomation(ctx context.Context, request UpdateProtectionBypassForAutomationRequest) (s string, err error) {
 	url := fmt.Sprintf("%s/v10/projects/%s/protection-bypass", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 
 	payload := getUpdateBypassProtectionRequestBody(request.NewValue, request.Secret)

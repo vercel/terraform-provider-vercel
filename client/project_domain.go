@@ -22,8 +22,8 @@ type CreateProjectDomainRequest struct {
 // CreateProjectDomain creates a project domain within Vercel.
 func (c *Client) CreateProjectDomain(ctx context.Context, projectID, teamID string, request CreateProjectDomainRequest) (r ProjectDomainResponse, err error) {
 	url := fmt.Sprintf("%s/v10/projects/%s/domains", c.baseURL, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	payload := string(mustMarshal(request))
@@ -37,15 +37,15 @@ func (c *Client) CreateProjectDomain(ctx context.Context, projectID, teamID stri
 		url:    url,
 		body:   payload,
 	}, &r)
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }
 
 // DeleteProjectDomain removes any association of a domain name with a Vercel project.
 func (c *Client) DeleteProjectDomain(ctx context.Context, projectID, domain, teamID string) error {
 	url := fmt.Sprintf("%s/v8/projects/%s/domains/%s", c.baseURL, projectID, domain)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "deleting project domain", map[string]any{
@@ -74,8 +74,8 @@ type ProjectDomainResponse struct {
 // GetProjectDomain retrieves information about a project domain from Vercel.
 func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID string) (r ProjectDomainResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s/domains/%s", c.baseURL, projectID, domain)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "getting project domain", map[string]any{
@@ -87,7 +87,7 @@ func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID
 		url:    url,
 		body:   "",
 	}, &r)
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }
 
@@ -102,8 +102,8 @@ type UpdateProjectDomainRequest struct {
 // UpdateProjectDomain updates an existing project domain within Vercel.
 func (c *Client) UpdateProjectDomain(ctx context.Context, projectID, domain, teamID string, request UpdateProjectDomainRequest) (r ProjectDomainResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects/%s/domains/%s", c.baseURL, projectID, domain)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	payload := string(mustMarshal(request))
@@ -117,6 +117,6 @@ func (c *Client) UpdateProjectDomain(ctx context.Context, projectID, domain, tea
 		url:    url,
 		body:   payload,
 	}, &r)
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }

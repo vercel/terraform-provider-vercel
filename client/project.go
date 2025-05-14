@@ -66,8 +66,8 @@ type CreateProjectRequest struct {
 // CreateProject will create a project within Vercel.
 func (c *Client) CreateProject(ctx context.Context, teamID string, request CreateProjectRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects", c.baseURL)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	payload := string(mustMarshal(request))
@@ -84,7 +84,7 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }
 
@@ -92,8 +92,8 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 // remove every environment variable, as these cease to exist when a project is removed.
 func (c *Client) DeleteProject(ctx context.Context, projectID, teamID string) error {
 	url := fmt.Sprintf("%s/v8/projects/%s", c.baseURL, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "deleting project", map[string]any{
 		"url": url,
@@ -237,8 +237,8 @@ type ResourceConfig struct {
 // GetProject retrieves information about an existing project from Vercel.
 func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v10/projects/%s", c.baseURL, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "getting project", map[string]any{
 		"url": url,
@@ -253,15 +253,15 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r Pr
 		return r, fmt.Errorf("unable to get project: %w", err)
 	}
 
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }
 
 // ListProjects lists the top 100 projects (no pagination) from within Vercel.
 func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v8/projects?limit=100", c.baseURL)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s&teamId=%s", url, c.TeamID(teamID))
 	}
 
 	pr := struct {
@@ -277,7 +277,7 @@ func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectRe
 		body:   "",
 	}, &pr)
 	for i := 0; i < len(pr.Projects); i++ {
-		pr.Projects[i].TeamID = c.teamID(teamID)
+		pr.Projects[i].TeamID = c.TeamID(teamID)
 	}
 	return pr.Projects, err
 }
@@ -324,8 +324,8 @@ type UpdateProjectRequest struct {
 // UpdateProject updates an existing projects configuration within Vercel.
 func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, request UpdateProjectRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v9/projects/%s", c.baseURL, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "updating project", map[string]any{
@@ -342,7 +342,7 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 		return r, err
 	}
 
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }
 
@@ -354,8 +354,8 @@ type UpdateProductionBranchRequest struct {
 
 func (c *Client) UpdateProductionBranch(ctx context.Context, request UpdateProductionBranchRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v9/projects/%s/branch", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "updating project production branch", map[string]any{
@@ -371,14 +371,14 @@ func (c *Client) UpdateProductionBranch(ctx context.Context, request UpdateProdu
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.teamID(c.teamID(request.TeamID))
+	r.TeamID = c.TeamID(c.TeamID(request.TeamID))
 	return r, err
 }
 
 func (c *Client) UnlinkGitRepoFromProject(ctx context.Context, projectID, teamID string) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v9/projects/%s/link", c.baseURL, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "unlinking project git repo", map[string]any{
 		"url": url,
@@ -391,7 +391,7 @@ func (c *Client) UnlinkGitRepoFromProject(ctx context.Context, projectID, teamID
 	if err != nil {
 		return r, fmt.Errorf("error unlinking git repo: %w", err)
 	}
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }
 
@@ -404,8 +404,8 @@ type LinkGitRepoToProjectRequest struct {
 
 func (c *Client) LinkGitRepoToProject(ctx context.Context, request LinkGitRepoToProjectRequest) (r ProjectResponse, err error) {
 	url := fmt.Sprintf("%s/v9/projects/%s/link", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	tflog.Info(ctx, "linking project git repo", map[string]any{
 		"url": url,
@@ -420,6 +420,6 @@ func (c *Client) LinkGitRepoToProject(ctx context.Context, request LinkGitRepoTo
 	if err != nil {
 		return r, fmt.Errorf("error linking git repo: %w", err)
 	}
-	r.TeamID = c.teamID(c.teamID(request.TeamID))
+	r.TeamID = c.TeamID(c.TeamID(request.TeamID))
 	return r, err
 }

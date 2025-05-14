@@ -14,8 +14,8 @@ type IntegrationProjectAccess struct {
 
 func (c *Client) GetIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (IntegrationProjectAccess, error) {
 	url := fmt.Sprintf("%s/v1/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "getting integration project access", map[string]any{
@@ -35,19 +35,19 @@ func (c *Client) GetIntegrationProjectAccess(ctx context.Context, integrationID,
 	}, &e); err != nil {
 		return IntegrationProjectAccess{
 			Allowed: false,
-			TeamID:  c.teamID(teamID),
+			TeamID:  c.TeamID(teamID),
 		}, err
 	}
 	return IntegrationProjectAccess{
 		Allowed: e.Allowed,
-		TeamID:  c.teamID(teamID),
+		TeamID:  c.TeamID(teamID),
 	}, nil
 }
 
 func (c *Client) GrantIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (IntegrationProjectAccess, error) {
 	url := fmt.Sprintf("%s/v1/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "getting integration project access", map[string]any{
@@ -67,19 +67,19 @@ func (c *Client) GrantIntegrationProjectAccess(ctx context.Context, integrationI
 	}, &e); err != nil {
 		return IntegrationProjectAccess{
 			Allowed: false,
-			TeamID:  c.teamID(teamID),
+			TeamID:  c.TeamID(teamID),
 		}, err
 	}
 	return IntegrationProjectAccess{
 		Allowed: true,
-		TeamID:  c.teamID(teamID),
+		TeamID:  c.TeamID(teamID),
 	}, nil
 }
 
 func (c *Client) RevokeIntegrationProjectAccess(ctx context.Context, integrationID, projectID, teamID string) (IntegrationProjectAccess, error) {
 	url := fmt.Sprintf("%s/v1/integrations/configuration/%s/project/%s", c.baseURL, integrationID, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "getting integration project access", map[string]any{
@@ -99,11 +99,11 @@ func (c *Client) RevokeIntegrationProjectAccess(ctx context.Context, integration
 	}, &e); err != nil {
 		return IntegrationProjectAccess{
 			Allowed: false,
-			TeamID:  c.teamID(teamID),
+			TeamID:  c.TeamID(teamID),
 		}, err
 	}
 	return IntegrationProjectAccess{
 		Allowed: false,
-		TeamID:  c.teamID(teamID),
+		TeamID:  c.TeamID(teamID),
 	}, nil
 }

@@ -20,8 +20,8 @@ type GetAccessGroupRequest struct {
 
 func (c *Client) GetAccessGroup(ctx context.Context, req GetAccessGroupRequest) (r AccessGroup, err error) {
 	url := fmt.Sprintf("%s/v1/access-groups/%s", c.baseURL, req.AccessGroupID)
-	if c.teamID(req.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
 	}
 	tflog.Info(ctx, "getting access group", map[string]any{
 		"url": url,
@@ -36,7 +36,7 @@ func (c *Client) GetAccessGroup(ctx context.Context, req GetAccessGroupRequest) 
 		return r, fmt.Errorf("unable to get access group: %w", err)
 	}
 
-	r.TeamID = c.teamID(req.TeamID)
+	r.TeamID = c.TeamID(req.TeamID)
 	return r, err
 }
 
@@ -47,8 +47,8 @@ type CreateAccessGroupRequest struct {
 
 func (c *Client) CreateAccessGroup(ctx context.Context, req CreateAccessGroupRequest) (r AccessGroup, err error) {
 	url := fmt.Sprintf("%s/v1/access-groups", c.baseURL)
-	if c.teamID(req.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
 	}
 	payload := string(mustMarshal(
 		struct {
@@ -70,7 +70,7 @@ func (c *Client) CreateAccessGroup(ctx context.Context, req CreateAccessGroupReq
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.teamID(req.TeamID)
+	r.TeamID = c.TeamID(req.TeamID)
 	return r, err
 }
 
@@ -82,8 +82,8 @@ type UpdateAccessGroupRequest struct {
 
 func (c *Client) UpdateAccessGroup(ctx context.Context, req UpdateAccessGroupRequest) (r AccessGroup, err error) {
 	url := fmt.Sprintf("%s/v1/access-groups/%s", c.baseURL, req.AccessGroupID)
-	if c.teamID(req.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
 	}
 	payload := string(mustMarshal(
 		struct {
@@ -105,7 +105,7 @@ func (c *Client) UpdateAccessGroup(ctx context.Context, req UpdateAccessGroupReq
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.teamID(req.TeamID)
+	r.TeamID = c.TeamID(req.TeamID)
 	return r, err
 }
 
@@ -116,8 +116,8 @@ type DeleteAccessGroupRequest struct {
 
 func (c *Client) DeleteAccessGroup(ctx context.Context, req DeleteAccessGroupRequest) error {
 	url := fmt.Sprintf("%s/v1/access-groups/%s", c.baseURL, req.AccessGroupID)
-	if c.teamID(req.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
 	}
 	tflog.Info(ctx, "deleting access group", map[string]any{
 		"url": url,

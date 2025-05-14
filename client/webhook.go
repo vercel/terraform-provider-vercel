@@ -25,8 +25,8 @@ type Webhook struct {
 
 func (c *Client) CreateWebhook(ctx context.Context, request CreateWebhookRequest) (w Webhook, err error) {
 	url := fmt.Sprintf("%s/v1/webhooks", c.baseURL)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "creating webhook", map[string]any{
@@ -44,8 +44,8 @@ func (c *Client) CreateWebhook(ctx context.Context, request CreateWebhookRequest
 
 func (c *Client) DeleteWebhook(ctx context.Context, id, teamID string) error {
 	url := fmt.Sprintf("%s/v1/webhooks/%s", c.baseURL, id)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "deleting webhook", map[string]any{
 		"url": url,
@@ -59,8 +59,8 @@ func (c *Client) DeleteWebhook(ctx context.Context, id, teamID string) error {
 
 func (c *Client) GetWebhook(ctx context.Context, id, teamID string) (w Webhook, err error) {
 	url := fmt.Sprintf("%s/v1/webhooks/%s", c.baseURL, id)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "getting webhook", map[string]any{
 		"url": url,

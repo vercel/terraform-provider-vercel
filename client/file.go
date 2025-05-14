@@ -20,8 +20,8 @@ type CreateFileRequest struct {
 // CreateFile will upload a file to Vercel so that it can be later used for a Deployment.
 func (c *Client) CreateFile(ctx context.Context, request CreateFileRequest) error {
 	url := fmt.Sprintf("%s/v2/now/files", c.baseURL)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,

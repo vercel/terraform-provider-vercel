@@ -46,10 +46,10 @@ func (c *Client) Team(ctx context.Context, teamID string) (Team, error) {
 	return c.team, nil
 }
 
-// teamID is a helper method to return one of two values based on specificity.
-// It will return an explicitly passed teamID if it is defined. If not defined,
-// it will fall back to the teamID configured on the client.
-func (c *Client) teamID(teamID string) string {
+// TeamID is a helper method to return one of two values based on specificity.
+// It will return an explicitly passed TeamID if it is defined. If not defined,
+// it will fall back to the TeamID configured on the client.
+func (c *Client) TeamID(teamID string) string {
 	if teamID != "" {
 		return teamID
 	}

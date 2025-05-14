@@ -22,8 +22,8 @@ type AddProjectMembersRequest struct {
 
 func (c *Client) AddProjectMembers(ctx context.Context, request AddProjectMembersRequest) error {
 	url := fmt.Sprintf("%s/v1/projects/%s/members/batch", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	tflog.Info(ctx, "adding project members", map[string]any{
 		"url": url,
@@ -51,8 +51,8 @@ type RemoveProjectMembersRequest struct {
 
 func (c *Client) RemoveProjectMembers(ctx context.Context, request RemoveProjectMembersRequest) error {
 	url := fmt.Sprintf("%s/v1/projects/%s/members/batch", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	tflog.Info(ctx, "removing project members", map[string]any{
 		"url": url,
@@ -85,8 +85,8 @@ type UpdateProjectMembersRequest struct {
 
 func (c *Client) UpdateProjectMembers(ctx context.Context, request UpdateProjectMembersRequest) error {
 	url := fmt.Sprintf("%s/v1/projects/%s/members", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "updating project members", map[string]any{
@@ -115,8 +115,8 @@ type GetProjectMembersRequest struct {
 
 func (c *Client) ListProjectMembers(ctx context.Context, request GetProjectMembersRequest) ([]ProjectMember, error) {
 	url := fmt.Sprintf("%s/v1/projects/%s/members", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s&limit=100", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s&limit=100", url, c.TeamID(request.TeamID))
 	}
 	tflog.Info(ctx, "listing project members", map[string]any{
 		"url": url,
