@@ -28,8 +28,10 @@ func testClient(t *testing.T) *client.Client {
 func cfg(config string) string {
 	team := os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM")
 	if team == "" {
+		//lintignore:R009
 		panic("Missing required environment variable VERCEL_TERRAFORM_TESTING_TEAM")
 	}
+	//lintignore:AT004
 	return fmt.Sprintf(`
 provider "vercel" {
 	team = "%[1]s"

@@ -50,7 +50,7 @@ data "vercel_edge_config_item" "test" {
 `, name)
 }
 
-func testAccEdgeConfigItemDataSourceConfigNoItem(name, teamID string) string {
+func testAccEdgeConfigItemDataSourceConfigNoItem(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test" {
     name         = "%[1]s"
