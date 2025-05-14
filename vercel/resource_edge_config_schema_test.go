@@ -61,7 +61,7 @@ func TestAcc_EdgeConfigSchemaResource(t *testing.T) {
 		CheckDestroy:             testCheckEdgeConfigSchemaDeleted(testClient(t), "vercel_edge_config_schema.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: cfg(`
                 resource "vercel_edge_config_schema" "test" {
                     id = "shouldnt-matter"
                     definition = <<EOF
@@ -70,11 +70,11 @@ func TestAcc_EdgeConfigSchemaResource(t *testing.T) {
                     }
                     EOF
                 }
-                `,
+                `),
 				ExpectError: regexp.MustCompile("Value must be a valid JSON document"),
 			},
 			{
-				Config: testAccResourceEdgeConfigSchema(name, teamIDConfig(t)),
+				Config: cfg(testAccResourceEdgeConfigSchema(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckEdgeConfigSchemaExists(testClient(t), testTeam(t), "vercel_edge_config_schema.test"),
 					resource.TestCheckResourceAttrSet("vercel_edge_config_schema.test", "id"),
@@ -82,7 +82,7 @@ func TestAcc_EdgeConfigSchemaResource(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccResourceEdgeConfigSchemaUpdated(name, teamIDConfig(t)),
+				Config: cfg(testAccResourceEdgeConfigSchemaUpdated(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckEdgeConfigSchemaExists(testClient(t), testTeam(t), "vercel_edge_config_schema.test"),
 					resource.TestCheckResourceAttrSet("vercel_edge_config_schema.test", "id"),
@@ -93,11 +93,10 @@ func TestAcc_EdgeConfigSchemaResource(t *testing.T) {
 	})
 }
 
-func testAccResourceEdgeConfigSchema(name, team string) string {
+func testAccResourceEdgeConfigSchema(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test" {
     name         = "%[1]s"
-    %[2]s
 }
 
 resource "vercel_edge_config_schema" "test" {
@@ -114,16 +113,14 @@ resource "vercel_edge_config_schema" "test" {
   }
 }
 EOF
-    %[2]s
 }
-`, name, team)
+`, name)
 }
 
-func testAccResourceEdgeConfigSchemaUpdated(name, team string) string {
+func testAccResourceEdgeConfigSchemaUpdated(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test" {
     name         = "%[1]s"
-    %[2]s
 }
 
 resource "vercel_edge_config_schema" "test" {
@@ -144,7 +141,6 @@ resource "vercel_edge_config_schema" "test" {
   }
 }
 EOF
-    %[2]s
 }
-`, name, team)
+`, name)
 }

@@ -89,10 +89,6 @@ func testAdditionalUser(t *testing.T) string {
 	return value
 }
 
-func teamIDConfig(t *testing.T) string {
-	return fmt.Sprintf("team_id = \"%s\"", testTeam(t))
-}
-
 func testExistingIntegration(t *testing.T) string {
 	value := os.Getenv("VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION")
 	if value == "" {

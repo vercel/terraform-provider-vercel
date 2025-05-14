@@ -19,7 +19,7 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectEnvironmentVariablesConfig(projectName, teamIDConfig(t), testGithubRepo(t)),
+				Config: cfg(testAccProjectEnvironmentVariablesConfig(projectName, testGithubRepo(t))),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "variables.#", "2"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
@@ -36,7 +36,7 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccProjectEnvironmentVariablesConfigUpdated(projectName, teamIDConfig(t), testGithubRepo(t)),
+				Config: cfg(testAccProjectEnvironmentVariablesConfigUpdated(projectName, testGithubRepo(t))),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "variables.#", "4"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
@@ -65,21 +65,19 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 	})
 }
 
-func testAccProjectEnvironmentVariablesConfig(projectName string, teamIDConfig string, githubRepo string) string {
+func testAccProjectEnvironmentVariablesConfig(projectName string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "%s"
-  %[2]s
 
   git_repository = {
     type = "github"
-    repo = "%[3]s"
+    repo = "%[2]s"
   }
 }
 
 resource "vercel_project_environment_variables" "test" {
   project_id = vercel_project.test.id
-  %[2]s
   variables = [
     {
       key   = "TEST_VAR_1"
@@ -94,24 +92,22 @@ resource "vercel_project_environment_variables" "test" {
     }
   ]
 }
-`, projectName, teamIDConfig, githubRepo)
+`, projectName, githubRepo)
 }
 
-func testAccProjectEnvironmentVariablesConfigUpdated(projectName string, teamIDConfig string, githubRepo string) string {
+func testAccProjectEnvironmentVariablesConfigUpdated(projectName string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "%s"
-  %[2]s
 
   git_repository = {
     type = "github"
-    repo = "%[3]s"
+    repo = "%[2]s"
   }
 }
 
 resource "vercel_project_environment_variables" "test" {
   project_id = vercel_project.test.id
-  %[2]s
   variables = [
     {
       key   = "TEST_VAR_1" // unchanged
@@ -136,5 +132,5 @@ resource "vercel_project_environment_variables" "test" {
     }
   ]
 }
-`, projectName, teamIDConfig, githubRepo)
+`, projectName, githubRepo)
 }

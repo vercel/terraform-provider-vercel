@@ -28,14 +28,14 @@ func TestAcc_ProjectDomain(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Check error adding production domain
 			{
-				Config: testAccProjectDomainWithProductionGitBranch(projectSuffix, "1"+domain, teamIDConfig(t), testGithubRepo(t)),
+				Config: cfg(testAccProjectDomainWithProductionGitBranch(projectSuffix, "1"+domain, testGithubRepo(t))),
 				ExpectError: regexp.MustCompile(
 					strings.ReplaceAll("the git_branch specified is the production branch. If you want to use this domain as a production domain, please omit the git_branch field.", " ", `\s*`),
 				),
 			},
 			// Create and Read testing
 			{
-				Config: testAccProjectDomainConfig(projectSuffix, "2"+domain, teamIDConfig(t)),
+				Config: cfg(testAccProjectDomainConfig(projectSuffix, "2"+domain)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectDomainExists(testClient(t), "vercel_project.test", testTeam(t), "2"+domain),
 					testTeamID,
@@ -44,14 +44,14 @@ func TestAcc_ProjectDomain(t *testing.T) {
 			},
 			// Update testing
 			{
-				Config: testAccProjectDomainConfigUpdated(projectSuffix, "2"+domain, teamIDConfig(t)),
+				Config: cfg(testAccProjectDomainConfigUpdated(projectSuffix, "2"+domain)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "redirect"),
 				),
 			},
 			// Redirect Update testing
 			{
-				Config: testAccProjectDomainConfigUpdated2(projectSuffix, "2"+domain, teamIDConfig(t)),
+				Config: cfg(testAccProjectDomainConfigUpdated2(projectSuffix, "2"+domain)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "redirect"),
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "redirect_status_code", "307"),
@@ -59,7 +59,7 @@ func TestAcc_ProjectDomain(t *testing.T) {
 			},
 			// Delete testing
 			{
-				Config: testAccProjectDomainConfigDeleted(projectSuffix, teamIDConfig(t)),
+				Config: cfg(testAccProjectDomainConfigDeleted(projectSuffix)),
 				Check:  testAccProjectDomainDestroy(testClient(t), "vercel_project.test", testTeam(t), domain),
 			},
 		},
@@ -74,13 +74,13 @@ func TestAcc_ProjectDomainCustomEnvironment(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Ensure we can't have both git_branch and custom_environment_id
 			{
-				Config: testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix, teamIDConfig(t), testGithubRepo(t)),
+				Config: cfg(testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix, testGithubRepo(t))),
 				ExpectError: regexp.MustCompile(
 					strings.ReplaceAll("Attribute \"git_branch\" cannot be specified when \"custom_environment_id\" is specified", " ", `\s*`),
 				),
 			},
 			{
-				Config: testAccProjectDomainConfigWithCustomEnvironment(randomSuffix, teamIDConfig(t)),
+				Config: cfg(testAccProjectDomainConfigWithCustomEnvironment(randomSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "custom_environment_id"),
 				),
@@ -127,140 +127,123 @@ func testAccProjectDomainDestroy(testClient *client.Client, n, teamID, domain st
 	}
 }
 
-func testAccProjectDomainWithProductionGitBranch(projectSuffix, domain, teamIDConfig string, githubRepo string) string {
+func testAccProjectDomainWithProductionGitBranch(projectSuffix, domain, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-domain-%[1]s"
-  %[2]s
-  git_repository = {
-    type = "github"
-    repo = "%[4]s"
-  }
-}
-
-resource "vercel_project_domain" "test" {
-  domain = "%[3]s"
-  %[2]s
-  git_branch = "main"
-  project_id = vercel_project.test.id
-}
-`, projectSuffix, teamIDConfig, domain, githubRepo)
-}
-
-func testAccProjectDomainConfig(projectSuffix, domain, extra string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "test-acc-domain-%s"
-  %s
-}
-
-resource "vercel_project_domain" "test" {
-  domain = "%s"
-  %s
-  project_id = vercel_project.test.id
-}
-`, projectSuffix, extra, domain, extra)
-}
-
-func testAccProjectDomainConfigUpdated(projectSuffix, domain, extra string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "test-acc-domain-%s"
-  %s
-}
-
-resource "vercel_project_domain" "test" {
-  domain = "%s"
-  project_id = vercel_project.test.id
-  %s
-
-  redirect = vercel_project_domain.redirect_target.domain
-}
-
-resource "vercel_project_domain" "redirect_target" {
-    domain = "redirect-target-1-%[3]s"
-    project_id = vercel_project.test.id
-    %[2]s
-}
-`, projectSuffix, extra, domain, extra)
-}
-
-func testAccProjectDomainConfigUpdated2(projectSuffix, domain, extra string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "test-acc-domain-%[1]s"
-  %[2]s
-}
-
-resource "vercel_project_domain" "redirect_target" {
-    domain = "redirect-target-1-%[3]s"
-    project_id = vercel_project.test.id
-    %[2]s
-}
-
-resource "vercel_project_domain" "redirect_target_2" {
-    domain = "redirect-target-2-%[3]s"
-    project_id = vercel_project.test.id
-    %[2]s
-}
-
-resource "vercel_project_domain" "test" {
-  domain = "%[3]s"
-  project_id = vercel_project.test.id
-  %[2]s
-
-  redirect = vercel_project_domain.redirect_target_2.domain
-  redirect_status_code = 307
-}
-`, projectSuffix, extra, domain)
-}
-
-func testAccProjectDomainConfigDeleted(projectSuffix, extra string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "test-acc-domain-%s"
-  %s
-}
-`, projectSuffix, extra)
-}
-
-func testAccProjectDomainConfigWithCustomEnvironment(randomSuffix string, teamIDConfig string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "test-acc-domain-%[1]s"
-  %[2]s
-}
-
-resource "vercel_custom_environment" "test" {
-    name = "test-acc-custom-environment"
-    project_id = vercel_project.test.id
-    %[2]s
-}
-
-resource "vercel_project_domain" "test" {
-    domain = "test-acc-domain-%[1]s-foobar.vercel.app"
-    project_id = vercel_project.test.id
-    custom_environment_id = vercel_custom_environment.test.id
-    %[2]s
-}
-`, randomSuffix, teamIDConfig)
-}
-
-func testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix string, teamIDConfig string, githubRepo string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "test-acc-domain-%[1]s"
-  %[2]s
   git_repository = {
     type = "github"
     repo = "%[3]s"
   }
 }
 
+resource "vercel_project_domain" "test" {
+  domain = "%[2]s"
+  git_branch = "main"
+  project_id = vercel_project.test.id
+}
+`, projectSuffix, domain, githubRepo)
+}
+
+func testAccProjectDomainConfig(projectSuffix, domain string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-domain-%s"
+}
+
+resource "vercel_project_domain" "test" {
+  domain = "%s"
+  project_id = vercel_project.test.id
+}
+`, projectSuffix, domain)
+}
+
+func testAccProjectDomainConfigUpdated(projectSuffix, domain string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-domain-%s"
+}
+
+resource "vercel_project_domain" "test" {
+  domain = "%s"
+  project_id = vercel_project.test.id
+
+  redirect = vercel_project_domain.redirect_target.domain
+}
+
+resource "vercel_project_domain" "redirect_target" {
+    domain = "redirect-target-1-%[2]s"
+    project_id = vercel_project.test.id
+}
+`, projectSuffix, domain)
+}
+
+func testAccProjectDomainConfigUpdated2(projectSuffix, domain string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-domain-%[1]s"
+}
+
+resource "vercel_project_domain" "redirect_target" {
+    domain = "redirect-target-1-%[2]s"
+    project_id = vercel_project.test.id
+}
+
+resource "vercel_project_domain" "redirect_target_2" {
+    domain = "redirect-target-2-%[2]s"
+    project_id = vercel_project.test.id
+}
+
+resource "vercel_project_domain" "test" {
+  domain = "%[2]s"
+  project_id = vercel_project.test.id
+
+  redirect = vercel_project_domain.redirect_target_2.domain
+  redirect_status_code = 307
+}
+`, projectSuffix, domain)
+}
+
+func testAccProjectDomainConfigDeleted(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-domain-%s"
+}
+`, projectSuffix)
+}
+
+func testAccProjectDomainConfigWithCustomEnvironment(randomSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-domain-%[1]s"
+}
+
 resource "vercel_custom_environment" "test" {
     name = "test-acc-custom-environment"
     project_id = vercel_project.test.id
-    %[2]s
+}
+
+resource "vercel_project_domain" "test" {
+    domain = "test-acc-domain-%[1]s-foobar.vercel.app"
+    project_id = vercel_project.test.id
+    custom_environment_id = vercel_custom_environment.test.id
+}
+`, randomSuffix)
+}
+
+func testAccProjectDomainConfigWithCustomEnvironmentAndGitBranch(randomSuffix, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-domain-%[1]s"
+  git_repository = {
+    type = "github"
+    repo = "%[2]s"
+  }
+}
+
+resource "vercel_custom_environment" "test" {
+    name = "test-acc-custom-environment"
+    project_id = vercel_project.test.id
 }
 
 resource "vercel_project_domain" "test" {
@@ -268,7 +251,6 @@ resource "vercel_project_domain" "test" {
     project_id = vercel_project.test.id
     custom_environment_id = vercel_custom_environment.test.id
     git_branch = "staging"
-    %[2]s
 }
-`, randomSuffix, teamIDConfig, githubRepo)
+`, randomSuffix, githubRepo)
 }

@@ -82,7 +82,7 @@ func TestAcc_Deployment(t *testing.T) {
 		CheckDestroy:             noopDestroyCheck,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(t), ""),
+				Config: cfg(testAccDeploymentConfig(projectSuffix, "")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testTeamID,
 					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
@@ -90,7 +90,7 @@ func TestAcc_Deployment(t *testing.T) {
 				),
 			},
 			{
-				Config: deploymentWithPrebuiltProject(projectSuffix, teamIDConfig(t)),
+				Config: cfg(deploymentWithPrebuiltProject(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testTeamID,
 					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
@@ -107,11 +107,11 @@ func TestAcc_DeploymentWithEnvironment(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(t), `environment = {
+				Config: cfg(testAccDeploymentConfig(projectSuffix, `environment = {
                     FOO = "baz",
                     BAR = "qux",
                     BAZ = null
-                }`),
+                }`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 					testAccEnvironmentSet(testClient(t), "vercel_deployment.test", "", "FOO", "BAR"),
@@ -131,9 +131,9 @@ func TestAcc_DeploymentWithProjectSettings(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(t), `project_settings = {
+				Config: cfg(testAccDeploymentConfig(projectSuffix, `project_settings = {
                     output_directory = ".",
-                }`),
+                }`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
@@ -152,7 +152,7 @@ func TestAcc_DeploymentWithRootDirectoryOverride(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRootDirectoryOverride(projectSuffix, teamIDConfig(t)),
+				Config: cfg(testAccRootDirectoryOverride(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
@@ -169,7 +169,7 @@ func TestAcc_DeploymentWithPathPrefix(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRootDirectoryWithPathPrefix(projectSuffix, teamIDConfig(t)),
+				Config: cfg(testAccRootDirectoryWithPathPrefix(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 				),
@@ -212,14 +212,14 @@ func TestAcc_DeploymentWithDeleteOnDestroy(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentConfig(projectSuffix, teamIDConfig(t), extraConfig),
+				Config: cfg(testAccDeploymentConfig(projectSuffix, extraConfig)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 					storeDeploymentID("vercel_deployment.test", &deploymentID),
 				),
 			},
 			{
-				Config: testAccDeploymentConfigWithNoDeployment(projectSuffix, teamIDConfig(t)),
+				Config: cfg(testAccDeploymentConfigWithNoDeployment(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testDeploymentGone(),
 				),
@@ -235,7 +235,7 @@ func TestAcc_DeploymentWithGitSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeployFromGitSource(projectSuffix, teamIDConfig(t), testGithubRepo(t), testBitbucketRepo(t)),
+				Config: cfg(testAccDeployFromGitSource(projectSuffix, testGithubRepo(t), testBitbucketRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists(testClient(t), "vercel_deployment.bitbucket", testTeam(t)),
 					testAccDeploymentExists(testClient(t), "vercel_deployment.github", testTeam(t)),
@@ -278,7 +278,7 @@ func TestAcc_DeploymentWithMissingFilesPath(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				PreConfig: func() { createRandomFilePreConfig(t) },
-				Config:    testAccWithDirectoryUpload(projectSuffix, teamIDConfig(t)),
+				Config:    cfg(testAccWithDirectoryUpload(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 				),
@@ -287,11 +287,10 @@ func TestAcc_DeploymentWithMissingFilesPath(t *testing.T) {
 	})
 }
 
-func testAccDeploymentConfigWithNoDeployment(projectSuffix, teamID string) string {
+func testAccDeploymentConfigWithNoDeployment(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-deployment-%[1]s"
-  %[2]s
   environment = [
     {
       key    = "bar"
@@ -300,14 +299,13 @@ resource "vercel_project" "test" {
     }
   ]
 }
-`, projectSuffix, teamID)
+`, projectSuffix)
 }
 
-func deploymentWithPrebuiltProject(projectSuffix, teamID string) string {
+func deploymentWithPrebuiltProject(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-deployment-%[1]s"
-  %[2]s
   environment = [
     {
       key    = "bar"
@@ -323,19 +321,17 @@ data "vercel_prebuilt_project" "test" {
 
 resource "vercel_deployment" "test" {
   project_id = vercel_project.test.id
-  %[2]s
 
   files       = data.vercel_prebuilt_project.test.output
   path_prefix = data.vercel_prebuilt_project.test.path
 }
-`, projectSuffix, teamID)
+`, projectSuffix)
 }
 
-func testAccDeploymentConfig(projectSuffix, teamID, deploymentExtras string) string {
+func testAccDeploymentConfig(projectSuffix, deploymentExtras string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-deployment-%[1]s"
-  %[2]s
   environment = [
     {
       key    = "bar"
@@ -355,7 +351,6 @@ data "vercel_file" "windows_line_ending" {
 
 resource "vercel_deployment" "test" {
   %[2]s
-  %[3]s
   project_id = vercel_project.test.id
 
   files = merge(
@@ -365,14 +360,13 @@ resource "vercel_deployment" "test" {
 
   production = true
 }
-`, projectSuffix, teamID, deploymentExtras)
+`, projectSuffix, deploymentExtras)
 }
 
-func testAccRootDirectoryOverride(projectSuffix, teamID string) string {
+func testAccRootDirectoryOverride(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-deployment-%[1]s"
-  %[2]s
 }
 
 data "vercel_file" "index" {
@@ -381,20 +375,18 @@ data "vercel_file" "index" {
 
 resource "vercel_deployment" "test" {
   project_id = vercel_project.test.id
-  %[2]s
   files      = data.vercel_file.index.file
   production = true
   project_settings = {
       root_directory = "vercel/example"
   }
-}`, projectSuffix, teamID)
+}`, projectSuffix)
 }
 
-func testAccRootDirectoryWithPathPrefix(projectSuffix, teamID string) string {
+func testAccRootDirectoryWithPathPrefix(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-deployment-%[1]s"
-  %[2]s
 }
 
 data "vercel_file" "index" {
@@ -403,13 +395,12 @@ data "vercel_file" "index" {
 
 resource "vercel_deployment" "test" {
   project_id    = vercel_project.test.id
-  %[2]s
   files         = data.vercel_file.index.file
   path_prefix   = "../vercel/example"
-}`, projectSuffix, teamID)
+}`, projectSuffix)
 }
 
-func testAccDeployFromGitSource(projectSuffix, teamID string, githubRepo string, bitbucketRepo string) string {
+func testAccDeployFromGitSource(projectSuffix, githubRepo, bitbucketRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "github" {
   name = "test-acc-deployment-%[1]s-github"
@@ -417,7 +408,6 @@ resource "vercel_project" "github" {
       type = "github"
       repo = "%[2]s"
   }
-  %[4]s
 }
 resource "vercel_project" "bitbucket" {
   name = "test-acc-deployment-%[1]s-bitbucket"
@@ -425,36 +415,31 @@ resource "vercel_project" "bitbucket" {
       type = "bitbucket"
       repo = "%[3]s"
   }
-  %[4]s
 }
 resource "vercel_deployment" "github" {
   project_id = vercel_project.github.id
   ref        = "main"
-  %[4]s
 }
 resource "vercel_deployment" "bitbucket" {
   project_id = vercel_project.bitbucket.id
   ref        = "main"
-  %[4]s
 }
-`, projectSuffix, githubRepo, bitbucketRepo, teamID)
+`, projectSuffix, githubRepo, bitbucketRepo)
 }
 
-func testAccWithDirectoryUpload(projectSuffix, teamID string) string {
+func testAccWithDirectoryUpload(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-deployment-%[1]s"
-  %[2]s
 }
 
 data "vercel_project_directory" "test" {
   path = "../vercel/examples/one"
- }
+}
 
 resource "vercel_deployment" "test" {
   project_id    = vercel_project.test.id
-  %[2]s
   files         = data.vercel_project_directory.test.files
   path_prefix   = data.vercel_project_directory.test.path
-}`, projectSuffix, teamID)
+}`, projectSuffix)
 }

@@ -15,7 +15,7 @@ func TestAcc_AttackChallengeModeResource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAttackChallengeModeConfigResource(name, teamIDConfig(t)),
+				Config: cfg(testAccAttackChallengeModeConfigResource(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_attack_challenge_mode.enabled", "enabled", "true"),
 					resource.TestCheckResourceAttr("vercel_attack_challenge_mode.disabled", "enabled", "false"),
@@ -44,7 +44,7 @@ func TestAcc_AttackChallengeModeResource(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccAttackChallengeModeConfigResourceUpdated(name, teamIDConfig(t)),
+				Config: cfg(testAccAttackChallengeModeConfigResourceUpdated(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_attack_challenge_mode.enabled", "enabled", "false"),
 				),
@@ -53,43 +53,37 @@ func TestAcc_AttackChallengeModeResource(t *testing.T) {
 	})
 }
 
-func testAccAttackChallengeModeConfigResource(name, teamID string) string {
+func testAccAttackChallengeModeConfigResource(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "enabled" {
     name = "test-acc-%[1]s-enabled"
-    %[2]s
 }
 
 resource "vercel_attack_challenge_mode" "enabled" {
     project_id = vercel_project.enabled.id
     enabled = true
-    %[2]s
 }
 
 resource "vercel_project" "disabled" {
     name = "test-acc-%[1]s-disabled"
-    %[2]s
 }
 
 resource "vercel_attack_challenge_mode" "disabled" {
     project_id = vercel_project.disabled.id
     enabled = false
-    %[2]s
 }
-`, name, teamID)
+`, name)
 }
 
-func testAccAttackChallengeModeConfigResourceUpdated(name, teamID string) string {
+func testAccAttackChallengeModeConfigResourceUpdated(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "enabled" {
     name = "test-acc-%[1]s-enabled"
-    %[2]s
 }
 
 resource "vercel_attack_challenge_mode" "enabled" {
     project_id = vercel_project.enabled.id
     enabled = false
-    %[2]s
 }
-`, name, teamID)
+`, name)
 }

@@ -69,7 +69,7 @@ func TestAcc_DNSRecord(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDNSRecordConfig(testDomain(t), nameSuffix, teamIDConfig(t)),
+				Config: cfg(testAccDNSRecordConfig(testDomain(t), nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDNSRecordExists(testClient(t), "vercel_dns_record.a_without_ttl", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "domain", testDomain(t)),
@@ -146,7 +146,7 @@ func TestAcc_DNSRecord(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccDNSRecordConfigUpdated(testDomain(t), nameSuffix, teamIDConfig(t)),
+				Config: cfg(testAccDNSRecordConfigUpdated(testDomain(t), nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDNSRecordExists(testClient(t), "vercel_dns_record.a_without_ttl", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_dns_record.a_without_ttl", "domain", testDomain(t)),
@@ -207,7 +207,7 @@ func TestAcc_DNSRecord(t *testing.T) {
 	})
 }
 
-func testAccDNSRecordConfig(testDomain, nameSuffix, teamID string) string {
+func testAccDNSRecordConfig(testDomain, nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_dns_record" "a_without_ttl" {
   domain = "%[1]s"
@@ -215,7 +215,6 @@ resource "vercel_dns_record" "a_without_ttl" {
   type  = "A"
   value = "127.0.0.1"
   comment = "a without ttl"
-  %[3]s
 }
 resource "vercel_dns_record" "a" {
   domain = "%[1]s"
@@ -224,7 +223,6 @@ resource "vercel_dns_record" "a" {
   ttl   = 120
   value = "127.0.0.1"
   comment = "a"
-  %[3]s
 }
 resource "vercel_dns_record" "aaaa" {
   domain = "%[1]s"
@@ -233,7 +231,6 @@ resource "vercel_dns_record" "aaaa" {
   ttl   = 120
   value = "::1"
   comment = "aaaa"
-  %[3]s
 }
 resource "vercel_dns_record" "alias" {
   domain = "%[1]s"
@@ -242,7 +239,6 @@ resource "vercel_dns_record" "alias" {
   ttl   = 120
   value = "example.com."
   comment = "alias"
-  %[3]s
 }
 resource "vercel_dns_record" "caa" {
   domain = "%[1]s"
@@ -251,7 +247,6 @@ resource "vercel_dns_record" "caa" {
   ttl    = 120
   value  = "0 issue \"letsencrypt.org\""
   comment = "caa"
-  %[3]s
 }
 resource "vercel_dns_record" "cname" {
   domain = "%[1]s"
@@ -260,7 +255,6 @@ resource "vercel_dns_record" "cname" {
   ttl   = 120
   value = "example.com."
   comment = "cname"
-  %[3]s
 }
 resource "vercel_dns_record" "mx" {
   domain = "%[1]s"
@@ -270,7 +264,6 @@ resource "vercel_dns_record" "mx" {
   mx_priority = 123
   value       = "example.com."
   comment = "mx"
-  %[3]s
 }
 resource "vercel_dns_record" "srv" {
   domain = "%[1]s"
@@ -284,7 +277,6 @@ resource "vercel_dns_record" "srv" {
       target   = "example.com."
   }
   comment = "srv"
-  %[3]s
 }
 resource "vercel_dns_record" "srv_no_target" {
   domain = "%[1]s"
@@ -298,7 +290,6 @@ resource "vercel_dns_record" "srv_no_target" {
       target = ""
   }
   comment = "srv no target"
-  %[3]s
 }
 resource "vercel_dns_record" "txt" {
   domain = "%[1]s"
@@ -307,7 +298,6 @@ resource "vercel_dns_record" "txt" {
   ttl  = 120
   value = "terraform testing"
   comment = "txt"
-  %[3]s
 }
 resource "vercel_dns_record" "ns" {
   domain = "%[1]s"
@@ -316,19 +306,17 @@ resource "vercel_dns_record" "ns" {
   ttl  = 120
   value = "example.com."
   comment = "ns"
-  %[3]s
 }
-`, testDomain, nameSuffix, teamID)
+`, testDomain, nameSuffix)
 }
 
-func testAccDNSRecordConfigUpdated(testDomain, nameSuffix, teamID string) string {
+func testAccDNSRecordConfigUpdated(testDomain, nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_dns_record" "a_without_ttl" {
   domain  = "%[1]s"
   name    = "test-acc-%[2]s-a-without-ttl-record"
   type    = "A"
   value   = "127.0.0.1"
-  %[3]s
 }
 resource "vercel_dns_record" "a" {
   domain = "%[1]s"
@@ -336,7 +324,6 @@ resource "vercel_dns_record" "a" {
   type  = "A"
   ttl   = 60
   value = "192.168.0.1"
-  %[3]s
 }
 resource "vercel_dns_record" "aaaa" {
   domain = "%[1]s"
@@ -344,7 +331,6 @@ resource "vercel_dns_record" "aaaa" {
   type  = "AAAA"
   ttl   = 60
   value = "::0"
-  %[3]s
 }
 resource "vercel_dns_record" "alias" {
   domain = "%[1]s"
@@ -352,7 +338,6 @@ resource "vercel_dns_record" "alias" {
   type  = "ALIAS"
   ttl   = 60
   value = "example2.com."
-  %[3]s
 }
 resource "vercel_dns_record" "caa" {
   domain = "%[1]s"
@@ -360,7 +345,6 @@ resource "vercel_dns_record" "caa" {
   type   = "CAA"
   ttl    = 60
   value  = "1 issue \"letsencrypt.org\""
-  %[3]s
 }
 resource "vercel_dns_record" "cname" {
   domain = "%[1]s"
@@ -368,7 +352,6 @@ resource "vercel_dns_record" "cname" {
   type  = "CNAME"
   ttl   = 60
   value = "example2.com."
-  %[3]s
 }
 resource "vercel_dns_record" "mx" {
   domain = "%[1]s"
@@ -377,7 +360,6 @@ resource "vercel_dns_record" "mx" {
   ttl         = 60
   mx_priority = 333
   value       = "example2.com."
-  %[3]s
 }
 resource "vercel_dns_record" "srv" {
   domain = "%[1]s"
@@ -390,7 +372,6 @@ resource "vercel_dns_record" "srv" {
       priority = 127
       target   = "example2.com."
   }
-  %[3]s
 }
 resource "vercel_dns_record" "txt" {
   domain = "%[1]s"
@@ -398,7 +379,6 @@ resource "vercel_dns_record" "txt" {
   type = "TXT"
   ttl  = 60
   value = "terraform testing two"
-  %[3]s
 }
 resource "vercel_dns_record" "ns" {
   domain = "%[1]s"
@@ -406,7 +386,6 @@ resource "vercel_dns_record" "ns" {
   type = "NS"
   ttl  = 60
   value = "example2.com."
-  %[3]s
 }
-`, testDomain, nameSuffix, teamID)
+`, testDomain, nameSuffix)
 }

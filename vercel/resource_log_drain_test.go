@@ -57,7 +57,7 @@ func TestAcc_LogDrainResource(t *testing.T) {
 		CheckDestroy:             testCheckLogDrainDeleted(testClient(t), "vercel_log_drain.minimal", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceLogDrain(name, teamIDConfig(t)),
+				Config: cfg(testAccResourceLogDrain(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckLogDrainExists(testClient(t), testTeam(t), "vercel_log_drain.minimal"),
 					resource.TestCheckResourceAttr("vercel_log_drain.minimal", "delivery_format", "json"),
@@ -93,10 +93,9 @@ func TestAcc_LogDrainResource(t *testing.T) {
 	})
 }
 
-func testAccResourceLogDrain(name, team string) string {
+func testAccResourceLogDrain(name string) string {
 	return fmt.Sprintf(`
 data "vercel_endpoint_verification" "test" {
-    %[2]s
 }
 
 resource "vercel_log_drain" "minimal" {
@@ -104,13 +103,10 @@ resource "vercel_log_drain" "minimal" {
     environments            = ["production"]
     sources                 = ["static"]
     endpoint = "https://verify-test-rouge.vercel.app/api?${data.vercel_endpoint_verification.test.verification_code}"
-
-    %[2]s
 }
 
 resource "vercel_project" "test" {
     name = "test-acc-%[1]s"
-    %[2]s
 }
 
 resource "vercel_log_drain" "maximal" {
@@ -124,8 +120,6 @@ resource "vercel_log_drain" "maximal" {
     secret                  = "a_very_long_and_very_well_specified_secret"
     sources                 = ["static", "edge", "external", "build", "lambda", "firewall"]
     endpoint = "https://verify-test-rouge.vercel.app/api?${data.vercel_endpoint_verification.test.verification_code}"
-
-    %[2]s
 }
-`, name, team)
+`, name)
 }

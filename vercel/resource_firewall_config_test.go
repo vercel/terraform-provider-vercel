@@ -34,7 +34,7 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccFirewallConfigResource(name, teamIDConfig(t)),
+				Config: cfg(testAccFirewallConfigResource(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.managed",
@@ -201,7 +201,7 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.botfilter"),
 			},
 			{
-				Config: testAccFirewallConfigResourceUpdated(name, teamIDConfig(t)),
+				Config: cfg(testAccFirewallConfigResourceUpdated(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.managed",
@@ -358,16 +358,14 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 	})
 }
 
-func testAccFirewallConfigResource(name, teamID string) string {
+func testAccFirewallConfigResource(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "managed" {
     name = "test-acc-%[1]s-mrs"
-    %[2]s
 }
 
 resource "vercel_firewall_config" "managed" {
     project_id = vercel_project.managed.id
-    %[2]s
 
     managed_rulesets {
         owasp {
@@ -381,12 +379,10 @@ resource "vercel_firewall_config" "managed" {
 
 resource "vercel_project" "custom" {
     name = "test-acc-%[1]s-custom"
-    %[2]s
 }
 
 resource "vercel_firewall_config" "custom" {
     project_id = vercel_project.custom.id
-    %[2]s
 
     rules {
         rule {
@@ -482,12 +478,10 @@ resource "vercel_firewall_config" "custom" {
 
 resource "vercel_project" "ips" {
     name = "test-acc-%[1]s-ips"
-    %[2]s
 }
 
 resource "vercel_firewall_config" "ips" {
     project_id = vercel_project.ips.id
-    %[2]s
 
     ip_rules {
         rule {
@@ -510,12 +504,10 @@ resource "vercel_firewall_config" "ips" {
 
 resource "vercel_project" "botfilter" {
     name = "test-acc-%[1]s-botfilter"
-    %[2]s
 }
 
 resource "vercel_firewall_config" "botfilter" {
     project_id = vercel_project.botfilter.id
-    %[2]s
 
     managed_rulesets {
         bot_filter {
@@ -525,19 +517,17 @@ resource "vercel_firewall_config" "botfilter" {
     }
 }
 
-`, name, teamID)
+`, name)
 }
 
-func testAccFirewallConfigResourceUpdated(name, teamID string) string {
+func testAccFirewallConfigResourceUpdated(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "managed" {
     name = "test-acc-%[1]s-mrs"
-    %[2]s
 }
 
 resource "vercel_firewall_config" "managed" {
     project_id = vercel_project.managed.id
-    %[2]s
 
     managed_rulesets {
         owasp {
@@ -552,12 +542,10 @@ resource "vercel_firewall_config" "managed" {
 
 resource "vercel_project" "custom" {
     name = "test-acc-%[1]s-custom"
-    %[2]s
 }
 
 resource "vercel_firewall_config" "custom" {
     project_id = vercel_project.custom.id
-    %[2]s
 
     rules {
         rule {
@@ -639,12 +627,10 @@ resource "vercel_firewall_config" "custom" {
 
 resource "vercel_project" "ips" {
     name = "test-acc-%[1]s-ips"
-    %[2]s
 }
 
 resource "vercel_firewall_config" "ips" {
     project_id = vercel_project.ips.id
-    %[2]s
 
     ip_rules {
         rule {
@@ -667,12 +653,10 @@ resource "vercel_firewall_config" "ips" {
 
 resource "vercel_project" "neg" {
     name = "test-acc-%[1]s-neg"
-    %[2]s
 }
 
 resource "vercel_firewall_config" "neg" {
     project_id = vercel_project.neg.id
-    %[2]s
 
     rules {
         rule {
@@ -698,12 +682,10 @@ resource "vercel_firewall_config" "neg" {
 
 resource "vercel_project" "botfilter" {
     name = "test-acc-%[1]s-botfilter"
-    %[2]s
 }
 
 resource "vercel_firewall_config" "botfilter" {
     project_id = vercel_project.botfilter.id
-    %[2]s
 
     managed_rulesets {
         bot_filter {
@@ -712,5 +694,5 @@ resource "vercel_firewall_config" "botfilter" {
         }
     }
 }
-`, name, teamID)
+`, name)
 }

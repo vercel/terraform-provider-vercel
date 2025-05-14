@@ -60,7 +60,7 @@ func TestAcc_EdgeConfigItemResource(t *testing.T) {
 		CheckDestroy:             testCheckEdgeConfigDeleted(testClient(t), "vercel_edge_config.test_item", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceEdgeConfigItem(name, teamIDConfig(t)),
+				Config: cfg(testAccResourceEdgeConfigItem(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckEdgeConfigExists(testClient(t), testTeam(t), "vercel_edge_config.test_item"),
 					resource.TestCheckResourceAttr("vercel_edge_config_item.test", "key", "foobar"),
@@ -73,7 +73,7 @@ func TestAcc_EdgeConfigItemResource(t *testing.T) {
 				ImportStateIdFunc: getEdgeConfigItemImportID("vercel_edge_config_item.test"),
 			},
 			{
-				Config: testAccResourceEdgeConfigItemDeleted(name, teamIDConfig(t)),
+				Config: cfg(testAccResourceEdgeConfigItemDeleted(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckEdgeConfigExists(testClient(t), testTeam(t), "vercel_edge_config.test_item"),
 					testCheckEdgeConfigItemDeleted(testClient(t), "vercel_edge_config.test_item", "foobar", testTeam(t)),
@@ -83,27 +83,24 @@ func TestAcc_EdgeConfigItemResource(t *testing.T) {
 	})
 }
 
-func testAccResourceEdgeConfigItem(name, team string) string {
+func testAccResourceEdgeConfigItem(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test_item" {
     name         = "%[1]s"
-    %[2]s
 }
 
 resource "vercel_edge_config_item" "test" {
     edge_config_id = vercel_edge_config.test_item.id
     key = "foobar"
     value = "baz"
-    %[2]s
 }
-`, name, team)
+`, name)
 }
 
-func testAccResourceEdgeConfigItemDeleted(name, team string) string {
+func testAccResourceEdgeConfigItemDeleted(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test_item" {
     name         = "%[1]s"
-    %[2]s
 }
-`, name, team)
+`, name)
 }

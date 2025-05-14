@@ -60,7 +60,7 @@ func TestAcc_ProjectEnvironmentVariable(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectEnvironmentVariableConfig(nameSuffix, testGithubRepo(t), teamIDConfig(t)),
+				Config: cfg(testAccProjectEnvironmentVariableConfig(nameSuffix, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "key", "foo"),
@@ -88,7 +88,7 @@ func TestAcc_ProjectEnvironmentVariable(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccProjectEnvironmentVariableConfigUpdated(nameSuffix, testGithubRepo(t), teamIDConfig(t)),
+				Config: cfg(testAccProjectEnvironmentVariableConfigUpdated(nameSuffix, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example", "key", "foo"),
@@ -123,7 +123,7 @@ func TestAcc_ProjectEnvironmentVariable(t *testing.T) {
 				ImportStateIdFunc: getProjectEnvironmentVariableImportID("vercel_project_environment_variable.example_git_branch"),
 			},
 			{
-				Config: testAccProjectEnvironmentVariableConfigDeleted(nameSuffix, testGithubRepo(t), teamIDConfig(t)),
+				Config: cfg(testAccProjectEnvironmentVariableConfigDeleted(nameSuffix, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariableDoNotExist(testClient(t), "vercel_project.example", testTeam(t)),
 				),
@@ -150,11 +150,10 @@ func getProjectEnvironmentVariableImportID(n string) resource.ImportStateIdFunc 
 	}
 }
 
-func testAccProjectEnvironmentVariableConfig(projectName string, githubRepo string, teamIDConfig string) string {
+func testAccProjectEnvironmentVariableConfig(projectName string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%[1]s"
-	%[3]s
 
 	git_repository = {
 		type = "github"
@@ -164,7 +163,6 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_environment_variable" "example" {
 	project_id = vercel_project.example.id
-	%[3]s
 	key        = "foo"
 	value      = "bar"
 	target     = ["production"]
@@ -173,7 +171,6 @@ resource "vercel_project_environment_variable" "example" {
 
 resource "vercel_project_environment_variable" "example_git_branch" {
 	project_id = vercel_project.example.id
-	%[3]s
 	key        = "foo"
 	value      = "bar-staging"
 	target     = ["preview"]
@@ -182,7 +179,6 @@ resource "vercel_project_environment_variable" "example_git_branch" {
 
 resource "vercel_project_environment_variable" "example_sensitive" {
 	project_id = vercel_project.example.id
-	%[3]s
 	key        = "foo_sensitive"
 	value      = "bar-sensitive"
 	target     = ["production"]
@@ -191,20 +187,18 @@ resource "vercel_project_environment_variable" "example_sensitive" {
 
 resource "vercel_project_environment_variable" "example_not_sensitive" {
 	project_id = vercel_project.example.id
-	%[3]s
 	key        = "foo_not_sensitive"
 	value      = "bar-not-sensitive"
 	target     = ["production"]
 	sensitive  = false
 }
-`, projectName, githubRepo, teamIDConfig)
+`, projectName, githubRepo)
 }
 
-func testAccProjectEnvironmentVariableConfigUpdated(projectName string, githubRepo string, teamIDConfig string) string {
+func testAccProjectEnvironmentVariableConfigUpdated(projectName string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
     name = "test-acc-example-project-%[1]s"
-    %[3]s
 
     git_repository = {
         type = "github"
@@ -214,7 +208,6 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_environment_variable" "example" {
     project_id = vercel_project.example.id
-    %[3]s
     key        = "foo"
     value      = "bar-new"
     target     = ["production", "preview"]
@@ -223,7 +216,6 @@ resource "vercel_project_environment_variable" "example" {
 
 resource "vercel_project_environment_variable" "example_git_branch" {
     project_id = vercel_project.example.id
-    %[3]s
     key        = "foo"
     value      = "bar-staging"
     target     = ["preview"]
@@ -232,25 +224,23 @@ resource "vercel_project_environment_variable" "example_git_branch" {
 
 resource "vercel_project_environment_variable" "example_sensitive" {
 	project_id = vercel_project.example.id
-	%[3]s
 	key        = "foo_sensitive"
 	value      = "bar-sensitive-updated"
 	target     = ["production"]
 	sensitive  = true
 }
-`, projectName, githubRepo, teamIDConfig)
+`, projectName, githubRepo)
 }
 
-func testAccProjectEnvironmentVariableConfigDeleted(projectName string, githubRepo string, teamIDConfig string) string {
+func testAccProjectEnvironmentVariableConfigDeleted(projectName string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
     name = "test-acc-example-project-%[1]s"
-    %[3]s
 
     git_repository = {
         type = "github"
         repo = "%[2]s"
     }
 }
-`, projectName, githubRepo, teamIDConfig)
+`, projectName, githubRepo)
 }
