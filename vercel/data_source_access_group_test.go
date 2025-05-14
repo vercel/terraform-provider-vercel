@@ -14,7 +14,7 @@ func TestAcc_AccessGroupDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAccessGroupDataSource(teamIDConfig(t), name),
+				Config: cfg(testAccAccessGroupDataSource(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_access_group.test", "name", "test-acc-"+name),
 				),
@@ -23,16 +23,14 @@ func TestAcc_AccessGroupDataSource(t *testing.T) {
 	})
 }
 
-func testAccAccessGroupDataSource(teamIDConfig string, name string) string {
+func testAccAccessGroupDataSource(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
-  name = "test-acc-%[2]s"
-  %[1]s
+  name = "test-acc-%[1]s"
 }
 
 data "vercel_access_group" "test" {
 	id = vercel_access_group.test.id
-	%[1]s
 }
-`, teamIDConfig, name)
+`, name)
 }

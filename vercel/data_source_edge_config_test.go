@@ -14,7 +14,7 @@ func TestAcc_EdgeConfigDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccEdgeConfigDataSourceConfig(name, teamIDConfig(t)),
+				Config: cfg(testAccEdgeConfigDataSourceConfig(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_edge_config.test", "name", name),
 				),
@@ -23,16 +23,14 @@ func TestAcc_EdgeConfigDataSource(t *testing.T) {
 	})
 }
 
-func testAccEdgeConfigDataSourceConfig(name, teamID string) string {
+func testAccEdgeConfigDataSourceConfig(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test" {
     name         = "%[1]s"
-    %[2]s
 }
 
 data "vercel_edge_config" "test" {
     id = vercel_edge_config.test.id
-    %[2]s
 }
-`, name, teamID)
+`, name)
 }

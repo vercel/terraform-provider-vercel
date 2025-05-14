@@ -14,7 +14,7 @@ func TestAcc_EdgeConfigTokenDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccEdgeConfigTokenDataSourceConfig(name, teamIDConfig(t)),
+				Config: cfg(testAccEdgeConfigTokenDataSourceConfig(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_edge_config_token.test", "label", "test-acc-token"),
 					resource.TestCheckResourceAttrSet("data.vercel_edge_config_token.test", "edge_config_id"),
@@ -27,23 +27,20 @@ func TestAcc_EdgeConfigTokenDataSource(t *testing.T) {
 	})
 }
 
-func testAccEdgeConfigTokenDataSourceConfig(name, teamID string) string {
+func testAccEdgeConfigTokenDataSourceConfig(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test" {
     name = "%[1]s"
-    %[2]s
 }
 
 resource "vercel_edge_config_token" "test" {
     label          = "test-acc-token"
     edge_config_id = vercel_edge_config.test.id
-    %[2]s
 }
 
 data "vercel_edge_config_token" "test" {
     edge_config_id = vercel_edge_config.test.id
     token          = vercel_edge_config_token.test.token
-    %[2]s
 }
-`, name, teamID)
+`, name)
 }

@@ -14,37 +14,31 @@ func TestAcc_MicrofrontendGroupDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(`
+				Config: cfg(fmt.Sprintf(`
 					resource "vercel_project" "test_project_1" {
 						name = "test-acc-project-%[1]s"
-						%[2]s
 					}
 					resource "vercel_project" "test_project_2" {
 						name = "test-acc-project-2-%[1]s"
-						%[2]s
 					}
 					resource "vercel_microfrontend_group" "test_group" {
 						name         = "test-acc-microfrontend-group-%[1]s"
 						default_app  = {
 							project_id = vercel_project.test_project_1.id
 						}
-						%[2]s
 					}
 					resource "vercel_microfrontend_group_membership" "test_child" {
 						project_id             = vercel_project.test_project_2.id
 						microfrontend_group_id = vercel_microfrontend_group.test_group.id
-						%[2]s
 					}
 					data "vercel_microfrontend_group" "test_group" {
 						id = vercel_microfrontend_group.test_group.id
-						%[2]s
 					}
 					data "vercel_microfrontend_group_membership" "test_child" {
 						microfrontend_group_id = vercel_microfrontend_group.test_group.id
 						project_id = vercel_project.test_project_2.id
-						%[2]s
-					}	
-				`, name, teamIDConfig(t)),
+					}
+				`, name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_microfrontend_group.test_group", "name", "test-acc-microfrontend-group-"+name),
 					resource.TestCheckResourceAttrSet("data.vercel_microfrontend_group.test_group", "default_app.project_id"),

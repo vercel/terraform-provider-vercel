@@ -12,7 +12,11 @@ func TestAcc_DataSourceProjectDirectory(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectDirectoryConfig(),
+				Config: `
+				data "vercel_project_directory" "test" {
+					path = "examples/one"
+				}
+				`,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_project_directory.test", "path", "examples/one"),
 					testChecksum("data.vercel_project_directory.test", filepath.Join("files.examples", "one", "index.html"), Checksums{
@@ -31,12 +35,4 @@ func TestAcc_DataSourceProjectDirectory(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccProjectDirectoryConfig() string {
-	return `
-data "vercel_project_directory" "test" {
-    path = "examples/one"
-}
-`
 }

@@ -14,7 +14,7 @@ func TestAcc_DeploymentDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDeploymentDataSourceConfig(name, teamIDConfig(t)),
+				Config: cfg(testAccDeploymentDataSourceConfig(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_id", "id"),
 					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_id", "project_id"),
@@ -33,7 +33,7 @@ func TestAcc_DeploymentDataSource(t *testing.T) {
 	})
 }
 
-func testAccDeploymentDataSourceConfig(name, teamID string) string {
+func testAccDeploymentDataSourceConfig(name string) string {
 	return fmt.Sprintf(`
 data "vercel_deployment" "by_id" {
    id = vercel_deployment.test.id
@@ -45,7 +45,6 @@ data "vercel_deployment" "by_url" {
 
 resource "vercel_project" "test" {
   name = "test-acc-deployment-%[1]s"
-  %[2]s
   environment = [
     {
       key    = "bar"
@@ -61,11 +60,10 @@ data "vercel_prebuilt_project" "test" {
 
 resource "vercel_deployment" "test" {
   project_id = vercel_project.test.id
-  %[2]s
 
   production  = true
   files       = data.vercel_prebuilt_project.test.output
   path_prefix = data.vercel_prebuilt_project.test.path
 }
-`, name, teamID)
+`, name)
 }
