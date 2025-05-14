@@ -36,7 +36,7 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccSharedEnvironmentVariablesConfig(nameSuffix, teamIDConfig(t)),
+				Config: cfg(testAccSharedEnvironmentVariablesConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", fmt.Sprintf("test_acc_foo_%s", nameSuffix)),
@@ -58,7 +58,7 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccSharedEnvironmentVariablesConfigUpdated(nameSuffix, teamIDConfig(t)),
+				Config: cfg(testAccSharedEnvironmentVariablesConfigUpdated(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", fmt.Sprintf("test_acc_foo_%s", nameSuffix)),
@@ -78,7 +78,7 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 				ImportStateIdFunc: getSharedEnvironmentVariableImportID("vercel_shared_environment_variable.example"),
 			},
 			{
-				Config: testAccSharedEnvironmentVariablesConfigDeleted(nameSuffix, teamIDConfig(t)),
+				Config: cfg(testAccSharedEnvironmentVariablesConfigDeleted(nameSuffix)),
 			},
 		},
 	})
@@ -99,15 +99,13 @@ func getSharedEnvironmentVariableImportID(n string) resource.ImportStateIdFunc {
 	}
 }
 
-func testAccSharedEnvironmentVariablesConfig(projectName string, teamIDConfig string) string {
+func testAccSharedEnvironmentVariablesConfig(projectName string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%[1]s"
-	%[2]s
 }
 
 resource "vercel_shared_environment_variable" "example" {
-	%[2]s
 	key         = "test_acc_foo_%[1]s"
 	value       = "bar"
 	target      = ["production"]
@@ -118,7 +116,6 @@ resource "vercel_shared_environment_variable" "example" {
 }
 
 resource "vercel_shared_environment_variable" "sensitive_example" {
-	%[2]s
 	key         = "test_acc_foo_sensitive_%[1]s"
 	value       = "bar"
     sensitive   = true
@@ -130,7 +127,6 @@ resource "vercel_shared_environment_variable" "sensitive_example" {
 }
 
 resource "vercel_shared_environment_variable" "no_comment_example" {
-	%[2]s
 	key         = "test_acc_foo_no_comment_%[1]s"
 	value       = "baz"
 	target      = ["production"]
@@ -138,23 +134,20 @@ resource "vercel_shared_environment_variable" "no_comment_example" {
         vercel_project.example.id
     ]
 }
-`, projectName, teamIDConfig)
+`, projectName)
 }
 
-func testAccSharedEnvironmentVariablesConfigUpdated(projectName string, teamIDConfig string) string {
+func testAccSharedEnvironmentVariablesConfigUpdated(projectName string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%[1]s"
-	%[2]s
 }
 
 resource "vercel_project" "example2" {
 	name = "test-acc-example-project-2-%[1]s"
-	%[2]s
 }
 
 resource "vercel_shared_environment_variable" "example" {
-	%[2]s
 	key         = "test_acc_foo_%[1]s"
 	value       = "updated-bar"
 	target      = ["preview", "development"]
@@ -165,7 +158,6 @@ resource "vercel_shared_environment_variable" "example" {
 }
 
 resource "vercel_shared_environment_variable" "sensitive_example" {
-	%[2]s
 	key         = "test_acc_foo_sensitive_%[1]s"
 	value       = "bar-updated"
     sensitive   = true
@@ -175,19 +167,17 @@ resource "vercel_shared_environment_variable" "sensitive_example" {
         vercel_project.example2.id
     ]
 }
-`, projectName, teamIDConfig)
+`, projectName)
 }
 
-func testAccSharedEnvironmentVariablesConfigDeleted(projectName string, teamIDConfig string) string {
+func testAccSharedEnvironmentVariablesConfigDeleted(projectName string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%[1]s"
-	%[2]s
 }
 
 resource "vercel_project" "example2" {
 	name = "test-acc-example-project-2-%[1]s"
-	%[2]s
 }
-    `, projectName, teamIDConfig)
+    `, projectName)
 }

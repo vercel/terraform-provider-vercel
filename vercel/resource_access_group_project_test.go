@@ -19,7 +19,7 @@ func TestAcc_AccessGroupProjectResource(t *testing.T) {
 		CheckDestroy:             testAccAccessGroupProjectDoesNotExist(testClient(t), testTeam(t), "vercel_access_group_project.test"),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceAccessGroupProject(teamIDConfig(t), name),
+				Config: cfg(testAccResourceAccessGroupProject(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckAccessGroupProjectExists(testClient(t), testTeam(t), "vercel_access_group_project.test"),
 					resource.TestCheckResourceAttrSet("vercel_access_group_project.test", "access_group_id"),
@@ -33,7 +33,7 @@ func TestAcc_AccessGroupProjectResource(t *testing.T) {
 				ImportStateIdFunc: getAccessGroupProjectImportID("vercel_access_group_project.test"),
 			},
 			{
-				Config: testAccResourceAccessGroupProjectUpdated(teamIDConfig(t), name),
+				Config: cfg(testAccResourceAccessGroupProjectUpdated(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckAccessGroupProjectExists(testClient(t), testTeam(t), "vercel_access_group_project.test"),
 					resource.TestCheckResourceAttrSet("vercel_access_group_project.test", "project_id"),
@@ -100,44 +100,38 @@ func testAccAccessGroupProjectDoesNotExist(testClient *client.Client, teamID str
 	}
 }
 
-func testAccResourceAccessGroupProject(teamIDConfig string, name string) string {
+func testAccResourceAccessGroupProject(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  %[1]s
-  name = "test-acc-%[2]s"
+  name = "test-acc-%[1]s"
 }
 
 resource "vercel_access_group" "test" {
-	%[1]s
-	name = "test-acc-%[2]s"
+	name = "test-acc-%[1]s"
 }
 
 resource "vercel_access_group_project" "test" {
-	%[1]s
 	project_id = vercel_project.test.id
 	access_group_id = vercel_access_group.test.id
 	role = "ADMIN"
 }
-`, teamIDConfig, name)
+`, name)
 }
 
-func testAccResourceAccessGroupProjectUpdated(teamIDConfig string, name string) string {
+func testAccResourceAccessGroupProjectUpdated(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  %[1]s
-  name = "test-acc-%[2]s"
+  name = "test-acc-%[1]s"
 }
 
 resource "vercel_access_group" "test" {
-	%[1]s
-	name = "test-acc-%[2]s"
+	name = "test-acc-%[1]s"
 }
 
 resource "vercel_access_group_project" "test" {
-	%[1]s
 	project_id = vercel_project.test.id
 	access_group_id = vercel_access_group.test.id
 	role = "PROJECT_DEVELOPER"
 }
-`, teamIDConfig, name)
+`, name)
 }

@@ -44,7 +44,7 @@ func TestAcc_CustomEnvironmentResource(t *testing.T) {
 		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCustomEnvironment(projectSuffix, teamIDConfig(t)),
+				Config: cfg(testAccCustomEnvironment(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckCustomEnvironmentExists(testClient(t), testTeam(t), "vercel_custom_environment.test"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "id"),
@@ -69,7 +69,7 @@ func TestAcc_CustomEnvironmentResource(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccCustomEnvironmentUpdated(projectSuffix, teamIDConfig(t)),
+				Config: cfg(testAccCustomEnvironmentUpdated(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckCustomEnvironmentExists(testClient(t), testTeam(t), "vercel_custom_environment.test"),
 					resource.TestCheckResourceAttrSet("vercel_custom_environment.test", "id"),
@@ -105,16 +105,14 @@ func getCustomEnvImportID(n string) resource.ImportStateIdFunc {
 	}
 }
 
-func testAccCustomEnvironment(projectSuffix string, teamIDConfig string) string {
+func testAccCustomEnvironment(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-custom-env-%[1]s"
-  %[2]s
 }
 
 resource "vercel_custom_environment" "test" {
   project_id = vercel_project.test.id
-  %[2]s
   name = "test-acc-%[1]s"
   description = "without branch tracking"
 }
@@ -122,7 +120,6 @@ resource "vercel_custom_environment" "test" {
 // Ensure project_environment_variable works
 resource "vercel_project_environment_variable" "test" {
     project_id = vercel_project.test.id
-    %[2]s
     key = "foo"
     value = "test-acc-env-var"
     custom_environment_ids = [vercel_custom_environment.test.id]
@@ -131,7 +128,6 @@ resource "vercel_project_environment_variable" "test" {
 // Ensure project_environment_variables works
 resource "vercel_project_environment_variables" "test" {
     project_id = vercel_project.test.id
-    %[2]s
     variables = [{
         key = "bar"
         value = "test-acc-env-var"
@@ -141,7 +137,6 @@ resource "vercel_project_environment_variables" "test" {
 
 resource "vercel_custom_environment" "test_bt" {
   project_id = vercel_project.test.id
-  %[2]s
   name = "test-acc-bt-%[1]s"
   description = "with branch tracking"
   branch_tracking = {
@@ -149,19 +144,17 @@ resource "vercel_custom_environment" "test_bt" {
     type = "startsWith"
   }
 }
-`, projectSuffix, teamIDConfig)
+`, projectSuffix)
 }
 
-func testAccCustomEnvironmentUpdated(projectSuffix string, teamIDConfig string) string {
+func testAccCustomEnvironmentUpdated(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-custom-env-%[1]s"
-  %[2]s
 }
 
 resource "vercel_custom_environment" "test" {
   project_id = vercel_project.test.id
-  %[2]s
   name = "test-acc-%[1]s-updtd"
   description = "without branch tracking updated"
   branch_tracking = {
@@ -169,5 +162,5 @@ resource "vercel_custom_environment" "test" {
       type = "endsWith"
   }
 }
-`, projectSuffix, teamIDConfig)
+`, projectSuffix)
 }

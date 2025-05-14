@@ -28,8 +28,8 @@ type CreateEnvironmentVariableRequest struct {
 // CreateEnvironmentVariable will create a brand new environment variable if one does not exist.
 func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEnvironmentVariableRequest) (e EnvironmentVariable, err error) {
 	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariable))
 
@@ -63,7 +63,7 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 		return e, fmt.Errorf("%w - %s", err, payload)
 	}
 	response.Created.Value = request.EnvironmentVariable.Value
-	response.Created.TeamID = c.teamID(request.TeamID)
+	response.Created.TeamID = c.TeamID(request.TeamID)
 	return response.Created, err
 }
 
@@ -146,8 +146,8 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		return []EnvironmentVariable{env}, err
 	}
 	url := fmt.Sprintf("%s/v10/projects/%s/env", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariables))
 
@@ -212,8 +212,8 @@ type UpdateEnvironmentVariableRequest struct {
 // UpdateEnvironmentVariable will update an existing environment variable to the latest information.
 func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEnvironmentVariableRequest) (e EnvironmentVariable, err error) {
 	url := fmt.Sprintf("%s/v10/projects/%s/env/%s", c.baseURL, request.ProjectID, request.EnvID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "updating environment variable", map[string]any{
@@ -228,15 +228,15 @@ func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEn
 	}, &e)
 	// The API response returns an encrypted environment variable, but we want to return the decrypted version.
 	e.Value = request.Value
-	e.TeamID = c.teamID(request.TeamID)
+	e.TeamID = c.TeamID(request.TeamID)
 	return e, err
 }
 
 // DeleteEnvironmentVariable will remove an environment variable from Vercel.
 func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamID, variableID string) error {
 	url := fmt.Sprintf("%s/v8/projects/%s/env/%s", c.baseURL, projectID, variableID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "deleting environment variable", map[string]any{
 		"url": url,
@@ -251,8 +251,8 @@ func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamI
 
 func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID string) ([]EnvironmentVariable, error) {
 	url := fmt.Sprintf("%s/v8/projects/%s/env?decrypt=true", c.baseURL, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s&teamId=%s", url, c.TeamID(teamID))
 	}
 
 	envResponse := struct {
@@ -268,7 +268,7 @@ func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID 
 		body:   "",
 	}, &envResponse)
 	for i := 0; i < len(envResponse.Env); i++ {
-		envResponse.Env[i].TeamID = c.teamID(teamID)
+		envResponse.Env[i].TeamID = c.TeamID(teamID)
 	}
 	return envResponse.Env, err
 }
@@ -276,8 +276,8 @@ func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID 
 // GetEnvironmentVariable gets a singluar environment variable from Vercel based on its ID.
 func (c *Client) GetEnvironmentVariable(ctx context.Context, projectID, teamID, envID string) (e EnvironmentVariable, err error) {
 	url := fmt.Sprintf("%s/v10/projects/%s/env/%s", c.baseURL, projectID, envID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "getting environment variable", map[string]any{
@@ -289,6 +289,6 @@ func (c *Client) GetEnvironmentVariable(ctx context.Context, projectID, teamID, 
 		url:    url,
 		body:   "",
 	}, &e)
-	e.TeamID = c.teamID(teamID)
+	e.TeamID = c.TeamID(teamID)
 	return e, err
 }

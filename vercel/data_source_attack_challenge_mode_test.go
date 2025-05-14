@@ -14,7 +14,7 @@ func TestAcc_AttackChallengeModeDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAttackChallengeModeConfig(name, teamIDConfig(t)),
+				Config: cfg(testAccAttackChallengeModeConfig(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_attack_challenge_mode.never_enabled", "enabled", "false"),
 					resource.TestCheckResourceAttr("data.vercel_attack_challenge_mode.enabled", "enabled", "true"),
@@ -25,48 +25,40 @@ func TestAcc_AttackChallengeModeDataSource(t *testing.T) {
 	})
 }
 
-func testAccAttackChallengeModeConfig(name, teamID string) string {
+func testAccAttackChallengeModeConfig(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "never_enabled" {
     name = "test-acc-%[1]s"
-    %[2]s
 }
 
 data "vercel_attack_challenge_mode" "never_enabled" {
     project_id = vercel_project.never_enabled.id
-    %[2]s
 }
 
 resource "vercel_project" "enabled" {
     name = "test-acc-%[1]s-enabled"
-    %[2]s
 }
 
 resource "vercel_attack_challenge_mode" "enabled" {
     project_id = vercel_project.enabled.id
     enabled = true
-    %[2]s
 }
 
 data "vercel_attack_challenge_mode" "enabled" {
     project_id = vercel_attack_challenge_mode.enabled.project_id
-    %[2]s
 }
 
 resource "vercel_project" "disabled" {
     name = "test-acc-%[1]s-disabled"
-    %[2]s
 }
 
 resource "vercel_attack_challenge_mode" "disabled" {
     project_id = vercel_project.disabled.id
     enabled = false
-    %[2]s
 }
 
 data "vercel_attack_challenge_mode" "disabled" {
     project_id = vercel_attack_challenge_mode.disabled.project_id
-    %[2]s
 }
-`, name, teamID)
+`, name)
 }

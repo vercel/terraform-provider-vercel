@@ -23,8 +23,8 @@ type CreateAccessGroupProjectRequest struct {
 
 func (c *Client) CreateAccessGroupProject(ctx context.Context, req CreateAccessGroupProjectRequest) (r AccessGroupProject, err error) {
 	url := fmt.Sprintf("%s/v1/access-groups/%s/projects", c.baseURL, req.AccessGroupID)
-	if c.teamID(req.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
 	}
 	payload := string(mustMarshal(
 		struct {
@@ -48,7 +48,7 @@ func (c *Client) CreateAccessGroupProject(ctx context.Context, req CreateAccessG
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.teamID(req.TeamID)
+	r.TeamID = c.TeamID(req.TeamID)
 	return r, err
 }
 
@@ -60,8 +60,8 @@ type GetAccessGroupProjectRequest struct {
 
 func (c *Client) GetAccessGroupProject(ctx context.Context, req GetAccessGroupProjectRequest) (r AccessGroupProject, err error) {
 	url := fmt.Sprintf("%s/v1/access-groups/%s/projects/%s", c.baseURL, req.AccessGroupID, req.ProjectID)
-	if c.teamID(req.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
 	}
 	tflog.Info(ctx, "getting access group project", map[string]any{
 		"url": url,
@@ -88,8 +88,8 @@ type UpdateAccessGroupProjectRequest struct {
 
 func (c *Client) UpdateAccessGroupProject(ctx context.Context, req UpdateAccessGroupProjectRequest) (r AccessGroupProject, err error) {
 	url := fmt.Sprintf("%s/v1/access-groups/%s/projects/%s", c.baseURL, req.AccessGroupID, req.ProjectID)
-	if c.teamID(req.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
 	}
 	payload := string(mustMarshal(
 		struct {
@@ -111,7 +111,7 @@ func (c *Client) UpdateAccessGroupProject(ctx context.Context, req UpdateAccessG
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.teamID(req.TeamID)
+	r.TeamID = c.TeamID(req.TeamID)
 	return r, err
 }
 
@@ -123,8 +123,8 @@ type DeleteAccessGroupProjectRequest struct {
 
 func (c *Client) DeleteAccessGroupProject(ctx context.Context, req DeleteAccessGroupProjectRequest) error {
 	url := fmt.Sprintf("%s/v1/access-groups/%s/projects/%s", c.baseURL, req.AccessGroupID, req.ProjectID)
-	if c.teamID(req.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(req.TeamID))
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
 	}
 	tflog.Info(ctx, "deleting access group project", map[string]any{
 		"url": url,

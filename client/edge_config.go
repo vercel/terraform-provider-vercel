@@ -20,8 +20,8 @@ type CreateEdgeConfigRequest struct {
 
 func (c *Client) CreateEdgeConfig(ctx context.Context, request CreateEdgeConfigRequest) (e EdgeConfig, err error) {
 	url := fmt.Sprintf("%s/v1/edge-config", c.baseURL)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "creating edge config", map[string]any{
@@ -39,8 +39,8 @@ func (c *Client) CreateEdgeConfig(ctx context.Context, request CreateEdgeConfigR
 
 func (c *Client) GetEdgeConfig(ctx context.Context, id, teamID string) (e EdgeConfig, err error) {
 	url := fmt.Sprintf("%s/v1/edge-config/%s", c.baseURL, id)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "reading edge config", map[string]any{
 		"url": url,
@@ -61,8 +61,8 @@ type UpdateEdgeConfigRequest struct {
 
 func (c *Client) UpdateEdgeConfig(ctx context.Context, request UpdateEdgeConfigRequest) (e EdgeConfig, err error) {
 	url := fmt.Sprintf("%s/v1/edge-config/%s", c.baseURL, request.ID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 
 	payload := string(mustMarshal(request))
@@ -81,8 +81,8 @@ func (c *Client) UpdateEdgeConfig(ctx context.Context, request UpdateEdgeConfigR
 
 func (c *Client) DeleteEdgeConfig(ctx context.Context, id, teamID string) error {
 	url := fmt.Sprintf("%s/v1/edge-config/%s", c.baseURL, id)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "deleting edge config", map[string]any{
 		"url": url,
@@ -97,8 +97,8 @@ func (c *Client) DeleteEdgeConfig(ctx context.Context, id, teamID string) error 
 
 func (c *Client) ListEdgeConfigs(ctx context.Context, teamID string) (e []EdgeConfig, err error) {
 	url := fmt.Sprintf("%s/v1/edge-config", c.baseURL)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "listing edge configs", map[string]any{
 		"url": url,

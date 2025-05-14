@@ -36,14 +36,14 @@ type MicrofrontendGroupsAPIResponse struct {
 }
 
 func (c *Client) CreateMicrofrontendGroup(ctx context.Context, TeamID string, Name string) (r MicrofrontendGroup, err error) {
-	if c.teamID(TeamID) == "" {
+	if c.TeamID(TeamID) == "" {
 		return r, fmt.Errorf("team_id is required")
 	}
 	tflog.Info(ctx, "creating microfrontend group", map[string]any{
 		"microfrontend_group_name": Name,
-		"team_id":                  c.teamID(TeamID),
+		"team_id":                  c.TeamID(TeamID),
 	})
-	url := fmt.Sprintf("%s/teams/%s/microfrontends", c.baseURL, c.teamID(TeamID))
+	url := fmt.Sprintf("%s/teams/%s/microfrontends", c.baseURL, c.TeamID(TeamID))
 	payload := string(mustMarshal(struct {
 		NewMicrofrontendsGroupName string `json:"newMicrofrontendsGroupName"`
 	}{
@@ -65,15 +65,15 @@ func (c *Client) CreateMicrofrontendGroup(ctx context.Context, TeamID string, Na
 		ID:     apiResponse.NewMicrofrontendGroup.ID,
 		Name:   apiResponse.NewMicrofrontendGroup.Name,
 		Slug:   apiResponse.NewMicrofrontendGroup.Slug,
-		TeamID: c.teamID(TeamID),
+		TeamID: c.TeamID(TeamID),
 	}, nil
 }
 
 func (c *Client) UpdateMicrofrontendGroup(ctx context.Context, request MicrofrontendGroup) (r MicrofrontendGroup, err error) {
-	if c.teamID(request.TeamID) == "" {
+	if c.TeamID(request.TeamID) == "" {
 		return r, fmt.Errorf("team_id is required")
 	}
-	url := fmt.Sprintf("%s/teams/%s/microfrontends/%s", c.baseURL, c.teamID(request.TeamID), request.ID)
+	url := fmt.Sprintf("%s/teams/%s/microfrontends/%s", c.baseURL, c.TeamID(request.TeamID), request.ID)
 	payload := string(mustMarshal(struct {
 		Name string `json:"name"`
 	}{
@@ -99,15 +99,15 @@ func (c *Client) UpdateMicrofrontendGroup(ctx context.Context, request Microfron
 		ID:     apiResponse.UpdatedMicrofrontendsGroup.ID,
 		Name:   apiResponse.UpdatedMicrofrontendsGroup.Name,
 		Slug:   apiResponse.UpdatedMicrofrontendsGroup.Slug,
-		TeamID: c.teamID(request.TeamID),
+		TeamID: c.TeamID(request.TeamID),
 	}, nil
 }
 
 func (c *Client) DeleteMicrofrontendGroup(ctx context.Context, request MicrofrontendGroup) (r struct{}, err error) {
-	if c.teamID(request.TeamID) == "" {
+	if c.TeamID(request.TeamID) == "" {
 		return r, fmt.Errorf("team_id is required")
 	}
-	url := fmt.Sprintf("%s/teams/%s/microfrontends/%s", c.baseURL, c.teamID(request.TeamID), request.ID)
+	url := fmt.Sprintf("%s/teams/%s/microfrontends/%s", c.baseURL, c.TeamID(request.TeamID), request.ID)
 
 	tflog.Info(ctx, "deleting microfrontend group", map[string]any{
 		"url": url,
@@ -123,12 +123,12 @@ func (c *Client) DeleteMicrofrontendGroup(ctx context.Context, request Microfron
 }
 
 func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID string, teamID string) (r MicrofrontendGroup, err error) {
-	if c.teamID(teamID) == "" {
+	if c.TeamID(teamID) == "" {
 		return r, fmt.Errorf("team_id is required")
 	}
 	url := fmt.Sprintf("%s/v1/microfrontends/groups", c.baseURL)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "getting microfrontend group", map[string]any{
@@ -158,7 +158,7 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 				projects[p.ID] = MicrofrontendGroupMembership{
 					MicrofrontendGroupID:            microfrontendGroupID,
 					ProjectID:                       p.ID,
-					TeamID:                          c.teamID(teamID),
+					TeamID:                          c.TeamID(teamID),
 					Enabled:                         p.Microfrontends.Enabled,
 					IsDefaultApp:                    p.Microfrontends.IsDefaultApp,
 					DefaultRoute:                    p.Microfrontends.DefaultRoute,
@@ -172,7 +172,7 @@ func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID
 				ID:         out.Groups[i].Group.ID,
 				Name:       out.Groups[i].Group.Name,
 				Slug:       out.Groups[i].Group.Slug,
-				TeamID:     c.teamID(teamID),
+				TeamID:     c.TeamID(teamID),
 				DefaultApp: defaultApp,
 				Projects:   projects,
 			}

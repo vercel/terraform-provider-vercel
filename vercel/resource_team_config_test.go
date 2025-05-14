@@ -14,7 +14,7 @@ func TestAcc_TeamConfig(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccVercelTeamConfigBasic(testTeam(t)),
+				Config: cfg(testAccVercelTeamConfigBasic(testTeam(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", "Vercel Terraform Testing"),
 					resource.TestCheckResourceAttr(resourceName, "slug", "terraform-testing-vtest314"),
@@ -22,7 +22,7 @@ func TestAcc_TeamConfig(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccVercelTeamConfigUpdated(testTeam(t)),
+				Config: cfg(testAccVercelTeamConfigUpdated(testTeam(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", "Vercel Terraform Testing o_o"),

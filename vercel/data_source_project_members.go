@@ -51,6 +51,7 @@ func (d *projectMembersDataSource) Schema(_ context.Context, _ datasource.Schema
 		Attributes: map[string]schema.Attribute{
 			"team_id": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "The team ID to which the project belongs. Required when accessing a team project if a default team has not been set in the provider.",
 			},
 			"project_id": schema.StringAttribute{
@@ -123,6 +124,7 @@ func (d *projectMembersDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	config.Members = types.SetValueMust(memberAttrType, memberItems)
+	config.TeamID = types.StringValue(d.client.TeamID(config.TeamID.ValueString()))
 	diags = resp.State.Set(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 }

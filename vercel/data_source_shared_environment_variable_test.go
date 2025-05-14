@@ -14,7 +14,7 @@ func TestAcc_SharedEnvironmentVariableDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccSharedEnvironmentVariableDataSource(name, teamIDConfig(t)),
+				Config: cfg(testAccSharedEnvironmentVariableDataSource(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_shared_environment_variable.test", "key", "test_acc_"+name),
 					resource.TestCheckResourceAttr("data.vercel_shared_environment_variable.test", "value", "foobar"),
@@ -38,11 +38,10 @@ func TestAcc_SharedEnvironmentVariableDataSource(t *testing.T) {
 	})
 }
 
-func testAccSharedEnvironmentVariableDataSource(name, teamID string) string {
+func testAccSharedEnvironmentVariableDataSource(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
     name = "test-acc-%[1]s"
-    %[2]s
 }
 
 resource "vercel_shared_environment_variable" "test" {
@@ -50,23 +49,19 @@ resource "vercel_shared_environment_variable" "test" {
   value = "foobar"
   target = [ "production", "preview" ]
   project_ids = [ vercel_project.test.id ]
-  %[2]s
 }
 
 data "vercel_shared_environment_variable" "test" {
     id = vercel_shared_environment_variable.test.id
-    %[2]s
 }
 
 data "vercel_shared_environment_variable" "by_key_and_target" {
     key = vercel_shared_environment_variable.test.key
     target = vercel_shared_environment_variable.test.target
-    %[2]s
 }
 
 resource "vercel_shared_environment_variable" "sensitive" {
     key = "test_acc_%[1]s_sensitive"
-    %[2]s
     value = "foobar"
     target = [ "production" ]
     project_ids = [ vercel_project.test.id ]
@@ -75,7 +70,6 @@ resource "vercel_shared_environment_variable" "sensitive" {
 
 data "vercel_shared_environment_variable" "sensitive" {
     id = vercel_shared_environment_variable.sensitive.id
-    %[2]s
 }
-`, name, teamID)
+`, name)
 }

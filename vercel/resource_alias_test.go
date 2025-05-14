@@ -48,7 +48,7 @@ func TestAcc_AliasResource(t *testing.T) {
 		CheckDestroy:             testCheckAliasDestroyed(testClient(t), "vercel_alias.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAliasResourceConfig(name, teamIDConfig(t), testGithubRepo(t)),
+				Config: cfg(testAccAliasResourceConfig(name, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckAliasExists(testClient(t), testTeam(t), fmt.Sprintf("test-acc-%s.vercel.app", name)),
 					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
@@ -57,7 +57,7 @@ func TestAcc_AliasResource(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccAliasResourceConfigUpdated(name, teamIDConfig(t), testGithubRepo(t)),
+				Config: cfg(testAccAliasResourceConfigUpdated(name, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckAliasExists(testClient(t), testTeam(t), fmt.Sprintf("test-acc-%s.vercel.app", name)),
 					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
@@ -69,52 +69,46 @@ func TestAcc_AliasResource(t *testing.T) {
 	})
 }
 
-func testAccAliasResourceConfig(name, team string, githubRepo string) string {
+func testAccAliasResourceConfig(name, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
     name = "test-acc-%[1]s"
-    %[2]s
     git_repository = {
         type = "github"
-        repo = "%[3]s"
+        repo = "%[2]s"
     }
 }
 
 resource "vercel_deployment" "test" {
     project_id = vercel_project.test.id
     ref        = "main"
-    %[2]s
 }
 
 resource "vercel_alias" "test" {
     alias         = "test-acc-%[1]s.vercel.app"
     deployment_id = vercel_deployment.test.id
-    %[2]s
 }
-`, name, team, githubRepo)
+`, name, githubRepo)
 }
 
-func testAccAliasResourceConfigUpdated(name, team string, githubRepo string) string {
+func testAccAliasResourceConfigUpdated(name, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
     name = "test-acc-%[1]s"
-    %[2]s
     git_repository = {
         type = "github"
-        repo = "%[3]s"
+        repo = "%[2]s"
     }
 }
 
 resource "vercel_deployment" "test_two" {
     project_id = vercel_project.test.id
     ref        = "main"
-    %[2]s
 }
 
 resource "vercel_alias" "test" {
     alias         = "test-acc-%[1]s.vercel.app"
     deployment_id = vercel_deployment.test_two.id
-    %[2]s
 }
-`, name, team, githubRepo)
+`, name, githubRepo)
 }

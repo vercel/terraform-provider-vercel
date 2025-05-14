@@ -68,7 +68,7 @@ func TestAcc_EdgeConfigTokenResource(t *testing.T) {
 		CheckDestroy:             testCheckEdgeConfigTokenDeleted(testClient(t), "vercel_edge_config_token.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceEdgeConfigToken(name, teamIDConfig(t)),
+				Config: cfg(testAccResourceEdgeConfigToken(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckEdgeConfigTokenExists(testClient(t), testTeam(t), "vercel_edge_config_token.test"),
 					resource.TestCheckResourceAttr("vercel_edge_config_token.test", "label", "test token"),
@@ -81,17 +81,15 @@ func TestAcc_EdgeConfigTokenResource(t *testing.T) {
 	})
 }
 
-func testAccResourceEdgeConfigToken(name, team string) string {
+func testAccResourceEdgeConfigToken(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test" {
     name         = "%[1]s"
-    %[2]s
 }
 
 resource "vercel_edge_config_token" "test" {
     label = "test token"
     edge_config_id = vercel_edge_config.test.id
-    %[2]s
 }
-`, name, team)
+`, name)
 }

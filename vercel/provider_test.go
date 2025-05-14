@@ -25,6 +25,22 @@ func testClient(t *testing.T) *client.Client {
 	return tc
 }
 
+func cfg(config string) string {
+	team := os.Getenv("VERCEL_TERRAFORM_TESTING_TEAM")
+	if team == "" {
+		//lintignore:R009
+		panic("Missing required environment variable VERCEL_TERRAFORM_TESTING_TEAM")
+	}
+	//lintignore:AT004
+	return fmt.Sprintf(`
+provider "vercel" {
+	team = "%[1]s"
+}
+
+%[2]s
+`, team, config)
+}
+
 func apiToken(t *testing.T) string {
 	value := os.Getenv("VERCEL_API_TOKEN")
 	if value == "" {
@@ -55,10 +71,6 @@ func testTeam(t *testing.T) string {
 		t.Fatalf("Missing required environment variable VERCEL_TERRAFORM_TESTING_TEAM")
 	}
 	return value
-}
-
-func teamIDConfig(t *testing.T) string {
-	return fmt.Sprintf("team_id = \"%s\"", testTeam(t))
 }
 
 func testDomain(t *testing.T) string {

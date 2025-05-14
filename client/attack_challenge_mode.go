@@ -29,8 +29,8 @@ func (c *Client) GetAttackChallengeMode(ctx context.Context, projectID, teamID s
 
 func (c *Client) UpdateAttackChallengeMode(ctx context.Context, request AttackChallengeMode) (a AttackChallengeMode, err error) {
 	url := fmt.Sprintf("%s/security/attack-mode", c.baseURL)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 
 	payload := string(mustMarshal(request))

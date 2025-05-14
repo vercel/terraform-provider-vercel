@@ -32,8 +32,8 @@ type DeploymentExpirationResponse struct {
 // DeleteDeploymentRetention will remove any existing deployment retention for a given project.
 func (c *Client) DeleteDeploymentRetention(ctx context.Context, projectID, teamID string) error {
 	url := fmt.Sprintf("%s/v9/projects/%s/deployment-expiration", c.baseURL, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	unlimited := "unlimited"
 	payload := string(mustMarshal(DeploymentRetentionRequest{ExpirationPreview: unlimited, ExpirationProduction: unlimited, ExpirationCanceled: unlimited, ExpirationErrored: unlimited}))
@@ -97,8 +97,8 @@ func (d deploymentExpirationResponse) toDeploymentExpirationResponse(teamID stri
 // UpdateDeploymentRetention will update an existing deployment retention to the latest information.
 func (c *Client) UpdateDeploymentRetention(ctx context.Context, request UpdateDeploymentRetentionRequest) (DeploymentExpirationResponse, error) {
 	url := fmt.Sprintf("%s/v9/projects/%s/deployment-expiration", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.DeploymentRetention))
 
@@ -113,14 +113,14 @@ func (c *Client) UpdateDeploymentRetention(ctx context.Context, request UpdateDe
 		url:    url,
 		body:   payload,
 	}, &d)
-	return d.toDeploymentExpirationResponse(c.teamID(request.TeamID)), err
+	return d.toDeploymentExpirationResponse(c.TeamID(request.TeamID)), err
 }
 
 // GetDeploymentRetention returns the deployment retention for a given project.
 func (c *Client) GetDeploymentRetention(ctx context.Context, projectID, teamID string) (d DeploymentExpirationResponse, err error) {
 	url := fmt.Sprintf("%s/v2/projects/%s", c.baseURL, projectID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "getting deployment retention", map[string]any{
@@ -141,11 +141,11 @@ func (c *Client) GetDeploymentRetention(ctx context.Context, projectID, teamID s
 				ExpirationCanceled:   36500,
 				ExpirationErrored:    36500,
 			},
-			TeamID: c.teamID(teamID),
+			TeamID: c.TeamID(teamID),
 		}, nil
 	}
 	return DeploymentExpirationResponse{
 		DeploymentExpiration: *p.DeploymentExpiration,
-		TeamID:               c.teamID(teamID),
+		TeamID:               c.TeamID(teamID),
 	}, err
 }

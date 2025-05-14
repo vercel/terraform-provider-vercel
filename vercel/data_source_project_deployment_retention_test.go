@@ -17,7 +17,7 @@ func TestAcc_ProjectDeploymentRetentionDataSource(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectDeploymentRetentionDataSourceConfig(nameSuffix, testGithubRepo(t), teamIDConfig(t)),
+				Config: cfg(testAccProjectDeploymentRetentionDataSourceConfig(nameSuffix, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectDeploymentRetentionExists(testClient(t), "vercel_project_deployment_retention.example", testTeam(t)),
 					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_preview", "1m"),
@@ -35,11 +35,10 @@ func TestAcc_ProjectDeploymentRetentionDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectDeploymentRetentionDataSourceConfig(projectName string, githubRepo string, teamIDConfig string) string {
+func testAccProjectDeploymentRetentionDataSourceConfig(projectName string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%[1]s"
-	%[3]s
 
 	git_repository = {
 		type = "github"
@@ -49,18 +48,15 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_deployment_retention" "example" {
 	project_id = vercel_project.example.id
-	%[3]s
     expiration_preview = "1m"
 }
 
 data "vercel_project_deployment_retention" "example" {
 	project_id = vercel_project_deployment_retention.example.project_id
-	%[3]s
 }
 
 resource "vercel_project" "example_2" {
 	name = "test-acc-example-project-2-%[1]s"
-	%[3]s
 
 	git_repository = {
 		type = "github"
@@ -70,7 +66,6 @@ resource "vercel_project" "example_2" {
 
 data "vercel_project_deployment_retention" "example_2" {
 	project_id = vercel_project.example_2.id
-	%[3]s
 }
-`, projectName, githubRepo, teamIDConfig)
+`, projectName, githubRepo)
 }

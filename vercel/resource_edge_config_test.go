@@ -57,7 +57,7 @@ func TestAcc_EdgeConfigResource(t *testing.T) {
 		CheckDestroy:             testCheckEdgeConfigDeleted(testClient(t), "vercel_edge_config.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceEdgeConfig(name, teamIDConfig(t)),
+				Config: cfg(testAccResourceEdgeConfig(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckEdgeConfigExists(testClient(t), testTeam(t), "vercel_edge_config.test"),
 					resource.TestCheckResourceAttr("vercel_edge_config.test", "name", name),
@@ -65,7 +65,7 @@ func TestAcc_EdgeConfigResource(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccResourceEdgeConfigUpdated(name, teamIDConfig(t)),
+				Config: cfg(testAccResourceEdgeConfigUpdated(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckEdgeConfigExists(testClient(t), testTeam(t), "vercel_edge_config.test"),
 					resource.TestCheckResourceAttr("vercel_edge_config.test", "name", fmt.Sprintf("%s-updated", name)),
@@ -76,20 +76,18 @@ func TestAcc_EdgeConfigResource(t *testing.T) {
 	})
 }
 
-func testAccResourceEdgeConfig(name, team string) string {
+func testAccResourceEdgeConfig(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test" {
     name         = "%[1]s"
-    %[2]s
 }
-`, name, team)
+`, name)
 }
 
-func testAccResourceEdgeConfigUpdated(name, team string) string {
+func testAccResourceEdgeConfigUpdated(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test" {
     name         = "%[1]s-updated"
-    %[2]s
 }
-`, name, team)
+`, name)
 }

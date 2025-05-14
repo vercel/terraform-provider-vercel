@@ -15,21 +15,21 @@ func TestAcc_ProjectMembers(t *testing.T) {
 		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectMembersConfig(projectSuffix, teamIDConfig(t)),
+				Config: cfg(testAccProjectMembersConfig(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_members.test", "project_id"),
 					resource.TestCheckResourceAttr("vercel_project_members.test", "members.#", "1"),
 				),
 			},
 			{
-				Config: testAccProjectMembersConfigUpdated(projectSuffix, teamIDConfig(t)),
+				Config: cfg(testAccProjectMembersConfigUpdated(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_members.test", "project_id"),
 					resource.TestCheckResourceAttr("vercel_project_members.test", "members.#", "2"),
 				),
 			},
 			{
-				Config: testAccProjectMembersConfigUpdatedAgain(projectSuffix, teamIDConfig(t)),
+				Config: cfg(testAccProjectMembersConfigUpdatedAgain(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project_members.test", "project_id"),
 					resource.TestCheckResourceAttr("vercel_project_members.test", "members.#", "1"),
@@ -39,35 +39,31 @@ func TestAcc_ProjectMembers(t *testing.T) {
 	})
 }
 
-func testAccProjectMembersConfig(projectSuffix string, teamIDConfig string) string {
+func testAccProjectMembersConfig(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-project-members-%[1]s"
-  %[2]s
 }
 
 resource "vercel_project_members" "test" {
   project_id = vercel_project.test.id
-  %[2]s
 
   members = [{
     email = "doug+test2@vercel.com"
     role  = "PROJECT_VIEWER"
   }]
 }
-`, projectSuffix, teamIDConfig)
+`, projectSuffix)
 }
 
-func testAccProjectMembersConfigUpdated(projectSuffix string, teamIDConfig string) string {
+func testAccProjectMembersConfigUpdated(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-project-members-%[1]s"
-  %[2]s
 }
 
 resource "vercel_project_members" "test" {
   project_id = vercel_project.test.id
-  %[2]s
 
   members = [{
       email = "doug+test2@vercel.com"
@@ -79,19 +75,17 @@ resource "vercel_project_members" "test" {
     }
   ]
 }
-`, projectSuffix, teamIDConfig)
+`, projectSuffix)
 }
 
-func testAccProjectMembersConfigUpdatedAgain(projectSuffix string, teamIDConfig string) string {
+func testAccProjectMembersConfigUpdatedAgain(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-project-members-%[1]s"
-  %[2]s
 }
 
 resource "vercel_project_members" "test" {
   project_id = vercel_project.test.id
-  %[2]s
 
   members = [
     {
@@ -100,5 +94,5 @@ resource "vercel_project_members" "test" {
     }
   ]
 }
-`, projectSuffix, teamIDConfig)
+`, projectSuffix)
 }

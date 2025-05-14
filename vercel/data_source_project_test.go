@@ -14,7 +14,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectDataSourceConfig(name, teamIDConfig(t), testGithubRepo(t)),
+				Config: cfg(testAccProjectDataSourceConfig(name, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_project.test", "name", "test-acc-"+name),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "build_command", "npm run build"),
@@ -65,7 +65,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectDataSourceConfig(name, teamID, githubRepo string) string {
+func testAccProjectDataSourceConfig(name, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-%s"
@@ -99,7 +99,6 @@ resource "vercel_project" "test" {
       }
     ]
   }
-  %s
   environment = [
     {
       key    = "foo"
@@ -124,7 +123,7 @@ resource "vercel_project" "test" {
   skew_protection = "7 days"
   git_repository = {
     type = "github"
-    repo = "%[3]s"
+    repo = "%[2]s"
     deploy_hooks = [
         {
             ref = "main"
@@ -146,7 +145,6 @@ resource "vercel_project" "test" {
 
 data "vercel_project" "test" {
     name = vercel_project.test.name
-    %[2]s
 }
-`, name, teamID, githubRepo)
+`, name, githubRepo)
 }

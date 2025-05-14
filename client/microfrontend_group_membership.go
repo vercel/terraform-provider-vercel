@@ -36,9 +36,9 @@ func (c *Client) GetMicrofrontendGroupMembership(ctx context.Context, TeamID str
 	tflog.Info(ctx, "getting microfrontend group", map[string]any{
 		"project_id": ProjectID,
 		"group_id":   GroupID,
-		"team_id":    c.teamID(TeamID),
+		"team_id":    c.TeamID(TeamID),
 	})
-	group, err := c.GetMicrofrontendGroup(ctx, GroupID, c.teamID(TeamID))
+	group, err := c.GetMicrofrontendGroup(ctx, GroupID, c.TeamID(TeamID))
 	if err != nil {
 		return r, err
 	}
@@ -57,7 +57,7 @@ func (c *Client) AddOrUpdateMicrofrontendGroupMembership(ctx context.Context, re
 	})
 	p, err := c.PatchMicrofrontendGroupMembership(ctx, MicrofrontendGroupMembership{
 		ProjectID:                       request.ProjectID,
-		TeamID:                          c.teamID(request.TeamID),
+		TeamID:                          c.TeamID(request.TeamID),
 		Enabled:                         true,
 		IsDefaultApp:                    request.IsDefaultApp,
 		DefaultRoute:                    request.DefaultRoute,
@@ -74,11 +74,11 @@ func (c *Client) RemoveMicrofrontendGroupMembership(ctx context.Context, request
 	tflog.Info(ctx, "removing microfrontend project from group", map[string]any{
 		"project_id": request.ProjectID,
 		"group_id":   request.MicrofrontendGroupID,
-		"team_id":    c.teamID(request.TeamID),
+		"team_id":    c.TeamID(request.TeamID),
 	})
 	p, err := c.PatchMicrofrontendGroupMembership(ctx, MicrofrontendGroupMembership{
 		ProjectID:            request.ProjectID,
-		TeamID:               c.teamID(request.TeamID),
+		TeamID:               c.TeamID(request.TeamID),
 		Enabled:              false,
 		MicrofrontendGroupID: request.MicrofrontendGroupID,
 	})
@@ -107,8 +107,8 @@ func (c *Client) PatchMicrofrontendGroupMembership(ctx context.Context, request 
 			Enabled:   request.Enabled,
 		}))
 	}
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 
 	tflog.Info(ctx, "updating microfrontend group membership", map[string]any{
@@ -128,7 +128,7 @@ func (c *Client) PatchMicrofrontendGroupMembership(ctx context.Context, request 
 	return MicrofrontendGroupMembership{
 		MicrofrontendGroupID:            request.MicrofrontendGroupID,
 		ProjectID:                       request.ProjectID,
-		TeamID:                          c.teamID(request.TeamID),
+		TeamID:                          c.TeamID(request.TeamID),
 		Enabled:                         apiResponse.Microfrontends.Enabled,
 		IsDefaultApp:                    apiResponse.Microfrontends.IsDefaultApp,
 		DefaultRoute:                    apiResponse.Microfrontends.DefaultRoute,

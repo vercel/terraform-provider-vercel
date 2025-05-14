@@ -196,8 +196,8 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 		request.GitSource = &gitSource
 	}
 	url := fmt.Sprintf("%s/v12/now/deployments?skipAutoDetectionConfirmation=1", c.baseURL)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s&teamId=%s", url, c.TeamID(teamID))
 	}
 	payload := string(mustMarshal(request))
 
@@ -259,8 +259,8 @@ type DeleteDeploymentResponse struct {
 // DeleteDeployment deletes a deployment within Vercel.
 func (c *Client) DeleteDeployment(ctx context.Context, deploymentID string, teamID string) (r DeleteDeploymentResponse, err error) {
 	url := fmt.Sprintf("%s/v13/deployments/%s", c.baseURL, deploymentID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "deleting deployment", map[string]any{
@@ -278,8 +278,8 @@ func (c *Client) DeleteDeployment(ctx context.Context, deploymentID string, team
 // GetDeployment retrieves information from Vercel about an existing Deployment.
 func (c *Client) GetDeployment(ctx context.Context, deploymentID, teamID string) (r DeploymentResponse, err error) {
 	url := fmt.Sprintf("%s/v13/deployments/%s", c.baseURL, deploymentID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "getting deployment", map[string]any{
@@ -291,6 +291,6 @@ func (c *Client) GetDeployment(ctx context.Context, deploymentID, teamID string)
 		url:    url,
 		body:   "",
 	}, &r)
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }

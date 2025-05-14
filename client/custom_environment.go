@@ -31,8 +31,8 @@ type CustomEnvironmentResponse struct {
 
 func (c *Client) CreateCustomEnvironment(ctx context.Context, request CreateCustomEnvironmentRequest) (res CustomEnvironmentResponse, err error) {
 	url := fmt.Sprintf("%s/v1/projects/%s/custom-environments", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "creating custom environment", map[string]any{
@@ -48,7 +48,7 @@ func (c *Client) CreateCustomEnvironment(ctx context.Context, request CreateCust
 	if err != nil {
 		return res, err
 	}
-	res.TeamID = c.teamID(request.TeamID)
+	res.TeamID = c.TeamID(request.TeamID)
 	res.ProjectID = request.ProjectID
 	return res, nil
 }
@@ -61,8 +61,8 @@ type GetCustomEnvironmentRequest struct {
 
 func (c *Client) GetCustomEnvironment(ctx context.Context, request GetCustomEnvironmentRequest) (res CustomEnvironmentResponse, err error) {
 	url := fmt.Sprintf("%s/v1/projects/%s/custom-environments/%s", c.baseURL, request.ProjectID, request.Slug)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	tflog.Info(ctx, "getting custom environment", map[string]any{
 		"url": url,
@@ -75,7 +75,7 @@ func (c *Client) GetCustomEnvironment(ctx context.Context, request GetCustomEnvi
 	if err != nil {
 		return res, err
 	}
-	res.TeamID = c.teamID(request.TeamID)
+	res.TeamID = c.TeamID(request.TeamID)
 	res.ProjectID = request.ProjectID
 	return res, nil
 
@@ -92,8 +92,8 @@ type UpdateCustomEnvironmentRequest struct {
 
 func (c *Client) UpdateCustomEnvironment(ctx context.Context, request UpdateCustomEnvironmentRequest) (res CustomEnvironmentResponse, err error) {
 	url := fmt.Sprintf("%s/v1/projects/%s/custom-environments/%s", c.baseURL, request.ProjectID, request.OldSlug)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "updating custom environment", map[string]any{
@@ -109,7 +109,7 @@ func (c *Client) UpdateCustomEnvironment(ctx context.Context, request UpdateCust
 	if err != nil {
 		return res, err
 	}
-	res.TeamID = c.teamID(request.TeamID)
+	res.TeamID = c.TeamID(request.TeamID)
 	res.ProjectID = request.ProjectID
 	return res, nil
 }
@@ -122,8 +122,8 @@ type DeleteCustomEnvironmentRequest struct {
 
 func (c *Client) DeleteCustomEnvironment(ctx context.Context, request DeleteCustomEnvironmentRequest) error {
 	url := fmt.Sprintf("%s/v1/projects/%s/custom-environments/%s", c.baseURL, request.ProjectID, request.Slug)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	tflog.Info(ctx, "deleting custom environment", map[string]any{
 		"url": url,

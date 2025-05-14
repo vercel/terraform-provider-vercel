@@ -67,14 +67,14 @@ func TestAcc_SharedEnvironmentVariableProjectLink(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccSharedEnvironmentVariableProjectLinkSetup(name, teamIDConfig(t)),
+				Config: cfg(testAccSharedEnvironmentVariableProjectLinkSetup(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
 					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
 				),
 			},
 			{
-				Config: testAccSharedEnvironmentVariableProjectLinkAdd1(name, teamIDConfig(t)),
+				Config: cfg(testAccSharedEnvironmentVariableProjectLinkAdd1(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
 					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
@@ -82,7 +82,7 @@ func TestAcc_SharedEnvironmentVariableProjectLink(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccSharedEnvironmentVariableProjectLinkDrop1(name, teamIDConfig(t)),
+				Config: cfg(testAccSharedEnvironmentVariableProjectLinkDrop1(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
 					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
@@ -93,114 +93,96 @@ func TestAcc_SharedEnvironmentVariableProjectLink(t *testing.T) {
 	})
 }
 
-func testAccSharedEnvironmentVariableProjectLinkSetup(name, team string) string {
+func testAccSharedEnvironmentVariableProjectLinkSetup(name string) string {
 	return fmt.Sprintf(`
 data "vercel_shared_environment_variable" "test" {
     key = "TEST_SHARED_ENV_VAR"
-		target = ["production", "preview", "development"]
-    %[2]s
+	target = ["production", "preview", "development"]
 }
 
 resource "vercel_project" "test0" {
     name = "test-acc-shared-env-0-%[1]s"
-    %[2]s
 }
 
 resource "vercel_project" "test1" {
     name = "test-acc-shared-env-1-%[1]s"
-    %[2]s
 }
 
 resource "vercel_shared_environment_variable_project_link" "test0" {
     shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
     project_id                     = vercel_project.test0.id
-    %[2]s
 }
 
 resource "vercel_shared_environment_variable_project_link" "test1" {
     shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
     project_id                     = vercel_project.test1.id
-    %[2]s
 }
-`, name, team)
+`, name)
 }
 
-func testAccSharedEnvironmentVariableProjectLinkAdd1(name, team string) string {
+func testAccSharedEnvironmentVariableProjectLinkAdd1(name string) string {
 	return fmt.Sprintf(`
 data "vercel_shared_environment_variable" "test" {
     key = "TEST_SHARED_ENV_VAR"
-		target = ["production", "preview", "development"]
-    %[2]s
+	target = ["production", "preview", "development"]
 }
 
 resource "vercel_project" "test0" {
     name = "test-acc-shared-env-0-%[1]s"
-    %[2]s
 }
 
 resource "vercel_project" "test1" {
     name = "test-acc-shared-env-1-%[1]s"
-    %[2]s
 }
 
 resource "vercel_project" "test2" {
     name = "test-acc-shared-env-2-%[1]s"
-    %[2]s
 }
 
 resource "vercel_shared_environment_variable_project_link" "test0" {
     shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
     project_id                     = vercel_project.test0.id
-    %[2]s
 }
 
 resource "vercel_shared_environment_variable_project_link" "test1" {
     shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
     project_id                     = vercel_project.test1.id
-    %[2]s
 }
 
 resource "vercel_shared_environment_variable_project_link" "test2" {
     shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
     project_id                     = vercel_project.test2.id
-    %[2]s
 }
-`, name, team)
+`, name)
 }
 
-func testAccSharedEnvironmentVariableProjectLinkDrop1(name, team string) string {
+func testAccSharedEnvironmentVariableProjectLinkDrop1(name string) string {
 	return fmt.Sprintf(`
 data "vercel_shared_environment_variable" "test" {
     key = "TEST_SHARED_ENV_VAR"
-		target = ["production", "preview", "development"]
-    %[2]s
+	target = ["production", "preview", "development"]
 }
 
 resource "vercel_project" "test0" {
     name = "test-acc-shared-env-0-%[1]s"
-    %[2]s
 }
 
 resource "vercel_project" "test1" {
     name = "test-acc-shared-env-1-%[1]s"
-    %[2]s
 }
 
 resource "vercel_project" "test2" {
     name = "test-acc-shared-env-2-%[1]s"
-    %[2]s
 }
 
 resource "vercel_shared_environment_variable_project_link" "test0" {
     shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
     project_id                     = vercel_project.test0.id
-    %[2]s
 }
 
 resource "vercel_shared_environment_variable_project_link" "test1" {
     shared_environment_variable_id = data.vercel_shared_environment_variable.test.id
     project_id                     = vercel_project.test1.id
-    %[2]s
 }
-`, name, team)
+`, name)
 }

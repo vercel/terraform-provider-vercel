@@ -61,8 +61,8 @@ func (c *Client) findConflictingSharedEnvID(ctx context.Context, request CreateS
 // CreateSharedEnvironmentVariable will create a brand new shared environment variable if one does not exist.
 func (c *Client) CreateSharedEnvironmentVariable(ctx context.Context, request CreateSharedEnvironmentVariableRequest) (e SharedEnvironmentVariableResponse, err error) {
 	url := fmt.Sprintf("%s/v1/env", c.baseURL)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request.EnvironmentVariable))
 	tflog.Info(ctx, "creating shared environment variable", map[string]any{
@@ -99,8 +99,8 @@ func (c *Client) CreateSharedEnvironmentVariable(ctx context.Context, request Cr
 // DeleteSharedEnvironmentVariable will remove a shared environment variable from Vercel.
 func (c *Client) DeleteSharedEnvironmentVariable(ctx context.Context, teamID, variableID string) error {
 	url := fmt.Sprintf("%s/v1/env", c.baseURL)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	payload := string(mustMarshal(struct {
 		IDs []string `json:"ids"`
@@ -122,8 +122,8 @@ func (c *Client) DeleteSharedEnvironmentVariable(ctx context.Context, teamID, va
 
 func (c *Client) GetSharedEnvironmentVariable(ctx context.Context, teamID, envID string) (e SharedEnvironmentVariableResponse, err error) {
 	url := fmt.Sprintf("%s/v1/env/%s", c.baseURL, envID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "getting shared environment variable", map[string]any{
@@ -135,14 +135,14 @@ func (c *Client) GetSharedEnvironmentVariable(ctx context.Context, teamID, envID
 		url:    url,
 		body:   "",
 	}, &e)
-	e.TeamID = c.teamID(teamID)
+	e.TeamID = c.TeamID(teamID)
 	return e, err
 }
 
 func (c *Client) ListSharedEnvironmentVariables(ctx context.Context, teamID string) ([]SharedEnvironmentVariableResponse, error) {
 	url := fmt.Sprintf("%s/v1/env/all", c.baseURL)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "listing shared environment variables", map[string]any{
@@ -158,7 +158,7 @@ func (c *Client) ListSharedEnvironmentVariables(ctx context.Context, teamID stri
 		body:   "",
 	}, &res)
 	for i := 0; i < len(res.Data); i++ {
-		res.Data[i].TeamID = c.teamID(teamID)
+		res.Data[i].TeamID = c.TeamID(teamID)
 	}
 	return res.Data, err
 }
@@ -181,8 +181,8 @@ type UpdateSharedEnvironmentVariableRequest struct {
 
 func (c *Client) UpdateSharedEnvironmentVariable(ctx context.Context, request UpdateSharedEnvironmentVariableRequest) (e SharedEnvironmentVariableResponse, err error) {
 	url := fmt.Sprintf("%s/v1/env", c.baseURL)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(struct {
 		Updates map[string]UpdateSharedEnvironmentVariableRequest `json:"updates"`

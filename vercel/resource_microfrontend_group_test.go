@@ -42,7 +42,7 @@ func testCheckMicrofrontendGroupDeleted(testClient *client.Client, n, teamID str
 		if err == nil {
 			return fmt.Errorf("expected not_found error, but got no error")
 		}
-		if !(err.Error() == "microfrontend group not found") {
+		if err.Error() != "microfrontend group not found" {
 			return fmt.Errorf("Unexpected error checking for deleted microfrontend group: %s", err)
 		}
 
@@ -57,28 +57,24 @@ func TestAcc_MicrofrontendGroupResource(t *testing.T) {
 		CheckDestroy:             testCheckMicrofrontendGroupDeleted(testClient(t), "vercel_microfrontend_group.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(`
+				Config: cfg(fmt.Sprintf(`
 				resource "vercel_project" "test" {
 				  name = "test-acc-project-%[1]s"
-				  %[2]s
 				}
 				resource "vercel_project" "test-2" {
 				  name = "test-acc-project-2-%[1]s"
-				  %[2]s
 				}
 				resource "vercel_microfrontend_group" "test" {
 					name         = "test-acc-microfrontend-group-%[1]s"
 					default_app  = {
 						project_id = vercel_project.test.id
 					}
-					%[2]s
 				}
 				resource "vercel_microfrontend_group_membership" "test-2" {
 					project_id             = vercel_project.test-2.id
 					microfrontend_group_id = vercel_microfrontend_group.test.id
-					%[2]s
 				}
-				`, name, teamIDConfig(t)),
+				`, name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckMicrofrontendGroupExists(testClient(t), testTeam(t), "vercel_microfrontend_group.test"),
 					resource.TestCheckResourceAttr("vercel_microfrontend_group.test", "name", "test-acc-microfrontend-group-"+name),

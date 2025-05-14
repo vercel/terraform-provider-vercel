@@ -23,8 +23,8 @@ type createAliasResponse struct {
 // UpsertAlias creates an alias within Vercel.
 func (c *Client) UpsertAlias(ctx context.Context, request UpsertAliasRequest) (r AliasResponse, err error) {
 	url := fmt.Sprintf("%s/v2/deployments/%s/aliases", c.baseURL, request.DeploymentID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 
@@ -47,7 +47,7 @@ func (c *Client) UpsertAlias(ctx context.Context, request UpsertAliasRequest) (r
 		UID:          aliasResponse.UID,
 		Alias:        aliasResponse.Alias,
 		DeploymentID: request.DeploymentID,
-		TeamID:       c.teamID(request.TeamID),
+		TeamID:       c.TeamID(request.TeamID),
 	}, nil
 }
 
@@ -59,8 +59,8 @@ type DeleteAliasResponse struct {
 // DeleteAlias deletes an alias within Vercel.
 func (c *Client) DeleteAlias(ctx context.Context, aliasUID string, teamID string) (r DeleteAliasResponse, err error) {
 	url := fmt.Sprintf("%s/v2/aliases/%s", c.baseURL, aliasUID)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 
 	tflog.Info(ctx, "deleting alias", map[string]any{
@@ -86,8 +86,8 @@ type AliasResponse struct {
 // GetAlias retrieves information about an existing alias from vercel.
 func (c *Client) GetAlias(ctx context.Context, alias, teamID string) (r AliasResponse, err error) {
 	url := fmt.Sprintf("%s/v4/aliases/%s", c.baseURL, alias)
-	if c.teamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(teamID))
+	if c.TeamID(teamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "getting alias", map[string]any{
 		"url": url,
@@ -98,6 +98,6 @@ func (c *Client) GetAlias(ctx context.Context, alias, teamID string) (r AliasRes
 		url:    url,
 		body:   "",
 	}, &r)
-	r.TeamID = c.teamID(teamID)
+	r.TeamID = c.TeamID(teamID)
 	return r, err
 }

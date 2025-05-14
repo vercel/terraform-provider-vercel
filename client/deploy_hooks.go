@@ -24,8 +24,8 @@ type CreateDeployHookRequest struct {
 
 func (c *Client) CreateDeployHook(ctx context.Context, request CreateDeployHookRequest) (h DeployHook, err error) {
 	url := fmt.Sprintf("%s/v2/projects/%s/deploy-hooks", c.baseURL, request.ProjectID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "creating deploy hook", map[string]any{
@@ -63,8 +63,8 @@ type DeleteDeployHookRequest struct {
 
 func (c *Client) DeleteDeployHook(ctx context.Context, request DeleteDeployHookRequest) error {
 	url := fmt.Sprintf("%s/v2/projects/%s/deploy-hooks/%s", c.baseURL, request.ProjectID, request.ID)
-	if c.teamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.teamID(request.TeamID))
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "creating deploy hook", map[string]any{

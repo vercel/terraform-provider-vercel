@@ -21,7 +21,7 @@ func TestAcc_AccessGroupResource(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResourceAccessGroup(teamIDConfig(t), name),
+				Config: cfg(testAccResourceAccessGroup(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckAccessGroupExists(testClient(t), testTeam(t), "vercel_access_group.test"),
 					resource.TestCheckResourceAttrSet("vercel_access_group.test", "id"),
@@ -34,7 +34,7 @@ func TestAcc_AccessGroupResource(t *testing.T) {
 				ImportStateIdFunc: getAccessGroupImportID("vercel_access_group.test"),
 			},
 			{
-				Config: testAccResourceAccessGroupUpdated(teamIDConfig(t), name),
+				Config: cfg(testAccResourceAccessGroupUpdated(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckAccessGroupExists(testClient(t), testTeam(t), "vercel_access_group.test"),
 					resource.TestCheckResourceAttrSet("vercel_access_group.test", "id"),
@@ -113,20 +113,18 @@ func testCheckAccessGroupDoesNotExist(testClient *client.Client, teamID string, 
 	}
 }
 
-func testAccResourceAccessGroup(teamIDConfig string, name string) string {
+func testAccResourceAccessGroup(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
-  %[1]s
-  name = "test-acc-%[2]s"
+  name = "test-acc-%[1]s"
 }
-`, teamIDConfig, name)
+`, name)
 }
 
-func testAccResourceAccessGroupUpdated(teamIDConfig string, name string) string {
+func testAccResourceAccessGroupUpdated(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_access_group" "test" {
-  %[1]s
-  name  = "test-acc-%[2]s-updated"
+  name  = "test-acc-%[1]s-updated"
 }
-`, teamIDConfig, name)
+`, name)
 }
