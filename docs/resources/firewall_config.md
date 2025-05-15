@@ -162,6 +162,11 @@ resource "vercel_firewall_config" "managed" {
       action = "log"
       active = true
     }
+
+    ai_bots {
+      action = "log"
+      active = true
+    }
   }
 }
 
