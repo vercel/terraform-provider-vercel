@@ -156,15 +156,23 @@ func (r *ProjectResponse) Repository() *Repository {
 	return nil
 }
 
+type ConnectConfigurationResponse struct {
+	Environment            string `json:"envId"`
+	ConnectConfigurationID string `json:"connectConfigurationId"`
+	Passive                bool   `json:"passive"`
+	BuildsEnabled          bool   `json:"buildsEnabled"`
+}
+
 // ProjectResponse defines the information Vercel returns about a project.
 type ProjectResponse struct {
-	BuildCommand                *string `json:"buildCommand"`
-	CommandForIgnoringBuildStep *string `json:"commandForIgnoringBuildStep"`
-	DevCommand                  *string `json:"devCommand"`
-	Framework                   *string `json:"framework"`
-	ID                          string  `json:"id"`
-	TeamID                      string  `json:"-"`
-	InstallCommand              *string `json:"installCommand"`
+	BuildCommand                *string                        `json:"buildCommand"`
+	CommandForIgnoringBuildStep *string                        `json:"commandForIgnoringBuildStep"`
+	ConnectConfigurations       []ConnectConfigurationResponse `json:"connectConfigurations"`
+	DevCommand                  *string                        `json:"devCommand"`
+	Framework                   *string                        `json:"framework"`
+	ID                          string                         `json:"id"`
+	TeamID                      string                         `json:"-"`
+	InstallCommand              *string                        `json:"installCommand"`
 	Link                        *struct {
 		Type string `json:"type"`
 		// github
@@ -343,6 +351,45 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 	}
 
 	r.TeamID = c.TeamID(teamID)
+	return r, err
+}
+
+// UpdateProjectSecureComputeNetworksRequest allows updating the Secure Compute Networks for a project.
+type UpdateProjectSecureComputeNetworksRequest struct {
+	TeamID                string                        `json:"-"`
+	ProjectID             string                        `json:"-"`
+	SecureComputeNetworks []ConnectConfigurationRequest `json:"connectConfigurations"`
+}
+
+type ConnectConfigurationRequest struct {
+	Environment            string `json:"envId"`
+	ConnectConfigurationID string `json:"connectConfigurationId"`
+	Passive                bool   `json:"passive"`
+	BuildsEnabled          bool   `json:"buildsEnabled"`
+}
+
+// UpdateProjectSecureComputeNetworks updates an existing projects connectConfigurations within Vercel.
+func (c *Client) UpdateProjectSecureComputeNetworks(ctx context.Context, request UpdateProjectSecureComputeNetworksRequest) (r ProjectResponse, err error) {
+	url := fmt.Sprintf("%s/v9/projects/%s", c.baseURL, request.ProjectID)
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
+	}
+	payload := string(mustMarshal(request))
+	tflog.Info(ctx, "updating project", map[string]any{
+		"url":     url,
+		"payload": payload,
+	})
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PATCH",
+		url:    url,
+		body:   payload,
+	}, &r)
+	if err != nil {
+		return r, err
+	}
+
+	r.TeamID = c.TeamID(request.TeamID)
 	return r, err
 }
 
