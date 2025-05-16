@@ -162,6 +162,11 @@ resource "vercel_firewall_config" "managed" {
       action = "log"
       active = true
     }
+
+    ai_bots {
+      action = "log"
+      active = true
+    }
   }
 }
 
@@ -235,8 +240,18 @@ Read-Only:
 
 Optional:
 
+- `ai_bots` (Block, Optional) Enable the ai_bots managed ruleset and select action (see [below for nested schema](#nestedblock--managed_rulesets--ai_bots))
 - `bot_filter` (Block, Optional) Enable the bot_filter managed ruleset and select action (see [below for nested schema](#nestedblock--managed_rulesets--bot_filter))
 - `owasp` (Block, Optional) Enable the owasp managed rulesets and select ruleset behaviors (see [below for nested schema](#nestedblock--managed_rulesets--owasp))
+
+<a id="nestedblock--managed_rulesets--ai_bots"></a>
+### Nested Schema for `managed_rulesets.ai_bots`
+
+Optional:
+
+- `action` (String)
+- `active` (Boolean)
+
 
 <a id="nestedblock--managed_rulesets--bot_filter"></a>
 ### Nested Schema for `managed_rulesets.bot_filter`
