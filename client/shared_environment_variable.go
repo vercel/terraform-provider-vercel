@@ -8,14 +8,15 @@ import (
 )
 
 type SharedEnvironmentVariableResponse struct {
-	Key        string   `json:"key"`
-	TeamID     string   `json:"ownerId"`
-	ID         string   `json:"id,omitempty"`
-	Value      string   `json:"value"`
-	Type       string   `json:"type"`
-	Target     []string `json:"target"`
-	ProjectIDs []string `json:"projectId"`
-	Comment    string   `json:"comment"`
+	Key                          string   `json:"key"`
+	TeamID                       string   `json:"ownerId"`
+	ID                           string   `json:"id,omitempty"`
+	Value                        string   `json:"value"`
+	Type                         string   `json:"type"`
+	Target                       []string `json:"target"`
+	ProjectIDs                   []string `json:"projectId"`
+	Comment                      string   `json:"comment"`
+	ApplyToAllCustomEnvironments bool     `json:"applyToAllCustomEnvironments"`
 }
 
 type SharedEnvVarRequest struct {
@@ -25,10 +26,11 @@ type SharedEnvVarRequest struct {
 }
 
 type SharedEnvironmentVariableRequest struct {
-	Type                 string                `json:"type"`
-	ProjectIDs           []string              `json:"projectId"`
-	Target               []string              `json:"target"`
-	EnvironmentVariables []SharedEnvVarRequest `json:"evs"`
+	Type                         string                `json:"type"`
+	ProjectIDs                   []string              `json:"projectId"`
+	Target                       []string              `json:"target"`
+	ApplyToAllCustomEnvironments bool                  `json:"applyToAllCustomEnvironments"`
+	EnvironmentVariables         []SharedEnvVarRequest `json:"evs"`
 }
 
 type CreateSharedEnvironmentVariableRequest struct {
@@ -169,14 +171,15 @@ type UpdateSharedEnvironmentVariableRequestProjectIDUpdates struct {
 }
 
 type UpdateSharedEnvironmentVariableRequest struct {
-	Value            string                                                 `json:"value,omitempty"`
-	Type             string                                                 `json:"type,omitempty"`
-	ProjectIDs       []string                                               `json:"projectId,omitempty"`
-	ProjectIDUpdates UpdateSharedEnvironmentVariableRequestProjectIDUpdates `json:"projectIdUpdates,omitempty"`
-	Target           []string                                               `json:"target,omitempty"`
-	Comment          string                                                 `json:"comment,omitempty"`
-	TeamID           string                                                 `json:"-"`
-	EnvID            string                                                 `json:"-"`
+	Value                        string                                                 `json:"value,omitempty"`
+	Type                         string                                                 `json:"type,omitempty"`
+	ProjectIDs                   []string                                               `json:"projectId,omitempty"`
+	ProjectIDUpdates             UpdateSharedEnvironmentVariableRequestProjectIDUpdates `json:"projectIdUpdates,omitempty"`
+	ApplyToAllCustomEnvironments bool                                                   `json:"applyToAllCustomEnvironments,omitempty"`
+	Target                       []string                                               `json:"target,omitempty"`
+	Comment                      string                                                 `json:"comment,omitempty"`
+	TeamID                       string                                                 `json:"-"`
+	EnvID                        string                                                 `json:"-"`
 }
 
 func (c *Client) UpdateSharedEnvironmentVariable(ctx context.Context, request UpdateSharedEnvironmentVariableRequest) (e SharedEnvironmentVariableResponse, err error) {
