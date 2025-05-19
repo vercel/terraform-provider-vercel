@@ -18,6 +18,7 @@ func TestAcc_SharedEnvironmentVariableDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_shared_environment_variable.test", "key", "test_acc_"+name),
 					resource.TestCheckResourceAttr("data.vercel_shared_environment_variable.test", "value", "foobar"),
+					resource.TestCheckResourceAttr("data.vercel_shared_environment_variable.test", "apply_to_all_custom_environments", "true"),
 					resource.TestCheckTypeSetElemAttr("data.vercel_shared_environment_variable.test", "target.*", "production"),
 					resource.TestCheckTypeSetElemAttr("data.vercel_shared_environment_variable.test", "target.*", "preview"),
 					resource.TestCheckResourceAttr("data.vercel_shared_environment_variable.test", "sensitive", "false"),
@@ -49,6 +50,7 @@ resource "vercel_shared_environment_variable" "test" {
   value = "foobar"
   target = [ "production", "preview" ]
   project_ids = [ vercel_project.test.id ]
+  apply_to_all_custom_environments = true
 }
 
 data "vercel_shared_environment_variable" "test" {

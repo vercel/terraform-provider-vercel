@@ -160,20 +160,26 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					stringvalidator.LengthBetween(0, 1000),
 				},
 			},
+			"apply_to_all_custom_environments": schema.BoolAttribute{
+				Description: "Whether the shared environment variable should be applied to all custom environments in the linked projects.",
+				Optional:    true,
+				Computed:    true,
+			},
 		},
 	}
 }
 
 // SharedEnvironmentVariable reflects the state terraform stores internally for a project environment variable.
 type SharedEnvironmentVariable struct {
-	Target     types.Set    `tfsdk:"target"`
-	Key        types.String `tfsdk:"key"`
-	Value      types.String `tfsdk:"value"`
-	TeamID     types.String `tfsdk:"team_id"`
-	ProjectIDs types.Set    `tfsdk:"project_ids"`
-	ID         types.String `tfsdk:"id"`
-	Sensitive  types.Bool   `tfsdk:"sensitive"`
-	Comment    types.String `tfsdk:"comment"`
+	Target                       types.Set    `tfsdk:"target"`
+	Key                          types.String `tfsdk:"key"`
+	Value                        types.String `tfsdk:"value"`
+	TeamID                       types.String `tfsdk:"team_id"`
+	ProjectIDs                   types.Set    `tfsdk:"project_ids"`
+	ID                           types.String `tfsdk:"id"`
+	Sensitive                    types.Bool   `tfsdk:"sensitive"`
+	Comment                      types.String `tfsdk:"comment"`
+	ApplyToAllCustomEnvironments types.Bool   `tfsdk:"apply_to_all_custom_environments"`
 }
 
 func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics) (req client.CreateSharedEnvironmentVariableRequest, ok bool) {
@@ -201,9 +207,10 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx
 
 	return client.CreateSharedEnvironmentVariableRequest{
 		EnvironmentVariable: client.SharedEnvironmentVariableRequest{
-			Target:     target,
-			Type:       envVariableType,
-			ProjectIDs: projectIDs,
+			ApplyToAllCustomEnvironments: e.ApplyToAllCustomEnvironments.ValueBool(),
+			Target:                       target,
+			Type:                         envVariableType,
+			ProjectIDs:                   projectIDs,
 			EnvironmentVariables: []client.SharedEnvVarRequest{
 				{
 					Key:     e.Key.ValueString(),
@@ -238,13 +245,14 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx
 		envVariableType = "encrypted"
 	}
 	return client.UpdateSharedEnvironmentVariableRequest{
-		Value:      e.Value.ValueString(),
-		Target:     target,
-		Type:       envVariableType,
-		TeamID:     e.TeamID.ValueString(),
-		EnvID:      e.ID.ValueString(),
-		ProjectIDs: projectIDs,
-		Comment:    e.Comment.ValueString(),
+		ApplyToAllCustomEnvironments: e.ApplyToAllCustomEnvironments.ValueBool(),
+		Value:                        e.Value.ValueString(),
+		Target:                       target,
+		Type:                         envVariableType,
+		TeamID:                       e.TeamID.ValueString(),
+		EnvID:                        e.ID.ValueString(),
+		ProjectIDs:                   projectIDs,
+		Comment:                      e.Comment.ValueString(),
 	}, true
 }
 
@@ -268,14 +276,15 @@ func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmen
 	}
 
 	return SharedEnvironmentVariable{
-		Target:     types.SetValueMust(types.StringType, target),
-		Key:        types.StringValue(response.Key),
-		Value:      value,
-		ProjectIDs: types.SetValueMust(types.StringType, projectIDs),
-		TeamID:     toTeamID(response.TeamID),
-		ID:         types.StringValue(response.ID),
-		Sensitive:  types.BoolValue(response.Type == "sensitive"),
-		Comment:    types.StringValue(response.Comment),
+		ApplyToAllCustomEnvironments: types.BoolValue(response.ApplyToAllCustomEnvironments),
+		Target:                       types.SetValueMust(types.StringType, target),
+		Key:                          types.StringValue(response.Key),
+		Value:                        value,
+		ProjectIDs:                   types.SetValueMust(types.StringType, projectIDs),
+		TeamID:                       toTeamID(response.TeamID),
+		ID:                           types.StringValue(response.ID),
+		Sensitive:                    types.BoolValue(response.Type == "sensitive"),
+		Comment:                      types.StringValue(response.Comment),
 	}
 }
 

@@ -139,6 +139,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "A comment explaining what the environment variable is for.",
 				Computed:    true,
 			},
+			"apply_to_all_custom_environments": schema.BoolAttribute{
+				Description: "Whether the Environment Variable should be applied to all custom environments.",
+				Computed:    true,
+			},
 		},
 	}
 }

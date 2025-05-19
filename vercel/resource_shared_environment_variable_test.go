@@ -42,6 +42,7 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", fmt.Sprintf("test_acc_foo_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "value", "bar"),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "comment", "Test comment for example"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "apply_to_all_custom_environments", "true"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "production"),
 
 					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.sensitive_example", testTeam(t)),
@@ -63,6 +64,7 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", fmt.Sprintf("test_acc_foo_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "value", "updated-bar"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "apply_to_all_custom_environments", "false"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "development"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "preview"),
 
@@ -113,6 +115,7 @@ resource "vercel_shared_environment_variable" "example" {
         vercel_project.example.id
     ]
     comment     = "Test comment for example"
+	apply_to_all_custom_environments = true
 }
 
 resource "vercel_shared_environment_variable" "sensitive_example" {
@@ -155,6 +158,7 @@ resource "vercel_shared_environment_variable" "example" {
         vercel_project.example.id,
         vercel_project.example2.id
     ]
+	apply_to_all_custom_environments = false
 }
 
 resource "vercel_shared_environment_variable" "sensitive_example" {
