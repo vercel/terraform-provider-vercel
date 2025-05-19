@@ -52,7 +52,7 @@ func (r *customCertificateResource) Configure(ctx context.Context, req resource.
 func (r *customCertificateResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: `
-Provides an Custom Certificate Resource, allowing Custom Certificates to be uploaded to Vercel.
+Provides a Custom Certificate Resource, allowing Custom Certificates to be uploaded to Vercel.
 
 By default, Vercel provides all domains with a custom SSL certificates. However, Enterprise teams can upload their own custom SSL certificate.
 
@@ -71,18 +71,18 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"private_key": schema.StringAttribute{
-				Description:   "The private key of the Certificate. Should start with -----BEGIN PRIVATE KEY-----  and end with -----END PRIVATE KEY-----",
+				Description:   "The private key of the Certificate. Should be in PEM format.",
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"certificate": schema.StringAttribute{
-				Description:   "The certificate itself. Should start with -----BEGIN CERTIFICATE----- and end with -----END CERTIFICATE-----",
+				Description:   "The certificate itself. Should be in PEM format.",
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"certificate_authority_certificate": schema.StringAttribute{
-				Description:   "The Certificate Authority root certificate such as one of Let's Encrypt's ISRG root certificates. This will be provided by your certificate issuer and is different to the core certificate. This may be included in their download process or available for download on their website. Should start with -----BEGIN CERTIFICATE----- and end with -----END CERTIFICATE-----",
-				Optional:      true,
+				Description:   "The Certificate Authority root certificate such as one of Let's Encrypt's ISRG root certificates. This will be provided by your certificate issuer and is different to the core certificate. This may be included in their download process or available for download on their website. Should be in PEM format.",
+				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 		},

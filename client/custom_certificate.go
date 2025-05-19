@@ -17,7 +17,7 @@ type CertificateResponse struct {
 }
 
 func (c *Client) UploadCustomCertificate(ctx context.Context, request UploadCustomCertificateRequest) (cr CertificateResponse, err error) {
-	url := fmt.Sprintf("%s/v7/certs", c.baseURL)
+	url := fmt.Sprintf("%s/v8/certs", c.baseURL)
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
@@ -38,7 +38,7 @@ type GetCustomCertificateRequest struct {
 }
 
 func (c *Client) GetCustomCertificate(ctx context.Context, request GetCustomCertificateRequest) (cr CertificateResponse, err error) {
-	url := fmt.Sprintf("%s/v7/certs/%s", c.baseURL, request.ID)
+	url := fmt.Sprintf("%s/v8/certs/%s", c.baseURL, request.ID)
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
@@ -58,7 +58,7 @@ type DeleteCustomCertificateRequest struct {
 }
 
 func (c *Client) DeleteCustomCertificate(ctx context.Context, request DeleteCustomCertificateRequest) error {
-	url := fmt.Sprintf("%s/v7/certs/%s", c.baseURL, request.ID)
+	url := fmt.Sprintf("%s/v8/certs/%s", c.baseURL, request.ID)
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}

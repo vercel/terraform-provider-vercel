@@ -3,14 +3,14 @@
 page_title: "vercel_custom_certificate Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  Provides an Custom Certificate Resource, allowing Custom Certificates to be uploaded to Vercel.
+  Provides a Custom Certificate Resource, allowing Custom Certificates to be uploaded to Vercel.
   By default, Vercel provides all domains with a custom SSL certificates. However, Enterprise teams can upload their own custom SSL certificate.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/domains/custom-SSL-certificate.
 ---
 
 # vercel_custom_certificate (Resource)
 
-Provides an Custom Certificate Resource, allowing Custom Certificates to be uploaded to Vercel.
+Provides a Custom Certificate Resource, allowing Custom Certificates to be uploaded to Vercel.
 
 By default, Vercel provides all domains with a custom SSL certificates. However, Enterprise teams can upload their own custom SSL certificate.
 
@@ -31,12 +31,12 @@ resource "vercel_custom_certificate" "example" {
 
 ### Required
 
-- `certificate` (String) The certificate itself. Should start with -----BEGIN CERTIFICATE----- and end with -----END CERTIFICATE-----
-- `private_key` (String) The private key of the Certificate. Should start with -----BEGIN PRIVATE KEY-----  and end with -----END PRIVATE KEY-----
+- `certificate` (String) The certificate itself. Should be in PEM format.
+- `certificate_authority_certificate` (String) The Certificate Authority root certificate such as one of Let's Encrypt's ISRG root certificates. This will be provided by your certificate issuer and is different to the core certificate. This may be included in their download process or available for download on their website. Should be in PEM format.
+- `private_key` (String) The private key of the Certificate. Should be in PEM format.
 
 ### Optional
 
-- `certificate_authority_certificate` (String) The Certificate Authority root certificate such as one of Let's Encrypt's ISRG root certificates. This will be provided by your certificate issuer and is different to the core certificate. This may be included in their download process or available for download on their website. Should start with -----BEGIN CERTIFICATE----- and end with -----END CERTIFICATE-----
 - `team_id` (String) The ID of the team the Custom Certificate should exist under. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
