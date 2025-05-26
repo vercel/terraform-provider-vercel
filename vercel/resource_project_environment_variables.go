@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -102,11 +101,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							// Sensitive:   true,
 						},
 						"target": schema.SetAttribute{
-							Optional:      true,
-							Computed:      true,
-							PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
-							Description:   "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.",
-							ElementType:   types.StringType,
+							Optional:    true,
+							Computed:    true,
+							Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.",
+							ElementType: types.StringType,
 							Validators: []validator.Set{
 								setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
 								setvalidator.SizeAtLeast(1),
@@ -117,11 +115,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							},
 						},
 						"custom_environment_ids": schema.SetAttribute{
-							Optional:      true,
-							Computed:      true,
-							ElementType:   types.StringType,
-							PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
-							Description:   "The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.",
+							Optional:    true,
+							Computed:    true,
+							ElementType: types.StringType,
+							Description: "The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.",
 							Validators: []validator.Set{
 								setvalidator.SizeAtLeast(1),
 								setvalidator.AtLeastOneOf(
