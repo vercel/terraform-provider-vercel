@@ -209,6 +209,12 @@ type ProjectResponse struct {
 	DeploymentExpiration                 *DeploymentExpiration       `json:"deploymentExpiration"`
 	ResourceConfig                       *ResourceConfigResponse     `json:"resourceConfig"`
 	NodeVersion                          string                      `json:"nodeVersion"`
+	Crons                                *ProjectCronsResponse       `json:"crons"`
+}
+
+type ProjectCronsResponse struct {
+	DisabledAt *int `json:"disabledAt"`
+	EnabledAt  int  `json:"enabled"`
 }
 
 type GitComments struct {
