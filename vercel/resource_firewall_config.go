@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -170,8 +171,26 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 							},
 						},
 					},
+					"bot_protection": schema.SingleNestedBlock{
+						Description: "Enable the bot_protection managed ruleset and select action",
+						Validators: []validator.Object{
+							objectvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("bot_filter")),
+						},
+						Attributes: map[string]schema.Attribute{
+							"active": schema.BoolAttribute{
+								Optional: true,
+							},
+							"action": schema.StringAttribute{
+								Optional: true,
+							},
+						},
+					},
 					"bot_filter": schema.SingleNestedBlock{
-						Description: "Enable the bot_filter managed ruleset and select action",
+						Description:        "DEPRECATED: Use bot_protection instead. This block will be removed in a future release.",
+						DeprecationMessage: "The 'bot_filter' block is deprecated. Please use 'bot_protection' instead.",
+						Validators: []validator.Object{
+							objectvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("bot_protection")),
+						},
 						Attributes: map[string]schema.Attribute{
 							"active": schema.BoolAttribute{
 								Optional: true,
@@ -465,9 +484,10 @@ type FirewallConfig struct {
 }
 
 type FirewallManagedRulesets struct {
-	OWASP     *CRSRule         `tfsdk:"owasp"`
-	BotFilter *BotFilterConfig `tfsdk:"bot_filter"`
-	AiBots    *AiBotsConfig    `tfsdk:"ai_bots"`
+	OWASP         *CRSRule             `tfsdk:"owasp"`
+	BotProtection *BotProtectionConfig `tfsdk:"bot_protection"`
+	BotFilter     *BotFilterConfig     `tfsdk:"bot_filter"` // Deprecated
+	AiBots        *AiBotsConfig        `tfsdk:"ai_bots"`
 }
 
 type CRSRule struct {
@@ -499,6 +519,11 @@ func (r *CRSRule) ToMap() map[string]*CRSRuleConfig {
 }
 
 type CRSRuleConfig struct {
+	Active types.Bool   `tfsdk:"active"`
+	Action types.String `tfsdk:"action"`
+}
+
+type BotProtectionConfig struct {
 	Active types.Bool   `tfsdk:"active"`
 	Action types.String `tfsdk:"action"`
 }
@@ -879,13 +904,22 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfi
 			cfg.ManagedRulesets.OWASP = fromCRS(conf.CRS, state.ManagedRulesets)
 		}
 
-		botFilter, botFilterExist := conf.ManagedRulesets["bot_filter"]
-		if botFilterExist {
-			botFilterConf := &BotFilterConfig{
-				Active: types.BoolValue(botFilter.Active),
-				Action: types.StringValue(botFilter.Action),
+		if state.ManagedRulesets != nil && state.ManagedRulesets.BotProtection != nil {
+			botFilter, botFilterExist := conf.ManagedRulesets["bot_filter"]
+			if botFilterExist {
+				cfg.ManagedRulesets.BotProtection = &BotProtectionConfig{
+					Active: types.BoolValue(botFilter.Active),
+					Action: types.StringValue(botFilter.Action),
+				}
 			}
-			cfg.ManagedRulesets.BotFilter = botFilterConf
+		} else if state.ManagedRulesets != nil && state.ManagedRulesets.BotFilter != nil {
+			botFilter, botFilterExist := conf.ManagedRulesets["bot_filter"]
+			if botFilterExist {
+				cfg.ManagedRulesets.BotFilter = &BotFilterConfig{
+					Active: types.BoolValue(botFilter.Active),
+					Action: types.StringValue(botFilter.Action),
+				}
+			}
 		}
 
 		aiBots, aiBotsExist := conf.ManagedRulesets["ai_bots"]
@@ -925,8 +959,15 @@ func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 			}
 		}
 
+		botProtection := f.ManagedRulesets.BotProtection
 		botFilter := f.ManagedRulesets.BotFilter
-		if botFilter != nil {
+
+		if botProtection != nil {
+			conf.ManagedRulesets["bot_protection"] = client.ManagedRule{
+				Active: botProtection.Active.ValueBool(),
+				Action: botProtection.Action.ValueString(),
+			}
+		} else if botFilter != nil {
 			conf.ManagedRulesets["bot_filter"] = client.ManagedRule{
 				Active: botFilter.Active.ValueBool(),
 				Action: botFilter.Action.ValueString(),
