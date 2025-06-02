@@ -143,7 +143,7 @@ resource "vercel_firewall_config" "managed" {
       gen  = { action = "deny" }
     }
 
-    bot_filter {
+    bot_protection {
       action = "log"
       active = true
     }
