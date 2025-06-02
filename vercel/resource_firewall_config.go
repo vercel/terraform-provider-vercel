@@ -170,8 +170,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 							},
 						},
 					},
-					"bot_filter": schema.SingleNestedBlock{
-						Description: "Enable the bot_filter managed ruleset and select action",
+					"bot_protection": schema.SingleNestedBlock{
+						Description: "Enable the bot_protection managed ruleset and select action",
 						Attributes: map[string]schema.Attribute{
 							"active": schema.BoolAttribute{
 								Optional: true,
@@ -465,9 +465,9 @@ type FirewallConfig struct {
 }
 
 type FirewallManagedRulesets struct {
-	OWASP     *CRSRule         `tfsdk:"owasp"`
-	BotFilter *BotFilterConfig `tfsdk:"bot_filter"`
-	AiBots    *AiBotsConfig    `tfsdk:"ai_bots"`
+	OWASP         *CRSRule             `tfsdk:"owasp"`
+	BotProtection *BotProtectionConfig `tfsdk:"bot_protection"`
+	AiBots        *AiBotsConfig        `tfsdk:"ai_bots"`
 }
 
 type CRSRule struct {
@@ -503,7 +503,7 @@ type CRSRuleConfig struct {
 	Action types.String `tfsdk:"action"`
 }
 
-type BotFilterConfig struct {
+type BotProtectionConfig struct {
 	Active types.Bool   `tfsdk:"active"`
 	Action types.String `tfsdk:"action"`
 }
@@ -879,13 +879,17 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfi
 			cfg.ManagedRulesets.OWASP = fromCRS(conf.CRS, state.ManagedRulesets)
 		}
 
-		botFilter, botFilterExist := conf.ManagedRulesets["bot_filter"]
-		if botFilterExist {
-			botFilterConf := &BotFilterConfig{
-				Active: types.BoolValue(botFilter.Active),
-				Action: types.StringValue(botFilter.Action),
+		// Accept both bot_filter (API) and bot_protection (future-proof)
+		botProtection, botProtectionExist := conf.ManagedRulesets["bot_filter"]
+		if !botProtectionExist {
+			botProtection, botProtectionExist = conf.ManagedRulesets["bot_protection"]
+		}
+		if botProtectionExist {
+			botProtectionConf := &BotProtectionConfig{
+				Active: types.BoolValue(botProtection.Active),
+				Action: types.StringValue(botProtection.Action),
 			}
-			cfg.ManagedRulesets.BotFilter = botFilterConf
+			cfg.ManagedRulesets.BotProtection = botProtectionConf
 		}
 
 		aiBots, aiBotsExist := conf.ManagedRulesets["ai_bots"]
@@ -925,11 +929,12 @@ func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 			}
 		}
 
-		botFilter := f.ManagedRulesets.BotFilter
-		if botFilter != nil {
-			conf.ManagedRulesets["bot_filter"] = client.ManagedRule{
-				Active: botFilter.Active.ValueBool(),
-				Action: botFilter.Action.ValueString(),
+		botProtection := f.ManagedRulesets.BotProtection
+		if botProtection != nil {
+			// Map to API field name
+			conf.ManagedRulesets["bot_protection"] = client.ManagedRule{
+				Active: botProtection.Active.ValueBool(),
+				Action: botProtection.Action.ValueString(),
 			}
 		}
 

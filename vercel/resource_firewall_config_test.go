@@ -170,12 +170,12 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"ip_rules.rule.2.hostname",
 						"*"),
 					resource.TestCheckResourceAttr(
-						"vercel_firewall_config.botfilter",
-						"managed_rulesets.bot_filter.action",
+						"vercel_firewall_config.botprotection",
+						"managed_rulesets.bot_protection.action",
 						"challenge"),
 					resource.TestCheckResourceAttr(
-						"vercel_firewall_config.botfilter",
-						"managed_rulesets.bot_filter.active",
+						"vercel_firewall_config.botprotection",
+						"managed_rulesets.bot_protection.active",
 						"true"),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.aibots",
@@ -204,8 +204,8 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 			},
 			{
 				ImportState:       true,
-				ResourceName:      "vercel_firewall_config.botfilter",
-				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.botfilter"),
+				ResourceName:      "vercel_firewall_config.botprotection",
+				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.botprotection"),
 			},
 			{
 				ImportState:       true,
@@ -356,12 +356,12 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"ip_rules.rule.2.hostname",
 						"*"),
 					resource.TestCheckResourceAttr(
-						"vercel_firewall_config.botfilter",
-						"managed_rulesets.bot_filter.action",
+						"vercel_firewall_config.botprotection",
+						"managed_rulesets.bot_protection.action",
 						"deny"),
 					resource.TestCheckResourceAttr(
-						"vercel_firewall_config.botfilter",
-						"managed_rulesets.bot_filter.active",
+						"vercel_firewall_config.botprotection",
+						"managed_rulesets.bot_protection.active",
 						"false"),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.aibots",
@@ -521,15 +521,15 @@ resource "vercel_firewall_config" "ips" {
     }
 }
 
-resource "vercel_project" "botfilter" {
-    name = "test-acc-%[1]s-botfilter"
+resource "vercel_project" "botprotection" {
+    name = "test-acc-%[1]s-botprotection"
 }
 
-resource "vercel_firewall_config" "botfilter" {
-    project_id = vercel_project.botfilter.id
+resource "vercel_firewall_config" "botprotection" {
+    project_id = vercel_project.botprotection.id
 
     managed_rulesets {
-        bot_filter {
+        bot_protection {
             action = "challenge"
             active = true
         }
@@ -714,15 +714,15 @@ resource "vercel_firewall_config" "neg" {
     }
 }
 
-resource "vercel_project" "botfilter" {
-    name = "test-acc-%[1]s-botfilter"
+resource "vercel_project" "botprotection" {
+    name = "test-acc-%[1]s-botprotection"
 }
 
-resource "vercel_firewall_config" "botfilter" {
-    project_id = vercel_project.botfilter.id
+resource "vercel_firewall_config" "botprotection" {
+    project_id = vercel_project.botprotection.id
 
     managed_rulesets {
-        bot_filter {
+        bot_protection {
             action = "deny"
             active = false
         }
