@@ -210,6 +210,7 @@ type ProjectResponse struct {
 	ResourceConfig                       *ResourceConfigResponse     `json:"resourceConfig"`
 	NodeVersion                          string                      `json:"nodeVersion"`
 	Crons                                *ProjectCronsResponse       `json:"crons"`
+	RollingRelease                       *ProjectRollingRelease      `json:"rollingRelease,omitempty"`
 }
 
 type ProjectCronsResponse struct {
