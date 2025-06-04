@@ -1,20 +1,21 @@
 # Vercel Terraform Provider
 
-- Website: https://www.terraform.io
-- Documentation: https://registry.terraform.io/providers/vercel/vercel/latest/docs
+- [Terraform Website](https://developer.hashicorp.com/terraform)
+- [Terraform Documentation for this Provider](https://registry.terraform.io/providers/vercel/vercel/latest/docs)
 
 ## Requirements
 
-- [Terraform](https://www.terraform.io/downloads.html) 1.1 or higher
+- [Terraform](https://developer.hashicorp.com/terraform/install) 1.1 or higher
 - [Go](https://golang.org/doc/install) 1.19 (to build the provider plugin)
-- [Task](https://taskfile.dev) v3 (to run Taskfile commands)
+- [GoReleaser](https://goreleaser.com/install)
+- [Task](https://taskfile.dev/installation) v3 (to run Taskfile commands)
 
 ## Building The Provider
 
 Clone repository locally and run
 
 ```sh
-$ task build
+task build
 ```
 
 ## Developing the Provider
@@ -24,27 +25,27 @@ If you wish to work on the provider, you'll first need [Go](http://www.golang.or
 To compile the provider, run `task build`. This will build the provider and put the provider binary in the repository root.
 
 ```sh
-$ task build
+task build
 ```
 
-In addition, you can run `task install` to set up a developer overrides in your ~/.terraformrc. This will then allow you to use your locally built provider binary.
+In addition, you can run `task install` to set up a developer overrides in your `~/.terraformrc`. This will then allow you to use your locally built provider binary.
 
 ```sh
-$ task install
+task install
 ```
 
 Create a `main.tf` file on your machine and use the [terraform cli](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli#install-terraform) to test
 
 ```sh
-$ terraform plan
-$ terraform apply
+terraform plan
+terraform apply
 ```
 
 When you are finished using a local version of the provider, running `task uninstall` will remove _all_ developer
 overrides.
 
 ```sh
-$ task uninstall
+task uninstall
 ```
 
 - HashiCorp - [Development Overrides for Provider developers](https://www.terraform.io/docs/cli/config/config-file.html#development-overrides-for-provider-developers).
@@ -53,41 +54,44 @@ $ task uninstall
 
 In order to test the provider, you can simply run `task test`.
 
-_Note:_ This runs acceptance tests that will create real resources. You should expect that the full acceptance test suite will take some time to run.
+> [!Note]
+> This runs acceptance tests that will create real resources. You should expect that the full acceptance test suite will take some time to run.
 
 The acceptance tests require a few environment variables to be set:
-* `VERCEL_API_TOKEN` - this can be generated [here](https://vercel.com/account/tokens)
-* `VERCEL_TERRAFORM_TESTING_TEAM` - a Vercel team_id where resources can be created and destroyed
-* `VERCEL_TERRAFORM_TESTING_GITHUB_REPO` - a GitHub repository in the form 'org/repo' that can be used to trigger deployments
-* `VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO` - a Bitbucket repository in the form 'project/repo' that can be used to trigger deployments
-* `VERCEL_TERRAFORM_TESTING_GITLAB_REPO` - a GitLab repository in the form 'project/repo' that can be used to trigger deployments
-* `VERCEL_TERRAFORM_TESTING_DOMAIN` - a Vercel testing domain that can be used for testing
-* `VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION` - a Vercel integration that can be used for testing
+
+- `VERCEL_API_TOKEN` - this can be generated at [vercel.com/account/tokens](https://vercel.com/account/tokens)
+- `VERCEL_TERRAFORM_TESTING_TEAM` - a Vercel team_id where resources can be created and destroyed
+- `VERCEL_TERRAFORM_TESTING_GITHUB_REPO` - a GitHub repository in the form 'org/repo' that can be used to trigger deployments
+- `VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO` - a Bitbucket repository in the form 'project/repo' that can be used to trigger deployments
+- `VERCEL_TERRAFORM_TESTING_GITLAB_REPO` - a GitLab repository in the form 'project/repo' that can be used to trigger deployments
+- `VERCEL_TERRAFORM_TESTING_DOMAIN` - a Vercel testing domain that can be used for testing
+- `VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION` - a Vercel integration that can be used for testing
 
 ```sh
-$ task test
+task test
 ```
 
-In order to run the tests with extra debugging context, prefix with `TF_LOG` (see the [terraform documentation](https://www.terraform.io/docs/internals/debugging.html) for details).
+In order to run the tests with extra debugging context, prefix with `TF_LOG` (see the [terraform documentation](https://developer.hashicorp.com/terraform/internals/debugging) for details).
 
 ```sh
-$ TF_LOG=INFO task test
+TF_LOG=INFO task test
 ```
 
 To run a specific set of tests, use the `-run` flag and specify a regex pattern matching the test names.
 
 ```sh
-$ task test -- -run 'TestAcc_Project*'
+task test -- -run 'TestAcc_Project*'
 ```
-
 
 ## Building The Documentation
 
 ```sh
-$ task docs
+task docs
 ```
+
 The documentation is autogenerated from Description fields within the provider, and the `examples` directory.
 Building the documentation generates markdown in the `docs` folder, ready for deployment to Hashicorp.
 
 - To view the documentation:
-  Paste `/docs` Markdown file content into https://registry.terraform.io/tools/doc-preview
+
+  Paste `/docs` Markdown file content into [https://registry.terraform.io/tools/doc-preview](https://registry.terraform.io/tools/doc-preview)
