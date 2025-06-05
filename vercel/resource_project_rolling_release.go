@@ -250,33 +250,33 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 
 // Delete deletes a Vercel project rolling release.
 func (r *projectRollingReleaseResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// var state ProjectRollingRelease
-	// diags := req.State.Get(ctx, &state)
-	// resp.Diagnostics.Append(diags...)
-	// if resp.Diagnostics.HasError() {
-	// 	return
-	// }
+	var state ProjectRollingRelease
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	// err := r.client.DeleteRollingRelease(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
-	// if client.NotFound(err) {
-	// 	return
-	// }
-	// if err != nil {
-	// 	resp.Diagnostics.AddError(
-	// 		"Error deleting project rolling release",
-	// 		fmt.Sprintf(
-	// 			"Could not delete project rolling release %s, unexpected error: %s",
-	// 			state.ProjectID.ValueString(),
-	// 			err,
-	// 		),
-	// 	)
-	// 	return
-	// }
+	err := r.client.DeleteRollingRelease(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
+	if client.NotFound(err) {
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting project rolling release",
+			fmt.Sprintf(
+				"Could not delete project rolling release %s, unexpected error: %s",
+				state.ProjectID.ValueString(),
+				err,
+			),
+		)
+		return
+	}
 
-	// tflog.Info(ctx, "deleted project rolling release", map[string]any{
-	// 	"team_id":    state.TeamID.ValueString(),
-	// 	"project_id": state.ProjectID.ValueString(),
-	// })
+	tflog.Info(ctx, "deleted project rolling release", map[string]any{
+		"team_id":    state.TeamID.ValueString(),
+		"project_id": state.ProjectID.ValueString(),
+	})
 }
 
 // Update updates the project rolling release of a Vercel project state.

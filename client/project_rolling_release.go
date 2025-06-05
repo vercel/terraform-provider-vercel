@@ -49,7 +49,7 @@ func (d RollingReleaseResponse) toRollingReleaseResponse(teamID string) RollingR
 
 // UpdateRollingRelease will update an existing rolling release to the latest information.
 func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRollingReleaseRequest) (RollingReleaseResponse, error) {
-	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config", c.baseURL, request.ProjectID)
+	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamid=%s", c.baseURL, request.ProjectID, request.TeamID)
 
 	payload := string(mustMarshal(request.RollingRelease))
 
@@ -67,21 +67,36 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 	return d.toRollingReleaseResponse(c.TeamID(request.TeamID)), err
 }
 
+// DeleteRollingRelease will delete the rolling release for a given project.
+func (c *Client) DeleteRollingRelease(ctx context.Context, projectID, teamID string) error {
+	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamID)
+
+	tflog.Info(ctx, "deleting rolling-release", map[string]any{
+		"url": url,
+	})
+
+	var d RollingReleaseResponse
+	err := c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "DELETE",
+		url:    url,
+	}, &d)
+	return err
+}
+
 // GetRollingRelease returns the rolling release for a given project.
 func (c *Client) GetRollingRelease(ctx context.Context, projectID, teamID string) (d RollingReleaseResponse, err error) {
-	project, err := c.GetProject(ctx, projectID, teamID)
-	if err != nil {
-		return RollingReleaseResponse{}, fmt.Errorf("error getting project %s: %w", projectID, err)
-	}
+	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamID)
 
-	rollingRelease := project.RollingRelease
-	if rollingRelease == nil {
-		return RollingReleaseResponse{
-			TeamID: c.TeamID(teamID),
-		}, nil
-	}
+	tflog.Info(ctx, "deleting rolling-release", map[string]any{
+		"url": url,
+	})
 
-	return RollingReleaseResponse{
-		TeamID: c.TeamID(teamID),
-	}, err
+	var d RollingReleaseResponse
+	err := c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "GET",
+		url:    url,
+	}, &d)
+	return err
 }
