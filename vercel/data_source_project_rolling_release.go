@@ -108,25 +108,40 @@ func (r *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 		return
 	}
 
-	result := convertResponseToProjectRollingRelease(out, config.ProjectID)
+	result := convertResponseToTFRollingRelease(out)
 	tflog.Info(ctx, "read project rolling release", map[string]any{
-		"team_id":    result.TeamID.ValueString(),
-		"project_id": result.ProjectID.ValueString(),
+		"team_id":    result.TeamID,
+		"project_id": result.ProjectID,
 	})
 
-	var stages []attr.Value
-	for _, s := range result.Stages {
-		stages = append(stages, types.Float64Value(s.TargetPercentage))
+	// Convert []TFRollingReleaseStage to []attr.Value (as []types.String)
+	stageValues := make([]attr.Value, len(result.RollingRelease.Stages))
+
+	var stageAttrType = types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"duration":          types.Float64Type,
+			"target_percentage": types.Float64Type,
+			"require_approval":  types.BoolType,
+		},
+	}
+
+	for i, stage := range result.RollingRelease.Stages {
+		newStage := types.ObjectValueMust(stageAttrType.AttrTypes, map[string]attr.Value{
+			"duration":          types.Float64Value(stage.Duration),
+			"target_percentage": types.Float64Value(stage.TargetPercentage),
+			"require_approval":  types.BoolValue(stage.RequireApproval),
+		})
+		stageValues[i] = newStage
 	}
 
 	diags = resp.State.Set(ctx, ProjectRollingReleaseWithID{
-		Enabled:              types.BoolValue(result.Enabled),
-		AdvancementType:      types.StringValue(result.AdvancementType),
-		CanaryResponseHeader: types.BoolValue(result.CanaryResponseHeader),
-		Stages:               types.ListValueMust(types.StringType, stages),
-		ProjectID:            result.ProjectID,
-		TeamID:               result.TeamID,
-		ID:                   result.ProjectID,
+		Enabled:              types.BoolValue(result.RollingRelease.Enabled),
+		AdvancementType:      types.StringValue(result.RollingRelease.AdvancementType),
+		CanaryResponseHeader: types.BoolValue(result.RollingRelease.CanaryResponseHeader),
+		Stages:               types.ListValueMust(types.StringType, stageValues),
+		ProjectID:            types.StringValue(result.ProjectID),
+		TeamID:               types.StringValue(result.TeamID),
+		ID:                   types.StringValue(result.ProjectID),
 	})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

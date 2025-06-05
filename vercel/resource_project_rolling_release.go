@@ -127,49 +127,79 @@ For more detailed information, please see the [Vercel documentation](https://ver
 	}
 }
 
-type Stage struct {
+type TFRollingReleaseStage struct {
 	TargetPercentage float64 `tfsdk:"targetPercentage,omitempty"`
 	Duration         float64 `tfsdk:"duration,omitempty"`
+	RequireApproval  bool    `tfsdk:"requireApproval,omitempty"`
+}
+
+// TFRollingRelease reflects the state terraform stores internally for a project rolling release.
+type TFRollingRelease struct {
+	Enabled              bool                    `tfsdk:"enabled,omitempty"`
+	AdvancementType      string                  `tfsdk:"advancementType,omitempty"`
+	CanaryResponseHeader bool                    `tfsdk:"canaryResponseHeader,omitempty"`
+	Stages               []TFRollingReleaseStage `tfsdk:"stages,omitempty"`
 }
 
 // ProjectRollingRelease reflects the state terraform stores internally for a project rolling release.
-type ProjectRollingRelease struct {
-	Enabled              bool         `tfsdk:"enabled,omitempty"`
-	AdvancementType      string       `tfsdk:"advancementType,omitempty"`
-	CanaryResponseHeader bool         `tfsdk:"canaryResponseHeader,omitempty"`
-	Stages               []Stage      `tfsdk:"stages,omitempty"`
-	ProjectID            types.String `tfsdk:"project_id"`
-	TeamID               types.String `tfsdk:"team_id"`
+type TFRollingReleaseInfo struct {
+	RollingRelease TFRollingRelease `tfsdk:"rollingRelease,omitempty"`
+	ProjectID      string           `tfsdk:"project_id"`
+	TeamID         string           `tfsdk:"team_id"`
 }
 
-func (e *ProjectRollingRelease) toUpdateRollingReleaseRequest() client.UpdateRollingReleaseRequest {
+func (e *TFRollingReleaseInfo) toUpdateRollingReleaseRequest() client.UpdateRollingReleaseRequest {
 	return client.UpdateRollingReleaseRequest{
-		ProjectID: e.ProjectID.ValueString(),
-		TeamID:    e.TeamID.ValueString(),
+		RollingRelease: client.RollingRelease{
+			Enabled:              e.RollingRelease.Enabled,
+			AdvancementType:      e.RollingRelease.AdvancementType,
+			CanaryResponseHeader: e.RollingRelease.CanaryResponseHeader,
+			Stages:               make([]client.RollingReleaseStage, len(e.RollingRelease.Stages)),
+		},
+		ProjectID: e.ProjectID,
+		TeamID:    e.TeamID,
 	}
 }
 
-// convertResponseToProjectRollingRelease is used to populate terraform state based on an API response.
+func convertStages(stages []client.RollingReleaseStage) []TFRollingReleaseStage {
+	result := make([]TFRollingReleaseStage, len(stages))
+	for i, stage := range stages {
+		result[i] = TFRollingReleaseStage{
+			TargetPercentage: stage.TargetPercentage,
+			Duration:         stage.Duration,
+			RequireApproval:  stage.RequireApproval,
+		}
+	}
+	return result
+}
+
+// convertResponseToTFRollingRelease is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
-func convertResponseToProjectRollingRelease(response client.RollingReleaseResponse, projectID types.String) ProjectRollingRelease {
-	return ProjectRollingRelease{
-		TeamID:    types.StringValue(response.TeamID),
-		ProjectID: projectID,
+func convertResponseToTFRollingRelease(response client.RollingReleaseInfo) TFRollingReleaseInfo {
+	return TFRollingReleaseInfo{
+		RollingRelease: TFRollingRelease{
+			Enabled:              response.RollingRelease.Enabled,
+			AdvancementType:      response.RollingRelease.AdvancementType,
+			CanaryResponseHeader: response.RollingRelease.CanaryResponseHeader,
+			Stages:               convertStages(response.RollingRelease.Stages),
+		},
+		ProjectID: response.ProjectID,
+		TeamID:    response.TeamID,
 	}
 }
 
 // Create will create a new rolling release config on a Vercel project.
 // This is called automatically by the provider when a new resource should be created.
 func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan ProjectRollingRelease
+	var plan TFRollingReleaseInfo
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	_, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	_, err := r.client.GetProject(ctx, plan.ProjectID, plan.TeamID)
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error creating project rolling release",
@@ -194,11 +224,11 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	result := convertResponseToProjectRollingRelease(response, plan.ProjectID)
+	result := convertResponseToTFRollingRelease(response)
 
 	tflog.Info(ctx, "created project rolling release", map[string]any{
-		"team_id":    result.TeamID.ValueString(),
-		"project_id": result.ProjectID.ValueString(),
+		"team_id":    result.TeamID,
+		"project_id": result.ProjectID,
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -211,14 +241,14 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 // Read will read an rolling release of a Vercel project by requesting it from the Vercel API, and will update terraform
 // with this information.
 func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state ProjectRollingRelease
+	var state TFRollingReleaseInfo
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	out, err := r.client.GetRollingRelease(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
+	out, err := r.client.GetRollingRelease(ctx, state.ProjectID, state.TeamID)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -227,18 +257,16 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 		resp.Diagnostics.AddError(
 			"Error reading project rolling release",
 			fmt.Sprintf("Could not get project rolling release %s %s, unexpected error: %s",
-				state.ProjectID.ValueString(),
-				state.TeamID.ValueString(),
 				err,
 			),
 		)
 		return
 	}
 
-	result := convertResponseToProjectRollingRelease(out, state.ProjectID)
+	result := convertResponseToTFRollingRelease(out)
 	tflog.Info(ctx, "read project rolling release", map[string]any{
-		"team_id":    result.TeamID.ValueString(),
-		"project_id": result.ProjectID.ValueString(),
+		"team_id":    result.TeamID,
+		"project_id": result.ProjectID,
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -250,14 +278,14 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 
 // Delete deletes a Vercel project rolling release.
 func (r *projectRollingReleaseResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state ProjectRollingRelease
+	var state TFRollingReleaseInfo
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.client.DeleteRollingRelease(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
+	err := r.client.DeleteRollingRelease(ctx, state.ProjectID, state.TeamID)
 	if client.NotFound(err) {
 		return
 	}
@@ -266,7 +294,7 @@ func (r *projectRollingReleaseResource) Delete(ctx context.Context, req resource
 			"Error deleting project rolling release",
 			fmt.Sprintf(
 				"Could not delete project rolling release %s, unexpected error: %s",
-				state.ProjectID.ValueString(),
+				state.ProjectID,
 				err,
 			),
 		)
@@ -274,14 +302,14 @@ func (r *projectRollingReleaseResource) Delete(ctx context.Context, req resource
 	}
 
 	tflog.Info(ctx, "deleted project rolling release", map[string]any{
-		"team_id":    state.TeamID.ValueString(),
-		"project_id": state.ProjectID.ValueString(),
+		"team_id":    state.TeamID,
+		"project_id": state.ProjectID,
 	})
 }
 
 // Update updates the project rolling release of a Vercel project state.
 func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan ProjectRollingRelease
+	var plan TFRollingReleaseInfo
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -297,11 +325,11 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	result := convertResponseToProjectRollingRelease(response, plan.ProjectID)
+	result := convertResponseToTFRollingRelease(response)
 
 	tflog.Info(ctx, "updated project rolling release", map[string]any{
-		"team_id":    result.TeamID.ValueString(),
-		"project_id": result.ProjectID.ValueString(),
+		"team_id":    result.TeamID,
+		"project_id": result.ProjectID,
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -335,10 +363,10 @@ func (r *projectRollingReleaseResource) ImportState(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectRollingRelease(out, types.StringValue(projectID))
+	result := convertResponseToTFRollingRelease(out)
 	tflog.Info(ctx, "imported project rolling release", map[string]any{
-		"team_id":    result.TeamID.ValueString(),
-		"project_id": result.ProjectID.ValueString(),
+		"team_id":    result.TeamID,
+		"project_id": result.ProjectID,
 	})
 
 	diags := resp.State.Set(ctx, result)
