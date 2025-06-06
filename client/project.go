@@ -16,7 +16,6 @@ type GitRepository struct {
 }
 
 type OIDCTokenConfig struct {
-	Enabled    bool   `json:"enabled"`
 	IssuerMode string `json:"issuerMode,omitempty"`
 }
 

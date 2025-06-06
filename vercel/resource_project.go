@@ -356,10 +356,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:    true,
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
-					"enabled": schema.BoolAttribute{
-						Description: "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
-						Required:    true,
-					},
 					"issuer_mode": schema.StringAttribute{
 						Optional:      true,
 						Computed:      true,
@@ -373,12 +369,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 				Default: objectdefault.StaticValue(types.ObjectValueMust(
 					map[string]attr.Type{
-						"enabled":     types.BoolType,
 						"issuer_mode": types.StringType,
 					},
 					map[string]attr.Value{
-						"enabled":     types.BoolValue(false),
-						"issuer_mode": types.StringValue("global"),
+						"issuer_mode": types.StringValue("team"),
 					},
 				)),
 			},
@@ -1032,7 +1026,6 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 }
 
 type OIDCTokenConfig struct {
-	Enabled    types.Bool   `tfsdk:"enabled"`
 	IssuerMode types.String `tfsdk:"issuer_mode"`
 }
 
@@ -1042,7 +1035,6 @@ func (o *OIDCTokenConfig) toCreateProjectRequest() *client.OIDCTokenConfig {
 	}
 
 	return &client.OIDCTokenConfig{
-		Enabled:    o.Enabled.ValueBool(),
 		IssuerMode: o.IssuerMode.ValueString(),
 	}
 }
@@ -1050,13 +1042,11 @@ func (o *OIDCTokenConfig) toCreateProjectRequest() *client.OIDCTokenConfig {
 func (o *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
 	if o == nil {
 		return &client.OIDCTokenConfig{
-			Enabled:    types.BoolValue(false).ValueBool(),
 			IssuerMode: types.StringValue("global").ValueString(),
 		}
 	}
 
 	return &client.OIDCTokenConfig{
-		Enabled:    o.Enabled.ValueBool(),
 		IssuerMode: o.IssuerMode.ValueString(),
 	}
 }
@@ -1310,11 +1300,9 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	var oidcTokenConfig = &OIDCTokenConfig{
-		Enabled:    types.BoolValue(false),
 		IssuerMode: types.StringValue("global"),
 	}
 	if response.OIDCTokenConfig != nil {
-		oidcTokenConfig.Enabled = types.BoolValue(response.OIDCTokenConfig.Enabled)
 		oidcTokenConfig.IssuerMode = types.StringValue(response.OIDCTokenConfig.IssuerMode)
 	}
 

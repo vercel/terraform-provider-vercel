@@ -78,7 +78,6 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "prioritise_production_builds", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "directory_listing", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "skew_protection", "7 days"),
-					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.issuer_mode", "team"),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_cpu_type", "standard"),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_timeout", "60"),
@@ -95,7 +94,6 @@ func TestAcc_Project(t *testing.T) {
 						"key":   "bar",
 						"value": "baz",
 					}),
-					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "true"),
@@ -1020,7 +1018,6 @@ resource "vercel_project" "test" {
   directory_listing = true
   skew_protection = "7 days"
   oidc_token_config = {
-    enabled = true
     issuer_mode = "team"
   }
   resource_config = {
