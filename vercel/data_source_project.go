@@ -239,8 +239,9 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
-						Description: "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
-						Computed:    true,
+						DeprecationMessage: "This field is deprecated and will be removed in a future version.",
+						Description:        "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
+						Computed:           true,
 					},
 					"issuer_mode": schema.StringAttribute{
 						Description: "Configures the URL of the `iss` claim. `team` = `https://oidc.vercel.com/[team_slug]` `global` = `https://oidc.vercel.com`",

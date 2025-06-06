@@ -129,7 +129,7 @@ Optional:
 
 Read-Only:
 
-- `enabled` (Boolean) When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.
+- `enabled` (Boolean, Deprecated) When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.
 
 
 <a id="nestedatt--options_allowlist"></a>
