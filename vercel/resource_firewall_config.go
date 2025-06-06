@@ -905,7 +905,7 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfi
 		}
 
 		if state.ManagedRulesets != nil && state.ManagedRulesets.BotProtection != nil {
-			botFilter, botFilterExist := conf.ManagedRulesets["bot_filter"]
+			botFilter, botFilterExist := conf.ManagedRulesets["bot_protection"]
 			if botFilterExist {
 				cfg.ManagedRulesets.BotProtection = &BotProtectionConfig{
 					Active: types.BoolValue(botFilter.Active),
@@ -913,7 +913,7 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfi
 				}
 			}
 		} else if state.ManagedRulesets != nil && state.ManagedRulesets.BotFilter != nil {
-			botFilter, botFilterExist := conf.ManagedRulesets["bot_filter"]
+			botFilter, botFilterExist := conf.ManagedRulesets["bot_protection"]
 			if botFilterExist {
 				cfg.ManagedRulesets.BotFilter = &BotFilterConfig{
 					Active: types.BoolValue(botFilter.Active),
@@ -968,7 +968,7 @@ func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 				Action: botProtection.Action.ValueString(),
 			}
 		} else if botFilter != nil {
-			conf.ManagedRulesets["bot_filter"] = client.ManagedRule{
+			conf.ManagedRulesets["bot_protection"] = client.ManagedRule{
 				Active: botFilter.Active.ValueBool(),
 				Action: botFilter.Action.ValueString(),
 			}
