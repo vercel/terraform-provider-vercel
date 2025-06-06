@@ -471,14 +471,14 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project rolling release",
-			fmt.Sprintf("Could not get project rolling release %s %s, unexpected error: %s",
+			fmt.Sprintf("Could not get project rolling release, unexpected error: %s",
 				err,
 			),
 		)
 		return
 	}
 
-	result, diags := convertResponseToTFRollingRelease(out, nil, ctx)
+	result, _ := convertResponseToTFRollingRelease(out, nil, ctx)
 	tflog.Info(ctx, "read project rolling release", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
@@ -592,7 +592,7 @@ func (r *projectRollingReleaseResource) ImportState(ctx context.Context, req res
 		return
 	}
 
-	result, diags := convertResponseToTFRollingRelease(out, nil, ctx)
+	result, _ := convertResponseToTFRollingRelease(out, nil, ctx)
 	tflog.Info(ctx, "imported project rolling release", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
