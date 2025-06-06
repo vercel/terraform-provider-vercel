@@ -3,18 +3,12 @@
 page_title: "vercel_project_rolling_release Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  Provides a Project Rolling release resource.
-  A Project Rolling release resource defines an Rolling release on a Vercel Project.
-  For more detailed information, please see the Vercel documentation https://vercel.com/docs/rolling-releases.
+  Manages rolling release configuration for a Vercel project.
 ---
 
 # vercel_project_rolling_release (Resource)
 
-Provides a Project Rolling release resource.
-
-A Project Rolling release resource defines an Rolling release on a Vercel Project.
-
-For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/rolling-releases).
+Manages rolling release configuration for a Vercel project.
 
 
 
@@ -23,20 +17,30 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 ### Required
 
-- `project_id` (String) The ID of the Project for the retention policy
+- `project_id` (String) The ID of the project.
+- `rolling_release` (Attributes) The rolling release configuration. (see [below for nested schema](#nestedatt--rolling_release))
+- `team_id` (String) The ID of the team the project exists in.
 
-### Optional
+<a id="nestedatt--rolling_release"></a>
+### Nested Schema for `rolling_release`
 
-- `advancement_type` (String) The advancement type of the rolling release. Can be 'automatic' or 'manual-approve'.
-- `canary_response_header` (Boolean) Whether the canary response header is enabled. This header is used to identify canary deployments.
-- `enabled` (Boolean) Whether the rolling release is enabled.
-- `stages` (List of Object) A list of stages for the rolling release. Each stage has a target percentage and duration. (see [below for nested schema](#nestedatt--stages))
-- `team_id` (String) The ID of the Vercel team.
+Required:
 
-<a id="nestedatt--stages"></a>
-### Nested Schema for `stages`
+- `enabled` (Boolean) Whether rolling releases are enabled.
 
 Optional:
 
-- `duration` (Number)
-- `targetPercentage` (Number)
+- `advancement_type` (String) The type of advancement between stages. Must be either 'automatic' or 'manual-approval'. Required when enabled is true.
+- `stages` (Attributes List) The stages of the rolling release. Required when enabled is true. (see [below for nested schema](#nestedatt--rolling_release--stages))
+
+<a id="nestedatt--rolling_release--stages"></a>
+### Nested Schema for `rolling_release.stages`
+
+Required:
+
+- `target_percentage` (Number) The percentage of traffic to route to this stage.
+
+Optional:
+
+- `duration` (Number) The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.
+- `require_approval` (Boolean) Whether approval is required before advancing to the next stage.

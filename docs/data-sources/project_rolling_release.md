@@ -3,18 +3,12 @@
 page_title: "vercel_project_rolling_release Data Source - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  Provides a Project Rolling Release datasource.
-  A Project Rolling Release datasource details information about a Rolling Release on a Vercel Project.
-  For more detailed information, please see the Vercel documentation https://vercel.com/docs/rolling-releases.
+  Data source for a Vercel project rolling release configuration.
 ---
 
 # vercel_project_rolling_release (Data Source)
 
-Provides a Project Rolling Release datasource.
-
-A Project Rolling Release datasource details information about a Rolling Release on a Vercel Project.
-
-For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/rolling-releases).
+Data source for a Vercel project rolling release configuration.
 
 
 
@@ -23,12 +17,27 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 ### Required
 
-- `project_id` (String) The ID of the Project for the rolling release
-
-### Optional
-
-- `team_id` (String) The ID of the Vercel team.
+- `project_id` (String) The ID of the project.
+- `team_id` (String) The ID of the team the project exists in.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `rolling_release` (Attributes) The rolling release configuration. (see [below for nested schema](#nestedatt--rolling_release))
+
+<a id="nestedatt--rolling_release"></a>
+### Nested Schema for `rolling_release`
+
+Read-Only:
+
+- `advancement_type` (String) The type of advancement between stages. Must be either 'automatic' or 'manual-approval'. Required when enabled is true.
+- `enabled` (Boolean) Whether rolling releases are enabled.
+- `stages` (Attributes List) The stages of the rolling release. Required when enabled is true. (see [below for nested schema](#nestedatt--rolling_release--stages))
+
+<a id="nestedatt--rolling_release--stages"></a>
+### Nested Schema for `rolling_release.stages`
+
+Read-Only:
+
+- `duration` (Number) The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.
+- `require_approval` (Boolean) Whether approval is required before advancing to the next stage.
+- `target_percentage` (Number) The percentage of traffic to route to this stage.
