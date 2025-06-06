@@ -357,8 +357,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
-						Description: "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
-						Required:    true,
+						DeprecationMessage: "This field is deprecated and will be removed in a future version.",
+						Description:        "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
+						Optional:           true,
 					},
 					"issuer_mode": schema.StringAttribute{
 						Optional:      true,
@@ -377,8 +378,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						"issuer_mode": types.StringType,
 					},
 					map[string]attr.Value{
-						"enabled":     types.BoolValue(false),
-						"issuer_mode": types.StringValue("global"),
+						"enabled":     types.BoolValue(true),
+						"issuer_mode": types.StringValue("team"),
 					},
 				)),
 			},
