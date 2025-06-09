@@ -51,40 +51,40 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project.",
-				Required:           true,
+				Required:            true,
 			},
 			"team_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the team the project exists in.",
-				Required:           true,
+				Required:            true,
 			},
 			"rolling_release": schema.SingleNestedAttribute{
 				MarkdownDescription: "The rolling release configuration.",
-				Computed:           true,
+				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
 						MarkdownDescription: "Whether rolling releases are enabled.",
-						Computed:           true,
+						Computed:            true,
 					},
 					"advancement_type": schema.StringAttribute{
 						MarkdownDescription: "The type of advancement between stages. Must be either 'automatic' or 'manual-approval'. Required when enabled is true.",
-						Computed:           true,
+						Computed:            true,
 					},
 					"stages": schema.ListNestedAttribute{
 						MarkdownDescription: "The stages of the rolling release. Required when enabled is true.",
-						Computed:           true,
+						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"target_percentage": schema.Int64Attribute{
 									MarkdownDescription: "The percentage of traffic to route to this stage.",
-									Computed:           true,
+									Computed:            true,
 								},
 								"duration": schema.Int64Attribute{
 									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.",
-									Computed:           true,
+									Computed:            true,
 								},
 								"require_approval": schema.BoolAttribute{
 									MarkdownDescription: "Whether approval is required before advancing to the next stage.",
-									Computed:           true,
+									Computed:            true,
 								},
 							},
 						},
