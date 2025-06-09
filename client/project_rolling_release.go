@@ -10,16 +10,16 @@ import (
 
 // RollingReleaseStage represents a stage in a rolling release
 type RollingReleaseStage struct {
-	TargetPercentage int  `json:"targetPercentage"`         // Required: 0-100
-	Duration        *int `json:"duration,omitempty"`       // Required for automatic advancement: 1-10000 minutes
+	TargetPercentage int  `json:"targetPercentage"`          // Required: 0-100
+	Duration         *int `json:"duration,omitempty"`        // Required for automatic advancement: 1-10000 minutes
 	RequireApproval  bool `json:"requireApproval,omitempty"` // Only in response for manual-approval type
 }
 
 // RollingRelease represents the rolling release configuration
 type RollingRelease struct {
-	Enabled         bool                `json:"enabled"`          // Required
-	AdvancementType string              `json:"advancementType"` // Required when enabled=true: 'automatic' or 'manual-approval'
-	Stages          []RollingReleaseStage `json:"stages"`         // Required when enabled=true: 2-10 stages
+	Enabled         bool                  `json:"enabled"`         // Required
+	AdvancementType string                `json:"advancementType"` // Required when enabled=true: 'automatic' or 'manual-approval'
+	Stages          []RollingReleaseStage `json:"stages"`          // Required when enabled=true: 2-10 stages
 }
 
 // ErrorResponse represents the error response from the Vercel API
@@ -94,10 +94,10 @@ func (c *Client) GetRollingRelease(ctx context.Context, projectID, teamID string
 	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamID)
 
 	tflog.Debug(ctx, "getting rolling-release configuration", map[string]any{
-		"url": url,
-		"method": "GET",
+		"url":        url,
+		"method":     "GET",
 		"project_id": projectID,
-		"team_id": teamID,
+		"team_id":    teamID,
 	})
 
 	d := RollingReleaseInfo{}
@@ -140,7 +140,7 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 			// Other stages can have all properties
 			stageMap := map[string]any{
 				"targetPercentage": stage.TargetPercentage,
-				"requireApproval": stage.RequireApproval,
+				"requireApproval":  stage.RequireApproval,
 			}
 			// Only include duration if it's set
 			if stage.Duration != nil {
@@ -158,15 +158,15 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 	}))
 
 	tflog.Debug(ctx, "updating rolling-release configuration", map[string]any{
-		"url": url,
-		"method": "PATCH",
-		"project_id": request.ProjectID,
-		"team_id": request.TeamID,
-		"payload": payload,
-		"base_url": c.baseURL,
-		"enabled": request.RollingRelease.Enabled,
+		"url":              url,
+		"method":           "PATCH",
+		"project_id":       request.ProjectID,
+		"team_id":          request.TeamID,
+		"payload":          payload,
+		"base_url":         c.baseURL,
+		"enabled":          request.RollingRelease.Enabled,
 		"advancement_type": request.RollingRelease.AdvancementType,
-		"stages_count": len(request.RollingRelease.Stages),
+		"stages_count":     len(request.RollingRelease.Stages),
 	})
 
 	// Log each stage for debugging
@@ -194,19 +194,19 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		var errResp ErrorResponse
 		if resp != "" && json.Unmarshal([]byte(resp), &errResp) == nil {
 			tflog.Error(ctx, "error updating rolling-release", map[string]any{
-				"error_code": errResp.Error.Code,
+				"error_code":    errResp.Error.Code,
 				"error_message": errResp.Error.Message,
-				"url": url,
-				"payload": payload,
-				"response": resp,
+				"url":           url,
+				"payload":       payload,
+				"response":      resp,
 			})
 			return d, fmt.Errorf("failed to update rolling release: %s - %s", errResp.Error.Code, errResp.Error.Message)
 		}
 
 		tflog.Error(ctx, "error updating rolling-release", map[string]any{
-			"error": err.Error(),
-			"url": url,
-			"payload": payload,
+			"error":    err.Error(),
+			"url":      url,
+			"payload":  payload,
 			"response": resp,
 		})
 		return d, fmt.Errorf("failed to update rolling release: %w", err)
@@ -215,11 +215,11 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 	// Return the request state since we know it's valid
 	result := RollingReleaseInfo{
 		ProjectID: request.ProjectID,
-		TeamID: request.TeamID,
+		TeamID:    request.TeamID,
 		RollingRelease: RollingRelease{
-			Enabled: request.RollingRelease.Enabled,
+			Enabled:         request.RollingRelease.Enabled,
 			AdvancementType: request.RollingRelease.AdvancementType,
-			Stages: make([]RollingReleaseStage, len(request.RollingRelease.Stages)),
+			Stages:          make([]RollingReleaseStage, len(request.RollingRelease.Stages)),
 		},
 	}
 
@@ -238,11 +238,11 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 	}
 
 	tflog.Debug(ctx, "returning rolling release configuration", map[string]any{
-		"project_id": result.ProjectID,
-		"team_id": result.TeamID,
-		"enabled": result.RollingRelease.Enabled,
+		"project_id":       result.ProjectID,
+		"team_id":          result.TeamID,
+		"enabled":          result.RollingRelease.Enabled,
 		"advancement_type": result.RollingRelease.AdvancementType,
-		"stages": result.RollingRelease.Stages,
+		"stages":           result.RollingRelease.Stages,
 	})
 
 	return result, nil
@@ -253,10 +253,10 @@ func (c *Client) DeleteRollingRelease(ctx context.Context, projectID, teamID str
 	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamID)
 
 	tflog.Debug(ctx, "deleting rolling-release configuration", map[string]any{
-		"url": url,
-		"method": "DELETE",
+		"url":        url,
+		"method":     "DELETE",
 		"project_id": projectID,
-		"team_id": teamID,
+		"team_id":    teamID,
 	})
 
 	var d RollingReleaseInfo
