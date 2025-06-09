@@ -360,6 +360,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						DeprecationMessage: "This field is deprecated and will be removed in a future version.",
 						Description:        "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
 						Optional:           true,
+						Validators: []validator.Bool{
+							onlyTrueValidator("This field is deprecated and can no longer be specified as 'false'"),
+						},
 					},
 					"issuer_mode": schema.StringAttribute{
 						Optional:      true,
