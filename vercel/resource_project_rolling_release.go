@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 )
 
 var (
@@ -81,47 +81,47 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project.",
-				Required:           true,
+				Required:            true,
 			},
 			"team_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the team the project exists in.",
-				Required:           true,
+				Required:            true,
 			},
 			"rolling_release": schema.SingleNestedAttribute{
 				MarkdownDescription: "The rolling release configuration.",
-				Required:           true,
+				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
 						MarkdownDescription: "Whether rolling releases are enabled.",
-						Required:           true,
+						Required:            true,
 					},
 					"advancement_type": schema.StringAttribute{
 						MarkdownDescription: "The type of advancement between stages. Must be either 'automatic' or 'manual-approval'. Required when enabled is true.",
-						Optional:           true,
-						Computed:           true,
+						Optional:            true,
+						Computed:            true,
 						Validators: []validator.String{
 							advancementTypeValidator{},
 						},
 					},
 					"stages": schema.ListNestedAttribute{
 						MarkdownDescription: "The stages of the rolling release. Required when enabled is true.",
-						Optional:           true,
-						Computed:           true,
+						Optional:            true,
+						Computed:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"target_percentage": schema.Int64Attribute{
 									MarkdownDescription: "The percentage of traffic to route to this stage.",
-									Required:           true,
+									Required:            true,
 								},
 								"duration": schema.Int64Attribute{
 									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.",
-									Optional:           true,
-									Computed:           true,
+									Optional:            true,
+									Computed:            true,
 								},
 								"require_approval": schema.BoolAttribute{
 									MarkdownDescription: "Whether approval is required before advancing to the next stage.",
-									Optional:           true,
-									Computed:           true,
+									Optional:            true,
+									Computed:            true,
 								},
 							},
 						},
@@ -133,16 +133,16 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 }
 
 type TFRollingReleaseStage struct {
-	TargetPercentage types.Int64  `tfsdk:"target_percentage"`
-	Duration        types.Int64  `tfsdk:"duration"`
-	RequireApproval types.Bool   `tfsdk:"require_approval"`
+	TargetPercentage types.Int64 `tfsdk:"target_percentage"`
+	Duration         types.Int64 `tfsdk:"duration"`
+	RequireApproval  types.Bool  `tfsdk:"require_approval"`
 }
 
 // TFRollingRelease reflects the state terraform stores internally for a project rolling release.
 type TFRollingRelease struct {
-	Enabled         types.Bool          `tfsdk:"enabled"`
-	AdvancementType types.String       `tfsdk:"advancement_type"`
-	Stages          types.List         `tfsdk:"stages"`
+	Enabled         types.Bool   `tfsdk:"enabled"`
+	AdvancementType types.String `tfsdk:"advancement_type"`
+	Stages          types.List   `tfsdk:"stages"`
 }
 
 // ProjectRollingRelease reflects the state terraform stores internally for a project rolling release.
@@ -154,13 +154,13 @@ type TFRollingReleaseInfo struct {
 
 type RollingReleaseStage struct {
 	TargetPercentage int  `json:"targetPercentage"`
-	Duration        *int `json:"duration,omitempty"`
-	RequireApproval bool `json:"requireApproval"`
+	Duration         *int `json:"duration,omitempty"`
+	RequireApproval  bool `json:"requireApproval"`
 }
 
 type RollingRelease struct {
-	Enabled         bool                `json:"enabled"`
-	AdvancementType string             `json:"advancementType"`
+	Enabled         bool                  `json:"enabled"`
+	AdvancementType string                `json:"advancementType"`
 	Stages          []RollingReleaseStage `json:"stages"`
 }
 
@@ -243,21 +243,21 @@ func convertStages(stages []client.RollingReleaseStage, advancementType string, 
 			elements[i] = types.ObjectValueMust(
 				map[string]attr.Type{
 					"target_percentage": types.Int64Type,
-					"duration":         types.Int64Type,
-					"require_approval": types.BoolType,
+					"duration":          types.Int64Type,
+					"require_approval":  types.BoolType,
 				},
 				map[string]attr.Value{
 					"target_percentage": stage.TargetPercentage,
-					"duration":         duration,
-					"require_approval": stage.RequireApproval,
+					"duration":          duration,
+					"require_approval":  stage.RequireApproval,
 				},
 			)
 		}
 		return types.ListValueFrom(ctx, types.ObjectType{
 			AttrTypes: map[string]attr.Type{
 				"target_percentage": types.Int64Type,
-				"duration":         types.Int64Type,
-				"require_approval": types.BoolType,
+				"duration":          types.Int64Type,
+				"require_approval":  types.BoolType,
 			},
 		}, elements)
 	}
@@ -267,8 +267,8 @@ func convertStages(stages []client.RollingReleaseStage, advancementType string, 
 		return types.ListValueFrom(ctx, types.ObjectType{
 			AttrTypes: map[string]attr.Type{
 				"target_percentage": types.Int64Type,
-				"duration":         types.Int64Type,
-				"require_approval": types.BoolType,
+				"duration":          types.Int64Type,
+				"require_approval":  types.BoolType,
 			},
 		}, []attr.Value{})
 	}
@@ -283,7 +283,7 @@ func convertStages(stages []client.RollingReleaseStage, advancementType string, 
 		if i < len(planStages) {
 			targetPercentage = planStages[i].TargetPercentage
 			requireApproval = planStages[i].RequireApproval
-			
+
 			// Handle duration based on advancement type
 			if advancementType == "automatic" {
 				if planStages[i].Duration.IsUnknown() {
@@ -315,13 +315,13 @@ func convertStages(stages []client.RollingReleaseStage, advancementType string, 
 		elements[i] = types.ObjectValueMust(
 			map[string]attr.Type{
 				"target_percentage": types.Int64Type,
-				"duration":         types.Int64Type,
-				"require_approval": types.BoolType,
+				"duration":          types.Int64Type,
+				"require_approval":  types.BoolType,
 			},
 			map[string]attr.Value{
 				"target_percentage": targetPercentage,
-				"duration":         duration,
-				"require_approval": requireApproval,
+				"duration":          duration,
+				"require_approval":  requireApproval,
 			},
 		)
 	}
@@ -329,8 +329,8 @@ func convertStages(stages []client.RollingReleaseStage, advancementType string, 
 	return types.ListValueFrom(ctx, types.ObjectType{
 		AttrTypes: map[string]attr.Type{
 			"target_percentage": types.Int64Type,
-			"duration":         types.Int64Type,
-			"require_approval": types.BoolType,
+			"duration":          types.Int64Type,
+			"require_approval":  types.BoolType,
 		},
 	}, elements)
 }
@@ -391,11 +391,11 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 	}
 
 	tflog.Debug(ctx, "Got plan from request", map[string]any{
-		"project_id": plan.ProjectID.ValueString(),
-		"team_id": plan.TeamID.ValueString(),
-		"enabled": plan.RollingRelease.Enabled.ValueBool(),
+		"project_id":       plan.ProjectID.ValueString(),
+		"team_id":          plan.TeamID.ValueString(),
+		"enabled":          plan.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": plan.RollingRelease.AdvancementType.ValueString(),
-		"stages": plan.RollingRelease.Stages,
+		"stages":           plan.RollingRelease.Stages,
 	})
 
 	_, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
@@ -439,11 +439,11 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 
 	// Log the values for debugging
 	tflog.Debug(ctx, "created project rolling release", map[string]any{
-		"team_id":    result.TeamID.ValueString(),
-		"project_id": result.ProjectID.ValueString(),
-		"enabled": result.RollingRelease.Enabled.ValueBool(),
+		"team_id":          result.TeamID.ValueString(),
+		"project_id":       result.ProjectID.ValueString(),
+		"enabled":          result.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
-		"stages": result.RollingRelease.Stages,
+		"stages":           result.RollingRelease.Stages,
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -554,11 +554,11 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 
 	// Log the values for debugging
 	tflog.Debug(ctx, "updated project rolling release", map[string]any{
-		"team_id":    result.TeamID.ValueString(),
-		"project_id": result.ProjectID.ValueString(),
-		"enabled": result.RollingRelease.Enabled.ValueBool(),
+		"team_id":          result.TeamID.ValueString(),
+		"project_id":       result.ProjectID.ValueString(),
+		"enabled":          result.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
-		"stages": result.RollingRelease.Stages,
+		"stages":           result.RollingRelease.Stages,
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -598,7 +598,7 @@ func (r *projectRollingReleaseResource) ImportState(ctx context.Context, req res
 		"project_id": result.ProjectID.ValueString(),
 	})
 
-	diags = resp.State.Set(ctx, result)
+	diags := resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
