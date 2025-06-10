@@ -583,6 +583,15 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
+			"build_machine_type": schema.StringAttribute{
+				Description: "When `on_demand_concurrent_builds` is enabled, choose the build machine: `standard` (4 vCPU, 8 GB) or `enhanced` (8 vCPU, 16GB)",
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("standard", "enhanced"),
+				},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
 		},
 	}
 }
@@ -635,6 +644,7 @@ type Project struct {
 	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
 	ResourceConfig                      types.Object                    `tfsdk:"resource_config"`
 	OnDemandConcurrentBuilds            types.Bool                      `tfsdk:"on_demand_concurrent_builds"`
+	BuildMachineType                    types.String                    `tfsdk:"build_machine_type"`
 }
 
 type GitComments struct {
@@ -754,7 +764,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		PublicSource:                      p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
 		ServerlessFunctionRegion:          p.ServerlessFunctionRegion.ValueString(),
-		ResourceConfig:                    resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds),
+		ResourceConfig:                    resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds, p.BuildMachineType),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
 	}, diags
@@ -835,7 +845,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		DirectoryListing:                     p.DirectoryListing.ValueBool(),
 		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
 		GitComments:                          gc.toUpdateProjectRequest(),
-		ResourceConfig:                       resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds),
+		ResourceConfig:                       resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds, p.BuildMachineType),
 		NodeVersion:                          p.NodeVersion.ValueString(),
 	}, nil
 }
@@ -1087,7 +1097,7 @@ func (p *Project) resourceConfig(ctx context.Context) (rc *ResourceConfig, diags
 	return rc, diags
 }
 
-func (r *ResourceConfig) toClientResourceConfig(onDemandConcurrentBuilds types.Bool) *client.ResourceConfig {
+func (r *ResourceConfig) toClientResourceConfig(onDemandConcurrentBuilds types.Bool, buildMachineType types.String) *client.ResourceConfig {
 	if r == nil {
 		return nil
 	}
@@ -1104,6 +1114,11 @@ func (r *ResourceConfig) toClientResourceConfig(onDemandConcurrentBuilds types.B
 	}
 	if !onDemandConcurrentBuilds.IsUnknown() {
 		resourceConfig.ElasticConcurrencyEnabled = onDemandConcurrentBuilds.ValueBoolPointer()
+	}
+	if !buildMachineType.IsUnknown() && *resourceConfig.ElasticConcurrencyEnabled {
+		// `build_machine_type` can only be set when `on_demand_concurrent_builds`
+		// is enabled.
+		resourceConfig.BuildMachineType = buildMachineType.ValueStringPointer()
 	}
 	return resourceConfig
 }
@@ -1476,6 +1491,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		ResourceConfig:                      resourceConfig,
 		NodeVersion:                         types.StringValue(response.NodeVersion),
 		OnDemandConcurrentBuilds:            types.BoolValue(response.ResourceConfig.ElasticConcurrencyEnabled),
+		BuildMachineType:           		 types.StringValue(*response.ResourceConfig.BuildMachineType),
 	}, nil
 }
 

@@ -394,6 +394,14 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Optional:    true,
 				Computed:    true,
 			},
+			"build_machine_type": schema.StringAttribute{
+				Description: "When `on_demand_concurrent_builds` is enabled, choose the build machine: `standard` (4 vCPU, 8 GB) or `enhanced` (8 vCPU, 16GB)",
+				Optional:    true,
+				Computed:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("standard", "enhanced"),
+				},
+			},
 		},
 	}
 }
@@ -438,6 +446,7 @@ type ProjectDataSource struct {
 	ResourceConfig                      types.Object          `tfsdk:"resource_config"`
 	NodeVersion                         types.String          `tfsdk:"node_version"`
 	OnDemandConcurrentBuilds            types.Bool            `tfsdk:"on_demand_concurrent_builds"`
+	BuildMachineType                    types.String          `tfsdk:"build_machine_type"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
@@ -504,6 +513,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		ResourceConfig:                      project.ResourceConfig,
 		NodeVersion:                         project.NodeVersion,
 		OnDemandConcurrentBuilds:            project.OnDemandConcurrentBuilds,
+		BuildMachineType:                    project.BuildMachineType,
 	}, nil
 }
 
