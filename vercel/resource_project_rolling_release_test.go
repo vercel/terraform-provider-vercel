@@ -40,69 +40,69 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 				Config: cfg(testAccProjectRollingReleasesConfig(nameSuffix, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "true"),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", "automatic"),
+					resource.TestCheckResourceAttr(resourceName, "vercel_project_rolling_release.enabled", "true"),
+					resource.TestCheckResourceAttr(resourceName, "vercel_project_rolling_release.advancement_type", "automatic"),
 
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.stages.#", "3"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+					resource.TestCheckResourceAttr(resourceName, "vercel_project_rolling_release.stages.#", "3"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vercel_project_rolling_release.stages.*", map[string]string{
 						"duration":          "1",
 						"require_approval":  "false",
 						"target_percentage": "15",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vercel_project_rolling_release.stages.*", map[string]string{
 						"duration":          "1",
 						"require_approval":  "false",
 						"target_percentage": "50",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vercel_project_rolling_release.stages.*", map[string]string{
 						"duration":          "1",
 						"require_approval":  "false",
 						"target_percentage": "100",
 					}),
-					resource.TestCheckResourceAttrSet(resourceName, "rolling_release.stages.0.id"),
-					resource.TestCheckResourceAttrSet(resourceName, "rolling_release.stages.1.id"),
-					resource.TestCheckResourceAttrSet(resourceName, "rolling_release.stages.2.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "vercel_project_rolling_release.stages.0.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "vercel_project_rolling_release.stages.1.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "vercel_project_rolling_release.stages.2.id"),
 				),
 			},
 			{
 				Config: cfg(testAccProjectRollingReleasesConfigUpdate(nameSuffix, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "true"),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", "automatic"),
+					resource.TestCheckResourceAttr(resourceName, "vercel_project_rolling_release.enabled", "true"),
+					resource.TestCheckResourceAttr(resourceName, "vercel_project_rolling_release.advancement_type", "automatic"),
 
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.stages.#", "4"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+					resource.TestCheckResourceAttr(resourceName, "vercel_project_rolling_release.stages.#", "4"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vercel_project_rolling_release.stages.*", map[string]string{
 						"duration":          "10",
 						"require_approval":  "false",
 						"target_percentage": "15",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vercel_project_rolling_release.stages.*", map[string]string{
 						"duration":          "1",
 						"require_approval":  "false",
 						"target_percentage": "55",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vercel_project_rolling_release.stages.*", map[string]string{
 						"duration":          "100",
 						"require_approval":  "false",
 						"target_percentage": "80",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vercel_project_rolling_release.stages.*", map[string]string{
 						"duration":          "1",
 						"require_approval":  "false",
 						"target_percentage": "100",
 					}),
-					resource.TestCheckResourceAttrSet(resourceName, "rolling_release.stages.0.id"),
-					resource.TestCheckResourceAttrSet(resourceName, "rolling_release.stages.1.id"),
-					resource.TestCheckResourceAttrSet(resourceName, "rolling_release.stages.2.id"),
-					resource.TestCheckResourceAttrSet(resourceName, "rolling_release.stages.3.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "vercel_project_rolling_release.stages.0.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "vercel_project_rolling_release.stages.1.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "vercel_project_rolling_release.stages.2.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "vercel_project_rolling_release.stages.3.id"),
 				),
 			},
 			{
 				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "false"),
+					resource.TestCheckResourceAttr(resourceName, "vercel_project_rolling_release.enabled", "false"),
 				),
 			},
 		},
