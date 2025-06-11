@@ -21,7 +21,7 @@ Provides information about DSync groups for a team.
 
 ### Read-Only
 
-- `groups` (Attributes Map) A map of DSync groups for the team. (see [below for nested schema](#nestedatt--groups))
+- `groups` (Attributes List) A map of DSync groups for the team. (see [below for nested schema](#nestedatt--groups))
 
 <a id="nestedatt--groups"></a>
 ### Nested Schema for `groups`
