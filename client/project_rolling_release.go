@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
-	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"sort"
+	"time"
 )
 
 // RollingReleaseStage represents a stage in a rolling release
@@ -52,18 +52,17 @@ func (r *RollingRelease) Validate() error {
 		return fmt.Errorf("must have between 2 and 10 stages when enabled is true, got: %d", len(r.Stages))
 	}
 
-	// Validate last stage is 100%
-	lastStage := r.Stages[len(r.Stages)-1]
-	if lastStage.TargetPercentage != 100 {
-		return fmt.Errorf("last stage must have target_percentage=100, got: %d", lastStage.TargetPercentage)
-	}
+	// Sort stages by target percentage to ensure correct order
+	sort.Slice(r.Stages, func(i, j int) bool {
+		return r.Stages[i].TargetPercentage < r.Stages[j].TargetPercentage
+	})
 
 	// Validate stages are in ascending order and within bounds
 	prevPercentage := 0
 	for i, stage := range r.Stages {
 		// Validate percentage bounds
-		if stage.TargetPercentage < 1 || stage.TargetPercentage > 100 {
-			return fmt.Errorf("stage %d: target_percentage must be between 1 and 100, got: %d", i, stage.TargetPercentage)
+		if stage.TargetPercentage < 0 || stage.TargetPercentage > 100 {
+			return fmt.Errorf("stage %d: target_percentage must be between 0 and 100, got: %d", i, stage.TargetPercentage)
 		}
 
 		// Validate ascending order
@@ -74,10 +73,30 @@ func (r *RollingRelease) Validate() error {
 
 		// Validate duration for automatic advancement
 		if r.AdvancementType == "automatic" {
-			if stage.Duration == nil || *stage.Duration < 1 || *stage.Duration > 10000 {
-				return fmt.Errorf("stage %d: duration must be between 1 and 10000 minutes for automatic advancement, got: %d", i, *stage.Duration)
+			if i < len(r.Stages)-1 { // All stages except last need duration
+				if stage.Duration == nil {
+					return fmt.Errorf("stage %d: duration is required for automatic advancement (except for the last stage)", i)
+				}
+				if *stage.Duration < 1 || *stage.Duration > 10000 {
+					return fmt.Errorf("stage %d: duration must be between 1 and 10000 minutes for automatic advancement, got: %d", i, *stage.Duration)
+				}
+			} else { // Last stage should not have duration
+				if stage.Duration != nil {
+					return fmt.Errorf("stage %d: last stage should not have duration for automatic advancement", i)
+				}
+			}
+		} else {
+			// For manual approval, no stages should have duration
+			if stage.Duration != nil {
+				return fmt.Errorf("stage %d: duration should not be set for manual-approval advancement type", i)
 			}
 		}
+	}
+
+	// Validate last stage is 100%
+	lastStage := r.Stages[len(r.Stages)-1]
+	if lastStage.TargetPercentage != 100 {
+		return fmt.Errorf("last stage must have target_percentage=100, got: %d", lastStage.TargetPercentage)
 	}
 
 	return nil
@@ -93,22 +112,25 @@ type RollingReleaseInfo struct {
 func (c *Client) GetRollingRelease(ctx context.Context, projectID, teamID string) (RollingReleaseInfo, error) {
 	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamID)
 
-	tflog.Debug(ctx, "getting rolling-release configuration", map[string]any{
-		"url":        url,
-		"method":     "GET",
-		"project_id": projectID,
-		"team_id":    teamID,
-	})
-
-	d := RollingReleaseInfo{}
-	err := c.doRequest(clientRequest{
+	resp, err := c.doRequestWithResponse(clientRequest{
 		ctx:    ctx,
 		method: "GET",
 		url:    url,
-	}, &d)
+	})
+
+	if err != nil {
+		return RollingReleaseInfo{}, fmt.Errorf("error getting rolling-release: %w", err)
+	}
+
+	// Parse the response
+	var d RollingReleaseInfo
+	if err := json.Unmarshal([]byte(resp), &d); err != nil {
+		return RollingReleaseInfo{}, fmt.Errorf("error parsing response: %w", err)
+	}
 	d.ProjectID = projectID
 	d.TeamID = teamID
-	return d, err
+
+	return d, nil
 }
 
 // UpdateRollingReleaseRequest defines the information that needs to be passed to Vercel in order to
@@ -121,143 +143,130 @@ type UpdateRollingReleaseRequest struct {
 
 // UpdateRollingRelease will update an existing rolling release to the latest information.
 func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRollingReleaseRequest) (RollingReleaseInfo, error) {
-	// Validate the request
-	if err := request.RollingRelease.Validate(); err != nil {
-		return RollingReleaseInfo{}, fmt.Errorf("invalid rolling release configuration: %w", err)
-	}
-
-	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID)
-
-	// Process stages to ensure final stage only has targetPercentage
-	stages := make([]map[string]any, len(request.RollingRelease.Stages))
-	for i, stage := range request.RollingRelease.Stages {
-		if i == len(request.RollingRelease.Stages)-1 {
-			// Final stage should only have targetPercentage
-			stages[i] = map[string]any{
-				"targetPercentage": stage.TargetPercentage,
-			}
-		} else {
-			// Other stages can have all properties
-			stageMap := map[string]any{
-				"targetPercentage": stage.TargetPercentage,
-				"requireApproval":  stage.RequireApproval,
-			}
-			// Only include duration if it's set
-			if stage.Duration != nil {
-				stageMap["duration"] = *stage.Duration
-			}
-			stages[i] = stageMap
+	// If we're enabling, we need to do it in steps
+	if request.RollingRelease.Enabled {
+		// First ensure it's disabled
+		disabledRequest := UpdateRollingReleaseRequest{
+			RollingRelease: RollingRelease{
+				Enabled:         false,
+				AdvancementType: "",
+				Stages:          []RollingReleaseStage{},
+			},
+			ProjectID: request.ProjectID,
+			TeamID:    request.TeamID,
 		}
-	}
 
-	// Send just the rolling release configuration, not the whole request
-	payload := string(mustMarshal(map[string]any{
-		"enabled":         request.RollingRelease.Enabled,
-		"advancementType": request.RollingRelease.AdvancementType,
-		"stages":          stages,
-	}))
-
-	tflog.Debug(ctx, "updating rolling-release configuration", map[string]any{
-		"url":              url,
-		"method":           "PATCH",
-		"project_id":       request.ProjectID,
-		"team_id":          request.TeamID,
-		"payload":          payload,
-		"base_url":         c.baseURL,
-		"enabled":          request.RollingRelease.Enabled,
-		"advancement_type": request.RollingRelease.AdvancementType,
-		"stages_count":     len(request.RollingRelease.Stages),
-	})
-
-	// Log each stage for debugging
-	for i, stage := range stages {
-		tflog.Debug(ctx, fmt.Sprintf("stage %d configuration", i), map[string]any{
-			"stage": stage,
+		_, err := c.doRequestWithResponse(clientRequest{
+			ctx:    ctx,
+			method: "PATCH",
+			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
+			body:   string(mustMarshal(disabledRequest.RollingRelease)),
 		})
-	}
-
-	var d RollingReleaseInfo
-	resp, err := c.doRequestWithResponse(clientRequest{
-		ctx:    ctx,
-		method: "PATCH",
-		url:    url,
-		body:   payload,
-	})
-
-	// Always log the raw response for debugging
-	tflog.Debug(ctx, "received raw response", map[string]any{
-		"response": resp,
-	})
-
-	if err != nil {
-		// Try to parse error response
-		var errResp ErrorResponse
-		if resp != "" && json.Unmarshal([]byte(resp), &errResp) == nil {
-			tflog.Error(ctx, "error updating rolling-release", map[string]any{
-				"error_code":    errResp.Error.Code,
-				"error_message": errResp.Error.Message,
-				"url":           url,
-				"payload":       payload,
-				"response":      resp,
-			})
-			return d, fmt.Errorf("failed to update rolling release: %s - %s", errResp.Error.Code, errResp.Error.Message)
+		if err != nil {
+			return RollingReleaseInfo{}, fmt.Errorf("error disabling rolling release: %w", err)
 		}
 
-		tflog.Error(ctx, "error updating rolling-release", map[string]any{
-			"error":    err.Error(),
-			"url":      url,
-			"payload":  payload,
-			"response": resp,
+		// Wait a bit before proceeding
+		time.Sleep(2 * time.Second)
+
+		// Now validate the request
+		if err := request.RollingRelease.Validate(); err != nil {
+			return RollingReleaseInfo{}, fmt.Errorf("invalid rolling release configuration: %w", err)
+		}
+
+		// Sort stages by target percentage
+		sort.Slice(request.RollingRelease.Stages, func(i, j int) bool {
+			return request.RollingRelease.Stages[i].TargetPercentage < request.RollingRelease.Stages[j].TargetPercentage
 		})
-		return d, fmt.Errorf("failed to update rolling release: %w", err)
-	}
 
-	// Return the request state since we know it's valid
-	result := RollingReleaseInfo{
-		ProjectID: request.ProjectID,
-		TeamID:    request.TeamID,
-		RollingRelease: RollingRelease{
-			Enabled:         request.RollingRelease.Enabled,
-			AdvancementType: request.RollingRelease.AdvancementType,
-			Stages:          make([]RollingReleaseStage, len(request.RollingRelease.Stages)),
-		},
-	}
-
-	// Copy stages, preserving the duration and requireApproval for non-final stages
-	for i, stage := range request.RollingRelease.Stages {
-		if i == len(request.RollingRelease.Stages)-1 {
-			// For the final stage, only include targetPercentage
-			result.RollingRelease.Stages[i] = RollingReleaseStage{
-				TargetPercentage: stage.TargetPercentage,
-				// Do not include Duration or RequireApproval for final stage
-			}
-		} else {
-			// For other stages, include all properties
-			result.RollingRelease.Stages[i] = stage
+		// First set up the stages
+		stagesRequest := map[string]any{
+			"enabled":         false,
+			"advancementType": request.RollingRelease.AdvancementType,
+			"stages":          request.RollingRelease.Stages,
 		}
+
+		_, err = c.doRequestWithResponse(clientRequest{
+			ctx:    ctx,
+			method: "PATCH",
+			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
+			body:   string(mustMarshal(stagesRequest)),
+		})
+		if err != nil {
+			return RollingReleaseInfo{}, fmt.Errorf("error configuring stages: %w", err)
+		}
+
+		// Wait a bit before enabling
+		time.Sleep(2 * time.Second)
+
+		// Finally enable it
+		enableRequest := map[string]any{
+			"enabled":         true,
+			"advancementType": request.RollingRelease.AdvancementType,
+			"stages":          request.RollingRelease.Stages,
+		}
+
+		resp, err := c.doRequestWithResponse(clientRequest{
+			ctx:    ctx,
+			method: "PATCH",
+			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
+			body:   string(mustMarshal(enableRequest)),
+		})
+		if err != nil {
+			// Try to parse error response
+			var errResp ErrorResponse
+			if jsonErr := json.Unmarshal([]byte(resp), &errResp); jsonErr == nil && errResp.Error.Message != "" {
+				return RollingReleaseInfo{}, fmt.Errorf("error enabling rolling release: %s - %s", errResp.Error.Code, errResp.Error.Message)
+			}
+			return RollingReleaseInfo{}, fmt.Errorf("error enabling rolling release: %w", err)
+		}
+
+		// Parse the response
+		var result RollingReleaseInfo
+		if err := json.Unmarshal([]byte(resp), &result); err != nil {
+			return RollingReleaseInfo{}, fmt.Errorf("error parsing response: %w", err)
+		}
+		result.ProjectID = request.ProjectID
+		result.TeamID = request.TeamID
+
+		return result, nil
+	} else {
+		// For disabling, just send the request as is
+		disabledRequest := UpdateRollingReleaseRequest{
+			RollingRelease: RollingRelease{
+				Enabled:         false,
+				AdvancementType: "",
+				Stages:          []RollingReleaseStage{},
+			},
+			ProjectID: request.ProjectID,
+			TeamID:    request.TeamID,
+		}
+
+		resp, err := c.doRequestWithResponse(clientRequest{
+			ctx:    ctx,
+			method: "PATCH",
+			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
+			body:   string(mustMarshal(disabledRequest.RollingRelease)),
+		})
+		if err != nil {
+			return RollingReleaseInfo{}, fmt.Errorf("error disabling rolling release: %w", err)
+		}
+
+		// Parse the response
+		var result RollingReleaseInfo
+		if err := json.Unmarshal([]byte(resp), &result); err != nil {
+			return RollingReleaseInfo{}, fmt.Errorf("error parsing response: %w", err)
+		}
+		result.ProjectID = request.ProjectID
+		result.TeamID = request.TeamID
+
+		return result, nil
 	}
-
-	tflog.Debug(ctx, "returning rolling release configuration", map[string]any{
-		"project_id":       result.ProjectID,
-		"team_id":          result.TeamID,
-		"enabled":          result.RollingRelease.Enabled,
-		"advancement_type": result.RollingRelease.AdvancementType,
-		"stages":           result.RollingRelease.Stages,
-	})
-
-	return result, nil
 }
 
 // DeleteRollingRelease will delete the rolling release for a given project.
 func (c *Client) DeleteRollingRelease(ctx context.Context, projectID, teamID string) error {
 	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamID)
-
-	tflog.Debug(ctx, "deleting rolling-release configuration", map[string]any{
-		"url":        url,
-		"method":     "DELETE",
-		"project_id": projectID,
-		"team_id":    teamID,
-	})
 
 	var d RollingReleaseInfo
 	err := c.doRequest(clientRequest{

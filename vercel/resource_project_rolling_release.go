@@ -3,9 +3,12 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"sort"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -62,15 +65,35 @@ func (v advancementTypeValidator) MarkdownDescription(ctx context.Context) strin
 }
 
 func (v advancementTypeValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+	// Get the value of enabled from the parent object
+	var enabled types.Bool
+	diags := req.Config.GetAttribute(ctx, path.Root("rolling_release").AtName("enabled"), &enabled)
+	if diags.HasError() {
+		resp.Diagnostics.AddError(
+			"Error validating advancement_type",
+			"Could not get enabled value from configuration",
+		)
 		return
 	}
-	value := req.ConfigValue.ValueString()
-	if value != "automatic" && value != "manual-approval" {
-		resp.Diagnostics.AddError(
-			"Invalid advancement_type",
-			fmt.Sprintf("advancement_type must be either 'automatic' or 'manual-approval', got: %s", value),
-		)
+
+	// Only validate when enabled is true
+	if enabled.ValueBool() {
+		if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+			resp.Diagnostics.AddError(
+				"Invalid advancement_type",
+				"advancement_type is required when enabled is true",
+			)
+			return
+		}
+
+		value := req.ConfigValue.ValueString()
+		if value != "automatic" && value != "manual-approval" {
+			resp.Diagnostics.AddError(
+				"Invalid advancement_type",
+				fmt.Sprintf("advancement_type must be either 'automatic' or 'manual-approval', got: %s", value),
+			)
+			return
+		}
 	}
 }
 
@@ -116,7 +139,6 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 								"duration": schema.Int64Attribute{
 									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.",
 									Optional:            true,
-									Computed:            true,
 								},
 								"require_approval": schema.BoolAttribute{
 									MarkdownDescription: "Whether approval is required before advancing to the next stage.",
@@ -176,45 +198,136 @@ func (e *TFRollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRol
 	var diags diag.Diagnostics
 
 	if e.RollingRelease.Enabled.ValueBool() {
-		if !e.RollingRelease.AdvancementType.IsNull() {
-			advancementType = e.RollingRelease.AdvancementType.ValueString()
-		} else {
-			advancementType = "manual-approval" // Default to manual-approval if not specified
+		// When enabled, both advancement_type and stages are required
+		if e.RollingRelease.AdvancementType.IsNull() || e.RollingRelease.AdvancementType.IsUnknown() {
+			diags.AddError(
+				"Error creating rolling release",
+				"advancement_type is required when enabled is true",
+			)
+			return client.UpdateRollingReleaseRequest{}, diags
+		}
+		advancementType = e.RollingRelease.AdvancementType.ValueString()
+
+		if e.RollingRelease.Stages.IsNull() || e.RollingRelease.Stages.IsUnknown() {
+			diags.AddError(
+				"Error creating rolling release",
+				"stages are required when enabled is true",
+			)
+			return client.UpdateRollingReleaseRequest{}, diags
 		}
 
 		// Convert stages from types.List to []client.RollingReleaseStage
 		var tfStages []TFRollingReleaseStage
-		if !e.RollingRelease.Stages.IsNull() && !e.RollingRelease.Stages.IsUnknown() {
-			diags = e.RollingRelease.Stages.ElementsAs(context.Background(), &tfStages, false)
-			if diags.HasError() {
+		diags = e.RollingRelease.Stages.ElementsAs(context.Background(), &tfStages, false)
+		if diags.HasError() {
+			return client.UpdateRollingReleaseRequest{}, diags
+		}
+
+		// Validate stages
+		if len(tfStages) < 2 || len(tfStages) > 10 {
+			diags.AddError(
+				"Error creating rolling release",
+				fmt.Sprintf("must have between 2 and 10 stages when enabled is true, got: %d", len(tfStages)),
+			)
+			return client.UpdateRollingReleaseRequest{}, diags
+		}
+
+		// Sort stages by target percentage to ensure correct order
+		sort.Slice(tfStages, func(i, j int) bool {
+			return tfStages[i].TargetPercentage.ValueInt64() < tfStages[j].TargetPercentage.ValueInt64()
+		})
+
+		// Validate stages are in ascending order and within bounds
+		prevPercentage := int64(0)
+		for i, stage := range tfStages {
+			percentage := stage.TargetPercentage.ValueInt64()
+
+			// Validate percentage bounds
+			if percentage < 0 || percentage > 100 {
+				diags.AddError(
+					"Error creating rolling release",
+					fmt.Sprintf("stage %d: target_percentage must be between 0 and 100, got: %d", i, percentage),
+				)
 				return client.UpdateRollingReleaseRequest{}, diags
 			}
-			stages = make([]client.RollingReleaseStage, len(tfStages))
-			for i, stage := range tfStages {
-				// For automatic advancement, set a default duration if not provided
-				if advancementType == "automatic" {
-					var duration int = 60 // Default duration in minutes
-					if !stage.Duration.IsNull() {
-						duration = int(stage.Duration.ValueInt64())
-					}
-					stages[i] = client.RollingReleaseStage{
-						TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
-						Duration:         &duration,
-						RequireApproval:  stage.RequireApproval.ValueBool(),
+
+			// Validate ascending order
+			if percentage <= prevPercentage {
+				diags.AddError(
+					"Error creating rolling release",
+					fmt.Sprintf("stage %d: target_percentage must be greater than previous stage (%d), got: %d", i, prevPercentage, percentage),
+				)
+				return client.UpdateRollingReleaseRequest{}, diags
+			}
+			prevPercentage = percentage
+		}
+
+		// Validate last stage is 100%
+		lastStage := tfStages[len(tfStages)-1]
+		if lastStage.TargetPercentage.ValueInt64() != 100 {
+			diags.AddError(
+				"Error creating rolling release",
+				fmt.Sprintf("last stage must have target_percentage=100, got: %d", lastStage.TargetPercentage.ValueInt64()),
+			)
+			return client.UpdateRollingReleaseRequest{}, diags
+		}
+
+		stages = make([]client.RollingReleaseStage, len(tfStages))
+		for i, stage := range tfStages {
+			if advancementType == "automatic" {
+				// For automatic advancement, duration is required except for last stage
+				if i < len(tfStages)-1 {
+					// Non-last stage needs duration
+					if stage.Duration.IsNull() {
+						// Default duration for non-last stages
+						duration := 60
+						stages[i] = client.RollingReleaseStage{
+							TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
+							Duration:         &duration,
+							RequireApproval:  stage.RequireApproval.ValueBool(),
+						}
+					} else {
+						duration := int(stage.Duration.ValueInt64())
+						if duration < 1 || duration > 10000 {
+							diags.AddError(
+								"Error creating rolling release",
+								fmt.Sprintf("stage %d: duration must be between 1 and 10000 minutes for automatic advancement, got: %d", i, duration),
+							)
+							return client.UpdateRollingReleaseRequest{}, diags
+						}
+						stages[i] = client.RollingReleaseStage{
+							TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
+							Duration:         &duration,
+							RequireApproval:  stage.RequireApproval.ValueBool(),
+						}
 					}
 				} else {
-					// For manual approval, omit duration field completely
+					// Last stage should not have duration
 					stages[i] = client.RollingReleaseStage{
 						TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
 						RequireApproval:  stage.RequireApproval.ValueBool(),
 					}
 				}
+			} else {
+				// For manual approval, omit duration field completely
+				stages[i] = client.RollingReleaseStage{
+					TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
+					RequireApproval:  stage.RequireApproval.ValueBool(),
+				}
 			}
 		}
 	} else {
-		// When disabled, don't send any stages to the API
+		// When disabled, don't send any stages or advancement type to the API
 		stages = []client.RollingReleaseStage{}
+		advancementType = ""
 	}
+
+	// Log the request for debugging
+	tflog.Debug(context.Background(), "converting to update request", map[string]any{
+		"enabled":          e.RollingRelease.Enabled.ValueBool(),
+		"advancement_type": advancementType,
+		"stages_count":     len(stages),
+	})
 
 	return client.UpdateRollingReleaseRequest{
 		RollingRelease: client.RollingRelease{
@@ -227,89 +340,109 @@ func (e *TFRollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRol
 	}, diags
 }
 
-func convertStages(stages []client.RollingReleaseStage, advancementType string, planStages []TFRollingReleaseStage, enabled bool, ctx context.Context) (types.List, diag.Diagnostics) {
-	// If disabled, always return plan stages to preserve state
-	if !enabled && len(planStages) > 0 {
-		elements := make([]attr.Value, len(planStages))
-		for i, stage := range planStages {
-			// For disabled state, ensure duration is known
-			var duration types.Int64
-			if stage.Duration.IsUnknown() {
-				duration = types.Int64Null()
-			} else {
-				duration = stage.Duration
-			}
+func convertResponseToTFRollingRelease(response client.RollingReleaseInfo, plan *TFRollingReleaseInfo, ctx context.Context) (TFRollingReleaseInfo, diag.Diagnostics) {
+	var diags diag.Diagnostics
 
-			elements[i] = types.ObjectValueMust(
-				map[string]attr.Type{
-					"target_percentage": types.Int64Type,
-					"duration":          types.Int64Type,
-					"require_approval":  types.BoolType,
-				},
-				map[string]attr.Value{
-					"target_percentage": stage.TargetPercentage,
-					"duration":          duration,
-					"require_approval":  stage.RequireApproval,
-				},
-			)
+	// If we have a plan and the response doesn't match what we expect,
+	// this is likely a race condition and we should preserve the plan values
+	if plan != nil && plan.RollingRelease.Enabled.ValueBool() {
+		// If the plan is enabled but response shows disabled or missing fields,
+		// this is likely a race condition
+		if !response.RollingRelease.Enabled ||
+			response.RollingRelease.AdvancementType == "" ||
+			len(response.RollingRelease.Stages) == 0 {
+			tflog.Debug(ctx, "detected race condition, preserving plan values", map[string]any{
+				"plan_enabled":              plan.RollingRelease.Enabled.ValueBool(),
+				"plan_advancement_type":     plan.RollingRelease.AdvancementType.ValueString(),
+				"plan_stages_count":         len(plan.RollingRelease.Stages.Elements()),
+				"response_enabled":          response.RollingRelease.Enabled,
+				"response_advancement_type": response.RollingRelease.AdvancementType,
+				"response_stages_count":     len(response.RollingRelease.Stages),
+			})
+			return *plan, diags
 		}
-		return types.ListValueFrom(ctx, types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"target_percentage": types.Int64Type,
-				"duration":          types.Int64Type,
-				"require_approval":  types.BoolType,
-			},
-		}, elements)
 	}
 
-	// If no stages from API and no plan stages, return empty list
-	if len(stages) == 0 {
-		return types.ListValueFrom(ctx, types.ObjectType{
+	result := TFRollingReleaseInfo{
+		RollingRelease: TFRollingRelease{
+			Enabled:         types.BoolValue(response.RollingRelease.Enabled),
+			AdvancementType: types.StringValue(response.RollingRelease.AdvancementType),
+		},
+		ProjectID: types.StringValue(response.ProjectID),
+		TeamID:    types.StringValue(response.TeamID),
+	}
+
+	// If disabled, return empty values
+	if !response.RollingRelease.Enabled {
+		result.RollingRelease.AdvancementType = types.StringValue("")
+		// Create an empty list instead of null
+		emptyStages, stagesDiags := types.ListValueFrom(ctx, types.ObjectType{
 			AttrTypes: map[string]attr.Type{
 				"target_percentage": types.Int64Type,
 				"duration":          types.Int64Type,
 				"require_approval":  types.BoolType,
 			},
 		}, []attr.Value{})
+		diags.Append(stagesDiags...)
+		if diags.HasError() {
+			return result, diags
+		}
+		result.RollingRelease.Stages = emptyStages
+		return result, diags
 	}
 
-	elements := make([]attr.Value, len(stages))
-	for i, stage := range stages {
-		targetPercentage := types.Int64Value(int64(stage.TargetPercentage))
-		requireApproval := types.BoolValue(stage.RequireApproval)
-		var duration types.Int64
+	// If we have a plan, try to match stages by target percentage to preserve order
+	var orderedStages []client.RollingReleaseStage
+	if plan != nil && !plan.RollingRelease.Stages.IsNull() && !plan.RollingRelease.Stages.IsUnknown() {
+		var planStages []TFRollingReleaseStage
+		diags.Append(plan.RollingRelease.Stages.ElementsAs(ctx, &planStages, false)...)
+		if diags.HasError() {
+			return result, diags
+		}
 
-		// If we have plan stages, preserve the values but ensure they're known
-		if i < len(planStages) {
-			targetPercentage = planStages[i].TargetPercentage
-			requireApproval = planStages[i].RequireApproval
+		// Create a map of target percentage to stage for quick lookup
+		stageMap := make(map[int]client.RollingReleaseStage)
+		for _, stage := range response.RollingRelease.Stages {
+			stageMap[stage.TargetPercentage] = stage
+		}
 
-			// Handle duration based on advancement type
-			if advancementType == "automatic" {
-				if planStages[i].Duration.IsUnknown() {
-					// For unknown values, use API value or default
-					if stage.Duration != nil {
-						duration = types.Int64Value(int64(*stage.Duration))
-					} else {
-						duration = types.Int64Value(60) // Default duration in minutes
-					}
-				} else {
-					duration = planStages[i].Duration
-				}
-			} else {
-				duration = types.Int64Null() // Manual approval doesn't use duration
+		// Try to preserve the order from the plan
+		orderedStages = make([]client.RollingReleaseStage, 0, len(response.RollingRelease.Stages))
+		for _, planStage := range planStages {
+			if stage, ok := stageMap[int(planStage.TargetPercentage.ValueInt64())]; ok {
+				orderedStages = append(orderedStages, stage)
+				delete(stageMap, stage.TargetPercentage)
 			}
-		} else {
-			// Only set duration for automatic advancement
-			if advancementType == "automatic" {
+		}
+
+		// Add any remaining stages that weren't in the plan
+		for _, stage := range response.RollingRelease.Stages {
+			if _, ok := stageMap[stage.TargetPercentage]; ok {
+				orderedStages = append(orderedStages, stage)
+			}
+		}
+	} else {
+		orderedStages = response.RollingRelease.Stages
+	}
+
+	// Convert stages from response
+	elements := make([]attr.Value, len(orderedStages))
+	for i, stage := range orderedStages {
+		var duration types.Int64
+		if response.RollingRelease.AdvancementType == "automatic" {
+			// For automatic advancement, duration is required except for the last stage
+			if i < len(orderedStages)-1 {
 				if stage.Duration != nil {
 					duration = types.Int64Value(int64(*stage.Duration))
 				} else {
 					duration = types.Int64Value(60) // Default duration in minutes
 				}
 			} else {
-				duration = types.Int64Null()
+				duration = types.Int64Value(0) // Last stage doesn't need duration
 			}
+		} else {
+			// For manual approval, duration is not used
+			duration = types.Int64Value(0)
 		}
 
 		elements[i] = types.ObjectValueMust(
@@ -319,70 +452,38 @@ func convertStages(stages []client.RollingReleaseStage, advancementType string, 
 				"require_approval":  types.BoolType,
 			},
 			map[string]attr.Value{
-				"target_percentage": targetPercentage,
+				"target_percentage": types.Int64Value(int64(stage.TargetPercentage)),
 				"duration":          duration,
-				"require_approval":  requireApproval,
+				"require_approval":  types.BoolValue(stage.RequireApproval),
 			},
 		)
 	}
 
-	return types.ListValueFrom(ctx, types.ObjectType{
+	stages, stagesDiags := types.ListValueFrom(ctx, types.ObjectType{
 		AttrTypes: map[string]attr.Type{
 			"target_percentage": types.Int64Type,
 			"duration":          types.Int64Type,
 			"require_approval":  types.BoolType,
 		},
 	}, elements)
-}
-
-func convertResponseToTFRollingRelease(response client.RollingReleaseInfo, plan *TFRollingReleaseInfo, ctx context.Context) (TFRollingReleaseInfo, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	result := TFRollingReleaseInfo{
-		RollingRelease: TFRollingRelease{
-			Enabled: types.BoolValue(response.RollingRelease.Enabled),
-		},
-		ProjectID: types.StringValue(response.ProjectID),
-		TeamID:    types.StringValue(response.TeamID),
-	}
-
-	// Get plan stages if available
-	var planStages []TFRollingReleaseStage
-	if plan != nil && !plan.RollingRelease.Stages.IsNull() && !plan.RollingRelease.Stages.IsUnknown() {
-		diags.Append(plan.RollingRelease.Stages.ElementsAs(ctx, &planStages, false)...)
-		if diags.HasError() {
-			return result, diags
-		}
-	}
-
-	if response.RollingRelease.Enabled {
-		result.RollingRelease.AdvancementType = types.StringValue(response.RollingRelease.AdvancementType)
-	} else {
-		result.RollingRelease.AdvancementType = types.StringNull()
-	}
-
-	// Convert stages, passing enabled state to ensure proper preservation
-	stages, stagesDiags := convertStages(
-		response.RollingRelease.Stages,
-		response.RollingRelease.AdvancementType,
-		planStages,
-		response.RollingRelease.Enabled,
-		ctx,
-	)
 	diags.Append(stagesDiags...)
 	if diags.HasError() {
 		return result, diags
 	}
 	result.RollingRelease.Stages = stages
 
+	// Log the conversion result for debugging
+	tflog.Debug(ctx, "converted rolling release response", map[string]any{
+		"enabled":          result.RollingRelease.Enabled.ValueBool(),
+		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
+		"stages_count":     len(elements),
+	})
+
 	return result, diags
 }
 
-// Create will create a new rolling release config on a Vercel project.
-// This is called automatically by the provider when a new resource should be created.
+// Create will create a rolling release for a Vercel project by sending a request to the Vercel API.
 func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	tflog.Debug(ctx, "Starting rolling release creation")
-
 	var plan TFRollingReleaseInfo
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -390,62 +491,74 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	tflog.Debug(ctx, "Got plan from request", map[string]any{
-		"project_id":       plan.ProjectID.ValueString(),
-		"team_id":          plan.TeamID.ValueString(),
-		"enabled":          plan.RollingRelease.Enabled.ValueBool(),
-		"advancement_type": plan.RollingRelease.AdvancementType.ValueString(),
-		"stages":           plan.RollingRelease.Stages,
+	// Convert plan to client request
+	request, diags := plan.toUpdateRollingReleaseRequest()
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Log the request for debugging
+	tflog.Debug(ctx, "creating rolling release", map[string]any{
+		"enabled":          request.RollingRelease.Enabled,
+		"advancement_type": request.RollingRelease.AdvancementType,
+		"stages":           request.RollingRelease.Stages,
 	})
 
-	_, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	if client.NotFound(err) {
-		resp.Diagnostics.AddError(
-			"Error creating project rolling release",
-			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
-		)
-		return
+	// If we're enabling, first create in disabled state then enable
+	if request.RollingRelease.Enabled {
+		// First create in disabled state
+		disabledRequest := client.UpdateRollingReleaseRequest{
+			RollingRelease: client.RollingRelease{
+				Enabled:         false,
+				AdvancementType: "",
+				Stages:          []client.RollingReleaseStage{},
+			},
+			ProjectID: request.ProjectID,
+			TeamID:    request.TeamID,
+		}
+
+		_, err := r.client.UpdateRollingRelease(ctx, disabledRequest)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error creating project rolling release",
+				fmt.Sprintf("Could not create project rolling release in disabled state, unexpected error: %s",
+					err,
+				),
+			)
+			return
+		}
+
+		// Wait a bit before enabling
+		time.Sleep(2 * time.Second)
 	}
+
+	out, err := r.client.UpdateRollingRelease(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project rolling release",
-			"Error reading project information, unexpected error: "+err.Error(),
+			fmt.Sprintf("Could not create project rolling release, unexpected error: %s",
+				err,
+			),
 		)
 		return
 	}
 
-	tflog.Debug(ctx, "Project exists, creating rolling release")
-
-	updateRequest, diags := plan.toUpdateRollingReleaseRequest()
+	// Convert response to state
+	result, diags := convertResponseToTFRollingRelease(out, &plan, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	response, err := r.client.UpdateRollingRelease(ctx, updateRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error creating project rolling release",
-			"Could not create project rolling release, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	result, diags := convertResponseToTFRollingRelease(response, &plan, ctx)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Log the values for debugging
-	tflog.Debug(ctx, "created project rolling release", map[string]any{
-		"team_id":          result.TeamID.ValueString(),
-		"project_id":       result.ProjectID.ValueString(),
+	// Log the result for debugging
+	tflog.Debug(ctx, "created rolling release", map[string]any{
 		"enabled":          result.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
 		"stages":           result.RollingRelease.Stages,
 	})
 
+	// Set state
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -453,7 +566,7 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 	}
 }
 
-// Read will read an rolling release of a Vercel project by requesting it from the Vercel API, and will update terraform
+// Read will read a rolling release of a Vercel project by requesting it from the Vercel API, and will update terraform
 // with this information.
 func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state TFRollingReleaseInfo
@@ -478,84 +591,21 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	result, _ := convertResponseToTFRollingRelease(out, nil, ctx)
-	tflog.Info(ctx, "read project rolling release", map[string]any{
-		"team_id":    result.TeamID.ValueString(),
-		"project_id": result.ProjectID.ValueString(),
+	// Log the response for debugging
+	tflog.Debug(ctx, "got rolling release from API", map[string]any{
+		"enabled":          out.RollingRelease.Enabled,
+		"advancement_type": out.RollingRelease.AdvancementType,
+		"stages":           out.RollingRelease.Stages,
 	})
 
-	diags = resp.State.Set(ctx, result)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-}
-
-// Delete deletes a Vercel project rolling release.
-func (r *projectRollingReleaseResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state TFRollingReleaseInfo
-	diags := req.State.Get(ctx, &state)
+	result, diags := convertResponseToTFRollingRelease(out, &state, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.client.DeleteRollingRelease(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
-	if client.NotFound(err) {
-		return
-	}
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error deleting project rolling release",
-			fmt.Sprintf(
-				"Could not delete project rolling release %s, unexpected error: %s",
-				state.ProjectID.ValueString(),
-				err,
-			),
-		)
-		return
-	}
-
-	tflog.Info(ctx, "deleted project rolling release", map[string]any{
-		"team_id":    state.TeamID.ValueString(),
-		"project_id": state.ProjectID.ValueString(),
-	})
-}
-
-// Update updates the project rolling release of a Vercel project state.
-func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan TFRollingReleaseInfo
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	updateRequest, diags := plan.toUpdateRollingReleaseRequest()
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	response, err := r.client.UpdateRollingRelease(ctx, updateRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error updating project rolling release",
-			"Could not update project rolling release, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	result, diags := convertResponseToTFRollingRelease(response, &plan, ctx)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Log the values for debugging
-	tflog.Debug(ctx, "updated project rolling release", map[string]any{
-		"team_id":          result.TeamID.ValueString(),
-		"project_id":       result.ProjectID.ValueString(),
+	// Log the result for debugging
+	tflog.Debug(ctx, "converted rolling release", map[string]any{
 		"enabled":          result.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
 		"stages":           result.RollingRelease.Stages,
@@ -564,6 +614,154 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+// Update will update an existing rolling release to the latest information.
+func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan TFRollingReleaseInfo
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state TFRollingReleaseInfo
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Convert plan to client request
+	request, diags := plan.toUpdateRollingReleaseRequest()
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Log the request for debugging
+	tflog.Debug(ctx, "updating rolling release", map[string]any{
+		"enabled":          request.RollingRelease.Enabled,
+		"advancement_type": request.RollingRelease.AdvancementType,
+		"stages":           request.RollingRelease.Stages,
+	})
+
+	// If we're transitioning from enabled to disabled, first disable
+	if state.RollingRelease.Enabled.ValueBool() && !request.RollingRelease.Enabled {
+		disabledRequest := client.UpdateRollingReleaseRequest{
+			RollingRelease: client.RollingRelease{
+				Enabled:         false,
+				AdvancementType: "",
+				Stages:          []client.RollingReleaseStage{},
+			},
+			ProjectID: request.ProjectID,
+			TeamID:    request.TeamID,
+		}
+
+		_, err := r.client.UpdateRollingRelease(ctx, disabledRequest)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project rolling release",
+				fmt.Sprintf("Could not disable project rolling release, unexpected error: %s",
+					err,
+				),
+			)
+			return
+		}
+
+		// Wait a bit before proceeding
+		time.Sleep(2 * time.Second)
+	}
+
+	// If we're transitioning from disabled to enabled, first create in disabled state
+	if !state.RollingRelease.Enabled.ValueBool() && request.RollingRelease.Enabled {
+		disabledRequest := client.UpdateRollingReleaseRequest{
+			RollingRelease: client.RollingRelease{
+				Enabled:         false,
+				AdvancementType: "",
+				Stages:          []client.RollingReleaseStage{},
+			},
+			ProjectID: request.ProjectID,
+			TeamID:    request.TeamID,
+		}
+
+		_, err := r.client.UpdateRollingRelease(ctx, disabledRequest)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project rolling release",
+				fmt.Sprintf("Could not create project rolling release in disabled state, unexpected error: %s",
+					err,
+				),
+			)
+			return
+		}
+
+		// Wait a bit before enabling
+		time.Sleep(2 * time.Second)
+	}
+
+	out, err := r.client.UpdateRollingRelease(ctx, request)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating project rolling release",
+			fmt.Sprintf("Could not update project rolling release, unexpected error: %s",
+				err,
+			),
+		)
+		return
+	}
+
+	// Convert response to state
+	result, diags := convertResponseToTFRollingRelease(out, &plan, ctx)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Log the result for debugging
+	tflog.Debug(ctx, "updated rolling release", map[string]any{
+		"enabled":          result.RollingRelease.Enabled.ValueBool(),
+		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
+		"stages":           result.RollingRelease.Stages,
+	})
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+// Delete will delete an existing rolling release by disabling it.
+func (r *projectRollingReleaseResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state TFRollingReleaseInfo
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Disable rolling release
+	request := client.UpdateRollingReleaseRequest{
+		RollingRelease: client.RollingRelease{
+			Enabled:         false,
+			AdvancementType: "",
+			Stages:          []client.RollingReleaseStage{},
+		},
+		ProjectID: state.ProjectID.ValueString(),
+		TeamID:    state.TeamID.ValueString(),
+	}
+
+	_, err := r.client.UpdateRollingRelease(ctx, request)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting project rolling release",
+			fmt.Sprintf("Could not delete project rolling release, unexpected error: %s",
+				err,
+			),
+		)
 		return
 	}
 }
@@ -592,13 +790,14 @@ func (r *projectRollingReleaseResource) ImportState(ctx context.Context, req res
 		return
 	}
 
-	result, _ := convertResponseToTFRollingRelease(out, nil, ctx)
+	// For import, we don't have any state to preserve
+	result, diags := convertResponseToTFRollingRelease(out, nil, ctx)
 	tflog.Info(ctx, "imported project rolling release", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
 	})
 
-	diags := resp.State.Set(ctx, result)
+	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

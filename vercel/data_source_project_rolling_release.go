@@ -140,16 +140,16 @@ func convertResponseToTFRollingReleaseDataSource(response client.RollingReleaseI
 	result := TFRollingReleaseInfoDataSource{
 		RollingRelease: TFRollingReleaseDataSource{
 			Enabled:         types.BoolValue(response.RollingRelease.Enabled),
-			AdvancementType: types.StringNull(),
-			Stages:          make([]TFRollingReleaseStageDataSource, 0),
+			AdvancementType: types.StringValue(response.RollingRelease.AdvancementType),
+			Stages:          convertStagesDataSource(response.RollingRelease.Stages),
 		},
 		ProjectID: types.StringValue(response.ProjectID),
 		TeamID:    types.StringValue(response.TeamID),
 	}
 
-	if response.RollingRelease.Enabled {
-		result.RollingRelease.AdvancementType = types.StringValue(response.RollingRelease.AdvancementType)
-		result.RollingRelease.Stages = convertStagesDataSource(response.RollingRelease.Stages)
+	if !response.RollingRelease.Enabled {
+		result.RollingRelease.AdvancementType = types.StringValue("")
+		result.RollingRelease.Stages = make([]TFRollingReleaseStageDataSource, 0)
 	}
 
 	return result
