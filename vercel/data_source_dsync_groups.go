@@ -53,7 +53,7 @@ func (d *dsyncGroupsDataSource) Schema(_ context.Context, req datasource.SchemaR
 				Description: "The ID of the team to retrieve DSync groups for.",
 				Required:    true,
 			},
-			"groups": schema.MapNestedAttribute{
+			"groups": schema.ListNestedAttribute{
 				Description: "A map of DSync groups for the team.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{

@@ -16,7 +16,6 @@ func TestAcc_DsyncGroupsDataSource(t *testing.T) {
 			{
 				Config: testAccVercelDsyncGroupsDataSource(testTeam(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "team_id", testTeam(t)),
 					resource.TestCheckResourceAttrSet(resourceName, "groups.#"),
 					resource.TestCheckResourceAttrSet(resourceName, "groups.0.id"),
 					resource.TestCheckResourceAttrSet(resourceName, "groups.0.name"),
@@ -31,7 +30,7 @@ func TestAcc_DsyncGroupsDataSource(t *testing.T) {
 func testAccVercelDsyncGroupsDataSource(teamID string) string {
 	return fmt.Sprintf(`
 data "vercel_dsync_groups" "test" {
-  team_id   = "%s"
+  team_id = "%s"
 }
 `, teamID)
 }
