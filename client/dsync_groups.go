@@ -12,11 +12,7 @@ type DsyncGroup struct {
 	Name string `json:"name"`
 }
 
-type DsyncGroups struct {
-	Groups []DsyncGroup `json:"groups"`
-}
-
-func (c *Client) GetDsyncGroups(ctx context.Context, TeamID string) (DsyncGroups, error) {
+func (c *Client) GetDsyncGroups(ctx context.Context, TeamID string) ([]DsyncGroup, error) {
 	var allGroups []DsyncGroup
 	var after *string
 
@@ -43,7 +39,7 @@ func (c *Client) GetDsyncGroups(ctx context.Context, TeamID string) (DsyncGroups
 			body:   "",
 		}, &response)
 		if err != nil {
-			return DsyncGroups{}, err
+			return nil, err
 		}
 
 		allGroups = append(allGroups, response.Groups...)
@@ -54,5 +50,5 @@ func (c *Client) GetDsyncGroups(ctx context.Context, TeamID string) (DsyncGroups
 		after = response.Pagination.After
 	}
 
-	return DsyncGroups{Groups: allGroups}, nil
+	return allGroups, nil
 }

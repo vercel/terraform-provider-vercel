@@ -79,14 +79,8 @@ type DsyncGroup struct {
 }
 
 type DsyncGroups struct {
-	TeamID types.String          `tfsdk:"team_id"`
-	Groups map[string]DsyncGroup `tfsdk:"groups"`
-}
-
-func responseToDsyncGroups(out client.DsyncGroups) DsyncGroups {
-	return DsyncGroups{
-		Groups: make(map[string]DsyncGroup, len(out.Groups)),
-	}
+	TeamID types.String `tfsdk:"team_id"`
+	Groups []DsyncGroup `tfsdk:"groups"`
 }
 
 func (d *dsyncGroupsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -113,12 +107,24 @@ func (d *dsyncGroupsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	result := responseToDsyncGroups(out)
+	var groups = make([]DsyncGroup, 0, len(out))
+	for _, g := range out {
+		groups = append(groups, DsyncGroup{
+			ID:   types.StringValue(g.ID),
+			Name: types.StringValue(g.Name),
+		})
+	}
+
+	result := DsyncGroups{
+		TeamID: config.TeamID,
+		Groups: groups,
+	}
+
 	tflog.Info(ctx, "read dsync groups", map[string]any{
 		"team_id": result.TeamID.ValueString(),
 	})
 
-	diags = resp.State.Set(ctx, result)
+	diags = resp.State.Set(ctx, DsyncGroups(result))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
