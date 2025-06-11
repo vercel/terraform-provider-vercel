@@ -25,7 +25,7 @@ type dsyncGroupsDataSource struct {
 }
 
 func (d *dsyncGroupsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_dsync_group"
+	resp.TypeName = req.ProviderTypeName + "_dsync_groups"
 }
 
 func (d *dsyncGroupsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
