@@ -737,6 +737,10 @@ func (r *projectRollingReleaseResource) ImportState(ctx context.Context, req res
 
 	// For import, we don't have any state to preserve
 	result, diags := convertResponseToTFRollingRelease(out, nil, ctx)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "imported project rolling release", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),

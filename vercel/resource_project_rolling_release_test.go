@@ -38,7 +38,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 		Steps: []resource.TestStep{
 			// First create the resource in a disabled state
 			{
-				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix, testGithubRepo(t))),
+				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "false"),
@@ -48,7 +48,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			},
 			// Then enable with initial configuration
 			{
-				Config: cfg(testAccProjectRollingReleasesConfig(nameSuffix, testGithubRepo(t))),
+				Config: cfg(testAccProjectRollingReleasesConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "true"),
@@ -70,7 +70,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			},
 			// Then update to new configuration
 			{
-				Config: cfg(testAccProjectRollingReleasesConfigUpdate(nameSuffix, testGithubRepo(t))),
+				Config: cfg(testAccProjectRollingReleasesConfigUpdate(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "true"),
@@ -96,7 +96,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			},
 			// Finally disable again
 			{
-				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix, testGithubRepo(t))),
+				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "false"),
@@ -108,15 +108,10 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 	})
 }
 
-func testAccProjectRollingReleasesConfig(nameSuffix string, githubRepo string) string {
+func testAccProjectRollingReleasesConfig(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%s"
-	git_repository = {
-		type = "github"
-		repo = "%s"
-	}
-	enable_preview_feedback = false
 	skew_protection = "12 hours"
 }
 
@@ -142,18 +137,13 @@ resource "vercel_project_rolling_release" "example" {
 		]
 	}
 }
-`, nameSuffix, githubRepo)
+`, nameSuffix)
 }
 
-func testAccProjectRollingReleasesConfigUpdate(nameSuffix string, githubRepo string) string {
+func testAccProjectRollingReleasesConfigUpdate(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%s"
-	git_repository = {
-		type = "github"
-		repo = "%s"
-	}
-	enable_preview_feedback = false
 	skew_protection = "12 hours"
 }
 
@@ -183,18 +173,13 @@ resource "vercel_project_rolling_release" "example" {
 		]
 	}
 }
-`, nameSuffix, githubRepo)
+`, nameSuffix)
 }
 
-func testAccProjectRollingReleasesConfigOff(nameSuffix string, githubRepo string) string {
+func testAccProjectRollingReleasesConfigOff(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%s"
-	git_repository = {
-		type = "github"
-		repo = "%s"
-	}
-	enable_preview_feedback = false
 	skew_protection = "12 hours"
 }
 
@@ -207,5 +192,5 @@ resource "vercel_project_rolling_release" "example" {
 		stages          = []
 	}
 }
-`, nameSuffix, githubRepo)
+`, nameSuffix)
 }
