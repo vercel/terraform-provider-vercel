@@ -93,10 +93,6 @@ func (d *dsyncGroupsDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	out, err := d.client.GetDsyncGroups(ctx, config.TeamID.ValueString())
-	if client.NotFound(err) {
-		resp.State.RemoveResource(ctx)
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading DSync Groups",
