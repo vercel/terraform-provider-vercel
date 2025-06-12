@@ -54,7 +54,7 @@ func (d *dsyncGroupsDataSource) Schema(_ context.Context, req datasource.SchemaR
 				Computed:    true,
 				Description: "The ID of the team the Dsync Groups are associated to. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
-			"groups": schema.ListNestedAttribute{
+			"list": schema.ListNestedAttribute{
 				Description: "A list of DSync groups for the team.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
@@ -70,6 +70,11 @@ func (d *dsyncGroupsDataSource) Schema(_ context.Context, req datasource.SchemaR
 					},
 				},
 			},
+			"map": schema.MapAttribute{
+				Description: "A map of Identity Provider group names to their Vercel IDs. This can be used to look up the ID of a group by its name using the [lookup](https://developer.hashicorp.com/terraform/language/functions/lookup) function.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
 		},
 	}
 }
@@ -80,8 +85,9 @@ type DsyncGroup struct {
 }
 
 type DsyncGroups struct {
-	TeamID types.String `tfsdk:"team_id"`
-	Groups []DsyncGroup `tfsdk:"groups"`
+	TeamID types.String            `tfsdk:"team_id"`
+	List   []DsyncGroup            `tfsdk:"list"`
+	Map    map[string]types.String `tfsdk:"map"`
 }
 
 func (d *dsyncGroupsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -104,17 +110,20 @@ func (d *dsyncGroupsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	var groups = make([]DsyncGroup, 0, len(out.Groups))
+	var groupsList = make([]DsyncGroup, 0, len(out.Groups))
+	var groupsMap = make(map[string]types.String, len(out.Groups))
 	for _, g := range out.Groups {
-		groups = append(groups, DsyncGroup{
+		groupsList = append(groupsList, DsyncGroup{
 			ID:   types.StringValue(g.ID),
 			Name: types.StringValue(g.Name),
 		})
+		groupsMap[g.Name] = types.StringValue(g.ID)
 	}
 
 	result := DsyncGroups{
 		TeamID: types.StringValue(out.TeamID),
-		Groups: groups,
+		List:   groupsList,
+		Map:    groupsMap,
 	}
 
 	tflog.Info(ctx, "read dsync groups", map[string]any{
