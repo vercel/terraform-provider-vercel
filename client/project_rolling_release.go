@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -112,21 +111,17 @@ type RollingReleaseInfo struct {
 func (c *Client) GetRollingRelease(ctx context.Context, projectID, teamID string) (RollingReleaseInfo, error) {
 	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamID)
 
-	resp, err := c.doRequestWithResponse(clientRequest{
+	var d RollingReleaseInfo
+	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "GET",
 		url:    url,
-	})
+	}, &d)
 
 	if err != nil {
 		return RollingReleaseInfo{}, fmt.Errorf("error getting rolling-release: %w", err)
 	}
 
-	// Parse the response
-	var d RollingReleaseInfo
-	if err := json.Unmarshal([]byte(resp), &d); err != nil {
-		return RollingReleaseInfo{}, fmt.Errorf("error parsing response: %w", err)
-	}
 	d.ProjectID = projectID
 	d.TeamID = teamID
 
@@ -156,12 +151,12 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 			TeamID:    request.TeamID,
 		}
 
-		_, err := c.doRequestWithResponse(clientRequest{
+		err := c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
 			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
 			body:   string(mustMarshal(disabledRequest.RollingRelease)),
-		})
+		}, nil)
 		if err != nil {
 			return RollingReleaseInfo{}, fmt.Errorf("error disabling rolling release: %w", err)
 		}
@@ -186,12 +181,12 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 			"stages":          request.RollingRelease.Stages,
 		}
 
-		_, err = c.doRequestWithResponse(clientRequest{
+		err = c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
 			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
 			body:   string(mustMarshal(stagesRequest)),
-		})
+		}, nil)
 		if err != nil {
 			return RollingReleaseInfo{}, fmt.Errorf("error configuring stages: %w", err)
 		}
@@ -206,26 +201,18 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 			"stages":          request.RollingRelease.Stages,
 		}
 
-		resp, err := c.doRequestWithResponse(clientRequest{
+		var result RollingReleaseInfo
+
+		err = c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
 			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
 			body:   string(mustMarshal(enableRequest)),
-		})
+		}, &result)
 		if err != nil {
-			// Try to parse error response
-			var errResp ErrorResponse
-			if jsonErr := json.Unmarshal([]byte(resp), &errResp); jsonErr == nil && errResp.Error.Message != "" {
-				return RollingReleaseInfo{}, fmt.Errorf("error enabling rolling release: %s - %s", errResp.Error.Code, errResp.Error.Message)
-			}
 			return RollingReleaseInfo{}, fmt.Errorf("error enabling rolling release: %w", err)
 		}
 
-		// Parse the response
-		var result RollingReleaseInfo
-		if err := json.Unmarshal([]byte(resp), &result); err != nil {
-			return RollingReleaseInfo{}, fmt.Errorf("error parsing response: %w", err)
-		}
 		result.ProjectID = request.ProjectID
 		result.TeamID = request.TeamID
 
@@ -242,21 +229,18 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 			TeamID:    request.TeamID,
 		}
 
-		resp, err := c.doRequestWithResponse(clientRequest{
+		var result RollingReleaseInfo
+
+		err := c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
 			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
 			body:   string(mustMarshal(disabledRequest.RollingRelease)),
-		})
+		}, &result)
 		if err != nil {
 			return RollingReleaseInfo{}, fmt.Errorf("error disabling rolling release: %w", err)
 		}
 
-		// Parse the response
-		var result RollingReleaseInfo
-		if err := json.Unmarshal([]byte(resp), &result); err != nil {
-			return RollingReleaseInfo{}, fmt.Errorf("error parsing response: %w", err)
-		}
 		result.ProjectID = request.ProjectID
 		result.TeamID = request.TeamID
 
