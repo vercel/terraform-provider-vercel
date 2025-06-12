@@ -96,37 +96,37 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 	}
 }
 
-type TFRollingReleaseStageDataSource struct {
+type RollingReleaseStageDataSource struct {
 	TargetPercentage types.Int64 `tfsdk:"target_percentage"`
 	Duration         types.Int64 `tfsdk:"duration"`
 	RequireApproval  types.Bool  `tfsdk:"require_approval"`
 }
 
-type TFRollingReleaseDataSource struct {
-	Enabled         types.Bool                        `tfsdk:"enabled"`
-	AdvancementType types.String                      `tfsdk:"advancement_type"`
-	Stages          []TFRollingReleaseStageDataSource `tfsdk:"stages"`
+type RollingReleaseDataSource struct {
+	Enabled         types.Bool                      `tfsdk:"enabled"`
+	AdvancementType types.String                    `tfsdk:"advancement_type"`
+	Stages          []RollingReleaseStageDataSource `tfsdk:"stages"`
 }
 
-type TFRollingReleaseInfoDataSource struct {
-	RollingRelease TFRollingReleaseDataSource `tfsdk:"rolling_release"`
-	ProjectID      types.String               `tfsdk:"project_id"`
-	TeamID         types.String               `tfsdk:"team_id"`
+type RollingReleaseInfoDataSource struct {
+	RollingRelease RollingReleaseDataSource `tfsdk:"rolling_release"`
+	ProjectID      types.String             `tfsdk:"project_id"`
+	TeamID         types.String             `tfsdk:"team_id"`
 }
 
-func convertStagesDataSource(stages []client.RollingReleaseStage) []TFRollingReleaseStageDataSource {
+func convertStagesDataSource(stages []client.RollingReleaseStage) []RollingReleaseStageDataSource {
 	if len(stages) == 0 {
-		return []TFRollingReleaseStageDataSource{}
+		return []RollingReleaseStageDataSource{}
 	}
 
-	result := make([]TFRollingReleaseStageDataSource, len(stages))
+	result := make([]RollingReleaseStageDataSource, len(stages))
 	for i, stage := range stages {
 		duration := types.Int64Null()
 		if stage.Duration != nil {
 			duration = types.Int64Value(int64(*stage.Duration))
 		}
 
-		result[i] = TFRollingReleaseStageDataSource{
+		result[i] = RollingReleaseStageDataSource{
 			TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
 			Duration:         duration,
 			RequireApproval:  types.BoolValue(stage.RequireApproval),
@@ -135,9 +135,9 @@ func convertStagesDataSource(stages []client.RollingReleaseStage) []TFRollingRel
 	return result
 }
 
-func convertResponseToTFRollingReleaseDataSource(response client.RollingReleaseInfo) TFRollingReleaseInfoDataSource {
-	result := TFRollingReleaseInfoDataSource{
-		RollingRelease: TFRollingReleaseDataSource{
+func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInfo) RollingReleaseInfoDataSource {
+	result := RollingReleaseInfoDataSource{
+		RollingRelease: RollingReleaseDataSource{
 			Enabled:         types.BoolValue(response.RollingRelease.Enabled),
 			AdvancementType: types.StringValue(response.RollingRelease.AdvancementType),
 			Stages:          convertStagesDataSource(response.RollingRelease.Stages),
@@ -148,14 +148,14 @@ func convertResponseToTFRollingReleaseDataSource(response client.RollingReleaseI
 
 	if !response.RollingRelease.Enabled {
 		result.RollingRelease.AdvancementType = types.StringValue("")
-		result.RollingRelease.Stages = []TFRollingReleaseStageDataSource{}
+		result.RollingRelease.Stages = make([]RollingReleaseStageDataSource, 0)
 	}
 
 	return result
 }
 
 func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config TFRollingReleaseInfoDataSource
+	var config RollingReleaseInfoDataSource
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -182,7 +182,7 @@ func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 		return
 	}
 
-	result := convertResponseToTFRollingReleaseDataSource(out)
+	result := convertResponseToRollingReleaseDataSource(out)
 	tflog.Info(ctx, "read project rolling release", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),

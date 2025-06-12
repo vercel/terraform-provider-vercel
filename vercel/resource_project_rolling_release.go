@@ -117,27 +117,27 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 	}
 }
 
-type TFRollingReleaseStage struct {
+type RollingReleaseStage struct {
 	TargetPercentage types.Int64 `tfsdk:"target_percentage"`
 	Duration         types.Int64 `tfsdk:"duration"`
 	RequireApproval  types.Bool  `tfsdk:"require_approval"`
 }
 
-// TFRollingRelease reflects the state terraform stores internally for a project rolling release.
-type TFRollingRelease struct {
+// RollingRelease reflects the state terraform stores internally for a project rolling release.
+type RollingRelease struct {
 	Enabled         types.Bool   `tfsdk:"enabled"`
 	AdvancementType types.String `tfsdk:"advancement_type"`
 	Stages          types.List   `tfsdk:"stages"`
 }
 
 // ProjectRollingRelease reflects the state terraform stores internally for a project rolling release.
-type TFRollingReleaseInfo struct {
-	RollingRelease TFRollingRelease `tfsdk:"rolling_release"`
-	ProjectID      types.String     `tfsdk:"project_id"`
-	TeamID         types.String     `tfsdk:"team_id"`
+type RollingReleaseInfo struct {
+	RollingRelease RollingRelease `tfsdk:"rolling_release"`
+	ProjectID      types.String   `tfsdk:"project_id"`
+	TeamID         types.String   `tfsdk:"team_id"`
 }
 
-func (e *TFRollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRollingReleaseRequest, diag.Diagnostics) {
+func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRollingReleaseRequest, diag.Diagnostics) {
 	var stages []client.RollingReleaseStage
 	var advancementType string
 	var diags diag.Diagnostics
@@ -162,7 +162,7 @@ func (e *TFRollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRol
 		}
 
 		// Convert stages from types.List to []client.RollingReleaseStage
-		var tfStages []TFRollingReleaseStage
+		var tfStages []RollingReleaseStage
 		diags = e.RollingRelease.Stages.ElementsAs(context.Background(), &tfStages, false)
 		if diags.HasError() {
 			return client.UpdateRollingReleaseRequest{}, diags
@@ -285,7 +285,7 @@ func (e *TFRollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRol
 	}, diags
 }
 
-func convertResponseToTFRollingRelease(response client.RollingReleaseInfo, plan *TFRollingReleaseInfo, ctx context.Context) (TFRollingReleaseInfo, diag.Diagnostics) {
+func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *RollingReleaseInfo, ctx context.Context) (RollingReleaseInfo, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	// If we have a plan and the response doesn't match what we expect,
@@ -308,8 +308,8 @@ func convertResponseToTFRollingRelease(response client.RollingReleaseInfo, plan 
 		}
 	}
 
-	result := TFRollingReleaseInfo{
-		RollingRelease: TFRollingRelease{
+	result := RollingReleaseInfo{
+		RollingRelease: RollingRelease{
 			Enabled:         types.BoolValue(response.RollingRelease.Enabled),
 			AdvancementType: types.StringValue(response.RollingRelease.AdvancementType),
 		},
@@ -339,7 +339,7 @@ func convertResponseToTFRollingRelease(response client.RollingReleaseInfo, plan 
 	// If we have a plan, try to match stages by target percentage to preserve order
 	var orderedStages []client.RollingReleaseStage
 	if plan != nil && !plan.RollingRelease.Stages.IsNull() && !plan.RollingRelease.Stages.IsUnknown() {
-		var planStages []TFRollingReleaseStage
+		var planStages []RollingReleaseStage
 		diags.Append(plan.RollingRelease.Stages.ElementsAs(ctx, &planStages, false)...)
 		if diags.HasError() {
 			return result, diags
@@ -429,7 +429,7 @@ func convertResponseToTFRollingRelease(response client.RollingReleaseInfo, plan 
 
 // Create will create a rolling release for a Vercel project by sending a request to the Vercel API.
 func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan TFRollingReleaseInfo
+	var plan RollingReleaseInfo
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -490,7 +490,7 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 	}
 
 	// Convert response to state
-	result, diags := convertResponseToTFRollingRelease(out, &plan, ctx)
+	result, diags := convertResponseToRollingRelease(out, &plan, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -514,7 +514,7 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 // Read will read a rolling release of a Vercel project by requesting it from the Vercel API, and will update terraform
 // with this information.
 func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state TFRollingReleaseInfo
+	var state RollingReleaseInfo
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -543,7 +543,7 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 		"stages":           out.RollingRelease.Stages,
 	})
 
-	result, diags := convertResponseToTFRollingRelease(out, &state, ctx)
+	result, diags := convertResponseToRollingRelease(out, &state, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -565,14 +565,14 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 
 // Update will update an existing rolling release to the latest information.
 func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan TFRollingReleaseInfo
+	var plan RollingReleaseInfo
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var state TFRollingReleaseInfo
+	var state RollingReleaseInfo
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -659,7 +659,7 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 	}
 
 	// Convert response to state
-	result, diags := convertResponseToTFRollingRelease(out, &plan, ctx)
+	result, diags := convertResponseToRollingRelease(out, &plan, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -681,7 +681,7 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 
 // Delete will delete an existing rolling release by disabling it.
 func (r *projectRollingReleaseResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state TFRollingReleaseInfo
+	var state RollingReleaseInfo
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -736,7 +736,7 @@ func (r *projectRollingReleaseResource) ImportState(ctx context.Context, req res
 	}
 
 	// For import, we don't have any state to preserve
-	result, diags := convertResponseToTFRollingRelease(out, nil, ctx)
+	result, diags := convertResponseToRollingRelease(out, nil, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
