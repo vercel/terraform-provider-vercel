@@ -148,7 +148,7 @@ func convertResponseToTFRollingReleaseDataSource(response client.RollingReleaseI
 
 	if !response.RollingRelease.Enabled {
 		result.RollingRelease.AdvancementType = types.StringValue("")
-		result.RollingRelease.Stages = make([]TFRollingReleaseStageDataSource, 0)
+		result.RollingRelease.Stages = []TFRollingReleaseStageDataSource{}
 	}
 
 	return result
