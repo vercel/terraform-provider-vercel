@@ -3,7 +3,6 @@ package vercel
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -143,77 +142,12 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	var diags diag.Diagnostics
 
 	if e.RollingRelease.Enabled.ValueBool() {
-		// When enabled, both advancement_type and stages are required
-		if e.RollingRelease.AdvancementType.IsNull() || e.RollingRelease.AdvancementType.IsUnknown() {
-			diags.AddError(
-				"Error creating rolling release",
-				"advancement_type is required when enabled is true",
-			)
-			return client.UpdateRollingReleaseRequest{}, diags
-		}
 		advancementType = e.RollingRelease.AdvancementType.ValueString()
-
-		if e.RollingRelease.Stages.IsNull() || e.RollingRelease.Stages.IsUnknown() {
-			diags.AddError(
-				"Error creating rolling release",
-				"stages are required when enabled is true",
-			)
-			return client.UpdateRollingReleaseRequest{}, diags
-		}
 
 		// Convert stages from types.List to []client.RollingReleaseStage
 		var tfStages []RollingReleaseStage
 		diags = e.RollingRelease.Stages.ElementsAs(context.Background(), &tfStages, false)
 		if diags.HasError() {
-			return client.UpdateRollingReleaseRequest{}, diags
-		}
-
-		// Validate stages
-		if len(tfStages) < 2 || len(tfStages) > 10 {
-			diags.AddError(
-				"Error creating rolling release",
-				fmt.Sprintf("must have between 2 and 10 stages when enabled is true, got: %d", len(tfStages)),
-			)
-			return client.UpdateRollingReleaseRequest{}, diags
-		}
-
-		// Sort stages by target percentage to ensure correct order
-		sort.Slice(tfStages, func(i, j int) bool {
-			return tfStages[i].TargetPercentage.ValueInt64() < tfStages[j].TargetPercentage.ValueInt64()
-		})
-
-		// Validate stages are in ascending order and within bounds
-		prevPercentage := int64(0)
-		for i, stage := range tfStages {
-			percentage := stage.TargetPercentage.ValueInt64()
-
-			// Validate percentage bounds
-			if percentage < 0 || percentage > 100 {
-				diags.AddError(
-					"Error creating rolling release",
-					fmt.Sprintf("stage %d: target_percentage must be between 0 and 100, got: %d", i, percentage),
-				)
-				return client.UpdateRollingReleaseRequest{}, diags
-			}
-
-			// Validate ascending order
-			if percentage <= prevPercentage {
-				diags.AddError(
-					"Error creating rolling release",
-					fmt.Sprintf("stage %d: target_percentage must be greater than previous stage (%d), got: %d", i, prevPercentage, percentage),
-				)
-				return client.UpdateRollingReleaseRequest{}, diags
-			}
-			prevPercentage = percentage
-		}
-
-		// Validate last stage is 100%
-		lastStage := tfStages[len(tfStages)-1]
-		if lastStage.TargetPercentage.ValueInt64() != 100 {
-			diags.AddError(
-				"Error creating rolling release",
-				fmt.Sprintf("last stage must have target_percentage=100, got: %d", lastStage.TargetPercentage.ValueInt64()),
-			)
 			return client.UpdateRollingReleaseRequest{}, diags
 		}
 
@@ -233,13 +167,6 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 						}
 					} else {
 						duration := int(stage.Duration.ValueInt64())
-						if duration < 1 || duration > 10000 {
-							diags.AddError(
-								"Error creating rolling release",
-								fmt.Sprintf("stage %d: duration must be between 1 and 10000 minutes for automatic advancement, got: %d", i, duration),
-							)
-							return client.UpdateRollingReleaseRequest{}, diags
-						}
 						stages[i] = client.RollingReleaseStage{
 							TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
 							Duration:         &duration,
