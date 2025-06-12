@@ -109,7 +109,8 @@ type RollingReleaseInfo struct {
 
 // GetRollingRelease returns the rolling release for a given project.
 func (c *Client) GetRollingRelease(ctx context.Context, projectID, teamID string) (RollingReleaseInfo, error) {
-	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamID)
+	teamId := c.TeamID(teamID)
+	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamId)
 
 	var d RollingReleaseInfo
 	err := c.doRequest(clientRequest{
@@ -123,7 +124,7 @@ func (c *Client) GetRollingRelease(ctx context.Context, projectID, teamID string
 	}
 
 	d.ProjectID = projectID
-	d.TeamID = teamID
+	d.TeamID = teamId
 
 	return d, nil
 }
@@ -138,6 +139,7 @@ type UpdateRollingReleaseRequest struct {
 
 // UpdateRollingRelease will update an existing rolling release to the latest information.
 func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRollingReleaseRequest) (RollingReleaseInfo, error) {
+	teamId := c.TeamID(request.TeamID)
 	// If we're enabling, we need to do it in steps
 	if request.RollingRelease.Enabled {
 		// First ensure it's disabled
@@ -147,14 +149,12 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 				AdvancementType: "",
 				Stages:          []RollingReleaseStage{},
 			},
-			ProjectID: request.ProjectID,
-			TeamID:    request.TeamID,
 		}
 
 		err := c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
-			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
+			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, teamId),
 			body:   string(mustMarshal(disabledRequest.RollingRelease)),
 		}, nil)
 		if err != nil {
@@ -184,7 +184,7 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		err = c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
-			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
+			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, teamId),
 			body:   string(mustMarshal(stagesRequest)),
 		}, nil)
 		if err != nil {
@@ -206,7 +206,7 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		err = c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
-			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
+			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, teamId),
 			body:   string(mustMarshal(enableRequest)),
 		}, &result)
 		if err != nil {
@@ -214,7 +214,7 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		}
 
 		result.ProjectID = request.ProjectID
-		result.TeamID = request.TeamID
+		result.TeamID = teamId
 
 		return result, nil
 	} else {
@@ -225,8 +225,6 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 				AdvancementType: "",
 				Stages:          []RollingReleaseStage{},
 			},
-			ProjectID: request.ProjectID,
-			TeamID:    request.TeamID,
 		}
 
 		var result RollingReleaseInfo
@@ -234,7 +232,7 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		err := c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
-			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
+			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, teamId),
 			body:   string(mustMarshal(disabledRequest.RollingRelease)),
 		}, &result)
 		if err != nil {
@@ -242,7 +240,7 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		}
 
 		result.ProjectID = request.ProjectID
-		result.TeamID = request.TeamID
+		result.TeamID = teamId
 
 		return result, nil
 	}
@@ -250,15 +248,13 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 
 // DeleteRollingRelease will delete the rolling release for a given project.
 func (c *Client) DeleteRollingRelease(ctx context.Context, projectID, teamID string) error {
-	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamID)
+	teamId := c.TeamID(teamID)
+	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamId)
 
-	var d RollingReleaseInfo
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "DELETE",
 		url:    url,
-	}, &d)
-	d.ProjectID = projectID
-	d.TeamID = teamID
+	}, nil)
 	return err
 }

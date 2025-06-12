@@ -6,11 +6,13 @@ import (
 	"sort"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -53,50 +55,6 @@ func (r *projectRollingReleaseResource) Configure(ctx context.Context, req resou
 	r.client = client
 }
 
-// Custom validator for advancement_type
-type advancementTypeValidator struct{}
-
-func (v advancementTypeValidator) Description(ctx context.Context) string {
-	return "advancement_type must be either 'automatic' or 'manual-approval'"
-}
-
-func (v advancementTypeValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v advancementTypeValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	// Get the value of enabled from the parent object
-	var enabled types.Bool
-	diags := req.Config.GetAttribute(ctx, path.Root("rolling_release").AtName("enabled"), &enabled)
-	if diags.HasError() {
-		resp.Diagnostics.AddError(
-			"Error validating advancement_type",
-			"Could not get enabled value from configuration",
-		)
-		return
-	}
-
-	// Only validate when enabled is true
-	if enabled.ValueBool() {
-		if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-			resp.Diagnostics.AddError(
-				"Invalid advancement_type",
-				"advancement_type is required when enabled is true",
-			)
-			return
-		}
-
-		value := req.ConfigValue.ValueString()
-		if value != "automatic" && value != "manual-approval" {
-			resp.Diagnostics.AddError(
-				"Invalid advancement_type",
-				fmt.Sprintf("advancement_type must be either 'automatic' or 'manual-approval', got: %s", value),
-			)
-			return
-		}
-	}
-}
-
 // Schema returns the schema information for a project rolling release resource.
 func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -107,8 +65,10 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 				Required:            true,
 			},
 			"team_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the team the project exists in.",
-				Required:            true,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The ID of the Vercel team.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"rolling_release": schema.SingleNestedAttribute{
 				MarkdownDescription: "The rolling release configuration.",
@@ -135,6 +95,9 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 								"target_percentage": schema.Int64Attribute{
 									MarkdownDescription: "The percentage of traffic to route to this stage.",
 									Required:            true,
+									Validators: []validator.Int64{
+										int64validator.Between(0, 100),
+									},
 								},
 								"duration": schema.Int64Attribute{
 									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.",
@@ -172,24 +135,6 @@ type TFRollingReleaseInfo struct {
 	RollingRelease TFRollingRelease `tfsdk:"rolling_release"`
 	ProjectID      types.String     `tfsdk:"project_id"`
 	TeamID         types.String     `tfsdk:"team_id"`
-}
-
-type RollingReleaseStage struct {
-	TargetPercentage int  `json:"targetPercentage"`
-	Duration         *int `json:"duration,omitempty"`
-	RequireApproval  bool `json:"requireApproval"`
-}
-
-type RollingRelease struct {
-	Enabled         bool                  `json:"enabled"`
-	AdvancementType string                `json:"advancementType"`
-	Stages          []RollingReleaseStage `json:"stages"`
-}
-
-type UpdateRollingReleaseRequest struct {
-	RollingRelease RollingRelease `json:"rollingRelease"`
-	ProjectID      string         `json:"-"`
-	TeamID         string         `json:"-"`
 }
 
 func (e *TFRollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRollingReleaseRequest, diag.Diagnostics) {

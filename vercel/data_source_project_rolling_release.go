@@ -54,8 +54,9 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 				Required:            true,
 			},
 			"team_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the team the project exists in.",
-				Required:            true,
+				Optional:    true,
+				Computed:    true,
+				Description: "The ID of the Vercel team.",
 			},
 			"rolling_release": schema.SingleNestedAttribute{
 				MarkdownDescription: "The rolling release configuration.",
@@ -120,11 +121,9 @@ func convertStagesDataSource(stages []client.RollingReleaseStage) []TFRollingRel
 
 	result := make([]TFRollingReleaseStageDataSource, len(stages))
 	for i, stage := range stages {
-		var duration types.Int64
+		duration := types.Int64Null()
 		if stage.Duration != nil {
 			duration = types.Int64Value(int64(*stage.Duration))
-		} else {
-			duration = types.Int64Null()
 		}
 
 		result[i] = TFRollingReleaseStageDataSource{

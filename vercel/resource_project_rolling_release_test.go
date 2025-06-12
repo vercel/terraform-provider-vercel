@@ -122,7 +122,6 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	team_id    = vercel_project.example.team_id
 	depends_on = [vercel_project.example]
 	rolling_release = {
 		enabled          = true
@@ -160,7 +159,6 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	team_id    = vercel_project.example.team_id
 	depends_on = [vercel_project.example]
 	rolling_release = {
 		enabled          = true
@@ -202,7 +200,6 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	team_id    = vercel_project.example.team_id
 	depends_on = [vercel_project.example]
 	rolling_release = {
 		enabled          = false
