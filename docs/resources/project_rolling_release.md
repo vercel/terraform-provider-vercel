@@ -49,6 +49,9 @@ resource "vercel_project_rolling_release" "example" {
 
 - `project_id` (String) The ID of the project.
 - `rolling_release` (Attributes) The rolling release configuration. (see [below for nested schema](#nestedatt--rolling_release))
+
+### Optional
+
 - `team_id` (String) The ID of the team the project exists in.
 
 <a id="nestedatt--rolling_release"></a>

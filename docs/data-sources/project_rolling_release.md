@@ -28,6 +28,9 @@ data "vercel_project_rolling_release" "example" {
 ### Required
 
 - `project_id` (String) The ID of the project.
+
+### Optional
+
 - `team_id` (String) The ID of the team the project exists in.
 
 ### Read-Only
