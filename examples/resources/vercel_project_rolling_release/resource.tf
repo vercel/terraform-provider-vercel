@@ -1,5 +1,5 @@
 resource "vercel_project" "example" {
-	name = "test-acc-example-project-%s"
+	name = "example-project"
 	skew_protection = "12 hours"
 }
 
