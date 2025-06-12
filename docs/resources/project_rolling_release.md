@@ -52,7 +52,7 @@ resource "vercel_project_rolling_release" "example" {
 
 ### Optional
 
-- `team_id` (String) The ID of the team the project exists in.
+- `team_id` (String) The ID of the Vercel team.
 
 <a id="nestedatt--rolling_release"></a>
 ### Nested Schema for `rolling_release`
