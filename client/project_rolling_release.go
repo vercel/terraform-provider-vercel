@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 )
 
@@ -83,11 +82,6 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 
 		// Wait a bit before proceeding
 		time.Sleep(2 * time.Second)
-
-		// Sort stages by target percentage
-		sort.Slice(request.RollingRelease.Stages, func(i, j int) bool {
-			return request.RollingRelease.Stages[i].TargetPercentage < request.RollingRelease.Stages[j].TargetPercentage
-		})
 
 		// First set up the stages
 		stagesRequest := map[string]any{
