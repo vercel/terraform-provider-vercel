@@ -116,7 +116,7 @@ type TFRollingReleaseInfoDataSource struct {
 
 func convertStagesDataSource(stages []client.RollingReleaseStage) []TFRollingReleaseStageDataSource {
 	if len(stages) == 0 {
-		return nil
+		return []TFRollingReleaseStageDataSource{}
 	}
 
 	result := make([]TFRollingReleaseStageDataSource, len(stages))
