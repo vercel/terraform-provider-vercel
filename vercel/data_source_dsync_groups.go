@@ -50,11 +50,12 @@ func (d *dsyncGroupsDataSource) Schema(_ context.Context, req datasource.SchemaR
 		Description: "Provides information about DSync groups for a team.",
 		Attributes: map[string]schema.Attribute{
 			"team_id": schema.StringAttribute{
-				Description: "The ID of the team to retrieve DSync groups for.",
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
+				Description: "The ID of the team the Dsync Groups are associated to. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
 			"groups": schema.ListNestedAttribute{
-				Description: "A map of DSync groups for the team.",
+				Description: "A list of DSync groups for the team.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -107,8 +108,8 @@ func (d *dsyncGroupsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	var groups = make([]DsyncGroup, 0, len(out))
-	for _, g := range out {
+	var groups = make([]DsyncGroup, 0, len(out.Groups))
+	for _, g := range out.Groups {
 		groups = append(groups, DsyncGroup{
 			ID:   types.StringValue(g.ID),
 			Name: types.StringValue(g.Name),
@@ -116,7 +117,7 @@ func (d *dsyncGroupsDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	result := DsyncGroups{
-		TeamID: config.TeamID,
+		TeamID: types.StringValue(out.TeamID),
 		Groups: groups,
 	}
 

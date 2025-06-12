@@ -12,12 +12,19 @@ type DsyncGroup struct {
 	Name string `json:"name"`
 }
 
-func (c *Client) GetDsyncGroups(ctx context.Context, TeamID string) ([]DsyncGroup, error) {
+type GetDsyncGroupsResponse struct {
+	TeamID string       `json:"teamId"`
+	Groups []DsyncGroup `json:"groups"`
+}
+
+func (c *Client) GetDsyncGroups(ctx context.Context, TeamID string) (GetDsyncGroupsResponse, error) {
 	var allGroups []DsyncGroup
 	var after *string
 
+	var ResolvedTeamID = c.TeamID(TeamID)
+
 	for {
-		url := fmt.Sprintf("%s/teams/%s/dsync/groups", c.baseURL, TeamID)
+		url := fmt.Sprintf("%s/teams/%s/dsync/groups", c.baseURL, ResolvedTeamID)
 		if after != nil {
 			url = fmt.Sprintf("%s?after=%s", url, *after)
 		}
@@ -39,7 +46,7 @@ func (c *Client) GetDsyncGroups(ctx context.Context, TeamID string) ([]DsyncGrou
 			body:   "",
 		}, &response)
 		if err != nil {
-			return nil, err
+			return GetDsyncGroupsResponse{}, err
 		}
 
 		allGroups = append(allGroups, response.Groups...)
@@ -50,5 +57,8 @@ func (c *Client) GetDsyncGroups(ctx context.Context, TeamID string) ([]DsyncGrou
 		after = response.Pagination.After
 	}
 
-	return allGroups, nil
+	return GetDsyncGroupsResponse{
+		TeamID: ResolvedTeamID,
+		Groups: allGroups,
+	}, nil
 }
