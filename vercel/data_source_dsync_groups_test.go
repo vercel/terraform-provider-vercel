@@ -16,11 +16,11 @@ func TestAcc_DsyncGroupsDataSource(t *testing.T) {
 			{
 				Config: testAccVercelDsyncGroupsDataSource(testTeam(t)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "groups.#"),
-					resource.TestCheckResourceAttrSet(resourceName, "groups.0.id"),
-					resource.TestCheckResourceAttrSet(resourceName, "groups.0.name"),
-					resource.TestCheckResourceAttrSet(resourceName, "groups.1.id"),
-					resource.TestCheckResourceAttrSet(resourceName, "groups.1.name"),
+					resource.TestCheckResourceAttrSet(resourceName, "list.0.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "list.0.name"),
+					resource.TestCheckResourceAttrSet(resourceName, "list.1.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "list.1.name"),
+					resource.TestCheckResourceAttrSet(resourceName, "map"),
 				),
 			},
 		},
