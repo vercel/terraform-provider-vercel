@@ -83,6 +83,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_cpu_type", "standard"),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_timeout", "60"),
 					resource.TestCheckResourceAttr("vercel_project.test", "on_demand_concurrent_builds", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "enhanced"),
 				),
 			},
 			// Update testing
@@ -100,6 +101,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "on_demand_concurrent_builds", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", ""),
 				),
 			},
 			// Test mutual exclusivity validation
@@ -1066,6 +1068,7 @@ resource "vercel_project" "test" {
     }
   ]
   on_demand_concurrent_builds = true
+  build_machine_type = "enhanced"
 }
 `, projectSuffix)
 }

@@ -58,6 +58,7 @@ resource "vercel_project" "example" {
 - `auto_assign_custom_domains` (Boolean) Automatically assign custom production domains after each Production deployment via merge to the production branch or Vercel CLI deploy with --prod. Defaults to `true`
 - `automatically_expose_system_environment_variables` (Boolean) Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field
 - `build_command` (String) The build command for this project. If omitted, this value will be automatically detected.
+- `build_machine_type` (String) The build machine type to use for this project. Must be one of "enhanced".
 - `customer_success_code_visibility` (Boolean) Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.
 - `dev_command` (String) The dev command for this project. If omitted, this value will be automatically detected.
 - `directory_listing` (Boolean) If no index file is present within a directory, the directory contents will be displayed.
