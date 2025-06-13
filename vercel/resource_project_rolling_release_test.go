@@ -36,14 +36,6 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
 		),
 		Steps: []resource.TestStep{
-			// First create the project
-			{
-				Config: cfg(testAccProjectConfig(nameSuffix)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
-				),
-			},
-			// Then enable with initial configuration
 			{
 				Config: cfg(testAccProjectRollingReleasesConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -68,7 +60,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			},
 			// Then update to new configuration
 			{
-				Config: cfg(testAccProjectRollingReleasesConfigUpdate(nameSuffix)),
+				Config: cfg(testAccProjectRollingReleasesConfigUpdated(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
@@ -95,7 +87,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			},
 			// Finally disable
 			{
-				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix)),
+				Config: cfg(testAccProjectRollingReleasesConfigDisabled(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
@@ -111,12 +103,11 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 func testAccProjectRollingReleasesConfig(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
-	name = "test-acc-example-project-%s"
+	name = "test-acc-rolling-releases-%s"
 }
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	depends_on = [vercel_project.example]
 	rolling_release = {
 		enabled          = true
 		advancement_type = "manual-approval"
@@ -139,15 +130,14 @@ resource "vercel_project_rolling_release" "example" {
 `, nameSuffix)
 }
 
-func testAccProjectRollingReleasesConfigUpdate(nameSuffix string) string {
+func testAccProjectRollingReleasesConfigUpdated(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
-	name = "test-acc-example-project-%s"
+	name = "test-acc-rolling-releases-%s"
 }
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	depends_on = [vercel_project.example]
 	rolling_release = {
 		enabled          = true
 		advancement_type = "manual-approval"
@@ -174,15 +164,14 @@ resource "vercel_project_rolling_release" "example" {
 `, nameSuffix)
 }
 
-func testAccProjectRollingReleasesConfigOff(nameSuffix string) string {
+func testAccProjectRollingReleasesConfigDisabled(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
-	name = "test-acc-example-project-%s"
+	name = "test-acc-rolling-releases-%s"
 }
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	depends_on = [vercel_project.example]
 	rolling_release = {
 		enabled          = false
 		advancement_type = ""

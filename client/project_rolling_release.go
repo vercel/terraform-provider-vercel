@@ -57,9 +57,8 @@ type UpdateRollingReleaseRequest struct {
 
 // UpdateRollingRelease will update an existing rolling release to the latest information.
 func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRollingReleaseRequest) (RollingReleaseInfo, error) {
-	teamId := c.TeamID(request.TeamID)
+	request.TeamID = c.TeamID(request.TeamID)
 	if request.RollingRelease.Enabled {
-
 		enableRequest := map[string]any{
 			"enabled":         true,
 			"advancementType": request.RollingRelease.AdvancementType,
@@ -67,11 +66,10 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		}
 
 		var result RollingReleaseInfo
-
 		err := c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
-			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, teamId),
+			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
 			body:   string(mustMarshal(enableRequest)),
 		}, &result)
 		if err != nil {
@@ -79,8 +77,7 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		}
 
 		result.ProjectID = request.ProjectID
-		result.TeamID = teamId
-
+		result.TeamID = request.TeamID
 		return result, nil
 	} else {
 		// For disabling, just send the request as is
@@ -93,11 +90,10 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		}
 
 		var result RollingReleaseInfo
-
 		err := c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
-			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, teamId),
+			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
 			body:   string(mustMarshal(disabledRequest.RollingRelease)),
 		}, &result)
 		if err != nil {
@@ -105,7 +101,7 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		}
 
 		result.ProjectID = request.ProjectID
-		result.TeamID = teamId
+		result.TeamID = request.TeamID
 
 		return result, nil
 	}

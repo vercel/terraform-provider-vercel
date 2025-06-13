@@ -214,27 +214,6 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 
 func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *RollingReleaseInfo, ctx context.Context) (RollingReleaseInfo, diag.Diagnostics) {
 	var diags diag.Diagnostics
-
-	// If we have a plan and the response doesn't match what we expect,
-	// this is likely a race condition and we should preserve the plan values
-	if plan != nil && plan.RollingRelease.Enabled.ValueBool() {
-		// If the plan is enabled but response shows disabled or missing fields,
-		// this is likely a race condition
-		if !response.RollingRelease.Enabled ||
-			response.RollingRelease.AdvancementType == "" ||
-			len(response.RollingRelease.Stages) == 0 {
-			tflog.Debug(ctx, "detected race condition, preserving plan values", map[string]any{
-				"plan_enabled":              plan.RollingRelease.Enabled.ValueBool(),
-				"plan_advancement_type":     plan.RollingRelease.AdvancementType.ValueString(),
-				"plan_stages_count":         len(plan.RollingRelease.Stages.Elements()),
-				"response_enabled":          response.RollingRelease.Enabled,
-				"response_advancement_type": response.RollingRelease.AdvancementType,
-				"response_stages_count":     len(response.RollingRelease.Stages),
-			})
-			return *plan, diags
-		}
-	}
-
 	result := RollingReleaseInfo{
 		RollingRelease: RollingRelease{
 			Enabled:         types.BoolValue(response.RollingRelease.Enabled),
@@ -371,7 +350,7 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 	}
 
 	// Log the request for debugging
-	tflog.Debug(ctx, "creating rolling release", map[string]any{
+	tflog.Info(ctx, "creating rolling release", map[string]any{
 		"enabled":          request.RollingRelease.Enabled,
 		"advancement_type": request.RollingRelease.AdvancementType,
 		"stages":           request.RollingRelease.Stages,
@@ -401,7 +380,6 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 			return
 		}
 
-		// Wait a bit before enabling
 		time.Sleep(2 * time.Second)
 	}
 
@@ -542,9 +520,6 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 			)
 			return
 		}
-
-		// Wait a bit before proceeding
-		time.Sleep(2 * time.Second)
 	}
 
 	// If we're transitioning from disabled to enabled, first create in disabled state
@@ -569,9 +544,6 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 			)
 			return
 		}
-
-		// Wait a bit before enabling
-		time.Sleep(2 * time.Second)
 	}
 
 	out, err := r.client.UpdateRollingRelease(ctx, request)
