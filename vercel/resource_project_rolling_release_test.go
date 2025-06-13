@@ -132,6 +132,7 @@ func testAccProjectRollingReleasesConfigUpdated(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-rolling-releases-%s"
+	skew_protection = "12 hours"
 }
 
 resource "vercel_project_rolling_release" "example" {
