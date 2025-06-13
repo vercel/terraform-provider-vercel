@@ -15,6 +15,7 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
 		),
 		Steps: []resource.TestStep{
+			// First create the project and enable rolling release
 			{
 				Config: cfg(testAccProjectRollingReleasesConfigUpdate(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -26,7 +27,7 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 			},
 			// Then disable it and check the data source
 			{
-				Config: cfg(testAccProjectConfig(nameSuffix)),
+				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), "vercel_project_rolling_release.example", testTeam(t)),
 					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "rolling_release.enabled", "false"),
