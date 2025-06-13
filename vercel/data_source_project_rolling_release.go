@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -61,6 +62,7 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 			"rolling_release": schema.SingleNestedAttribute{
 				MarkdownDescription: "The rolling release configuration.",
 				Computed:            true,
+				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
 						MarkdownDescription: "Whether rolling releases are enabled.",
@@ -109,9 +111,9 @@ type RollingReleaseDataSource struct {
 }
 
 type RollingReleaseInfoDataSource struct {
-	RollingRelease RollingReleaseDataSource `tfsdk:"rolling_release"`
-	ProjectID      types.String             `tfsdk:"project_id"`
-	TeamID         types.String             `tfsdk:"team_id"`
+	RollingRelease types.Object `tfsdk:"rolling_release"`
+	ProjectID      types.String `tfsdk:"project_id"`
+	TeamID         types.String `tfsdk:"team_id"`
 }
 
 func convertStagesDataSource(stages []client.RollingReleaseStage) []RollingReleaseStageDataSource {
@@ -136,22 +138,32 @@ func convertStagesDataSource(stages []client.RollingReleaseStage) []RollingRelea
 }
 
 func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInfo) RollingReleaseInfoDataSource {
-	result := RollingReleaseInfoDataSource{
-		RollingRelease: RollingReleaseDataSource{
-			Enabled:         types.BoolValue(response.RollingRelease.Enabled),
-			AdvancementType: types.StringValue(response.RollingRelease.AdvancementType),
-			Stages:          convertStagesDataSource(response.RollingRelease.Stages),
-		},
-		ProjectID: types.StringValue(response.ProjectID),
-		TeamID:    types.StringValue(response.TeamID),
+	rollingRelease := RollingReleaseDataSource{
+		Enabled:         types.BoolValue(response.RollingRelease.Enabled),
+		AdvancementType: types.StringValue(response.RollingRelease.AdvancementType),
+		Stages:          convertStagesDataSource(response.RollingRelease.Stages),
 	}
 
 	if !response.RollingRelease.Enabled {
-		result.RollingRelease.AdvancementType = types.StringValue("")
-		result.RollingRelease.Stages = make([]RollingReleaseStageDataSource, 0)
+		rollingRelease.AdvancementType = types.StringValue("")
+		rollingRelease.Stages = make([]RollingReleaseStageDataSource, 0)
 	}
 
-	return result
+	rollingReleaseObj, _ := types.ObjectValueFrom(context.Background(), map[string]attr.Type{
+		"enabled":          types.BoolType,
+		"advancement_type": types.StringType,
+		"stages": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{
+			"target_percentage": types.Int64Type,
+			"duration":          types.Int64Type,
+			"require_approval":  types.BoolType,
+		}}},
+	}, rollingRelease)
+
+	return RollingReleaseInfoDataSource{
+		RollingRelease: rollingReleaseObj,
+		ProjectID:      types.StringValue(response.ProjectID),
+		TeamID:         types.StringValue(response.TeamID),
+	}
 }
 
 func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

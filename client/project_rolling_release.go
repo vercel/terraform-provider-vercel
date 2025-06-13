@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"time"
 )
 
 // RollingReleaseStage represents a stage in a rolling release
@@ -59,51 +58,8 @@ type UpdateRollingReleaseRequest struct {
 // UpdateRollingRelease will update an existing rolling release to the latest information.
 func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRollingReleaseRequest) (RollingReleaseInfo, error) {
 	teamId := c.TeamID(request.TeamID)
-	// If we're enabling, we need to do it in steps
 	if request.RollingRelease.Enabled {
-		// First ensure it's disabled
-		disabledRequest := UpdateRollingReleaseRequest{
-			RollingRelease: RollingRelease{
-				Enabled:         false,
-				AdvancementType: "",
-				Stages:          []RollingReleaseStage{},
-			},
-		}
 
-		err := c.doRequest(clientRequest{
-			ctx:    ctx,
-			method: "PATCH",
-			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, teamId),
-			body:   string(mustMarshal(disabledRequest.RollingRelease)),
-		}, nil)
-		if err != nil {
-			return RollingReleaseInfo{}, fmt.Errorf("error disabling rolling release: %w", err)
-		}
-
-		// Wait a bit before proceeding
-		time.Sleep(2 * time.Second)
-
-		// First set up the stages
-		stagesRequest := map[string]any{
-			"enabled":         false,
-			"advancementType": request.RollingRelease.AdvancementType,
-			"stages":          request.RollingRelease.Stages,
-		}
-
-		err = c.doRequest(clientRequest{
-			ctx:    ctx,
-			method: "PATCH",
-			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, teamId),
-			body:   string(mustMarshal(stagesRequest)),
-		}, nil)
-		if err != nil {
-			return RollingReleaseInfo{}, fmt.Errorf("error configuring stages: %w", err)
-		}
-
-		// Wait a bit before enabling
-		time.Sleep(2 * time.Second)
-
-		// Finally enable it
 		enableRequest := map[string]any{
 			"enabled":         true,
 			"advancementType": request.RollingRelease.AdvancementType,
@@ -112,7 +68,7 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 
 		var result RollingReleaseInfo
 
-		err = c.doRequest(clientRequest{
+		err := c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "PATCH",
 			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, teamId),
