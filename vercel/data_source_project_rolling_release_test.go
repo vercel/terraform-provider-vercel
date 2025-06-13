@@ -25,12 +25,12 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 			},
 			// Then enable rolling release
 			{
-				Config: cfg(testAccProjectRollingReleasesConfigUpdate(nameSuffix)),
+				Config: cfg(testAccProjectRollingReleasesConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), "vercel_project_rolling_release.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "rolling_release.enabled", "true"),
 					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "rolling_release.advancement_type", "manual-approval"),
-					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "rolling_release.stages.#", "4"),
+					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "rolling_release.stages.#", "3"),
 				),
 			},
 			// Then disable it and check the data source
