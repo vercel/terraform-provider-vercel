@@ -9,7 +9,6 @@ import (
 )
 
 func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
-	return
 	nameSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
