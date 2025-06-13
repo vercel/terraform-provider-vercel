@@ -53,7 +53,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 						"target_percentage": "50",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
-						"require_approval":  "true",
+						"require_approval":  "false",
 						"target_percentage": "100",
 					}),
 				),
@@ -113,15 +113,12 @@ resource "vercel_project_rolling_release" "example" {
 		advancement_type = "manual-approval"
 		stages = [
 			{
-				require_approval  = true
 				target_percentage = 20
 			},
 			{
-				require_approval  = true
 				target_percentage = 50
 			},
 			{
-				require_approval  = true
 				target_percentage = 100
 			}
 		]
