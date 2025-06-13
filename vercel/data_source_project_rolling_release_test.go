@@ -1,6 +1,7 @@
 package vercel_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -27,7 +28,7 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 			},
 			// Then disable it and check the data source
 			{
-				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix)),
+				Config: cfg(testAccProjectRollingReleasesConfigOffWithDataSource(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), "vercel_project_rolling_release.example", testTeam(t)),
 					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "rolling_release.enabled", "false"),
@@ -37,4 +38,27 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testAccProjectRollingReleasesConfigOffWithDataSource(nameSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%s"
+}
+
+resource "vercel_project_rolling_release" "example" {
+	project_id = vercel_project.example.id
+	depends_on = [vercel_project.example]
+	rolling_release = {
+		enabled          = false
+		advancement_type = ""
+		stages          = []
+	}
+}
+
+data "vercel_project_rolling_release" "example" {
+	project_id = vercel_project.example.id
+	depends_on = [vercel_project_rolling_release.example]
+}
+`, nameSuffix)
 }
