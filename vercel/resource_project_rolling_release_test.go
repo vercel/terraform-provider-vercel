@@ -135,9 +135,6 @@ resource "vercel_project_rolling_release" "example" {
 			}
 		]
 	}
-	lifecycle {
-		depends_on = [vercel_project.example]
-	}
 }
 `, nameSuffix)
 }
@@ -173,9 +170,6 @@ resource "vercel_project_rolling_release" "example" {
 			}
 		]
 	}
-	lifecycle {
-		depends_on = [vercel_project.example]
-	}
 }
 `, nameSuffix)
 }
@@ -193,9 +187,6 @@ resource "vercel_project_rolling_release" "example" {
 		enabled          = false
 		advancement_type = ""
 		stages          = []
-	}
-	lifecycle {
-		depends_on = [vercel_project.example]
 	}
 }
 `, nameSuffix)
