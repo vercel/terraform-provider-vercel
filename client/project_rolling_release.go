@@ -3,6 +3,8 @@ package client
 import (
 	"context"
 	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // RollingReleaseStage represents a stage in a rolling release
@@ -78,6 +80,10 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 
 		result.ProjectID = request.ProjectID
 		result.TeamID = request.TeamID
+		tflog.Info(ctx, "enabled rolling release", map[string]any{
+			"response": result,
+			"request":  request,
+		})
 		return result, nil
 	} else {
 		// For disabling, just send the request as is

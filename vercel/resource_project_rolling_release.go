@@ -3,7 +3,6 @@ package vercel
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -101,6 +100,7 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 								"duration": schema.Int64Attribute{
 									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.",
 									Optional:            true,
+									Computed:            true,
 								},
 								"require_approval": schema.BoolAttribute{
 									MarkdownDescription: "Whether approval is required before advancing to the next stage.",
@@ -195,7 +195,7 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	}
 
 	// Log the request for debugging
-	tflog.Debug(context.Background(), "converting to update request", map[string]any{
+	tflog.Info(context.Background(), "converting to update request", map[string]any{
 		"enabled":          e.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": advancementType,
 		"stages_count":     len(stages),
@@ -214,17 +214,21 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 
 func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *RollingReleaseInfo, ctx context.Context) (RollingReleaseInfo, diag.Diagnostics) {
 	var diags diag.Diagnostics
+	advancementType := types.StringNull()
+	if plan.RollingRelease.Enabled.ValueBool() {
+		advancementType = plan.RollingRelease.AdvancementType
+	}
 	result := RollingReleaseInfo{
 		RollingRelease: RollingRelease{
-			Enabled:         types.BoolValue(response.RollingRelease.Enabled),
-			AdvancementType: types.StringValue(response.RollingRelease.AdvancementType),
+			Enabled:         plan.RollingRelease.Enabled,
+			AdvancementType: advancementType,
 		},
 		ProjectID: types.StringValue(response.ProjectID),
 		TeamID:    types.StringValue(response.TeamID),
 	}
 
 	// If disabled, return empty values
-	if !response.RollingRelease.Enabled {
+	if !plan.RollingRelease.Enabled.ValueBool() {
 		result.RollingRelease.AdvancementType = types.StringValue("")
 		// Create an empty list instead of null
 		emptyStages, stagesDiags := types.ListValueFrom(ctx, types.ObjectType{
@@ -293,7 +297,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			}
 		} else {
 			// For manual approval, duration is not used
-			duration = types.Int64Value(0)
+			duration = types.Int64Null()
 		}
 
 		elements[i] = types.ObjectValueMust(
@@ -324,7 +328,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 	result.RollingRelease.Stages = stages
 
 	// Log the conversion result for debugging
-	tflog.Debug(ctx, "converted rolling release response", map[string]any{
+	tflog.Info(ctx, "converted rolling release response", map[string]any{
 		"enabled":          result.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
 		"stages_count":     len(elements),
@@ -379,8 +383,6 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 			)
 			return
 		}
-
-		time.Sleep(2 * time.Second)
 	}
 
 	out, err := r.client.UpdateRollingRelease(ctx, request)
