@@ -395,12 +395,9 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 			},
 			"build_machine_type": schema.StringAttribute{
-				Description: "The build machine type to use for this project. Must be one of \"standard\", \"enhanced\".",
+				Description: "The build machine type to use for this project.",
 				Optional:    true,
 				Computed:    true,
-				Validators: []validator.String{
-					stringvalidator.OneOf("standard", "enhanced"),
-				},
 			},
 		},
 	}
