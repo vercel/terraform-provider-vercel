@@ -36,14 +36,11 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
 		),
 		Steps: []resource.TestStep{
-			// First create the resource in a disabled state
+			// First create the project
 			{
-				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix)),
+				Config: cfg(testAccProjectConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "false"),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", ""),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.stages.#", "0"),
+					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 				),
 			},
 			// Then enable with initial configuration
@@ -94,7 +91,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					}),
 				),
 			},
-			// Finally disable again
+			// Finally disable
 			{
 				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -112,7 +109,6 @@ func testAccProjectRollingReleasesConfig(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%s"
-	skew_protection = "12 hours"
 }
 
 resource "vercel_project_rolling_release" "example" {
@@ -144,7 +140,6 @@ func testAccProjectRollingReleasesConfigUpdate(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%s"
-	skew_protection = "12 hours"
 }
 
 resource "vercel_project_rolling_release" "example" {
@@ -180,7 +175,6 @@ func testAccProjectRollingReleasesConfigOff(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%s"
-	skew_protection = "12 hours"
 }
 
 resource "vercel_project_rolling_release" "example" {

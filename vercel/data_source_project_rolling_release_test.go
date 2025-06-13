@@ -16,6 +16,24 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
 		),
 		Steps: []resource.TestStep{
+			// First create the project
+			{
+				Config: cfg(testAccProjectConfig(nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
+				),
+			},
+			// Then create the rolling release in an enabled state
+			{
+				Config: cfg(testAccProjectRollingReleaseDataSourceConfigEnabled(nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectRollingReleaseExists(testClient(t), "vercel_project_rolling_release.example", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "rolling_release.enabled", "true"),
+					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "rolling_release.advancement_type", "manual-approval"),
+					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "rolling_release.stages.#", "3"),
+				),
+			},
+			// Then disable it and check the data source
 			{
 				Config: cfg(testAccProjectRollingReleaseDataSourceConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -27,6 +45,37 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testAccProjectRollingReleaseDataSourceConfigEnabled(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+}
+
+resource "vercel_project_rolling_release" "example" {
+	project_id = vercel_project.example.id
+	depends_on = [vercel_project.example]
+	rolling_release = {
+		enabled          = true
+		advancement_type = "manual-approval"
+		stages = [
+			{
+				require_approval  = true
+				target_percentage = 20
+			},
+			{
+				require_approval  = true
+				target_percentage = 50
+			},
+			{
+				require_approval  = true
+				target_percentage = 100
+			}
+		]
+	}
+}
+`, projectName)
 }
 
 func testAccProjectRollingReleaseDataSourceConfig(projectName string) string {
