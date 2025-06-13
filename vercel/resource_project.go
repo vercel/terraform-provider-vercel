@@ -584,10 +584,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"build_machine_type": schema.StringAttribute{
-				Description:   "The build machine type to use for this project. Must be one of \"enhanced\".",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description: "The build machine type to use for this project. Must be one of \"enhanced\".",
+				Optional:    true,
+				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("enhanced"),
 				},
