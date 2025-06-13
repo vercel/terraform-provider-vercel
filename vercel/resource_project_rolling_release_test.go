@@ -153,7 +153,7 @@ resource "vercel_project_rolling_release" "example" {
 				target_percentage = 80
 			},
 			{
-				require_approval  = true
+				require_approval  = false
 				target_percentage = 100
 			}
 		]
