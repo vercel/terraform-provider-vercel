@@ -47,6 +47,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			{
 				Config: cfg(testAccProjectRollingReleasesConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "true"),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", "manual-approval"),
@@ -69,6 +70,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			{
 				Config: cfg(testAccProjectRollingReleasesConfigUpdate(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "true"),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", "manual-approval"),
@@ -95,6 +97,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			{
 				Config: cfg(testAccProjectRollingReleasesConfigOff(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "false"),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", ""),
