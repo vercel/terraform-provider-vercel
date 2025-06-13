@@ -31,11 +31,8 @@ data "vercel_project_rolling_release" "example" {
 
 ### Optional
 
-- `team_id` (String) The ID of the Vercel team.
-
-### Read-Only
-
 - `rolling_release` (Attributes) The rolling release configuration. (see [below for nested schema](#nestedatt--rolling_release))
+- `team_id` (String) The ID of the Vercel team.
 
 <a id="nestedatt--rolling_release"></a>
 ### Nested Schema for `rolling_release`
