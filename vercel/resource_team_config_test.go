@@ -19,6 +19,8 @@ func TestAcc_TeamConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", "Vercel Terraform Testing"),
 					resource.TestCheckResourceAttr(resourceName, "slug", "terraform-testing-vtest314"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "email_domain"),
+					resource.TestCheckResourceAttrSet(resourceName, "preview_deployment_suffix"),
 				),
 			},
 			{
