@@ -59,7 +59,9 @@ data "vercel_file" "test" {
 
 resource "vercel_team_config" "test" {
   id                                    = "%s"
-  avatar                                =  data.vercel_file.test.file
+  avatar                                = data.vercel_file.test.file
+  email_domain                          = example.com
+	preview_deployment_suffix             = preview.example.com
   name                                  = "Vercel Terraform Testing o_o"
   slug                                  = "terraform-testing-vtest314"
   description                           = "Vercel Terraform Testing"
