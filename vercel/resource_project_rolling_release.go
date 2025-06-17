@@ -129,7 +129,6 @@ type RollingReleaseStage struct {
 type RollingRelease struct {
 	Enabled         types.Bool   `tfsdk:"enabled"`
 	AdvancementType types.String `tfsdk:"advancement_type"`
-	Duration        types.Int64  `tfsdk:"duration"`
 	Stages          types.List   `tfsdk:"stages"`
 }
 

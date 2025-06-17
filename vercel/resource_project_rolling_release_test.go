@@ -93,7 +93,6 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "true"),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", "automatic"),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.duration", "10"),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.stages.#", "4"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
 						"require_approval":  "false",
@@ -198,19 +197,22 @@ resource "vercel_project_rolling_release" "example" {
 	rolling_release = {
 		enabled          = true
 		advancement_type = "automatic"
-		duration = 10
 		stages = [
 			{
 				target_percentage = 20
+				duration = 10
 			},
 			{
 				target_percentage = 50
+				duration = 10
 			},
 			{
 				target_percentage = 80
+				duration = 10
 			},
 			{
 				target_percentage = 100
+				duration = 10
 			}
 		]
 	}
