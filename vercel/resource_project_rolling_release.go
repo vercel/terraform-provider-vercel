@@ -84,11 +84,6 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 							advancementTypeValidator{},
 						},
 					},
-					"duration": schema.Int64Attribute{
-						MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. This duration will be applied to all stages except the last one.",
-						Optional:            true,
-						Computed:            true,
-					},
 					"stages": schema.ListNestedAttribute{
 						MarkdownDescription: "The stages of the rolling release. Required when enabled is true.",
 						Optional:            true,
@@ -129,6 +124,7 @@ type RollingReleaseStage struct {
 type RollingRelease struct {
 	Enabled         types.Bool   `tfsdk:"enabled"`
 	AdvancementType types.String `tfsdk:"advancement_type"`
+	Duration        types.Int64  `tfsdk:"duration"`
 	Stages          types.List   `tfsdk:"stages"`
 }
 
