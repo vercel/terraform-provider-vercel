@@ -74,7 +74,7 @@ Required:
 
 Optional:
 
-- `duration` (Number) The duration in minutes to wait before advancing to the next stage.
+- `duration` (Number) The duration in minutes to wait before advancing to the next stage. Required for non-last stages when advancement_type is 'automatic'.
 
 Read-Only:
 
