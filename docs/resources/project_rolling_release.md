@@ -75,4 +75,7 @@ Required:
 Optional:
 
 - `duration` (Number) The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.
+
+Read-Only:
+
 - `require_approval` (Boolean) Whether approval is required before advancing to the next stage.
