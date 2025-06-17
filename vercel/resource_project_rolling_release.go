@@ -104,7 +104,6 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 								},
 								"require_approval": schema.BoolAttribute{
 									MarkdownDescription: "Whether approval is required before advancing to the next stage.",
-									Optional:            true,
 									Computed:            true,
 								},
 							},
