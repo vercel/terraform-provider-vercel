@@ -142,19 +142,15 @@ resource "vercel_project_rolling_release" "example" {
 		advancement_type = "manual-approval"
 		stages = [
 			{
-				require_approval  = true
 				target_percentage = 20
 			},
 			{
-				require_approval  = true
 				target_percentage = 50
 			},
 			{
-				require_approval  = true
 				target_percentage = 80
 			},
 			{
-				require_approval  = false
 				target_percentage = 100
 			}
 		]
