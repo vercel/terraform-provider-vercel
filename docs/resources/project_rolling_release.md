@@ -72,7 +72,10 @@ Required:
 
 - `target_percentage` (Number) The percentage of traffic to route to this stage.
 
-Read-Only:
+Optional:
 
 - `duration` (Number) The duration in minutes to wait before advancing to the next stage.
+
+Read-Only:
+
 - `require_approval` (Boolean) Whether approval is required before advancing to the next stage.

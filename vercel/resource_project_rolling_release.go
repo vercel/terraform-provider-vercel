@@ -100,6 +100,7 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 								"duration": schema.Int64Attribute{
 									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage.",
 									Computed:            true,
+									Optional:            true,
 								},
 								"require_approval": schema.BoolAttribute{
 									MarkdownDescription: "Whether approval is required before advancing to the next stage.",
