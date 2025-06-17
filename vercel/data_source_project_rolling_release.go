@@ -83,7 +83,7 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 								},
 								"duration": schema.Int64Attribute{
 									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.",
-									Computed:            true,
+									Optional:            true,
 								},
 								"require_approval": schema.BoolAttribute{
 									MarkdownDescription: "Whether approval is required before advancing to the next stage.",
