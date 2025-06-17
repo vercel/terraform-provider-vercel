@@ -84,6 +84,11 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 							advancementTypeValidator{},
 						},
 					},
+					"duration": schema.Int64Attribute{
+						MarkdownDescription: "The duration in minutes to wait before advancing to the next stage.",
+						Optional:            true,
+						Computed:            true,
+					},
 					"stages": schema.ListNestedAttribute{
 						MarkdownDescription: "The stages of the rolling release. Required when enabled is true.",
 						Optional:            true,
@@ -98,8 +103,7 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 									},
 								},
 								"duration": schema.Int64Attribute{
-									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.",
-									Optional:            true,
+									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage.",
 									Computed:            true,
 								},
 								"require_approval": schema.BoolAttribute{

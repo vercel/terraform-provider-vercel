@@ -85,6 +85,34 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					}),
 				),
 			},
+			// Then update to new configuration
+			{
+				Config: cfg(testAccProjectRollingReleasesConfigUpdatedAutomatic(nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
+					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
+					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "true"),
+					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", "automatic"),
+					resource.TestCheckResourceAttr(resourceName, "rolling_release.duration", "10"),
+					resource.TestCheckResourceAttr(resourceName, "rolling_release.stages.#", "4"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+						"require_approval":  "false",
+						"target_percentage": "20",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+						"require_approval":  "false",
+						"target_percentage": "50",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+						"require_approval":  "false",
+						"target_percentage": "80",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+						"require_approval":  "false",
+						"target_percentage": "100",
+					}),
+				),
+			},
 			// Finally disable
 			{
 				Config: cfg(testAccProjectRollingReleasesConfigDisabled(nameSuffix)),
@@ -140,6 +168,37 @@ resource "vercel_project_rolling_release" "example" {
 	rolling_release = {
 		enabled          = true
 		advancement_type = "manual-approval"
+		stages = [
+			{
+				target_percentage = 20
+			},
+			{
+				target_percentage = 50
+			},
+			{
+				target_percentage = 80
+			},
+			{
+				target_percentage = 100
+			}
+		]
+	}
+}
+`, nameSuffix)
+}
+func testAccProjectRollingReleasesConfigUpdatedAutomatic(nameSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-rolling-releases-%s"
+	skew_protection = "12 hours"
+}
+
+resource "vercel_project_rolling_release" "example" {
+	project_id = vercel_project.example.id
+	rolling_release = {
+		enabled          = true
+		advancement_type = "automatic"
+		duration = 10
 		stages = [
 			{
 				target_percentage = 20

@@ -63,6 +63,7 @@ Required:
 Optional:
 
 - `advancement_type` (String) The type of advancement between stages. Must be either 'automatic' or 'manual-approval'. Required when enabled is true.
+- `duration` (Number) The duration in minutes to wait before advancing to the next stage.
 - `stages` (Attributes List) The stages of the rolling release. Required when enabled is true. (see [below for nested schema](#nestedatt--rolling_release--stages))
 
 <a id="nestedatt--rolling_release--stages"></a>
@@ -72,10 +73,7 @@ Required:
 
 - `target_percentage` (Number) The percentage of traffic to route to this stage.
 
-Optional:
-
-- `duration` (Number) The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.
-
 Read-Only:
 
+- `duration` (Number) The duration in minutes to wait before advancing to the next stage.
 - `require_approval` (Boolean) Whether approval is required before advancing to the next stage.
