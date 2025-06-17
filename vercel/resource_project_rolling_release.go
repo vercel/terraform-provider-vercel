@@ -85,7 +85,7 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 						},
 					},
 					"duration": schema.Int64Attribute{
-						MarkdownDescription: "The duration in minutes to wait before advancing to the next stage.",
+						MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. This duration will be applied to all stages except the last one.",
 						Optional:            true,
 						Computed:            true,
 					},
@@ -129,6 +129,7 @@ type RollingReleaseStage struct {
 type RollingRelease struct {
 	Enabled         types.Bool   `tfsdk:"enabled"`
 	AdvancementType types.String `tfsdk:"advancement_type"`
+	Duration        types.Int64  `tfsdk:"duration"`
 	Stages          types.List   `tfsdk:"stages"`
 }
 
@@ -160,21 +161,11 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 				// For automatic advancement, duration is required except for last stage
 				if i < len(tfStages)-1 {
 					// Non-last stage needs duration
-					if stage.Duration.IsNull() {
-						// Default duration for non-last stages
-						duration := 60
-						stages[i] = client.RollingReleaseStage{
-							TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
-							Duration:         &duration,
-							RequireApproval:  stage.RequireApproval.ValueBool(),
-						}
-					} else {
-						duration := int(stage.Duration.ValueInt64())
-						stages[i] = client.RollingReleaseStage{
-							TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
-							Duration:         &duration,
-							RequireApproval:  stage.RequireApproval.ValueBool(),
-						}
+					duration := int(e.RollingRelease.Duration.ValueInt64())
+					stages[i] = client.RollingReleaseStage{
+						TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
+						Duration:         &duration,
+						RequireApproval:  stage.RequireApproval.ValueBool(),
 					}
 				} else {
 					// Last stage should not have duration
