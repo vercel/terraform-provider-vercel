@@ -59,6 +59,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "oidc_token_config.enabled", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "oidc_token_config.issuer_mode", "team"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "on_demand_concurrent_builds", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "build_machine_type", "enhanced"),
 				),
 			},
 		},
@@ -141,6 +142,7 @@ resource "vercel_project" "test" {
     issuer_mode = "team"
   }
   on_demand_concurrent_builds = true
+  build_machine_type = "enhanced"
 }
 
 data "vercel_project" "test" {
