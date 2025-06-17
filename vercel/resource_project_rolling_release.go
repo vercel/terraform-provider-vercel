@@ -160,11 +160,21 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 				// For automatic advancement, duration is required except for last stage
 				if i < len(tfStages)-1 {
 					// Non-last stage needs duration
-					duration := int(e.RollingRelease.Duration.ValueInt64())
-					stages[i] = client.RollingReleaseStage{
-						TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
-						Duration:         &duration,
-						RequireApproval:  stage.RequireApproval.ValueBool(),
+					if stage.Duration.IsNull() {
+						// Default duration for non-last stages
+						duration := 60
+						stages[i] = client.RollingReleaseStage{
+							TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
+							Duration:         &duration,
+							RequireApproval:  stage.RequireApproval.ValueBool(),
+						}
+					} else {
+						duration := int(stage.Duration.ValueInt64())
+						stages[i] = client.RollingReleaseStage{
+							TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
+							Duration:         &duration,
+							RequireApproval:  stage.RequireApproval.ValueBool(),
+						}
 					}
 				} else {
 					// Last stage should not have duration
