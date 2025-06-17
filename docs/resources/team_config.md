@@ -72,12 +72,9 @@ Optional:
 <a id="nestedatt--saml"></a>
 ### Nested Schema for `saml`
 
-Required:
-
-- `enforced` (Boolean) Indicates if SAML is enforced for the team.
-
 Optional:
 
+- `enforced` (Boolean) Indicates if SAML is enforced for the team.
 - `roles` (Attributes Map) Directory groups to role or access group mappings. For each directory group, specify either a role or access group id. (see [below for nested schema](#nestedatt--saml--roles))
 
 <a id="nestedatt--saml--roles"></a>

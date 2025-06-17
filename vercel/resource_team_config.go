@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -122,44 +121,44 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "Hostname that'll be matched with emails on sign-up to automatically join the Team.",
 			},
 			"saml": schema.SingleNestedAttribute{
+				Description:   "Configuration for SAML authentication.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"enforced": schema.BoolAttribute{
-						Description: "Indicates if SAML is enforced for the team.",
-						Required:    true,
+						Description:   "Indicates if SAML is enforced for the team.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 					},
 					"roles": schema.MapNestedAttribute{
-						Description: "Directory groups to role or access group mappings. For each directory group, specify either a role or access group id.",
-						Optional:    true,
-						Computed:    true,
+						Description:   "Directory groups to role or access group mappings. For each directory group, specify either a role or access group id.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
+						Validators:    []validator.Map{validateSamlRoles()},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"role": schema.StringAttribute{
-									Description: "The team level role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.",
-									Optional:    true,
+									Description:   "The team level role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.",
+									Optional:      true,
+									Computed:      true,
+									PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 									Validators: []validator.String{
 										stringvalidator.OneOf("MEMBER", "OWNER", "VIEWER", "DEVELOPER", "BILLING", "CONTRIBUTOR"),
 									},
 								},
 								"access_group_id": schema.StringAttribute{
-									Description: "The access group id to assign to the user.",
-									Optional:    true,
+									Description:   "The access group id to assign to the user.",
+									Optional:      true,
+									Computed:      true,
+									PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 								},
 							},
 						},
-						Validators: []validator.Map{validateSamlRoles()},
-						Default: mapdefault.StaticValue(types.MapValueMust(types.ObjectType{
-							AttrTypes: map[string]attr.Type{
-								"role":            types.StringType,
-								"access_group_id": types.StringType,
-							},
-						}, map[string]attr.Value{})),
-						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 					},
 				},
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
-				Description:   "Configuration for SAML authentication.",
 			},
 			"invite_code": schema.StringAttribute{
 				Computed:      true,
@@ -690,7 +689,9 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 							"roles": schema.MapAttribute{
 								Description: "Directory groups to role or access group mappings.",
 								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
+								// PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 								Validators: []validator.Map{
 									// Validate only this attribute or roles is configured.
 									mapvalidator.ExactlyOneOf(
@@ -702,6 +703,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 							"access_group_id": schema.StringAttribute{
 								Description: "The ID of the access group to use for the team.",
 								Optional:    true,
+								Computed:    true,
 								Validators: []validator.String{
 									stringvalidator.RegexMatches(regexp.MustCompile("^ag_[A-z0-9_ -]+$"), "Access group ID must be a valid access group"),
 									// Validate only this attribute or roles is configured.
@@ -712,10 +714,10 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 								},
 							},
 						},
-						Optional:      true,
-						Computed:      true,
-						PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
-						Description:   "Configuration for SAML authentication.",
+						Optional: true,
+						Computed: true,
+						// PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+						Description: "Configuration for SAML authentication.",
 					},
 					"invite_code": schema.StringAttribute{
 						Computed:      true,
@@ -776,13 +778,12 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 			},
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
 				var priorStateData TeamConfig
-
 				resp.Diagnostics.Append(req.State.Get(ctx, &priorStateData)...)
-
 				if resp.Diagnostics.HasError() {
 					return
 				}
 
+				tflog.Info(ctx, "upgrading state for team_config resource", map[string]any{})
 				upgradedStateData := TeamConfig{
 					ID:                                 priorStateData.ID,
 					Avatar:                             priorStateData.Avatar,
@@ -807,6 +808,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 						UnhandledUnknownAsEmpty: true,
 					})
 					if diags.HasError() {
+						resp.Diagnostics.Append(diags...)
 						return
 					}
 					// samlV0 did not correctly handle access groups, so don't need to upgrade them.
@@ -822,6 +824,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 						Enforced: samlV0.Enforced,
 						Roles:    roles,
 					})
+					resp.Diagnostics.Append(diags...)
 					if diags.HasError() {
 						return
 					}
