@@ -97,14 +97,17 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
 						"require_approval":  "false",
 						"target_percentage": "20",
+						"duration":          "10",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
 						"require_approval":  "false",
 						"target_percentage": "50",
+						"duration":          "10",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
 						"require_approval":  "false",
 						"target_percentage": "80",
+						"duration":          "10",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
 						"require_approval":  "false",
@@ -200,19 +203,18 @@ resource "vercel_project_rolling_release" "example" {
 		stages = [
 			{
 				target_percentage = 20
-				duration = 10
+				duration          = 10
 			},
 			{
 				target_percentage = 50
-				duration = 10
+				duration          = 10
 			},
 			{
 				target_percentage = 80
-				duration = 10
+				duration          = 10
 			},
 			{
 				target_percentage = 100
-				duration = 10
 			}
 		]
 	}
