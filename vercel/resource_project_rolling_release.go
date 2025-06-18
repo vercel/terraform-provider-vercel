@@ -72,22 +72,16 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 				MarkdownDescription: "The rolling release configuration.",
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
-					"enabled": schema.BoolAttribute{
-						MarkdownDescription: "Whether rolling releases are enabled.",
-						Required:            true,
-					},
 					"advancement_type": schema.StringAttribute{
-						MarkdownDescription: "The type of advancement between stages. Must be either 'automatic' or 'manual-approval'. Required when enabled is true.",
-						Optional:            true,
-						Computed:            true,
+						MarkdownDescription: "The type of advancement between stages. Must be either 'automatic' or 'manual-approval'.",
+						Required:            true,
 						Validators: []validator.String{
 							advancementTypeValidator{},
 						},
 					},
 					"stages": schema.ListNestedAttribute{
-						MarkdownDescription: "The stages of the rolling release. Required when enabled is true.",
-						Optional:            true,
-						Computed:            true,
+						MarkdownDescription: "The stages of the rolling release.",
+						Required:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"target_percentage": schema.Int64Attribute{
@@ -125,7 +119,6 @@ type RollingReleaseStage struct {
 
 // RollingRelease reflects the state terraform stores internally for a project rolling release.
 type RollingRelease struct {
-	Enabled         types.Bool   `tfsdk:"enabled"`
 	AdvancementType types.String `tfsdk:"advancement_type"`
 	Stages          types.List   `tfsdk:"stages"`
 }
@@ -142,7 +135,6 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	var advancementType string
 	var diags diag.Diagnostics
 
-	if e.RollingRelease.Enabled.ValueBool() {
 		advancementType = e.RollingRelease.AdvancementType.ValueString()
 
 		// Convert stages from types.List to []client.RollingReleaseStage
@@ -189,22 +181,16 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 				}
 			}
 		}
-	} else {
-		// When disabled, don't send any stages or advancement type to the API
-		stages = []client.RollingReleaseStage{}
-		advancementType = ""
 	}
 
 	// Log the request for debugging
 	tflog.Info(context.Background(), "converting to update request", map[string]any{
-		"enabled":          e.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": advancementType,
 		"stages_count":     len(stages),
 	})
 
 	return client.UpdateRollingReleaseRequest{
-		RollingRelease: client.RollingRelease{
-			Enabled:         e.RollingRelease.Enabled.ValueBool(),
+		RollingRelease: client.RollingReleaseInfo{
 			AdvancementType: advancementType,
 			Stages:          stages,
 		},
@@ -213,15 +199,11 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	}, diags
 }
 
-func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *RollingReleaseInfo, ctx context.Context) (RollingReleaseInfo, diag.Diagnostics) {
+func convertResponseToRollingRelease(response client.RollingReleaseResponse, plan *RollingReleaseInfo, ctx context.Context) (RollingReleaseInfo, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	advancementType := types.StringNull()
-	if plan.RollingRelease.Enabled.ValueBool() {
-		advancementType = plan.RollingRelease.AdvancementType
-	}
 	result := RollingReleaseInfo{
 		RollingRelease: RollingRelease{
-			Enabled:         plan.RollingRelease.Enabled,
 			AdvancementType: advancementType,
 		},
 		ProjectID: types.StringValue(response.ProjectID),
@@ -229,7 +211,6 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 	}
 
 	// If disabled, return empty values
-	if !plan.RollingRelease.Enabled.ValueBool() {
 		result.RollingRelease.AdvancementType = types.StringValue("")
 		// Create an empty list instead of null
 		emptyStages, stagesDiags := types.ListValueFrom(ctx, types.ObjectType{
@@ -245,7 +226,6 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		}
 		result.RollingRelease.Stages = emptyStages
 		return result, diags
-	}
 
 	// If we have a plan, try to match stages by target percentage to preserve order
 	var orderedStages []client.RollingReleaseStage
@@ -289,7 +269,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 
 		// If duration is not set in plan, handle based on advancement type
 		if duration.IsNull() {
-			if plan.RollingRelease.AdvancementType.ValueString() == "automatic" {
+			if plan != nil && plan.RollingRelease.AdvancementType.ValueString() == "automatic" {
 				if i < len(orderedStages)-1 {
 					// For non-last stages in automatic advancement, use the duration from the API
 					if stage.Duration != nil {
@@ -338,7 +318,6 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 
 	// Log the conversion result for debugging
 	tflog.Info(ctx, "converted rolling release response", map[string]any{
-		"enabled":          result.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
 		"stages_count":     len(stages),
 	})
@@ -364,17 +343,13 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 
 	// Log the request for debugging
 	tflog.Info(ctx, "creating rolling release", map[string]any{
-		"enabled":          request.RollingRelease.Enabled,
 		"advancement_type": request.RollingRelease.AdvancementType,
 		"stages":           request.RollingRelease.Stages,
 	})
 
-	// If we're enabling, first create in disabled state then enable
-	if request.RollingRelease.Enabled {
 		// First create in disabled state
 		disabledRequest := client.UpdateRollingReleaseRequest{
-			RollingRelease: client.RollingRelease{
-				Enabled:         false,
+			RollingRelease: client.RollingReleaseInfo{
 				AdvancementType: "",
 				Stages:          []client.RollingReleaseStage{},
 			},
@@ -392,7 +367,6 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 			)
 			return
 		}
-	}
 
 	out, err := r.client.UpdateRollingRelease(ctx, request)
 	if err != nil {
@@ -414,7 +388,6 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 
 	// Log the result for debugging
 	tflog.Debug(ctx, "created rolling release", map[string]any{
-		"enabled":          result.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
 		"stages":           result.RollingRelease.Stages,
 	})
@@ -454,7 +427,6 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 
 	// Log the response for debugging
 	tflog.Debug(ctx, "got rolling release from API", map[string]any{
-		"enabled":          out.RollingRelease.Enabled,
 		"advancement_type": out.RollingRelease.AdvancementType,
 		"stages":           out.RollingRelease.Stages,
 	})
@@ -467,7 +439,6 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 
 	// Log the result for debugging
 	tflog.Debug(ctx, "converted rolling release", map[string]any{
-		"enabled":          result.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
 		"stages":           result.RollingRelease.Stages,
 	})
@@ -504,7 +475,6 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 
 	// Log the request for debugging
 	tflog.Debug(ctx, "updating rolling release", map[string]any{
-		"enabled":          request.RollingRelease.Enabled,
 		"advancement_type": request.RollingRelease.AdvancementType,
 		"stages":           request.RollingRelease.Stages,
 	})
@@ -512,7 +482,7 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 	// If we're transitioning from enabled to disabled, first disable
 	if state.RollingRelease.Enabled.ValueBool() && !request.RollingRelease.Enabled {
 		disabledRequest := client.UpdateRollingReleaseRequest{
-			RollingRelease: client.RollingRelease{
+			RollingRelease: client.RollingReleaseInfo{
 				Enabled:         false,
 				AdvancementType: "",
 				Stages:          []client.RollingReleaseStage{},
@@ -536,7 +506,7 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 	// If we're transitioning from disabled to enabled, first create in disabled state
 	if !state.RollingRelease.Enabled.ValueBool() && request.RollingRelease.Enabled {
 		disabledRequest := client.UpdateRollingReleaseRequest{
-			RollingRelease: client.RollingRelease{
+			RollingRelease: client.RollingReleaseInfo{
 				Enabled:         false,
 				AdvancementType: "",
 				Stages:          []client.RollingReleaseStage{},
@@ -577,7 +547,6 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 
 	// Log the result for debugging
 	tflog.Debug(ctx, "updated rolling release", map[string]any{
-		"enabled":          result.RollingRelease.Enabled.ValueBool(),
 		"advancement_type": result.RollingRelease.AdvancementType.ValueString(),
 		"stages":           result.RollingRelease.Stages,
 	})
@@ -600,7 +569,7 @@ func (r *projectRollingReleaseResource) Delete(ctx context.Context, req resource
 
 	// Disable rolling release
 	request := client.UpdateRollingReleaseRequest{
-		RollingRelease: client.RollingRelease{
+		RollingRelease: client.RollingReleaseInfo{
 			Enabled:         false,
 			AdvancementType: "",
 			Stages:          []client.RollingReleaseStage{},

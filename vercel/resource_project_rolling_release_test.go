@@ -27,6 +27,17 @@ func testAccProjectRollingReleaseExists(testClient *client.Client, n, teamID str
 	}
 }
 
+func getRollingReleaseImportId(n string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", n)
+		}
+
+		return fmt.Sprintf("%s/%s", rs.Primary.Attributes["team_id"], rs.Primary.Attributes["project_id"]), nil
+	}
+}
+
 func TestAcc_ProjectRollingRelease(t *testing.T) {
 	resourceName := "vercel_project_rolling_release.example"
 	nameSuffix := acctest.RandString(16)
@@ -57,6 +68,14 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 						"target_percentage": "100",
 					}),
 				),
+			},
+			// Now, import the existing resource
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateIdFunc:                    getRollingReleaseImportId(resourceName),
+				ImportStateVerifyIdentifierAttribute: "project_id",
 			},
 			// Then update to new configuration
 			{
@@ -124,6 +143,56 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "false"),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", ""),
 					resource.TestCheckResourceAttr(resourceName, "rolling_release.stages.#", "0"),
+				),
+			},
+			{
+				Config: cfg(fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-rolling-releases-auto-duration-%s"
+}
+
+resource "vercel_project_rolling_release" "example" {
+	project_id = vercel_project.example.id
+	rolling_release = {
+		enabled          = true
+		advancement_type = "automatic"
+		stages = [
+			{
+				target_percentage = 30
+				// Duration is omitted here for the first stage
+			},
+			{
+				target_percentage = 70
+				duration          = 30 // Explicit duration for a middle stage
+			},
+			{
+				target_percentage = 100
+				// Duration is omitted for the last stage (as it should be)
+			}
+		]
+	}
+}
+`, nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
+					resource.TestCheckResourceAttr(resourceName, "rolling_release.enabled", "true"),
+					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", "automatic"),
+					resource.TestCheckResourceAttr(resourceName, "rolling_release.stages.#", "3"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+						"target_percentage": "30",
+						"duration":          "60", // Asserting the default value
+						"require_approval":  "false",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+						"target_percentage": "70",
+						"duration":          "30", // Asserting the explicit value
+						"require_approval":  "false",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+						"target_percentage": "100",
+						// Duration for the last stage is expected to be null or not present
+						"require_approval": "false",
+					}),
 				),
 			},
 		},
