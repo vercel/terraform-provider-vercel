@@ -98,7 +98,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						"value": schema.StringAttribute{
 							Required:    true,
 							Description: "The value of the Environment Variable.",
-							// Sensitive:   true,
+							Sensitive:   true,
 						},
 						"target": schema.SetAttribute{
 							Optional:    true,
