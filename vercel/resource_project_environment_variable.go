@@ -178,6 +178,35 @@ func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req
 		return
 	}
 
+	// Check if we need to suppress updates for sensitive/write-only environment variables
+	var plan ProjectEnvironmentVariable
+	diags = req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Only handle sensitive/write-only variables and when we have a value to compare
+	if (plan.Sensitive.IsNull() || plan.Sensitive.ValueBool()) && plan.Value.ValueString() != "" && !plan.Value.IsNull() {
+		// Get the hash from private state
+		prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+		privateKey := prefix + plan.Key.ValueString()
+		storedHash, _ := req.Private.GetKey(ctx, privateKey)
+
+		// Calculate hash of the planned value
+		hash := sha256.Sum256([]byte(plan.Value.ValueString()))
+
+		// If hashes match, suppress the update by setting the value to null in plan
+		if len(storedHash) > 0 && string(storedHash) == string(hash[:]) {
+			plan.Value = types.StringNull()
+			diags = resp.Plan.Set(ctx, plan)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
+	}
+
 	if config.ID.ValueString() != "" {
 		// The resource already exists, so this is okay.
 		return
