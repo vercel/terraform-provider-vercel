@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -342,6 +343,12 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 
 	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
 
+	// Set the key for the environment variable in the private state.
+	prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	hash := sha256.Sum256([]byte(plan.Value.ValueString()))
+	privateKey := prefix + plan.Key.ValueString()
+	resp.Private.SetKey(ctx, privateKey, hash[:])
+
 	tflog.Info(ctx, "created project environment variable", map[string]any{
 		"id":         result.ID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
@@ -421,6 +428,12 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 	}
 
 	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
+
+	// Update the key for the environment variable in the private state.
+	prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	hash := sha256.Sum256([]byte(plan.Value.ValueString()))
+	privateKey := prefix + plan.Key.ValueString()
+	resp.Private.SetKey(ctx, privateKey, hash[:])
 
 	tflog.Info(ctx, "updated project environment variable", map[string]any{
 		"id":         result.ID.ValueString(),

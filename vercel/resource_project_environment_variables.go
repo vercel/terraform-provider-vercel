@@ -418,9 +418,9 @@ func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req re
 
 	// Set the hash of the environment variable values in the private state.
 	prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	for _, env := range request.EnvironmentVariables { 
-		hash := sha256.Sum256([]byte(env.Value))
-		privateKey := prefix + env.Key
+	for _, env := range envs { 
+		hash := sha256.Sum256([]byte(env.Value.ValueString()))
+		privateKey := prefix + env.Key.ValueString()
 		resp.Private.SetKey(ctx, privateKey, hash[:])
 	}
 
@@ -551,6 +551,15 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 		resp.Diagnostics.Append(diags...)
 		return
 	}
+
+	// Update the hash of all the environment variable values in the private state.
+	prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	for _, env := range planEnvs { 
+		hash := sha256.Sum256([]byte(env.Value.ValueString()))
+		privateKey := prefix + env.Key.ValueString()
+		resp.Private.SetKey(ctx, privateKey, hash[:])
+	}
+
 	plannedEnvsByID := map[string]EnvironmentItem{}
 	var toAdd EnvironmentItems
 	for _, e := range planEnvs {
@@ -688,6 +697,11 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 			)
 			return
 		}
+
+		// Delete the hash from the private state.
+		privateKey := prefix + v.Key.ValueString()
+		resp.Private.SetKey(ctx, privateKey, nil)
+
 		tflog.Info(ctx, "deleted environment variable", map[string]any{
 			"team_id":        plan.TeamID.ValueString(),
 			"project_id":     plan.ProjectID.ValueString(),
