@@ -100,7 +100,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Required:    true,
 							Description: "The value of the Environment Variable.",
 							Sensitive:   true,
-							WriteOnly:   true, // We don't want to show the value in the plan or state.
+							WriteOnly:   true,
 						},
 						"target": schema.SetAttribute{
 							Optional:    true,
@@ -171,6 +171,47 @@ func (p *ProjectEnvironmentVariables) environment(ctx context.Context) (Environm
 	return vars, diags
 }
 
+func suppressWriteOnlyEnvVarUpdates(ctx context.Context, config *ProjectEnvironmentVariables, req resource.ModifyPlanRequest) diag.Diagnostics {
+    var diags diag.Diagnostics
+
+	environment, diags := config.environment(ctx)
+	if diags.HasError() {
+		diags.Append(diags...)
+		return diags
+	}
+
+    prefix := fmt.Sprintf("vercel_env_%s_%s_", config.ProjectID.ValueString(), config.TeamID.ValueString())
+	modified := false
+
+    for i, env := range environment {
+        if env.Sensitive.IsNull() || !env.Sensitive.ValueBool() {
+            continue // Only handle sensitive/write-only
+        }
+        hash := sha256.Sum256([]byte(env.Value.ValueString()))
+        privateKey := prefix + env.Key.ValueString()
+        storedHash, _ := req.Private.GetKey(ctx, privateKey)
+        if len(storedHash) > 0 && string(storedHash) == string(hash[:]) {
+            // Set the value to null in the plan to suppress update
+            env.Value = types.StringNull()
+            environment[i] = env
+			modified = true
+        }
+    }
+
+    if modified {
+        // Convert the environment items back to attr.Value elements
+        var envValues []attr.Value
+        for _, e := range environment {
+            envValues = append(envValues, e.toAttrValue())
+        }
+
+        // Create a new set value with the modified environment variables
+        config.Variables = types.SetValueMust(envVariableElemType, envValues)
+    }
+
+    return diags
+}
+
 func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.Plan.Raw.IsNull() {
 		return
@@ -237,6 +278,19 @@ func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, re
 			"Project Environment Variables Invalid",
 			"This team has a policy that forces all environment variables to be sensitive. Please remove the `sensitive` field for your environment variables or set the `sensitive` field to `true` in your configuration.",
 		)
+	}
+
+	var plan ProjectEnvironmentVariables
+	diags = req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diags = suppressWriteOnlyEnvVarUpdates(ctx, &plan, req)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }
 
