@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"time"
 
@@ -99,6 +100,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Required:    true,
 							Description: "The value of the Environment Variable.",
 							Sensitive:   true,
+							WriteOnly:   true, // We don't want to show the value in the plan or state.
 						},
 						"target": schema.SetAttribute{
 							Optional:    true,
@@ -173,6 +175,7 @@ func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, re
 	if req.Plan.Raw.IsNull() {
 		return
 	}
+
 	var config ProjectEnvironmentVariables
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -413,10 +416,17 @@ func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req re
 		return
 	}
 
+	// Set the hash of the environment variable values in the private state.
+	prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	for _, env := range request.EnvironmentVariables { 
+		hash := sha256.Sum256([]byte(env.Value))
+		privateKey := prefix + env.Key
+		resp.Private.SetKey(ctx, privateKey, hash[:])
+	}
+
 	tflog.Info(ctx, "created project environment variables", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
-		"variables":  created,
 	})
 
 	diags = resp.State.Set(ctx, result)

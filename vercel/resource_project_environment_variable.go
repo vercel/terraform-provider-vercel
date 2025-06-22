@@ -111,6 +111,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Required:    true,
 				Description: "The value of the Environment Variable.",
 				Sensitive:   true,
+				WriteOnly:   true,
 			},
 			"git_branch": schema.StringAttribute{
 				Optional:    true,
