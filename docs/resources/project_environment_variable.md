@@ -74,7 +74,7 @@ resource "vercel_project_environment_variable" "example_sensitive" {
 
 - `key` (String) The name of the Environment Variable.
 - `project_id` (String) The ID of the Vercel project.
-- `value` (String, Sensitive, WriteOnly) The value of the Environment Variable.
+- `value` (String, Sensitive) The value of the Environment Variable.
 
 ### Optional
 
