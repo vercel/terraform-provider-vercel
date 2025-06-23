@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -83,9 +84,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "The ID of the Vercel team. Required when configuring a team resource if a default team has not been set in the provider.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
-			"variables": schema.SetNestedAttribute{
+			"variables": schema.MapNestedAttribute{
 				Required:    true,
-				Description: "A set of Environment Variables that should be configured for the project.",
+				Description: "A map of Environment Variables that should be configured for the project. The map key is the environment variable name.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
@@ -158,55 +159,43 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 type ProjectEnvironmentVariables struct {
 	TeamID    types.String `tfsdk:"team_id"`
 	ProjectID types.String `tfsdk:"project_id"`
-	Variables types.Set    `tfsdk:"variables"`
+	Variables types.Map    `tfsdk:"variables"`
 }
 
-func (p *ProjectEnvironmentVariables) environment(ctx context.Context) (EnvironmentItems, diag.Diagnostics) {
+func (p *ProjectEnvironmentVariables) environment(ctx context.Context) (EnvironmentItemsMap, diag.Diagnostics) {
 	if p.Variables.IsNull() {
 		return nil, nil
 	}
 
-	var vars []EnvironmentItem
+	var vars EnvironmentItemsMap
 	diags := p.Variables.ElementsAs(ctx, &vars, true)
 	return vars, diags
 }
 
-func suppressWriteOnlyEnvVarUpdates(ctx context.Context, config *ProjectEnvironmentVariables, req resource.ModifyPlanRequest) diag.Diagnostics {
+
+// Updated: now takes resp *resource.ModifyPlanResponse and triggers RequiresReplace on value changes
+func suppressWriteOnlyEnvVarUpdates(ctx context.Context, config *ProjectEnvironmentVariables, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) diag.Diagnostics {
     var diags diag.Diagnostics
 
-	environment, diags := config.environment(ctx)
-	if diags.HasError() {
-		diags.Append(diags...)
-		return diags
-	}
+    environment, diags := config.environment(ctx)
+    if diags.HasError() {
+        diags.Append(diags...)
+        return diags
+    }
 
     prefix := fmt.Sprintf("vercel_env_%s_%s_", config.ProjectID.ValueString(), config.TeamID.ValueString())
-	modified := false
 
-    for i, env := range environment {
-        if env.Sensitive.IsNull() || !env.Sensitive.ValueBool() {
-            continue // Only handle sensitive/write-only
-        }
+    for key, env := range environment {
         hash := sha256.Sum256([]byte(env.Value.ValueString()))
         privateKey := prefix + env.Key.ValueString()
         storedHash, _ := req.Private.GetKey(ctx, privateKey)
-        if len(storedHash) > 0 && string(storedHash) == string(hash[:]) {
-            // Set the value to null in the plan to suppress update
-            env.Value = types.StringNull()
-            environment[i] = env
-			modified = true
+        if len(storedHash) > 0 && strings.Trim(string(storedHash), "\"") == fmt.Sprintf("%x", hash) {
+        
+        } else {
+			// Trigger RequiresReplace for this variable's value
+			resp.RequiresReplace = append(resp.RequiresReplace, 
+				path.Root("variables").AtMapKey(key).AtName("value"))
         }
-    }
-
-    if modified {
-        // Convert the environment items back to attr.Value elements
-        var envValues []attr.Value
-        for _, e := range environment {
-            envValues = append(envValues, e.toAttrValue())
-        }
-
-        // Create a new set value with the modified environment variables
-        config.Variables = types.SetValueMust(envVariableElemType, envValues)
     }
 
     return diags
@@ -235,9 +224,28 @@ func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, re
 		return
 	}
 
+	var plan ProjectEnvironmentVariables
+	diags = resp.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diags = suppressWriteOnlyEnvVarUpdates(ctx, &config, req, resp)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	/*diags = resp.Plan.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}*/
+
 	// work out if there are any new env vars that are specifying sensitive = false
 	var nonSensitiveEnvVars []path.Path
-	for i, e := range environment {
+	for key, e := range environment {
 		if e.ID.ValueString() != "" {
 			continue
 		}
@@ -247,7 +255,7 @@ func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, re
 		nonSensitiveEnvVars = append(
 			nonSensitiveEnvVars,
 			path.Root("variables").
-				AtSetValue(config.Variables.Elements()[i]).
+				AtMapKey(key).
 				AtName("sensitive"),
 		)
 	}
@@ -279,22 +287,12 @@ func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, re
 			"This team has a policy that forces all environment variables to be sensitive. Please remove the `sensitive` field for your environment variables or set the `sensitive` field to `true` in your configuration.",
 		)
 	}
-
-	var plan ProjectEnvironmentVariables
-	diags = req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	diags = suppressWriteOnlyEnvVarUpdates(ctx, &plan, req)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
+// EnvironmentItems represents a set of environment variables
+// for use with MapNestedAttribute
 type EnvironmentItems []EnvironmentItem
+type EnvironmentItemsMap map[string]EnvironmentItem
 
 func (e *EnvironmentItems) toCreateEnvironmentVariablesRequest(ctx context.Context, projectID types.String, teamID types.String) (r client.CreateEnvironmentVariablesRequest, diags diag.Diagnostics) {
 	variables := []client.EnvironmentVariableRequest{}
@@ -347,7 +345,8 @@ func convertResponseToProjectEnvironmentVariables(
 		return ProjectEnvironmentVariables{}, diags
 	}
 
-	var env []attr.Value
+	// Build a map of environment variables keyed by variable name
+	env := make(map[string]attr.Value)
 	alreadyPresent := map[string]struct{}{}
 	for _, e := range response {
 		var targetValue attr.Value
@@ -400,7 +399,8 @@ func convertResponseToProjectEnvironmentVariables(
 		}
 		alreadyPresent[e.ID] = struct{}{}
 
-		env = append(env, types.ObjectValueMust(
+		// Use the env var key as the map key
+		env[e.Key] = types.ObjectValueMust(
 			envVariableElemType.AttrTypes,
 			map[string]attr.Value{
 				"key":                    types.StringValue(e.Key),
@@ -412,17 +412,23 @@ func convertResponseToProjectEnvironmentVariables(
 				"sensitive":              types.BoolValue(e.Type == "sensitive"),
 				"comment":                types.StringValue(e.Comment),
 			},
-		))
+		)
 	}
 
+	// Add unchanged items to the map (by key)
 	for _, e := range unchanged {
-		env = append(env, e.toAttrValue())
+		k := e.Key.ValueString()
+		if _, exists := env[k]; !exists {
+			env[k] = e.toAttrValue()
+		}
 	}
+
+	// No need to sort, as maps are order-insensitive
 
 	return ProjectEnvironmentVariables{
 		TeamID:    toTeamID(plan.TeamID.ValueString()),
 		ProjectID: plan.ProjectID,
-		Variables: types.SetValueMust(envVariableElemType, env),
+		Variables: types.MapValueMust(envVariableElemType, env),
 	}, nil
 }
 
@@ -430,7 +436,7 @@ func convertResponseToProjectEnvironmentVariables(
 // This is called automatically by the provider when a new resource should be created.
 func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan ProjectEnvironmentVariables
-	diags := req.Plan.Get(ctx, &plan)
+	diags := req.Config.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -451,7 +457,12 @@ func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req re
 		return
 	}
 
-	request, diags := envs.toCreateEnvironmentVariablesRequest(ctx, plan.ProjectID, plan.TeamID)
+	envList := make(EnvironmentItems, 0, len(envs))
+	for _, v := range envs {
+		envList = append(envList, v)
+	}
+
+	request, diags := envList.toCreateEnvironmentVariablesRequest(ctx, plan.ProjectID, plan.TeamID)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -475,7 +486,7 @@ func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req re
 	for _, env := range envs { 
 		hash := sha256.Sum256([]byte(env.Value.ValueString()))
 		privateKey := prefix + env.Key.ValueString()
-		resp.Private.SetKey(ctx, privateKey, hash[:])
+		resp.Private.SetKey(ctx, privateKey, []byte(fmt.Sprintf("\"%x\"", hash)))
 	}
 
 	tflog.Info(ctx, "created project environment variables", map[string]any{
@@ -600,44 +611,32 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 		resp.Diagnostics.Append(diags...)
 		return
 	}
-	planEnvs, diags := plan.environment(ctx)
+
+	var config ProjectEnvironmentVariables
+	diags = req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	configEnvs, diags := config.environment(ctx)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
 	}
 
+
 	// Update the hash of all the environment variable values in the private state.
 	prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	for _, env := range planEnvs { 
+	for _, env := range configEnvs { 
 		hash := sha256.Sum256([]byte(env.Value.ValueString()))
 		privateKey := prefix + env.Key.ValueString()
-		resp.Private.SetKey(ctx, privateKey, hash[:])
+		resp.Private.SetKey(ctx, privateKey, []byte(fmt.Sprintf("\"%x\"", hash)))
 	}
 
-	plannedEnvsByID := map[string]EnvironmentItem{}
-	var toAdd EnvironmentItems
-	for _, e := range planEnvs {
-		if e.ID.ValueString() != "" {
-			plannedEnvsByID[e.ID.ValueString()] = e
-		} else {
-			toAdd = append(toAdd, e)
-		}
-	}
-
-	var toRemove EnvironmentItems
-	var unchanged EnvironmentItems
-	for _, e := range stateEnvs {
-		plannedEnv, ok := plannedEnvsByID[e.ID.ValueString()]
-		if !ok {
-			toRemove = append(toRemove, e)
-			continue
-		}
-		if !plannedEnv.equal(&e) {
-			toRemove = append(toRemove, e)
-			toAdd = append(toAdd, plannedEnv)
-			continue
-		}
-		unchanged = append(unchanged, e)
+	planEnvs, diags := plan.environment(ctx)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
 	}
 
 	envsFromAPI, err := r.client.GetEnvironmentVariables(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
@@ -652,81 +651,42 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 		)
 		return
 	}
-	skipAdding := map[int]bool{}
+
+	// Build a map of envs from API for efficient lookup by key
+	envsFromAPIMap := make(map[string]client.EnvironmentVariable, len(envsFromAPI))
 	for _, e := range envsFromAPI {
-		// The env var exists at the moment, but not in TF state (the ID isn't present).
-		// Check if it has the same `key`, `target` and `custom_environment_ids` and value as any env var we are adding.
-		// This detects drift for stuff like: deleting an env var and then creating it again (the ID changes, but
-		// nothing else).
-		if _, ok := plannedEnvsByID[e.ID]; !ok { // env isn't in the planned envs
-			for i, ee := range toAdd { // look for a matching env var in the toAdd list
-				var target []string
-				diags := ee.Target.ElementsAs(ctx, &target, true)
-				if diags.HasError() {
-					resp.Diagnostics.Append(diags...)
-					return
-				}
-				var customEnvironmentIDs []string
-				diags = ee.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
-				if diags.HasError() {
-					resp.Diagnostics.Append(diags...)
-					return
-				}
-				if ee.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
-					if e.Decrypted != nil && !*e.Decrypted {
-						continue // We don't know if it's value is encrypted.
-					}
-					if e.Type == "sensitive" {
-						continue // We don't know if it's the same env var if sensitive
-					}
-					if e.Value != ee.Value.ValueString() {
-						continue // Value mismatches, so we need to update it.
-					}
-
-					var targetValue types.Set
-					if len(e.Target) > 0 {
-						target := make([]attr.Value, 0, len(e.Target))
-						for _, t := range e.Target {
-							target = append(target, types.StringValue(t))
-						}
-						targetValue = types.SetValueMust(types.StringType, target)
-					} else {
-						targetValue = types.SetNull(types.StringType)
-					}
-
-					var customEnvIDsValue types.Set
-					if len(e.CustomEnvironmentIDs) > 0 {
-						customEnvIDs := make([]attr.Value, 0, len(e.CustomEnvironmentIDs))
-						for _, c := range e.CustomEnvironmentIDs {
-							customEnvIDs = append(customEnvIDs, types.StringValue(c))
-						}
-						customEnvIDsValue = types.SetValueMust(types.StringType, customEnvIDs)
-					} else {
-						customEnvIDsValue = types.SetNull(types.StringType)
-					}
-					unchanged = append(unchanged, EnvironmentItem{
-						Key:                  types.StringValue(e.Key),
-						Value:                types.StringValue(e.Value),
-						Target:               targetValue,
-						CustomEnvironmentIDs: customEnvIDsValue,
-						GitBranch:            types.StringPointerValue(e.GitBranch),
-						ID:                   types.StringValue(e.ID),
-						Sensitive:            types.BoolValue(e.Type == "sensitive"),
-						Comment:              types.StringValue(e.Comment),
-					})
-					skipAdding[i] = true
-				}
-			}
+		envsFromAPIMap[e.Key] = e
+	}
+	
+	var toAdd EnvironmentItems
+	for key := range planEnvs {
+		_, ok := envsFromAPIMap[key]
+		if !ok {
+			toAdd = append(toAdd, configEnvs[key])
 		}
 	}
-	var filteredToAdd EnvironmentItems
-	for i, e := range toAdd {
-		if _, ok := skipAdding[i]; ok {
+	
+	var toRemove EnvironmentItems
+	var unchanged EnvironmentItems
+	for key, e := range stateEnvs {
+		_, ok := planEnvs[key]
+		if !ok {
+			// If a value isn't in in the planned state, it means it was removed from the config.
+			toRemove = append(toRemove, e)
+
+			// As this is fully deleted, remove the hash from the private state.
+			privateKey := prefix + e.Key.ValueString()
+			resp.Private.SetKey(ctx, privateKey, nil)
 			continue
 		}
-		filteredToAdd = append(filteredToAdd, e)
+		apiEnv, ok := envsFromAPIMap[key]
+		if ok && (e.ID.ValueString() != apiEnv.ID || !envVarMatches(ctx, configEnvs[key], apiEnv)) {
+			toRemove = append(toRemove, e)
+			toAdd = append(toAdd, configEnvs[key])
+			continue
+		}
+		unchanged = append(unchanged, e)
 	}
-	toAdd = filteredToAdd
 
 	tflog.Info(ctx, "Updating environment variables", map[string]any{
 		"to_remove": len(toRemove),
@@ -751,10 +711,6 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 			)
 			return
 		}
-
-		// Delete the hash from the private state.
-		privateKey := prefix + v.Key.ValueString()
-		resp.Private.SetKey(ctx, privateKey, nil)
 
 		tflog.Info(ctx, "deleted environment variable", map[string]any{
 			"team_id":        plan.TeamID.ValueString(),
@@ -838,4 +794,33 @@ func (r *projectEnvironmentVariablesResource) Delete(ctx context.Context, req re
 			"environment_id": v.ID.ValueString(),
 		})
 	}
+}
+
+// envVarMatches returns true if the two environment variables match by key, target, and custom_environment_ids.
+func envVarMatches(ctx context.Context, ee EnvironmentItem, e client.EnvironmentVariable) bool {
+	// TODO: Incorporate any data changes if the value in Vercel has updated, and we can actually read it.
+	
+	var target []string
+	diags := ee.Target.ElementsAs(ctx, &target, true)
+	if diags.HasError() {
+		return false
+	}
+	var customEnvironmentIDs []string
+	diags = ee.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
+	if diags.HasError() {
+		return false
+	}
+	if (ee.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs)) {
+		if e.Decrypted != nil && !*e.Decrypted {
+			return false // We don't know if it's value is encrypted.
+		}
+		if e.Type == "sensitive" {
+			return false // We don't know if it's the same env var if sensitive
+		}
+		if e.Value != ee.Value.ValueString() {
+			return false // Value mismatches, so we need to update it.
+		}
+		return true
+	}
+	return false
 }
