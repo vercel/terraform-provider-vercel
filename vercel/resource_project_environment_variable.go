@@ -2,7 +2,6 @@ package vercel
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -112,7 +111,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Required:    true,
 				Description: "The value of the Environment Variable.",
 				Sensitive:   true,
-				WriteOnly:   true,
 			},
 			"git_branch": schema.StringAttribute{
 				Optional:    true,
@@ -176,35 +174,6 @@ func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	// Check if we need to suppress updates for sensitive/write-only environment variables
-	var plan ProjectEnvironmentVariable
-	diags = req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Only handle sensitive/write-only variables and when we have a value to compare
-	if (plan.Sensitive.IsNull() || plan.Sensitive.ValueBool()) && plan.Value.ValueString() != "" && !plan.Value.IsNull() {
-		// Get the hash from private state
-		prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-		privateKey := prefix + plan.Key.ValueString()
-		storedHash, _ := req.Private.GetKey(ctx, privateKey)
-
-		// Calculate hash of the planned value
-		hash := sha256.Sum256([]byte(plan.Value.ValueString()))
-
-		// If hashes match, suppress the update by setting the value to null in plan
-		if len(storedHash) > 0 && string(storedHash) == string(hash[:]) {
-			plan.Value = types.StringNull()
-			diags = resp.Plan.Set(ctx, plan)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-		}
 	}
 
 	if config.ID.ValueString() != "" {
@@ -372,12 +341,6 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 
 	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
 
-	// Set the key for the environment variable in the private state.
-	prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	hash := sha256.Sum256([]byte(plan.Value.ValueString()))
-	privateKey := prefix + plan.Key.ValueString()
-	resp.Private.SetKey(ctx, privateKey, hash[:])
-
 	tflog.Info(ctx, "created project environment variable", map[string]any{
 		"id":         result.ID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
@@ -457,12 +420,6 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 	}
 
 	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
-
-	// Update the key for the environment variable in the private state.
-	prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	hash := sha256.Sum256([]byte(plan.Value.ValueString()))
-	privateKey := prefix + plan.Key.ValueString()
-	resp.Private.SetKey(ctx, privateKey, hash[:])
 
 	tflog.Info(ctx, "updated project environment variable", map[string]any{
 		"id":         result.ID.ValueString(),
