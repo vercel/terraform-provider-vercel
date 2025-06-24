@@ -61,50 +61,38 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 				Computed:    true,
 				Description: "The ID of the Vercel team.",
 			},
-			"automatic_rolling_release": schema.SingleNestedAttribute{
+			"automatic_rolling_release": schema.ListNestedAttribute{
 				MarkdownDescription: "Automatic rolling release configuration.",
 				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"stages": schema.ListNestedAttribute{
-						MarkdownDescription: "The stages for automatic rolling release.",
-						Required:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"target_percentage": schema.Int64Attribute{
-									MarkdownDescription: "The percentage of traffic to route to this stage.",
-									Required:            true,
-									Validators: []validator.Int64{
-										int64validator.Between(0, 100),
-									},
-								},
-								"duration": schema.Int64Attribute{
-									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage.",
-									Required:            true,
-									Validators: []validator.Int64{
-										int64validator.Between(1, 10000),
-									},
-								},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"target_percentage": schema.Int64Attribute{
+							MarkdownDescription: "The percentage of traffic to route to this stage.",
+							Required:            true,
+							Validators: []validator.Int64{
+								int64validator.Between(0, 100),
+							},
+						},
+						"duration": schema.Int64Attribute{
+							MarkdownDescription: "The duration in minutes to wait before advancing to the next stage.",
+							Required:            true,
+							Validators: []validator.Int64{
+								int64validator.Between(1, 10000),
 							},
 						},
 					},
 				},
 			},
-			"manual_rolling_release": schema.SingleNestedAttribute{
+			"manual_rolling_release": schema.ListNestedAttribute{
 				MarkdownDescription: "Manual rolling release configuration.",
 				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"stages": schema.ListNestedAttribute{
-						MarkdownDescription: "The stages for manual rolling release.",
-						Required:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"target_percentage": schema.Int64Attribute{
-									MarkdownDescription: "The percentage of traffic to route to this stage.",
-									Required:            true,
-									Validators: []validator.Int64{
-										int64validator.Between(0, 100),
-									},
-								},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"target_percentage": schema.Int64Attribute{
+							MarkdownDescription: "The percentage of traffic to route to this stage.",
+							Required:            true,
+							Validators: []validator.Int64{
+								int64validator.Between(0, 100),
 							},
 						},
 					},
