@@ -31,26 +31,37 @@ data "vercel_project_rolling_release" "example" {
 
 ### Optional
 
-- `rolling_release` (Attributes) The rolling release configuration. (see [below for nested schema](#nestedatt--rolling_release))
+- `automatic_rolling_release` (Attributes) Automatic rolling release configuration. (see [below for nested schema](#nestedatt--automatic_rolling_release))
+- `manual_rolling_release` (Attributes) Manual rolling release configuration. (see [below for nested schema](#nestedatt--manual_rolling_release))
 - `team_id` (String) The ID of the Vercel team.
 
-<a id="nestedatt--rolling_release"></a>
-### Nested Schema for `rolling_release`
+<a id="nestedatt--automatic_rolling_release"></a>
+### Nested Schema for `automatic_rolling_release`
 
-Read-Only:
+Required:
 
-- `advancement_type` (String) The type of advancement between stages. Must be either 'automatic' or 'manual-approval'. Required when enabled is true.
-- `enabled` (Boolean) Whether rolling releases are enabled.
-- `stages` (Attributes List) The stages of the rolling release. Required when enabled is true. (see [below for nested schema](#nestedatt--rolling_release--stages))
+- `stages` (Attributes List) The stages for automatic rolling release. (see [below for nested schema](#nestedatt--automatic_rolling_release--stages))
 
-<a id="nestedatt--rolling_release--stages"></a>
-### Nested Schema for `rolling_release.stages`
+<a id="nestedatt--automatic_rolling_release--stages"></a>
+### Nested Schema for `automatic_rolling_release.stages`
 
-Optional:
+Required:
 
-- `duration` (Number) The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.
+- `duration` (Number) The duration in minutes to wait before advancing to the next stage.
+- `target_percentage` (Number) The percentage of traffic to route to this stage.
 
-Read-Only:
 
-- `require_approval` (Boolean) Whether approval is required before advancing to the next stage.
+
+<a id="nestedatt--manual_rolling_release"></a>
+### Nested Schema for `manual_rolling_release`
+
+Required:
+
+- `stages` (Attributes List) The stages for manual rolling release. (see [below for nested schema](#nestedatt--manual_rolling_release--stages))
+
+<a id="nestedatt--manual_rolling_release--stages"></a>
+### Nested Schema for `manual_rolling_release.stages`
+
+Required:
+
 - `target_percentage` (Number) The percentage of traffic to route to this stage.
