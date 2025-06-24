@@ -130,20 +130,12 @@ type ManualStage struct {
 	TargetPercentage types.Int64 `tfsdk:"target_percentage"`
 }
 
-type AutomaticRollingRelease struct {
-	Stages types.List `tfsdk:"stages"`
-}
-
-type ManualRollingRelease struct {
-	Stages types.List `tfsdk:"stages"`
-}
-
 // ProjectRollingRelease reflects the state terraform stores internally for a project rolling release.
 type RollingReleaseInfo struct {
-	AutomaticRollingRelease *AutomaticRollingRelease `tfsdk:"automatic_rolling_release"`
-	ManualRollingRelease    *ManualRollingRelease    `tfsdk:"manual_rolling_release"`
-	ProjectID               types.String             `tfsdk:"project_id"`
-	TeamID                  types.String             `tfsdk:"team_id"`
+	AutomaticRollingRelease types.List   `tfsdk:"automatic_rolling_release"`
+	ManualRollingRelease    types.List   `tfsdk:"manual_rolling_release"`
+	ProjectID               types.String `tfsdk:"project_id"`
+	TeamID                  types.String `tfsdk:"team_id"`
 }
 
 func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRollingReleaseRequest, diag.Diagnostics) {
@@ -151,12 +143,12 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	var advancementType string
 	var diags diag.Diagnostics
 
-	if e.AutomaticRollingRelease != nil {
+	if !e.AutomaticRollingRelease.IsNull() && !e.AutomaticRollingRelease.IsUnknown() {
 		advancementType = "automatic"
 
 		// Convert automatic stages
 		var tfStages []AutomaticStage
-		diags = e.AutomaticRollingRelease.Stages.ElementsAs(context.Background(), &tfStages, false)
+		diags = e.AutomaticRollingRelease.ElementsAs(context.Background(), &tfStages, false)
 		if diags.HasError() {
 			return client.UpdateRollingReleaseRequest{}, diags
 		}
@@ -178,12 +170,12 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 			RequireApproval:  false,
 		})
 
-	} else if e.ManualRollingRelease != nil {
+	} else if !e.ManualRollingRelease.IsNull() && !e.ManualRollingRelease.IsUnknown() {
 		advancementType = "manual-approval"
 
 		// Convert manual stages
 		var tfStages []ManualStage
-		diags = e.ManualRollingRelease.Stages.ElementsAs(context.Background(), &tfStages, false)
+		diags = e.ManualRollingRelease.ElementsAs(context.Background(), &tfStages, false)
 		if diags.HasError() {
 			return client.UpdateRollingReleaseRequest{}, diags
 		}
@@ -284,9 +276,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			return result, diags
 		}
 
-		result.AutomaticRollingRelease = &AutomaticRollingRelease{
-			Stages: stagesList,
-		}
+		result.AutomaticRollingRelease = stagesList
 
 	} else if response.RollingRelease.AdvancementType == "manual-approval" {
 		// Convert API stages to manual stages (excluding terminal stage)
@@ -326,9 +316,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			return result, diags
 		}
 
-		result.ManualRollingRelease = &ManualRollingRelease{
-			Stages: stagesList,
-		}
+		result.ManualRollingRelease = stagesList
 	}
 
 	// Log the conversion result for debugging
@@ -473,34 +461,6 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 		"advancement_type": request.RollingRelease.AdvancementType,
 		"stages":           request.RollingRelease.Stages,
 	})
-
-	// Check if we're transitioning between enabled and disabled states
-	wasEnabled := state.AutomaticRollingRelease != nil || state.ManualRollingRelease != nil
-	isEnabled := plan.AutomaticRollingRelease != nil || plan.ManualRollingRelease != nil
-
-	// If we're transitioning from enabled to disabled, first disable
-	if wasEnabled && !isEnabled {
-		disabledRequest := client.UpdateRollingReleaseRequest{
-			RollingRelease: client.RollingRelease{
-				Enabled:         false,
-				AdvancementType: "",
-				Stages:          []client.RollingReleaseStage{},
-			},
-			ProjectID: request.ProjectID,
-			TeamID:    request.TeamID,
-		}
-
-		_, err := r.client.UpdateRollingRelease(ctx, disabledRequest)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error updating project rolling release",
-				fmt.Sprintf("Could not disable project rolling release, unexpected error: %s",
-					err,
-				),
-			)
-			return
-		}
-	}
 
 	out, err := r.client.UpdateRollingRelease(ctx, request)
 	if err != nil {

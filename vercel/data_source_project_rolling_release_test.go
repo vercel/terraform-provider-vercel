@@ -17,7 +17,7 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccProjectRollingReleasesConfigOffWithDataSource(nameSuffix)),
+				Config: cfg(testAccProjectRollingReleasesConfigOnWithDataSource(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), "vercel_project_rolling_release.example", testTeam(t)),
 					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "rolling_release.enabled", "false"),
@@ -29,7 +29,7 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectRollingReleasesConfigOffWithDataSource(nameSuffix string) string {
+func testAccProjectRollingReleasesConfigOnWithDataSource(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%s"
@@ -37,10 +37,11 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	rolling_release = {
-		enabled          = false
-		advancement_type = ""
-		stages          = []
+	automatic_rolling_release {
+		stages {
+			target_percentage = 10
+			duration = 10
+		}
 	}
 }
 

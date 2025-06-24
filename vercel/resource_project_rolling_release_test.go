@@ -41,11 +41,11 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
-					resource.TestCheckResourceAttr(resourceName, "manual_rolling_release.stages.#", "2"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.stages.*", map[string]string{
+					resource.TestCheckResourceAttr(resourceName, "manual_rolling_release.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.*", map[string]string{
 						"target_percentage": "20",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.*", map[string]string{
 						"target_percentage": "50",
 					}),
 				),
@@ -56,14 +56,14 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
-					resource.TestCheckResourceAttr(resourceName, "manual_rolling_release.stages.#", "3"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.stages.*", map[string]string{
+					resource.TestCheckResourceAttr(resourceName, "manual_rolling_release.#", "3"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release*", map[string]string{
 						"target_percentage": "20",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.*", map[string]string{
 						"target_percentage": "50",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.*", map[string]string{
 						"target_percentage": "80",
 					}),
 				),
@@ -74,16 +74,16 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
-					resource.TestCheckResourceAttr(resourceName, "automatic_rolling_release.stages.#", "3"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "automatic_rolling_release.stages.*", map[string]string{
+					resource.TestCheckResourceAttr(resourceName, "automatic_rolling_release.#", "3"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "automatic_rolling_release.*", map[string]string{
 						"target_percentage": "20",
 						"duration":          "10",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "automatic_rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "automatic_rolling_release.*", map[string]string{
 						"target_percentage": "50",
 						"duration":          "10",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "automatic_rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "automatic_rolling_release.*", map[string]string{
 						"target_percentage": "80",
 						"duration":          "10",
 					}),
@@ -111,16 +111,14 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	manual_rolling_release = {
-		stages = [
-			{
-				target_percentage = 20
-			},
-			{
-				target_percentage = 50
-			}
-		]
-	}
+	manual_rolling_release = [
+		{
+			target_percentage = 20
+		},
+		{
+			target_percentage = 50
+		}
+	]
 }
 `, nameSuffix)
 }
@@ -134,19 +132,17 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	manual_rolling_release = {
-		stages = [
-			{
-				target_percentage = 20
-			},
-			{
-				target_percentage = 50
-			},
-			{
-				target_percentage = 80
-			}
-		]
-	}
+	manual_rolling_release = [
+		{
+			target_percentage = 20
+		},
+		{
+			target_percentage = 50
+		},
+		{
+			target_percentage = 80
+		}
+	]
 }
 `, nameSuffix)
 }
@@ -159,22 +155,20 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	automatic_rolling_release = {
-		stages = [
-			{
-				target_percentage = 20
-				duration          = 10
-			},
-			{
-				target_percentage = 50
-				duration          = 10
-			},
-			{
-				target_percentage = 80
-				duration          = 10
-			}
-		]
-	}
+	automatic_rolling_release = [
+		{
+			target_percentage = 20
+			duration          = 10
+		},
+		{
+			target_percentage = 50
+			duration          = 10
+		},
+		{
+			target_percentage = 80
+			duration          = 10
+		}
+	]
 }
 `, nameSuffix)
 }
