@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
@@ -59,35 +61,49 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 				Computed:    true,
 				Description: "The ID of the Vercel team.",
 			},
-			"rolling_release": schema.SingleNestedAttribute{
-				MarkdownDescription: "The rolling release configuration.",
-				Computed:            true,
+			"automatic_rolling_release": schema.SingleNestedAttribute{
+				MarkdownDescription: "Automatic rolling release configuration.",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
-					"enabled": schema.BoolAttribute{
-						MarkdownDescription: "Whether rolling releases are enabled.",
-						Computed:            true,
-					},
-					"advancement_type": schema.StringAttribute{
-						MarkdownDescription: "The type of advancement between stages. Must be either 'automatic' or 'manual-approval'. Required when enabled is true.",
-						Computed:            true,
-					},
 					"stages": schema.ListNestedAttribute{
-						MarkdownDescription: "The stages of the rolling release. Required when enabled is true.",
-						Computed:            true,
+						MarkdownDescription: "The stages for automatic rolling release.",
+						Required:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"target_percentage": schema.Int64Attribute{
 									MarkdownDescription: "The percentage of traffic to route to this stage.",
-									Computed:            true,
+									Required:            true,
+									Validators: []validator.Int64{
+										int64validator.Between(0, 100),
+									},
 								},
 								"duration": schema.Int64Attribute{
-									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Required for all stages except the final stage when using automatic advancement.",
-									Optional:            true,
+									MarkdownDescription: "The duration in minutes to wait before advancing to the next stage.",
+									Required:            true,
+									Validators: []validator.Int64{
+										int64validator.Between(1, 10000),
+									},
 								},
-								"require_approval": schema.BoolAttribute{
-									MarkdownDescription: "Whether approval is required before advancing to the next stage.",
-									Computed:            true,
+							},
+						},
+					},
+				},
+			},
+			"manual_rolling_release": schema.SingleNestedAttribute{
+				MarkdownDescription: "Manual rolling release configuration.",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"stages": schema.ListNestedAttribute{
+						MarkdownDescription: "The stages for manual rolling release.",
+						Required:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"target_percentage": schema.Int64Attribute{
+									MarkdownDescription: "The percentage of traffic to route to this stage.",
+									Required:            true,
+									Validators: []validator.Int64{
+										int64validator.Between(0, 100),
+									},
 								},
 							},
 						},
