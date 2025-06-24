@@ -401,7 +401,7 @@ func convertResponseToProjectEnvironmentVariables(
 
 		// Use the env var key as the map key
 		env[e.Key] = types.ObjectValueMust(
-			envVariableElemType.AttrTypes,
+			EnvVariableElemType.AttrTypes,
 			map[string]attr.Value{
 				"key":                    types.StringValue(e.Key),
 				"value":                  value,
@@ -428,7 +428,7 @@ func convertResponseToProjectEnvironmentVariables(
 	return ProjectEnvironmentVariables{
 		TeamID:    toTeamID(plan.TeamID.ValueString()),
 		ProjectID: plan.ProjectID,
-		Variables: types.MapValueMust(envVariableElemType, env),
+		Variables: types.MapValueMust(EnvVariableElemType, env),
 	}, nil
 }
 

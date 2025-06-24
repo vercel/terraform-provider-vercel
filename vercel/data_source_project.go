@@ -450,7 +450,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 	/* Force reading of environment and git comments. These are ignored usually if the planned value is null,
 	   otherwise it causes issues with terraform thinking there are changes when there aren't. However,
 	   for the data source we always want to read the value */
-	plan.Environment = types.SetValueMust(envVariableElemType, []attr.Value{})
+	plan.Environment = types.SetValueMust(EnvVariableElemType, []attr.Value{})
 	plan.GitComments = types.ObjectNull(gitCommentsAttrTypes)
 	if response.GitComments != nil {
 		plan.GitComments = types.ObjectValueMust(gitCommentsAttrTypes, map[string]attr.Value{
