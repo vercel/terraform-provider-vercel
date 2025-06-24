@@ -48,7 +48,6 @@ data "vercel_project" "example" {
 - `enable_affected_projects_deployments` (Boolean) When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.
 - `enable_preview_feedback` (Boolean) Whether the Vercel Toolbar is enabled on your preview deployments. If unspecified, defaults to team setting.
 - `enable_production_feedback` (Boolean) Whether the Vercel Toolbar is enabled on your production deployments. If unspecified, defaults to team setting.
-- `environment` (Attributes Set) A list of environment variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
 - `framework` (String) The framework that is being used for this project. If omitted, no framework is selected.
 - `function_failover` (Boolean) Automatically failover Serverless Functions to the nearest region. You can customize regions through vercel.json. A new Deployment is required for your changes to take effect.
 - `git_comments` (Attributes) Configuration for Git Comments. (see [below for nested schema](#nestedatt--git_comments))
@@ -74,21 +73,6 @@ data "vercel_project" "example" {
 - `skew_protection` (String) Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
-
-<a id="nestedatt--environment"></a>
-### Nested Schema for `environment`
-
-Read-Only:
-
-- `comment` (String) A comment explaining what the environment variable is for.
-- `custom_environment_ids` (Set of String) The IDs of Custom Environments that the Environment Variable should be present on.
-- `git_branch` (String) The git branch of the environment variable.
-- `id` (String) The ID of the environment variable
-- `key` (String) The name of the environment variable.
-- `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. Note that the value will be `null` for sensitive environment variables.
-- `target` (Set of String) The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.
-- `value` (String) The value of the environment variable.
-
 
 <a id="nestedatt--git_comments"></a>
 ### Nested Schema for `git_comments`

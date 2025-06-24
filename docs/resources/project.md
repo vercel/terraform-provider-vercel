@@ -6,8 +6,7 @@ description: |-
   Provides a Project resource.
   A Project groups deployments and custom domains. To deploy on Vercel, you need to create a Project.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/overview.
-  ~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and this Project resource with Environment Variables defined in-line via the environment field.
-  At this time you cannot use a Vercel Project resource with in-line environment in conjunction with any vercel_project_environment_variables or vercel_project_environment_variable resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+  ~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables) to update environment variables.
 ---
 
 # vercel_project (Resource)
@@ -18,8 +17,7 @@ A Project groups deployments and custom domains. To deploy on Vercel, you need t
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/overview).
 
-~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and this Project resource with Environment Variables defined in-line via the `environment` field.
-At this time you cannot use a Vercel Project resource with in-line `environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables) to update environment variables.
 
 ## Example Usage
 
@@ -65,7 +63,6 @@ resource "vercel_project" "example" {
 - `enable_affected_projects_deployments` (Boolean) When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.
 - `enable_preview_feedback` (Boolean) Enables the Vercel Toolbar on your preview deployments.
 - `enable_production_feedback` (Boolean) Enables the Vercel Toolbar on your production deployments: one of on, off or default.
-- `environment` (Attributes Set) A set of Environment Variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
 - `framework` (String) The framework that is being used for this project. If omitted, no framework is selected.
 - `function_failover` (Boolean) Automatically failover Serverless Functions to the nearest region. You can customize regions through vercel.json. A new Deployment is required for your changes to take effect.
 - `git_comments` (Attributes) Configuration for Git Comments. (see [below for nested schema](#nestedatt--git_comments))
@@ -96,27 +93,6 @@ resource "vercel_project" "example" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-<a id="nestedatt--environment"></a>
-### Nested Schema for `environment`
-
-Required:
-
-- `key` (String) The name of the Environment Variable.
-- `value` (String, Sensitive) The value of the Environment Variable.
-
-Optional:
-
-- `comment` (String) A comment explaining what the environment variable is for.
-- `custom_environment_ids` (Set of String) The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.
-- `git_branch` (String) The git branch of the Environment Variable.
-- `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))
-- `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.
-
-Read-Only:
-
-- `id` (String) The ID of the Environment Variable.
-
 
 <a id="nestedatt--git_comments"></a>
 ### Nested Schema for `git_comments`
