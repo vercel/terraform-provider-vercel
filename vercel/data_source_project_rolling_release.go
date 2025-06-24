@@ -193,10 +193,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		stages := make([]attr.Value, len(automaticStages))
 		for i, stage := range automaticStages {
 			stageObj := types.ObjectValueMust(
-				map[string]attr.Type{
-					"target_percentage": types.Int64Type,
-					"duration":          types.Int64Type,
-				},
+				automaticRollingReleaseElementType.AttrTypes,
 				map[string]attr.Value{
 					"target_percentage": stage.TargetPercentage,
 					"duration":          stage.Duration,
@@ -205,12 +202,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"target_percentage": types.Int64Type,
-				"duration":          types.Int64Type,
-			},
-		}, stages)
+		stagesList, stagesDiags := types.ListValueFrom(ctx, automaticRollingReleaseElementType, stages)
 		diags.Append(stagesDiags...)
 		if diags.HasError() {
 			return result, diags
@@ -236,9 +228,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		stages := make([]attr.Value, len(manualStages))
 		for i, stage := range manualStages {
 			stageObj := types.ObjectValueMust(
-				map[string]attr.Type{
-					"target_percentage": types.Int64Type,
-				},
+				manualRollingReleaseElementType.AttrTypes,
 				map[string]attr.Value{
 					"target_percentage": stage.TargetPercentage,
 				},
@@ -246,11 +236,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"target_percentage": types.Int64Type,
-			},
-		}, stages)
+		stagesList, stagesDiags := types.ListValueFrom(ctx, manualRollingReleaseElementType, stages)
 		diags.Append(stagesDiags...)
 		if diags.HasError() {
 			return result, diags

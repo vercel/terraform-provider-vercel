@@ -118,6 +118,20 @@ type ManualStage struct {
 	TargetPercentage types.Int64 `tfsdk:"target_percentage"`
 }
 
+// Define the element types for the lists
+var automaticRollingReleaseElementType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"target_percentage": types.Int64Type,
+		"duration":          types.Int64Type,
+	},
+}
+
+var manualRollingReleaseElementType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"target_percentage": types.Int64Type,
+	},
+}
+
 // ProjectRollingRelease reflects the state terraform stores internally for a project rolling release.
 type RollingReleaseInfo struct {
 	AutomaticRollingRelease types.List   `tfsdk:"automatic_rolling_release"`
@@ -241,10 +255,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		stages := make([]attr.Value, len(automaticStages))
 		for i, stage := range automaticStages {
 			stageObj := types.ObjectValueMust(
-				map[string]attr.Type{
-					"target_percentage": types.Int64Type,
-					"duration":          types.Int64Type,
-				},
+				automaticRollingReleaseElementType.AttrTypes,
 				map[string]attr.Value{
 					"target_percentage": stage.TargetPercentage,
 					"duration":          stage.Duration,
@@ -253,12 +264,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"target_percentage": types.Int64Type,
-				"duration":          types.Int64Type,
-			},
-		}, stages)
+		stagesList, stagesDiags := types.ListValueFrom(ctx, automaticRollingReleaseElementType, stages)
 		diags.Append(stagesDiags...)
 		if diags.HasError() {
 			return result, diags
@@ -284,9 +290,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		stages := make([]attr.Value, len(manualStages))
 		for i, stage := range manualStages {
 			stageObj := types.ObjectValueMust(
-				map[string]attr.Type{
-					"target_percentage": types.Int64Type,
-				},
+				manualRollingReleaseElementType.AttrTypes,
 				map[string]attr.Value{
 					"target_percentage": stage.TargetPercentage,
 				},
@@ -294,11 +298,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"target_percentage": types.Int64Type,
-			},
-		}, stages)
+		stagesList, stagesDiags := types.ListValueFrom(ctx, manualRollingReleaseElementType, stages)
 		diags.Append(stagesDiags...)
 		if diags.HasError() {
 			return result, diags
