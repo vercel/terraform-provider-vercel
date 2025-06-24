@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -102,78 +103,29 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 	}
 }
 
-type RollingReleaseStageDataSource struct {
-	TargetPercentage types.Int64 `tfsdk:"target_percentage"`
-	Duration         types.Int64 `tfsdk:"duration"`
-}
-
-type RollingReleaseDataSource struct {
-	ManualRollingRelease    types.List `tfsdk:"manual_rolling_release"`
-	AutomaticRollingRelease types.List `tfsdk:"automatic_rolling_release"`
-}
-
-type RollingReleaseInfoDataSource struct {
-	ManualRollingRelease    types.List   `tfsdk:"manual_rolling_release"`
+// ProjectRollingReleaseDataSourceModel reflects the structure of the data source.
+type ProjectRollingReleaseDataSourceModel struct {
 	AutomaticRollingRelease types.List   `tfsdk:"automatic_rolling_release"`
+	ManualRollingRelease    types.List   `tfsdk:"manual_rolling_release"`
 	ProjectID               types.String `tfsdk:"project_id"`
 	TeamID                  types.String `tfsdk:"team_id"`
 }
 
-func convertStagesDataSource(stages []client.RollingReleaseStage) types.List {
-	if len(stages) == 0 {
-		return types.ListNull(types.ObjectType{AttrTypes: map[string]attr.Type{
-			"target_percentage": types.Int64Type,
-			"duration":          types.Int64Type,
-		}})
-	}
-
-	result := make([]RollingReleaseStageDataSource, len(stages))
-	for i, stage := range stages {
-		duration := types.Int64Null()
-		if stage.Duration != nil {
-			duration = types.Int64Value(int64(*stage.Duration))
-		}
-
-		result[i] = RollingReleaseStageDataSource{
-			TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
-			Duration:         duration,
-		}
-	}
-
-	stagesList, _ := types.ListValueFrom(context.Background(), types.ObjectType{AttrTypes: map[string]attr.Type{
-		"target_percentage": types.Int64Type,
-		"duration":          types.Int64Type,
-	}}, result)
-	return stagesList
-}
-
-func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInfo) RollingReleaseInfoDataSource {
-	rollingRelease := RollingReleaseDataSource{
-		ManualRollingRelease:    convertStagesDataSource(response.RollingRelease.Stages),
-		AutomaticRollingRelease: convertStagesDataSource(response.RollingRelease.Stages),
-	}
-
-	return RollingReleaseInfoDataSource{
-		ManualRollingRelease:    rollingRelease.ManualRollingRelease,
-		AutomaticRollingRelease: rollingRelease.AutomaticRollingRelease,
-		ProjectID:               types.StringValue(response.ProjectID),
-		TeamID:                  types.StringValue(response.TeamID),
-	}
-}
-
 func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config RollingReleaseInfoDataSource
-	diags := req.Config.Get(ctx, &config)
-	resp.Diagnostics.Append(diags...)
+	var data ProjectRollingReleaseDataSourceModel
+
+	// Read Terraform configuration data into the model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	out, err := d.client.GetRollingRelease(ctx, config.ProjectID.ValueString(), config.TeamID.ValueString())
+	out, err := d.client.GetRollingRelease(ctx, data.ProjectID.ValueString(), data.TeamID.ValueString())
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error reading project rolling release",
-			fmt.Sprintf("No project rolling release found with id %s %s", config.TeamID.ValueString(), config.ProjectID.ValueString()),
+			fmt.Sprintf("No project rolling release found with id %s %s", data.TeamID.ValueString(), data.ProjectID.ValueString()),
 		)
 		return
 	}
@@ -181,23 +133,137 @@ func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 		resp.Diagnostics.AddError(
 			"Error reading project rolling release",
 			fmt.Sprintf("Could not get project rolling release %s %s, unexpected error: %s",
-				config.TeamID.ValueString(),
-				config.ProjectID.ValueString(),
+				data.TeamID.ValueString(),
+				data.ProjectID.ValueString(),
 				err,
 			),
 		)
 		return
 	}
 
-	result := convertResponseToRollingReleaseDataSource(out)
-	tflog.Info(ctx, "read project rolling release", map[string]any{
-		"team_id":    result.TeamID.ValueString(),
-		"project_id": result.ProjectID.ValueString(),
-	})
-
-	diags = resp.State.Set(ctx, result)
+	// Convert the response to the data source model
+	convertedData, diags := convertResponseToRollingReleaseDataSource(out, data, ctx)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Save data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &convertedData)...)
+}
+
+func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInfo, plan ProjectRollingReleaseDataSourceModel, ctx context.Context) (ProjectRollingReleaseDataSourceModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	result := ProjectRollingReleaseDataSourceModel{
+		ProjectID: types.StringValue(response.ProjectID),
+		TeamID:    types.StringValue(response.TeamID),
+	}
+
+	// If disabled, return empty values
+	if !response.RollingRelease.Enabled {
+		return result, diags
+	}
+
+	// Determine which type of rolling release to use based on API response
+	if response.RollingRelease.AdvancementType == "automatic" {
+		// Convert API stages to automatic stages (excluding terminal stage)
+		var automaticStages []AutomaticStage
+		for _, stage := range response.RollingRelease.Stages {
+			// Skip the terminal stage (100%)
+			if stage.TargetPercentage == 100 {
+				continue
+			}
+
+			var duration types.Int64
+			if stage.Duration != nil {
+				duration = types.Int64Value(int64(*stage.Duration))
+			} else {
+				duration = types.Int64Value(60) // Default duration
+			}
+
+			automaticStages = append(automaticStages, AutomaticStage{
+				TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
+				Duration:         duration,
+			})
+		}
+
+		// Convert to Terraform types
+		stages := make([]attr.Value, len(automaticStages))
+		for i, stage := range automaticStages {
+			stageObj := types.ObjectValueMust(
+				map[string]attr.Type{
+					"target_percentage": types.Int64Type,
+					"duration":          types.Int64Type,
+				},
+				map[string]attr.Value{
+					"target_percentage": stage.TargetPercentage,
+					"duration":          stage.Duration,
+				},
+			)
+			stages[i] = stageObj
+		}
+
+		stagesList, stagesDiags := types.ListValueFrom(ctx, types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"target_percentage": types.Int64Type,
+				"duration":          types.Int64Type,
+			},
+		}, stages)
+		diags.Append(stagesDiags...)
+		if diags.HasError() {
+			return result, diags
+		}
+
+		result.AutomaticRollingRelease = stagesList
+
+	} else if response.RollingRelease.AdvancementType == "manual-approval" {
+		// Convert API stages to manual stages (excluding terminal stage)
+		var manualStages []ManualStage
+		for _, stage := range response.RollingRelease.Stages {
+			// Skip the terminal stage (100%)
+			if stage.TargetPercentage == 100 {
+				continue
+			}
+
+			manualStages = append(manualStages, ManualStage{
+				TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
+			})
+		}
+
+		// Convert to Terraform types
+		stages := make([]attr.Value, len(manualStages))
+		for i, stage := range manualStages {
+			stageObj := types.ObjectValueMust(
+				map[string]attr.Type{
+					"target_percentage": types.Int64Type,
+				},
+				map[string]attr.Value{
+					"target_percentage": stage.TargetPercentage,
+				},
+			)
+			stages[i] = stageObj
+		}
+
+		stagesList, stagesDiags := types.ListValueFrom(ctx, types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"target_percentage": types.Int64Type,
+			},
+		}, stages)
+		diags.Append(stagesDiags...)
+		if diags.HasError() {
+			return result, diags
+		}
+
+		result.ManualRollingRelease = stagesList
+	}
+
+	// Log the conversion result for debugging
+	tflog.Info(ctx, "converted rolling release response", map[string]any{
+		"advancement_type": response.RollingRelease.AdvancementType,
+		"stages_count":     len(response.RollingRelease.Stages),
+	})
+
+	return result, diags
 }

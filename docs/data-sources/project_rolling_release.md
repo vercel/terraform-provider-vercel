@@ -31,8 +31,8 @@ data "vercel_project_rolling_release" "example" {
 
 ### Optional
 
-- `automatic_rolling_release` (Attributes) Automatic rolling release configuration. (see [below for nested schema](#nestedatt--automatic_rolling_release))
-- `manual_rolling_release` (Attributes) Manual rolling release configuration. (see [below for nested schema](#nestedatt--manual_rolling_release))
+- `automatic_rolling_release` (Attributes List) Automatic rolling release configuration. (see [below for nested schema](#nestedatt--automatic_rolling_release))
+- `manual_rolling_release` (Attributes List) Manual rolling release configuration. (see [below for nested schema](#nestedatt--manual_rolling_release))
 - `team_id` (String) The ID of the Vercel team.
 
 <a id="nestedatt--automatic_rolling_release"></a>
@@ -40,27 +40,12 @@ data "vercel_project_rolling_release" "example" {
 
 Required:
 
-- `stages` (Attributes List) The stages for automatic rolling release. (see [below for nested schema](#nestedatt--automatic_rolling_release--stages))
-
-<a id="nestedatt--automatic_rolling_release--stages"></a>
-### Nested Schema for `automatic_rolling_release.stages`
-
-Required:
-
 - `duration` (Number) The duration in minutes to wait before advancing to the next stage.
 - `target_percentage` (Number) The percentage of traffic to route to this stage.
 
 
-
 <a id="nestedatt--manual_rolling_release"></a>
 ### Nested Schema for `manual_rolling_release`
-
-Required:
-
-- `stages` (Attributes List) The stages for manual rolling release. (see [below for nested schema](#nestedatt--manual_rolling_release--stages))
-
-<a id="nestedatt--manual_rolling_release--stages"></a>
-### Nested Schema for `manual_rolling_release.stages`
 
 Required:
 
