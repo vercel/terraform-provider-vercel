@@ -210,12 +210,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, automaticRollingReleaseElementType, stages)
-		diags.Append(stagesDiags...)
-		if diags.HasError() {
-			return result, diags
-		}
-
+		stagesList := types.ListValueMust(automaticRollingReleaseElementType, stages)
 		result.AutomaticRollingRelease = stagesList
 
 	} else if response.RollingRelease.AdvancementType == "manual-approval" {
@@ -244,12 +239,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, manualRollingReleaseElementType, stages)
-		diags.Append(stagesDiags...)
-		if diags.HasError() {
-			return result, diags
-		}
-
+		stagesList := types.ListValueMust(manualRollingReleaseElementType, stages)
 		result.ManualRollingRelease = stagesList
 	}
 

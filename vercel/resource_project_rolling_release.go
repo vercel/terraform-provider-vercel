@@ -272,12 +272,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, automaticRollingReleaseElementType, stages)
-		diags.Append(stagesDiags...)
-		if diags.HasError() {
-			return result, diags
-		}
-
+		stagesList := types.ListValueMust(automaticRollingReleaseElementType, stages)
 		result.AutomaticRollingRelease = stagesList
 
 	} else if response.RollingRelease.AdvancementType == "manual-approval" {
@@ -306,12 +301,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, manualRollingReleaseElementType, stages)
-		diags.Append(stagesDiags...)
-		if diags.HasError() {
-			return result, diags
-		}
-
+		stagesList := types.ListValueMust(manualRollingReleaseElementType, stages)
 		result.ManualRollingRelease = stagesList
 	}
 
@@ -356,11 +346,7 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, automaticRollingReleaseElementType, stages)
-		resp.Diagnostics.Append(stagesDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+		stagesList := types.ListValueMust(automaticRollingReleaseElementType, stages)
 		plan.AutomaticRollingRelease = stagesList
 	}
 
@@ -385,11 +371,7 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, manualRollingReleaseElementType, stages)
-		resp.Diagnostics.Append(stagesDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+		stagesList := types.ListValueMust(manualRollingReleaseElementType, stages)
 		plan.ManualRollingRelease = stagesList
 	}
 
@@ -527,11 +509,7 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, automaticRollingReleaseElementType, stages)
-		resp.Diagnostics.Append(stagesDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+		stagesList := types.ListValueMust(automaticRollingReleaseElementType, stages)
 		plan.AutomaticRollingRelease = stagesList
 	}
 
@@ -556,11 +534,7 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 			stages[i] = stageObj
 		}
 
-		stagesList, stagesDiags := types.ListValueFrom(ctx, manualRollingReleaseElementType, stages)
-		resp.Diagnostics.Append(stagesDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+		stagesList := types.ListValueMust(manualRollingReleaseElementType, stages)
 		plan.ManualRollingRelease = stagesList
 	}
 
