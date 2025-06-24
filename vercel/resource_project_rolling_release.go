@@ -333,6 +333,66 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 		return
 	}
 
+	// Ensure plan values have proper element types
+	if !plan.AutomaticRollingRelease.IsNull() && !plan.AutomaticRollingRelease.IsUnknown() {
+		// Convert to proper type
+		var automaticStages []AutomaticStage
+		diags = plan.AutomaticRollingRelease.ElementsAs(ctx, &automaticStages, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Recreate the list with proper element type
+		stages := make([]attr.Value, len(automaticStages))
+		for i, stage := range automaticStages {
+			stageObj := types.ObjectValueMust(
+				automaticRollingReleaseElementType.AttrTypes,
+				map[string]attr.Value{
+					"target_percentage": stage.TargetPercentage,
+					"duration":          stage.Duration,
+				},
+			)
+			stages[i] = stageObj
+		}
+
+		stagesList, stagesDiags := types.ListValueFrom(ctx, automaticRollingReleaseElementType, stages)
+		resp.Diagnostics.Append(stagesDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.AutomaticRollingRelease = stagesList
+	}
+
+	if !plan.ManualRollingRelease.IsNull() && !plan.ManualRollingRelease.IsUnknown() {
+		// Convert to proper type
+		var manualStages []ManualStage
+		diags = plan.ManualRollingRelease.ElementsAs(ctx, &manualStages, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Recreate the list with proper element type
+		stages := make([]attr.Value, len(manualStages))
+		for i, stage := range manualStages {
+			stageObj := types.ObjectValueMust(
+				manualRollingReleaseElementType.AttrTypes,
+				map[string]attr.Value{
+					"target_percentage": stage.TargetPercentage,
+				},
+			)
+			stages[i] = stageObj
+		}
+
+		stagesList, stagesDiags := types.ListValueFrom(ctx, manualRollingReleaseElementType, stages)
+		resp.Diagnostics.Append(stagesDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.ManualRollingRelease = stagesList
+	}
+
 	// Convert plan to client request
 	request, diags := plan.toUpdateRollingReleaseRequest()
 	resp.Diagnostics.Append(diags...)
@@ -442,6 +502,66 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// Ensure plan values have proper element types
+	if !plan.AutomaticRollingRelease.IsNull() && !plan.AutomaticRollingRelease.IsUnknown() {
+		// Convert to proper type
+		var automaticStages []AutomaticStage
+		diags = plan.AutomaticRollingRelease.ElementsAs(ctx, &automaticStages, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Recreate the list with proper element type
+		stages := make([]attr.Value, len(automaticStages))
+		for i, stage := range automaticStages {
+			stageObj := types.ObjectValueMust(
+				automaticRollingReleaseElementType.AttrTypes,
+				map[string]attr.Value{
+					"target_percentage": stage.TargetPercentage,
+					"duration":          stage.Duration,
+				},
+			)
+			stages[i] = stageObj
+		}
+
+		stagesList, stagesDiags := types.ListValueFrom(ctx, automaticRollingReleaseElementType, stages)
+		resp.Diagnostics.Append(stagesDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.AutomaticRollingRelease = stagesList
+	}
+
+	if !plan.ManualRollingRelease.IsNull() && !plan.ManualRollingRelease.IsUnknown() {
+		// Convert to proper type
+		var manualStages []ManualStage
+		diags = plan.ManualRollingRelease.ElementsAs(ctx, &manualStages, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Recreate the list with proper element type
+		stages := make([]attr.Value, len(manualStages))
+		for i, stage := range manualStages {
+			stageObj := types.ObjectValueMust(
+				manualRollingReleaseElementType.AttrTypes,
+				map[string]attr.Value{
+					"target_percentage": stage.TargetPercentage,
+				},
+			)
+			stages[i] = stageObj
+		}
+
+		stagesList, stagesDiags := types.ListValueFrom(ctx, manualRollingReleaseElementType, stages)
+		resp.Diagnostics.Append(stagesDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.ManualRollingRelease = stagesList
 	}
 
 	// Convert plan to client request
