@@ -98,48 +98,6 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Description: "The version of Node.js that is used in the Build Step and for Serverless Functions.",
 			},
-			"environment": schema.SetNestedAttribute{
-				Description: "A list of environment variables that should be configured for the project.",
-				Computed:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"target": schema.SetAttribute{
-							Description: "The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
-							ElementType: types.StringType,
-							Computed:    true,
-						},
-						"custom_environment_ids": schema.SetAttribute{
-							Description: "The IDs of Custom Environments that the Environment Variable should be present on.",
-							ElementType: types.StringType,
-							Computed:    true,
-						},
-						"key": schema.StringAttribute{
-							Description: "The name of the environment variable.",
-							Computed:    true,
-						},
-						"value": schema.StringAttribute{
-							Description: "The value of the environment variable.",
-							Computed:    true,
-						},
-						"id": schema.StringAttribute{
-							Description: "The ID of the environment variable",
-							Computed:    true,
-						},
-						"git_branch": schema.StringAttribute{
-							Description: "The git branch of the environment variable.",
-							Computed:    true,
-						},
-						"sensitive": schema.BoolAttribute{
-							Description: "Whether the Environment Variable is sensitive or not. Note that the value will be `null` for sensitive environment variables.",
-							Computed:    true,
-						},
-						"comment": schema.StringAttribute{
-							Description: "A comment explaining what the environment variable is for.",
-							Computed:    true,
-						},
-					},
-				},
-			},
 			"framework": schema.StringAttribute{
 				Computed:    true,
 				Description: "The framework that is being used for this project. If omitted, no framework is selected.",
@@ -407,7 +365,6 @@ For more detailed information, please see the [Vercel documentation](https://ver
 type ProjectDataSource struct {
 	BuildCommand                        types.String          `tfsdk:"build_command"`
 	DevCommand                          types.String          `tfsdk:"dev_command"`
-	Environment                         types.Set             `tfsdk:"environment"`
 	Framework                           types.String          `tfsdk:"framework"`
 	GitRepository                       *GitRepository        `tfsdk:"git_repository"`
 	ID                                  types.String          `tfsdk:"id"`
@@ -446,11 +403,10 @@ type ProjectDataSource struct {
 	BuildMachineTYpe                    types.String          `tfsdk:"build_machine_type"`
 }
 
-func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
+func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project) (ProjectDataSource, error) {
 	/* Force reading of environment and git comments. These are ignored usually if the planned value is null,
 	   otherwise it causes issues with terraform thinking there are changes when there aren't. However,
 	   for the data source we always want to read the value */
-	plan.Environment = types.SetValueMust(EnvVariableElemType, []attr.Value{})
 	plan.GitComments = types.ObjectNull(gitCommentsAttrTypes)
 	if response.GitComments != nil {
 		plan.GitComments = types.ObjectValueMust(gitCommentsAttrTypes, map[string]attr.Value{
@@ -459,7 +415,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		})
 	}
 
-	project, err := convertResponseToProject(ctx, response, plan, environmentVariables)
+	project, err := convertResponseToProject(ctx, response, plan)
 	if err != nil {
 		return ProjectDataSource{}, err
 	}
@@ -474,7 +430,6 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 	return ProjectDataSource{
 		BuildCommand:                        project.BuildCommand,
 		DevCommand:                          project.DevCommand,
-		Environment:                         project.Environment,
 		Framework:                           project.Framework,
 		GitRepository:                       project.GitRepository,
 		ID:                                  project.ID,
@@ -538,15 +493,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	environmentVariables, err := d.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading project environment variables",
-			"Could not read project, unexpected error: "+err.Error(),
-		)
-		return
-	}
-	result, err := convertResponseToProjectDataSource(ctx, out, nullProject, environmentVariables)
+	result, err := convertResponseToProjectDataSource(ctx, out, nullProject)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",

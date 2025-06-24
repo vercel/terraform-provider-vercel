@@ -93,10 +93,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Description: "The ID of the Environment Variable.",
 							Computed:    true,
 						},
-						"key": schema.StringAttribute{
-							Required:    true,
-							Description: "The name of the Environment Variable.",
-						},
 						"value": schema.StringAttribute{
 							Required:    true,
 							Description: "The value of the Environment Variable.",
@@ -187,7 +183,7 @@ func suppressWriteOnlyEnvVarUpdates(ctx context.Context, config *ProjectEnvironm
 
     for key, env := range environment {
         hash := sha256.Sum256([]byte(env.Value.ValueString()))
-        privateKey := prefix + env.Key.ValueString()
+        privateKey := prefix + key
         storedHash, _ := req.Private.GetKey(ctx, privateKey)
         if len(storedHash) > 0 && strings.Trim(string(storedHash), "\"") == fmt.Sprintf("%x", hash) {
         
@@ -291,12 +287,11 @@ func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, re
 
 // EnvironmentItems represents a set of environment variables
 // for use with MapNestedAttribute
-type EnvironmentItems []EnvironmentItem
 type EnvironmentItemsMap map[string]EnvironmentItem
 
-func (e *EnvironmentItems) toCreateEnvironmentVariablesRequest(ctx context.Context, projectID types.String, teamID types.String) (r client.CreateEnvironmentVariablesRequest, diags diag.Diagnostics) {
+func (e *EnvironmentItemsMap) toCreateEnvironmentVariablesRequest(ctx context.Context, projectID types.String, teamID types.String) (r client.CreateEnvironmentVariablesRequest, diags diag.Diagnostics) {
 	variables := []client.EnvironmentVariableRequest{}
-	for _, env := range *e {
+	for key, env := range *e {
 		var target []string
 		diags = env.Target.ElementsAs(ctx, &target, true)
 		if diags.HasError() {
@@ -314,7 +309,7 @@ func (e *EnvironmentItems) toCreateEnvironmentVariablesRequest(ctx context.Conte
 			envVariableType = "encrypted"
 		}
 		variables = append(variables, client.EnvironmentVariableRequest{
-			Key:                  env.Key.ValueString(),
+			Key:                  key,
 			Value:                env.Value.ValueString(),
 			Target:               target,
 			CustomEnvironmentIDs: customEnvironmentIDs,
@@ -338,7 +333,7 @@ func convertResponseToProjectEnvironmentVariables(
 	ctx context.Context,
 	response []client.EnvironmentVariable,
 	plan ProjectEnvironmentVariables,
-	unchanged []EnvironmentItem,
+	unchanged EnvironmentItemsMap,
 ) (ProjectEnvironmentVariables, diag.Diagnostics) {
 	environment, diags := plan.environment(ctx)
 	if diags.HasError() {
@@ -375,7 +370,7 @@ func convertResponseToProjectEnvironmentVariables(
 			value = types.StringNull()
 		}
 		if e.Decrypted != nil && !*e.Decrypted || e.Type == "sensitive" {
-			for _, p := range environment {
+			for key, p := range environment {
 				var target []string
 				diags := p.Target.ElementsAs(ctx, &target, true)
 				if diags.HasError() {
@@ -386,7 +381,7 @@ func convertResponseToProjectEnvironmentVariables(
 				if diags.HasError() {
 					return ProjectEnvironmentVariables{}, diags
 				}
-				if p.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
+				if key == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
 					value = p.Value
 					break
 				}
@@ -403,7 +398,6 @@ func convertResponseToProjectEnvironmentVariables(
 		env[e.Key] = types.ObjectValueMust(
 			EnvVariableElemType.AttrTypes,
 			map[string]attr.Value{
-				"key":                    types.StringValue(e.Key),
 				"value":                  value,
 				"target":                 targetValue,
 				"custom_environment_ids": customEnvIDsValue,
@@ -416,10 +410,9 @@ func convertResponseToProjectEnvironmentVariables(
 	}
 
 	// Add unchanged items to the map (by key)
-	for _, e := range unchanged {
-		k := e.Key.ValueString()
-		if _, exists := env[k]; !exists {
-			env[k] = e.toAttrValue()
+	for key, e := range unchanged {
+		if _, exists := env[key]; !exists {
+			env[key] = e.toAttrValue()
 		}
 	}
 
@@ -457,16 +450,12 @@ func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req re
 		return
 	}
 
-	envList := make(EnvironmentItems, 0, len(envs))
-	for _, v := range envs {
-		envList = append(envList, v)
-	}
-
-	request, diags := envList.toCreateEnvironmentVariablesRequest(ctx, plan.ProjectID, plan.TeamID)
+	request, diags := envs.toCreateEnvironmentVariablesRequest(ctx, plan.ProjectID, plan.TeamID)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
 	}
+
 	created, err := r.client.CreateEnvironmentVariables(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -483,9 +472,9 @@ func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req re
 
 	// Set the hash of the environment variable values in the private state.
 	prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	for _, env := range envs { 
+	for key, env := range envs { 
 		hash := sha256.Sum256([]byte(env.Value.ValueString()))
-		privateKey := prefix + env.Key.ValueString()
+		privateKey := prefix + key
 		resp.Private.SetKey(ctx, privateKey, []byte(fmt.Sprintf("\"%x\"", hash)))
 	}
 
@@ -552,7 +541,7 @@ func (r *projectEnvironmentVariablesResource) Read(ctx context.Context, req reso
 			// The env var exists at the moment, but not in TF state (the ID isn't present).
 			// Check if it has the same `key`, `target` and `custom_environment_ids` as an existing env var.
 			// This detects drift for stuff like: deleting an env var and then creating it again (the ID changes).
-			for _, ee := range existing {
+			for key, ee := range existing {
 				var target []string
 				diags := ee.Target.ElementsAs(ctx, &target, true)
 				if diags.HasError() {
@@ -565,7 +554,7 @@ func (r *projectEnvironmentVariablesResource) Read(ctx context.Context, req reso
 					resp.Diagnostics.Append(diags...)
 					return
 				}
-				if ee.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
+				if key == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
 					toUse = append(toUse, e)
 				}
 			}
@@ -627,9 +616,9 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 
 	// Update the hash of all the environment variable values in the private state.
 	prefix := fmt.Sprintf("vercel_env_%s_%s_", plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	for _, env := range configEnvs { 
+	for key, env := range configEnvs { 
 		hash := sha256.Sum256([]byte(env.Value.ValueString()))
-		privateKey := prefix + env.Key.ValueString()
+		privateKey := prefix + key
 		resp.Private.SetKey(ctx, privateKey, []byte(fmt.Sprintf("\"%x\"", hash)))
 	}
 
@@ -658,34 +647,34 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 		envsFromAPIMap[e.Key] = e
 	}
 	
-	var toAdd EnvironmentItems
+	toAdd := make(EnvironmentItemsMap)
 	for key := range planEnvs {
 		_, ok := envsFromAPIMap[key]
 		if !ok {
-			toAdd = append(toAdd, configEnvs[key])
+			toAdd[key] = configEnvs[key]
 		}
 	}
 	
-	var toRemove EnvironmentItems
-	var unchanged EnvironmentItems
+	toRemove := make(EnvironmentItemsMap)
+	unchanged := make(EnvironmentItemsMap)
 	for key, e := range stateEnvs {
 		_, ok := planEnvs[key]
 		if !ok {
 			// If a value isn't in in the planned state, it means it was removed from the config.
-			toRemove = append(toRemove, e)
+			toRemove[key] = e
 
 			// As this is fully deleted, remove the hash from the private state.
-			privateKey := prefix + e.Key.ValueString()
+			privateKey := prefix + key
 			resp.Private.SetKey(ctx, privateKey, nil)
 			continue
 		}
 		apiEnv, ok := envsFromAPIMap[key]
-		if ok && (e.ID.ValueString() != apiEnv.ID || !envVarMatches(ctx, configEnvs[key], apiEnv)) {
-			toRemove = append(toRemove, e)
-			toAdd = append(toAdd, configEnvs[key])
+		if ok && (e.ID.ValueString() != apiEnv.ID || !envVarMatches(ctx, key, configEnvs[key], apiEnv)) {
+			toRemove[key] = e
+			toAdd[key] = configEnvs[key]
 			continue
 		}
-		unchanged = append(unchanged, e)
+		unchanged[key] = e
 	}
 
 	tflog.Info(ctx, "Updating environment variables", map[string]any{
@@ -694,7 +683,7 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 		"unchanged": len(unchanged),
 	})
 
-	for _, v := range toRemove {
+	for key, v := range toRemove {
 		err := r.client.DeleteEnvironmentVariable(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString(), v.ID.ValueString())
 		if client.NotFound(err) {
 			continue
@@ -704,7 +693,7 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 				"Error updating Project Environment Variables",
 				fmt.Sprintf(
 					"Could not remove environment variable %s (%s), unexpected error: %s",
-					v.Key.ValueString(),
+					key,
 					v.ID.ValueString(),
 					err,
 				),
@@ -774,14 +763,14 @@ func (r *projectEnvironmentVariablesResource) Delete(ctx context.Context, req re
 		resp.Diagnostics.Append(diags...)
 		return
 	}
-	for _, v := range envs {
+	for key, v := range envs {
 		err := r.client.DeleteEnvironmentVariable(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString(), v.ID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating Project Environment Variables",
 				fmt.Sprintf(
 					"Could not remove environment variable %s (%s), unexpected error: %s",
-					v.Key.ValueString(),
+					key,
 					v.ID.ValueString(),
 					err,
 				),
@@ -797,7 +786,7 @@ func (r *projectEnvironmentVariablesResource) Delete(ctx context.Context, req re
 }
 
 // envVarMatches returns true if the two environment variables match by key, target, and custom_environment_ids.
-func envVarMatches(ctx context.Context, ee EnvironmentItem, e client.EnvironmentVariable) bool {
+func envVarMatches(ctx context.Context, key string, ee EnvironmentItem, e client.EnvironmentVariable) bool {
 	// TODO: Incorporate any data changes if the value in Vercel has updated, and we can actually read it.
 	
 	var target []string
@@ -810,7 +799,7 @@ func envVarMatches(ctx context.Context, ee EnvironmentItem, e client.Environment
 	if diags.HasError() {
 		return false
 	}
-	if (ee.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs)) {
+	if (key == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs)) {
 		if e.Decrypted != nil && !*e.Decrypted {
 			return false // We don't know if it's value is encrypted.
 		}

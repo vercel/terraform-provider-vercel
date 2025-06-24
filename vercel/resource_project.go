@@ -78,8 +78,7 @@ A Project groups deployments and custom domains. To deploy on Vercel, you need t
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/overview).
 
-~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and this Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
-At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables) to update environment variables.
         `,
 		Attributes: map[string]schema.Attribute{
 			"team_id": schema.StringAttribute{
@@ -132,77 +131,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					),
 				},
 				Description: "The version of Node.js that is used in the Build Step and for Serverless Functions. A new Deployment is required for your changes to take effect.",
-			},
-			"environment": schema.SetNestedAttribute{
-				Description: "A set of Environment Variables that should be configured for the project.",
-				Optional:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"target": schema.SetAttribute{
-							Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.",
-							ElementType: types.StringType,
-							Validators: []validator.Set{
-								setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
-								setvalidator.SizeAtLeast(1),
-								setvalidator.AtLeastOneOf(
-									path.MatchRelative().AtParent().AtName("target"),
-									path.MatchRelative().AtParent().AtName("custom_environment_ids"),
-								),
-							},
-							Optional: true,
-							Computed: true,
-							PlanModifiers: []planmodifier.Set{
-								setplanmodifier.UseStateForUnknown(),
-							},
-						},
-						"custom_environment_ids": schema.SetAttribute{
-							Description: "The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.",
-							ElementType: types.StringType,
-							Validators: []validator.Set{
-								setvalidator.SizeAtLeast(1),
-								setvalidator.AtLeastOneOf(
-									path.MatchRelative().AtParent().AtName("target"),
-									path.MatchRelative().AtParent().AtName("custom_environment_ids"),
-								),
-							},
-							Optional: true,
-							Computed: true,
-							PlanModifiers: []planmodifier.Set{
-								setplanmodifier.UseStateForUnknown(),
-							},
-						},
-						"git_branch": schema.StringAttribute{
-							Description: "The git branch of the Environment Variable.",
-							Optional:    true,
-						},
-						"key": schema.StringAttribute{
-							Description: "The name of the Environment Variable.",
-							Required:    true,
-						},
-						"value": schema.StringAttribute{
-							Description: "The value of the Environment Variable.",
-							Required:    true,
-							Sensitive:   true,
-						},
-						"id": schema.StringAttribute{
-							Description: "The ID of the Environment Variable.",
-							Computed:    true,
-						},
-						"sensitive": schema.BoolAttribute{
-							Description: "Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))",
-							Optional:    true,
-							Computed:    true,
-						},
-						"comment": schema.StringAttribute{
-							Description: "A comment explaining what the environment variable is for.",
-							Optional:    true,
-							Computed:    true,
-							Validators: []validator.String{
-								stringvalidator.LengthBetween(0, 1000),
-							},
-						},
-					},
-				},
 			},
 			"framework": schema.StringAttribute{
 				Optional:    true,
@@ -704,45 +632,7 @@ func (p *Project) environment(ctx context.Context) ([]EnvironmentItem, error) {
 	return vars, nil
 }
 
-func parseEnvironment(ctx context.Context, vars []EnvironmentItem) (out []client.EnvironmentVariable, diags diag.Diagnostics) {
-	for _, e := range vars {
-		var target []string
-		diags = e.Target.ElementsAs(ctx, &target, true)
-		if diags.HasError() {
-			return out, diags
-		}
-		var customEnvironmentIDs []string
-		diags = e.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
-		if diags.HasError() {
-			return out, diags
-		}
-
-		var envVariableType string
-		if e.Sensitive.ValueBool() {
-			envVariableType = "sensitive"
-		} else {
-			envVariableType = "encrypted"
-		}
-
-		out = append(out, client.EnvironmentVariable{
-			Key:                  e.Key.ValueString(),
-			Value:                e.Value.ValueString(),
-			Target:               target,
-			CustomEnvironmentIDs: customEnvironmentIDs,
-			GitBranch:            e.GitBranch.ValueStringPointer(),
-			Type:                 envVariableType,
-			ID:                   e.ID.ValueString(),
-			Comment:              e.Comment.ValueString(),
-		})
-	}
-	return out, nil
-}
-
-func (p *Project) toCreateProjectRequest(ctx context.Context, envs []EnvironmentItem) (req client.CreateProjectRequest, diags diag.Diagnostics) {
-	clientEnvs, diags := parseEnvironment(ctx, envs)
-	if diags.HasError() {
-		return req, diags
-	}
+func (p *Project) toCreateProjectRequest(ctx context.Context) (req client.CreateProjectRequest, diags diag.Diagnostics) {
 	resourceConfig, diags := p.resourceConfig(ctx)
 	if diags.HasError() {
 		return req, diags
@@ -753,7 +643,6 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		CommandForIgnoringBuildStep:       p.IgnoreCommand.ValueStringPointer(),
 		DevCommand:                        p.DevCommand.ValueStringPointer(),
 		EnableAffectedProjectsDeployments: p.EnableAffectedProjectsDeployments.ValueBoolPointer(),
-		EnvironmentVariables:              clientEnvs,
 		Framework:                         p.Framework.ValueStringPointer(),
 		GitRepository:                     p.GitRepository.toCreateProjectRequest(),
 		InstallCommand:                    p.InstallCommand.ValueStringPointer(),
@@ -1170,7 +1059,7 @@ func fromSkewProtectionMaxAge(sp int) types.String {
 	return types.StringValue(v)
 }
 
-func convertResponseToProject(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (Project, error) {
+func convertResponseToProject(ctx context.Context, response client.ProjectResponse, plan Project) (Project, error) {
 	fields := plan.coercedFields()
 
 	var gr *GitRepository
@@ -1274,66 +1163,6 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 	}
 
-	var env []attr.Value
-	for _, e := range environmentVariables {
-		var targetValue attr.Value
-		if len(e.Target) > 0 {
-			target := make([]attr.Value, 0, len(e.Target))
-			for _, t := range e.Target {
-				target = append(target, types.StringValue(t))
-			}
-			targetValue = types.SetValueMust(types.StringType, target)
-		} else {
-			targetValue = types.SetNull(types.StringType)
-		}
-
-		var customEnvIDsValue attr.Value
-		if len(e.CustomEnvironmentIDs) > 0 {
-			customEnvIDs := make([]attr.Value, 0, len(e.CustomEnvironmentIDs))
-			for _, c := range e.CustomEnvironmentIDs {
-				customEnvIDs = append(customEnvIDs, types.StringValue(c))
-			}
-			customEnvIDsValue = types.SetValueMust(types.StringType, customEnvIDs)
-		} else {
-			customEnvIDsValue = types.SetNull(types.StringType)
-		}
-		value := types.StringValue(e.Value)
-		if e.Type == "sensitive" {
-			value = types.StringNull()
-			environment, err := plan.environment(ctx)
-			if err != nil {
-				return Project{}, fmt.Errorf("error reading project environment variables: %s", err)
-			}
-			for _, p := range environment {
-				var target []string
-				diags := p.Target.ElementsAs(ctx, &target, true)
-				if diags.HasError() {
-					return Project{}, fmt.Errorf("error reading project environment variables: %s", diags)
-				}
-				var customEnvironmentIDs []string
-				diags = p.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
-				if diags.HasError() {
-					return Project{}, fmt.Errorf("error reading project environment variables: %s", diags)
-				}
-				if p.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
-					value = p.Value
-					break
-				}
-			}
-		}
-
-		env = append(env, types.ObjectValueMust(EnvVariableElemType.AttrTypes, map[string]attr.Value{
-			"key":                    types.StringValue(e.Key),
-			"value":                  value,
-			"target":                 targetValue,
-			"custom_environment_ids": customEnvIDsValue,
-			"git_branch":             types.StringPointerValue(e.GitBranch),
-			"id":                     types.StringValue(e.ID),
-			"sensitive":              types.BoolValue(e.Type == "sensitive"),
-			"comment":                types.StringValue(e.Comment),
-		}))
-	}
-
 	protectionBypassSecret := types.StringNull()
 	protectionBypass := types.BoolNull()
 	for k, v := range response.ProtectionBypass {
@@ -1348,11 +1177,6 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 	if plan.ProtectionBypassForAutomationSecret.ValueString() != "" {
 		protectionBypassSecret = types.StringValue(plan.ProtectionBypassForAutomationSecret.ValueString())
-	}
-
-	environmentEntry := types.SetValueMust(EnvVariableElemType, env)
-	if plan.Environment.IsNull() {
-		environmentEntry = types.SetNull(EnvVariableElemType)
 	}
 
 	gitComments := types.ObjectNull(gitCommentsAttrTypes)
@@ -1370,7 +1194,6 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	return Project{
 		BuildCommand:                        uncoerceString(fields.BuildCommand, types.StringPointerValue(response.BuildCommand)),
 		DevCommand:                          uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
-		Environment:                         environmentEntry,
 		Framework:                           types.StringPointerValue(response.Framework),
 		GitRepository:                       gr,
 		ID:                                  types.StringValue(response.ID),
@@ -1486,16 +1309,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	environment, err := plan.environment(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error parsing project environment variables",
-			"Could not read environment variables, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	request, diags := plan.toCreateProjectRequest(ctx, environment)
+	request, diags := plan.toCreateProjectRequest(ctx)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -1509,16 +1323,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading project environment variables",
-			"Could not create project, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	result, err := convertResponseToProject(ctx, out, plan, environmentVariables)
+	result, err := convertResponseToProject(ctx, out, plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
@@ -1560,7 +1365,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			}
 			out.Link.DeployHooks = append(out.Link.DeployHooks, hook)
 		}
-		result, err := convertResponseToProject(ctx, out, plan, environmentVariables)
+		result, err := convertResponseToProject(ctx, out, plan)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error converting project response to model",
@@ -1592,7 +1397,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			return
 		}
 
-		result, err = convertResponseToProject(ctx, out, plan, environmentVariables)
+		result, err = convertResponseToProject(ctx, out, plan)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error converting project response to model",
@@ -1651,7 +1456,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	result, err = convertResponseToProject(ctx, out, plan, environmentVariables)
+	result, err = convertResponseToProject(ctx, out, plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
@@ -1698,15 +1503,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading project environment variables",
-			"Could not read project, unexpected error: "+err.Error(),
-		)
-		return
-	}
-	result, err := convertResponseToProject(ctx, out, state, environmentVariables)
+	result, err := convertResponseToProject(ctx, out, state)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
@@ -1724,37 +1521,6 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-}
-
-// containsEnvVar is a helper function for working out whether a specific environment variable
-// is present within a slice. It ensures that all properties of the environment variable match.
-func containsEnvVar(env []EnvironmentItem, v EnvironmentItem) bool {
-	for _, e := range env {
-		if e.ID == v.ID {
-			// we can rely on this because we use a known ID from state.
-			// and new env vars have no ID
-			return true
-		}
-	}
-	return false
-}
-
-// diffEnvVars is used to determine the set of environment variables that need to be updated,
-// and the set of environment variables that need to be removed.
-func diffEnvVars(oldVars, newVars []EnvironmentItem) (toCreate, toRemove []EnvironmentItem) {
-	toRemove = []EnvironmentItem{}
-	toCreate = []EnvironmentItem{}
-	for _, e := range oldVars {
-		if !containsEnvVar(newVars, e) {
-			toRemove = append(toRemove, e)
-		}
-	}
-	for _, e := range newVars {
-		if !containsEnvVar(oldVars, e) {
-			toCreate = append(toCreate, e)
-		}
-	}
-	return toCreate, toRemove
 }
 
 func containsDeployHook(hooks []DeployHook, h DeployHook) bool {
@@ -1818,86 +1584,6 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	/* Update the environment variables first */
-	planEnvs, err := plan.environment(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error parsing project environment variables",
-			"Could not read environment variables, unexpected error: "+err.Error(),
-		)
-		return
-	}
-	stateEnvs, err := state.environment(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error parsing project environment variables from state",
-			"Could not read environment variables, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	tflog.Info(ctx, "planEnvs", map[string]any{
-		"plan_envs":  planEnvs,
-		"state_envs": stateEnvs,
-	})
-
-	toCreate, toRemove := diffEnvVars(stateEnvs, planEnvs)
-	for _, v := range toRemove {
-		err := r.client.DeleteEnvironmentVariable(ctx, state.ID.ValueString(), state.TeamID.ValueString(), v.ID.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error updating project",
-				fmt.Sprintf(
-					"Could not remove environment variable %s (%s), unexpected error: %s",
-					v.Key.ValueString(),
-					v.ID.ValueString(),
-					err,
-				),
-			)
-			return
-		}
-		tflog.Info(ctx, "deleted environment variable", map[string]any{
-			"team_id":        plan.TeamID.ValueString(),
-			"project_id":     plan.ID.ValueString(),
-			"environment_id": v.ID.ValueString(),
-		})
-	}
-
-	var items []client.EnvironmentVariableRequest
-	for _, v := range toCreate {
-		vv, diags := v.toEnvironmentVariableRequest(ctx)
-		if diags.HasError() {
-			resp.Diagnostics.Append(diags...)
-			return
-		}
-		items = append(items, vv)
-	}
-
-	if items != nil {
-		_, err = r.client.CreateEnvironmentVariables(
-			ctx,
-			client.CreateEnvironmentVariablesRequest{
-				ProjectID:            plan.ID.ValueString(),
-				TeamID:               plan.TeamID.ValueString(),
-				EnvironmentVariables: items,
-			},
-		)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error updating project",
-				fmt.Sprintf(
-					"Could not upsert environment variables for project %s, unexpected error: %s",
-					plan.ID.ValueString(),
-					err,
-				),
-			)
-		}
-		tflog.Info(ctx, "upserted environment variables", map[string]any{
-			"team_id":    plan.TeamID.ValueString(),
-			"project_id": plan.ID.ValueString(),
-		})
 	}
 
 	if state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation {
@@ -2074,15 +1760,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading project environment variables",
-			"Could not update project, unexpected error: "+err.Error(),
-		)
-		return
-	}
-	result, err := convertResponseToProject(ctx, out, plan, environmentVariables)
+	result, err := convertResponseToProject(ctx, out, plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
@@ -2159,15 +1837,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading project environment variables",
-			"Could not import project, unexpected error: "+err.Error(),
-		)
-		return
-	}
-	result, err := convertResponseToProject(ctx, out, nullProject, environmentVariables)
+	result, err := convertResponseToProject(ctx, out, nullProject)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error converting project response to model",
