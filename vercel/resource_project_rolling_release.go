@@ -223,6 +223,14 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		TeamID:    types.StringValue(response.TeamID),
 	}
 
+	// Initialize empty lists for null/unknown values
+	if plan.AutomaticRollingRelease.IsNull() || plan.AutomaticRollingRelease.IsUnknown() {
+		result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
+	}
+	if plan.ManualRollingRelease.IsNull() || plan.ManualRollingRelease.IsUnknown() {
+		result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
+	}
+
 	// If disabled, return empty values
 	if !response.RollingRelease.Enabled {
 		return result, diags
