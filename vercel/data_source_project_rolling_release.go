@@ -117,24 +117,26 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 type RollingReleaseStageDataSource struct {
 	TargetPercentage types.Int64 `tfsdk:"target_percentage"`
 	Duration         types.Int64 `tfsdk:"duration"`
-	RequireApproval  types.Bool  `tfsdk:"require_approval"`
 }
 
 type RollingReleaseDataSource struct {
-	Enabled         types.Bool                      `tfsdk:"enabled"`
-	AdvancementType types.String                    `tfsdk:"advancement_type"`
-	Stages          []RollingReleaseStageDataSource `tfsdk:"stages"`
+	ManualRollingRelease    types.List `tfsdk:"manual_rolling_release"`
+	AutomaticRollingRelease types.List `tfsdk:"automatic_rolling_release"`
 }
 
 type RollingReleaseInfoDataSource struct {
-	RollingRelease types.Object `tfsdk:"rolling_release"`
-	ProjectID      types.String `tfsdk:"project_id"`
-	TeamID         types.String `tfsdk:"team_id"`
+	ManualRollingRelease    types.List   `tfsdk:"manual_rolling_release"`
+	AutomaticRollingRelease types.List   `tfsdk:"automatic_rolling_release"`
+	ProjectID               types.String `tfsdk:"project_id"`
+	TeamID                  types.String `tfsdk:"team_id"`
 }
 
-func convertStagesDataSource(stages []client.RollingReleaseStage) []RollingReleaseStageDataSource {
+func convertStagesDataSource(stages []client.RollingReleaseStage) types.List {
 	if len(stages) == 0 {
-		return []RollingReleaseStageDataSource{}
+		return types.ListNull(types.ObjectType{AttrTypes: map[string]attr.Type{
+			"target_percentage": types.Int64Type,
+			"duration":          types.Int64Type,
+		}})
 	}
 
 	result := make([]RollingReleaseStageDataSource, len(stages))
@@ -147,38 +149,27 @@ func convertStagesDataSource(stages []client.RollingReleaseStage) []RollingRelea
 		result[i] = RollingReleaseStageDataSource{
 			TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
 			Duration:         duration,
-			RequireApproval:  types.BoolValue(stage.RequireApproval),
 		}
 	}
-	return result
+
+	stagesList, _ := types.ListValueFrom(context.Background(), types.ObjectType{AttrTypes: map[string]attr.Type{
+		"target_percentage": types.Int64Type,
+		"duration":          types.Int64Type,
+	}}, result)
+	return stagesList
 }
 
 func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInfo) RollingReleaseInfoDataSource {
 	rollingRelease := RollingReleaseDataSource{
-		Enabled:         types.BoolValue(response.RollingRelease.Enabled),
-		AdvancementType: types.StringValue(response.RollingRelease.AdvancementType),
-		Stages:          convertStagesDataSource(response.RollingRelease.Stages),
+		ManualRollingRelease:    convertStagesDataSource(response.RollingRelease.Stages),
+		AutomaticRollingRelease: convertStagesDataSource(response.RollingRelease.Stages),
 	}
-
-	if !response.RollingRelease.Enabled {
-		rollingRelease.AdvancementType = types.StringValue("")
-		rollingRelease.Stages = make([]RollingReleaseStageDataSource, 0)
-	}
-
-	rollingReleaseObj, _ := types.ObjectValueFrom(context.Background(), map[string]attr.Type{
-		"enabled":          types.BoolType,
-		"advancement_type": types.StringType,
-		"stages": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{
-			"target_percentage": types.Int64Type,
-			"duration":          types.Int64Type,
-			"require_approval":  types.BoolType,
-		}}},
-	}, rollingRelease)
 
 	return RollingReleaseInfoDataSource{
-		RollingRelease: rollingReleaseObj,
-		ProjectID:      types.StringValue(response.ProjectID),
-		TeamID:         types.StringValue(response.TeamID),
+		ManualRollingRelease:    rollingRelease.ManualRollingRelease,
+		AutomaticRollingRelease: rollingRelease.AutomaticRollingRelease,
+		ProjectID:               types.StringValue(response.ProjectID),
+		TeamID:                  types.StringValue(response.TeamID),
 	}
 }
 
