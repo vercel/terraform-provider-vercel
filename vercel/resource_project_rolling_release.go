@@ -148,16 +148,37 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	if !e.AutomaticRollingRelease.IsNull() && !e.AutomaticRollingRelease.IsUnknown() {
 		advancementType = "automatic"
 
-		// Convert automatic stages
-		var tfStages []AutomaticStage
-		diags = e.AutomaticRollingRelease.ElementsAs(context.Background(), &tfStages, false)
+		// Convert automatic stages using a more robust approach
+		var automaticStages []AutomaticStage
+		diags = e.AutomaticRollingRelease.ElementsAs(context.Background(), &automaticStages, false)
 		if diags.HasError() {
-			return client.UpdateRollingReleaseRequest{}, diags
+			// If ElementsAs fails, try to extract values manually
+			automaticStages = []AutomaticStage{}
+			// Use ElementsAs with a different approach
+			var rawElements []attr.Value
+			diags = e.AutomaticRollingRelease.ElementsAs(context.Background(), &rawElements, false)
+			if !diags.HasError() {
+				for _, elem := range rawElements {
+					if elem.IsNull() || elem.IsUnknown() {
+						continue
+					}
+
+					// Try to extract the object values
+					if obj, ok := elem.(types.Object); ok {
+						targetPercentage := obj.Attributes()["target_percentage"].(types.Int64)
+						duration := obj.Attributes()["duration"].(types.Int64)
+						automaticStages = append(automaticStages, AutomaticStage{
+							TargetPercentage: targetPercentage,
+							Duration:         duration,
+						})
+					}
+				}
+			}
 		}
 
 		// Add all stages from config
-		stages = make([]client.RollingReleaseStage, len(tfStages))
-		for i, stage := range tfStages {
+		stages = make([]client.RollingReleaseStage, len(automaticStages))
+		for i, stage := range automaticStages {
 			duration := int(stage.Duration.ValueInt64())
 			stages[i] = client.RollingReleaseStage{
 				TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
@@ -175,16 +196,35 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	} else if !e.ManualRollingRelease.IsNull() && !e.ManualRollingRelease.IsUnknown() {
 		advancementType = "manual-approval"
 
-		// Convert manual stages
-		var tfStages []ManualStage
-		diags = e.ManualRollingRelease.ElementsAs(context.Background(), &tfStages, false)
+		// Convert manual stages using a more robust approach
+		var manualStages []ManualStage
+		diags = e.ManualRollingRelease.ElementsAs(context.Background(), &manualStages, false)
 		if diags.HasError() {
-			return client.UpdateRollingReleaseRequest{}, diags
+			// If ElementsAs fails, try to extract values manually
+			manualStages = []ManualStage{}
+			// Use ElementsAs with a different approach
+			var rawElements []attr.Value
+			diags = e.ManualRollingRelease.ElementsAs(context.Background(), &rawElements, false)
+			if !diags.HasError() {
+				for _, elem := range rawElements {
+					if elem.IsNull() || elem.IsUnknown() {
+						continue
+					}
+
+					// Try to extract the object values
+					if obj, ok := elem.(types.Object); ok {
+						targetPercentage := obj.Attributes()["target_percentage"].(types.Int64)
+						manualStages = append(manualStages, ManualStage{
+							TargetPercentage: targetPercentage,
+						})
+					}
+				}
+			}
 		}
 
 		// Add all stages from config
-		stages = make([]client.RollingReleaseStage, len(tfStages))
-		for i, stage := range tfStages {
+		stages = make([]client.RollingReleaseStage, len(manualStages))
+		for i, stage := range manualStages {
 			stages[i] = client.RollingReleaseStage{
 				TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
 				RequireApproval:  true,
@@ -323,58 +363,6 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	// Ensure plan values have proper element types
-	if !plan.AutomaticRollingRelease.IsNull() && !plan.AutomaticRollingRelease.IsUnknown() {
-		// Convert to proper type
-		var automaticStages []AutomaticStage
-		diags = plan.AutomaticRollingRelease.ElementsAs(ctx, &automaticStages, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		// Recreate the list with proper element type
-		stages := make([]attr.Value, len(automaticStages))
-		for i, stage := range automaticStages {
-			stageObj := types.ObjectValueMust(
-				automaticRollingReleaseElementType.AttrTypes,
-				map[string]attr.Value{
-					"target_percentage": stage.TargetPercentage,
-					"duration":          stage.Duration,
-				},
-			)
-			stages[i] = stageObj
-		}
-
-		stagesList := types.ListValueMust(automaticRollingReleaseElementType, stages)
-		plan.AutomaticRollingRelease = stagesList
-	}
-
-	if !plan.ManualRollingRelease.IsNull() && !plan.ManualRollingRelease.IsUnknown() {
-		// Convert to proper type
-		var manualStages []ManualStage
-		diags = plan.ManualRollingRelease.ElementsAs(ctx, &manualStages, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		// Recreate the list with proper element type
-		stages := make([]attr.Value, len(manualStages))
-		for i, stage := range manualStages {
-			stageObj := types.ObjectValueMust(
-				manualRollingReleaseElementType.AttrTypes,
-				map[string]attr.Value{
-					"target_percentage": stage.TargetPercentage,
-				},
-			)
-			stages[i] = stageObj
-		}
-
-		stagesList := types.ListValueMust(manualRollingReleaseElementType, stages)
-		plan.ManualRollingRelease = stagesList
-	}
-
 	// Convert plan to client request
 	request, diags := plan.toUpdateRollingReleaseRequest()
 	resp.Diagnostics.Append(diags...)
@@ -484,58 +472,6 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	// Ensure plan values have proper element types
-	if !plan.AutomaticRollingRelease.IsNull() && !plan.AutomaticRollingRelease.IsUnknown() {
-		// Convert to proper type
-		var automaticStages []AutomaticStage
-		diags = plan.AutomaticRollingRelease.ElementsAs(ctx, &automaticStages, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		// Recreate the list with proper element type
-		stages := make([]attr.Value, len(automaticStages))
-		for i, stage := range automaticStages {
-			stageObj := types.ObjectValueMust(
-				automaticRollingReleaseElementType.AttrTypes,
-				map[string]attr.Value{
-					"target_percentage": stage.TargetPercentage,
-					"duration":          stage.Duration,
-				},
-			)
-			stages[i] = stageObj
-		}
-
-		stagesList := types.ListValueMust(automaticRollingReleaseElementType, stages)
-		plan.AutomaticRollingRelease = stagesList
-	}
-
-	if !plan.ManualRollingRelease.IsNull() && !plan.ManualRollingRelease.IsUnknown() {
-		// Convert to proper type
-		var manualStages []ManualStage
-		diags = plan.ManualRollingRelease.ElementsAs(ctx, &manualStages, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		// Recreate the list with proper element type
-		stages := make([]attr.Value, len(manualStages))
-		for i, stage := range manualStages {
-			stageObj := types.ObjectValueMust(
-				manualRollingReleaseElementType.AttrTypes,
-				map[string]attr.Value{
-					"target_percentage": stage.TargetPercentage,
-				},
-			)
-			stages[i] = stageObj
-		}
-
-		stagesList := types.ListValueMust(manualRollingReleaseElementType, stages)
-		plan.ManualRollingRelease = stagesList
 	}
 
 	// Convert plan to client request
