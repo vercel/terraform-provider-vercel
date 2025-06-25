@@ -75,7 +75,7 @@ resource "vercel_project_environment_variables" "example" {
 Required:
 
 - `key` (String) The name of the Environment Variable.
-- `value` (String) The value of the Environment Variable.
+- `value` (String, Sensitive) The value of the Environment Variable.
 
 Optional:
 
