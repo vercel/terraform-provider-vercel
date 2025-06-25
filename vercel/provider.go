@@ -99,16 +99,17 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newEndpointVerificationDataSource,
 		newFileDataSource,
 		newLogDrainDataSource,
+		newMicrofrontendGroupDataSource,
+		newMicrofrontendGroupMembershipDataSource,
 		newPrebuiltProjectDataSource,
 		newProjectDataSource,
 		newProjectDeploymentRetentionDataSource,
 		newProjectDirectoryDataSource,
 		newProjectMembersDataSource,
+		newSecureComputeNetworkDataSource,
 		newSharedEnvironmentVariableDataSource,
 		newTeamConfigDataSource,
 		newTeamMemberDataSource,
-		newMicrofrontendGroupDataSource,
-		newMicrofrontendGroupMembershipDataSource,
 	}
 }
 
