@@ -162,7 +162,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 	}
 
 	// If disabled or advancementType is empty, return empty values
-	if !response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "" {
+	if response.RollingRelease.AdvancementType == "" {
 		result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
 		result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
 		return result, diags

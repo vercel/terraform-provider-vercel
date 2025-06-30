@@ -57,7 +57,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "manual_rolling_release.#", "3"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.*", map[string]string{
 						"target_percentage": "20",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "manual_rolling_release.*", map[string]string{
