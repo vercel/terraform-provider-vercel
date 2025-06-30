@@ -111,6 +111,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newMicrofrontendGroupDataSource,
 		newMicrofrontendGroupMembershipDataSource,
 		newProjectRollingReleaseDataSource,
+		newDsyncGroupsDataSource,
 	}
 }
 
