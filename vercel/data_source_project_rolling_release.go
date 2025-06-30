@@ -161,17 +161,19 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		TeamID:    types.StringValue(response.TeamID),
 	}
 
+	// If disabled or advancementType is empty, return empty values
+	if !response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "" {
+		result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
+		result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
+		return result, diags
+	}
+
 	// Initialize empty lists for null/unknown values
 	if plan.AutomaticRollingRelease.IsNull() || plan.AutomaticRollingRelease.IsUnknown() {
 		result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
 	}
 	if plan.ManualRollingRelease.IsNull() || plan.ManualRollingRelease.IsUnknown() {
 		result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
-	}
-
-	// If disabled, return empty values
-	if !response.RollingRelease.Enabled {
-		return result, diags
 	}
 
 	// Determine which type of rolling release to use based on API response

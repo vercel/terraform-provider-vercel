@@ -263,17 +263,36 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		TeamID:    types.StringValue(response.TeamID),
 	}
 
+	// If the API response shows disabled but we have stages, and the plan has configuration,
+	// use the plan configuration instead of treating it as disabled
+	if !response.RollingRelease.Enabled && len(response.RollingRelease.Stages) > 0 {
+		// Check if we have a plan with configuration
+		if !plan.AutomaticRollingRelease.IsNull() && !plan.AutomaticRollingRelease.IsUnknown() {
+			// Use the plan's automatic rolling release configuration
+			result.AutomaticRollingRelease = plan.AutomaticRollingRelease
+			result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
+			return result, diags
+		} else if !plan.ManualRollingRelease.IsNull() && !plan.ManualRollingRelease.IsUnknown() {
+			// Use the plan's manual rolling release configuration
+			result.ManualRollingRelease = plan.ManualRollingRelease
+			result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
+			return result, diags
+		}
+	}
+
+	// If disabled or advancementType is empty, return empty values
+	if !response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "" {
+		result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
+		result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
+		return result, diags
+	}
+
 	// Initialize empty lists for null/unknown values
 	if plan.AutomaticRollingRelease.IsNull() || plan.AutomaticRollingRelease.IsUnknown() {
 		result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
 	}
 	if plan.ManualRollingRelease.IsNull() || plan.ManualRollingRelease.IsUnknown() {
 		result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
-	}
-
-	// If disabled, return empty values
-	if !response.RollingRelease.Enabled {
-		return result, diags
 	}
 
 	// Determine which type of rolling release to use based on API response
