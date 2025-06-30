@@ -179,8 +179,5 @@ resource "vercel_project" "example" {
 	name = "test-acc-rolling-releases-%s"
 }
 
-resource "vercel_project_rolling_release" "example" {
-	project_id = vercel_project.example.id
-}
 `, nameSuffix)
 }
