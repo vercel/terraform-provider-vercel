@@ -88,7 +88,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 						"duration":          "10",
 					}),
 				),
-			}
+			},
 		},
 	})
 }
