@@ -244,6 +244,19 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 		"stages_count":     len(stages),
 	})
 
+	// If no configuration is provided, disable the rolling release
+	if advancementType == "" {
+		return client.UpdateRollingReleaseRequest{
+			RollingRelease: client.RollingRelease{
+				Enabled:         false,
+				AdvancementType: "",
+				Stages:          []client.RollingReleaseStage{},
+			},
+			ProjectID: e.ProjectID.ValueString(),
+			TeamID:    e.TeamID.ValueString(),
+		}, diags
+	}
+
 	return client.UpdateRollingReleaseRequest{
 		RollingRelease: client.RollingRelease{
 			Enabled:         true,

@@ -168,13 +168,9 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		return result, diags
 	}
 
-	// Initialize empty lists for null/unknown values
-	if plan.AutomaticRollingRelease.IsNull() || plan.AutomaticRollingRelease.IsUnknown() {
-		result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
-	}
-	if plan.ManualRollingRelease.IsNull() || plan.ManualRollingRelease.IsUnknown() {
-		result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
-	}
+	// Initialize empty lists for both types
+	result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
+	result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
 
 	// Determine which type of rolling release to use based on API response
 	if response.RollingRelease.AdvancementType == "automatic" {

@@ -44,7 +44,7 @@ resource "vercel_project_rolling_release" "example" {
 }
 
 data "vercel_project_rolling_release" "example" {
-	project_id = vercel_project_rolling_release.example.project_id
+	project_id = vercel_project.example.id
 }
 `, nameSuffix)
 }

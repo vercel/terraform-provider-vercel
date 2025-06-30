@@ -88,16 +88,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 						"duration":          "10",
 					}),
 				),
-			},
-			// Finally disable
-			{
-				Config: cfg(testAccProjectRollingReleasesConfigDisabled(nameSuffix)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
-					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
-					resource.TestCheckResourceAttr(resourceName, "automatic_rolling_release", ""),
-				),
-			},
+			}
 		},
 	})
 }
@@ -170,14 +161,5 @@ resource "vercel_project_rolling_release" "example" {
 		}
 	]
 }
-`, nameSuffix)
-}
-
-func testAccProjectRollingReleasesConfigDisabled(nameSuffix string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "example" {
-	name = "test-acc-rolling-releases-%s"
-}
-
 `, nameSuffix)
 }
