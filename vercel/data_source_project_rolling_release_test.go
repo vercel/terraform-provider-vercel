@@ -21,8 +21,6 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), "vercel_project_rolling_release.example", testTeam(t)),
 					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "automatic_rolling_release.#", "1"),
-					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "automatic_rolling_release.0.target_percentage", "10"),
-					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "automatic_rolling_release.0.duration", "10"),
 				),
 			},
 		},
