@@ -142,7 +142,7 @@ func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 	}
 
 	// Convert the response to the data source model
-	convertedData, diags := convertResponseToRollingReleaseDataSource(out, data, ctx)
+	convertedData, diags := convertResponseToRollingReleaseDataSource(out, ctx)
 	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {
@@ -153,7 +153,7 @@ func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 	resp.Diagnostics.Append(resp.State.Set(ctx, &convertedData)...)
 }
 
-func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInfo, plan ProjectRollingReleaseDataSourceModel, ctx context.Context) (ProjectRollingReleaseDataSourceModel, diag.Diagnostics) {
+func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInfo, ctx context.Context) (ProjectRollingReleaseDataSourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	// Log the raw response for debugging
@@ -171,8 +171,8 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		TeamID:    types.StringValue(response.TeamID),
 	}
 	// Initialize empty lists for both types
-	result.AutomaticRollingRelease = types.ListValueMust(automaticRollingReleaseElementType, []attr.Value{})
-	result.ManualRollingRelease = types.ListValueMust(manualRollingReleaseElementType, []attr.Value{})
+	result.AutomaticRollingRelease = types.ListValueMust(AutomaticRollingReleaseElementType, []attr.Value{})
+	result.ManualRollingRelease = types.ListValueMust(ManualRollingReleaseElementType, []attr.Value{})
 
 	// If no stages, return empty lists
 	if len(response.RollingRelease.Stages) == 0 {
@@ -234,7 +234,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		stages := make([]attr.Value, len(automaticStages))
 		for i, stage := range automaticStages {
 			stageObj := types.ObjectValueMust(
-				automaticRollingReleaseElementType.AttrTypes,
+				AutomaticRollingReleaseElementType.AttrTypes,
 				map[string]attr.Value{
 					"target_percentage": stage.TargetPercentage,
 					"duration":          stage.Duration,
@@ -243,7 +243,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 			stages[i] = stageObj
 		}
 
-		stagesList := types.ListValueMust(automaticRollingReleaseElementType, stages)
+		stagesList := types.ListValueMust(AutomaticRollingReleaseElementType, stages)
 		result.AutomaticRollingRelease = stagesList
 
 	} else if advancementType == "manual-approval" {
@@ -282,7 +282,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		stages := make([]attr.Value, len(manualStages))
 		for i, stage := range manualStages {
 			stageObj := types.ObjectValueMust(
-				manualRollingReleaseElementType.AttrTypes,
+				ManualRollingReleaseElementType.AttrTypes,
 				map[string]attr.Value{
 					"target_percentage": stage.TargetPercentage,
 				},
@@ -290,13 +290,20 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 			stages[i] = stageObj
 		}
 
-		stagesList := types.ListValueMust(manualRollingReleaseElementType, stages)
+		stagesList := types.ListValueMust(ManualRollingReleaseElementType, stages)
+		tflog.Info(ctx, "created manual stages list", map[string]any{
+			"stages_count": len(stages),
+			"stages_list":  stagesList,
+			"is_null":      stagesList.IsNull(),
+			"is_unknown":   stagesList.IsUnknown(),
+		})
 		result.ManualRollingRelease = stagesList
 
 		tflog.Info(ctx, "final manual rolling release result", map[string]any{
 			"stages_count": len(stages),
 			"is_null":      result.ManualRollingRelease.IsNull(),
 			"is_unknown":   result.ManualRollingRelease.IsUnknown(),
+			"stages_list":  stagesList,
 		})
 	}
 

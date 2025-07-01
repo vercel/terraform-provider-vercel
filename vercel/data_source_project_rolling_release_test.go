@@ -18,9 +18,15 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccProjectRollingReleasesConfigOnWithDataSource(nameSuffix)),
+				Config: cfg(testAccProjectRollingReleasesDataSourceConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), "vercel_project_rolling_release.example", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "manual_rolling_release.#", "2"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectRollingReleasesDataSourceConfigWithDataSource(nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
 					func(s *terraform.State) error {
 						rs, ok := s.RootModule().Resources["data.vercel_project_rolling_release.example"]
 						if !ok {
@@ -36,10 +42,32 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectRollingReleasesConfigOnWithDataSource(nameSuffix string) string {
+func testAccProjectRollingReleasesDataSourceConfig(nameSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
 	name = "test-acc-example-project-%s"
+	skew_protection = "12 hours"
+}
+
+resource "vercel_project_rolling_release" "example" {
+	project_id = vercel_project.example.id
+	manual_rolling_release = [
+		{
+			target_percentage = 20
+		},
+		{
+			target_percentage = 50
+		}
+	]
+}
+`, nameSuffix)
+}
+
+func testAccProjectRollingReleasesDataSourceConfigWithDataSource(nameSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%s"
+	skew_protection = "12 hours"
 }
 
 resource "vercel_project_rolling_release" "example" {

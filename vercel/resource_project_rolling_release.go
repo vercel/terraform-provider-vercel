@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -56,17 +54,16 @@ func (r *projectRollingReleaseResource) Configure(ctx context.Context, req resou
 // Schema returns the schema information for a project rolling release resource.
 func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages rolling release configuration for a Vercel project.",
+		MarkdownDescription: "Resource for a Vercel project rolling release configuration.",
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project.",
 				Required:            true,
 			},
 			"team_id": schema.StringAttribute{
-				Optional:      true,
-				Computed:      true,
-				Description:   "The ID of the Vercel team.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				Optional:    true,
+				Computed:    true,
+				Description: "The ID of the Vercel team.",
 			},
 			"automatic_rolling_release": schema.ListNestedAttribute{
 				MarkdownDescription: "Automatic rolling release configuration.",
@@ -107,29 +104,6 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 			},
 		},
 	}
-}
-
-type AutomaticStage struct {
-	TargetPercentage types.Int64 `tfsdk:"target_percentage"`
-	Duration         types.Int64 `tfsdk:"duration"`
-}
-
-type ManualStage struct {
-	TargetPercentage types.Int64 `tfsdk:"target_percentage"`
-}
-
-// Define the element types for the lists
-var automaticRollingReleaseElementType = types.ObjectType{
-	AttrTypes: map[string]attr.Type{
-		"target_percentage": types.Int64Type,
-		"duration":          types.Int64Type,
-	},
-}
-
-var manualRollingReleaseElementType = types.ObjectType{
-	AttrTypes: map[string]attr.Type{
-		"target_percentage": types.Int64Type,
-	},
 }
 
 // ProjectRollingRelease reflects the state terraform stores internally for a project rolling release.
@@ -283,29 +257,29 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		if !plan.AutomaticRollingRelease.IsNull() && !plan.AutomaticRollingRelease.IsUnknown() {
 			// Use the plan's automatic rolling release configuration
 			result.AutomaticRollingRelease = plan.AutomaticRollingRelease
-			result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
+			result.ManualRollingRelease = types.ListNull(AutomaticRollingReleaseElementType)
 			return result, diags
 		} else if !plan.ManualRollingRelease.IsNull() && !plan.ManualRollingRelease.IsUnknown() {
 			// Use the plan's manual rolling release configuration
 			result.ManualRollingRelease = plan.ManualRollingRelease
-			result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
+			result.AutomaticRollingRelease = types.ListNull(AutomaticRollingReleaseElementType)
 			return result, diags
 		}
 	}
 
 	// If disabled or advancementType is empty, return empty values
 	if !response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "" {
-		result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
-		result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
+		result.AutomaticRollingRelease = types.ListNull(AutomaticRollingReleaseElementType)
+		result.ManualRollingRelease = types.ListNull(ManualRollingReleaseElementType)
 		return result, diags
 	}
 
 	// Initialize empty lists for null/unknown values
 	if plan.AutomaticRollingRelease.IsNull() || plan.AutomaticRollingRelease.IsUnknown() {
-		result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
+		result.AutomaticRollingRelease = types.ListNull(AutomaticRollingReleaseElementType)
 	}
 	if plan.ManualRollingRelease.IsNull() || plan.ManualRollingRelease.IsUnknown() {
-		result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
+		result.ManualRollingRelease = types.ListNull(ManualRollingReleaseElementType)
 	}
 
 	// Determine which type of rolling release to use based on API response
@@ -335,7 +309,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		stages := make([]attr.Value, len(automaticStages))
 		for i, stage := range automaticStages {
 			stageObj := types.ObjectValueMust(
-				automaticRollingReleaseElementType.AttrTypes,
+				AutomaticRollingReleaseElementType.AttrTypes,
 				map[string]attr.Value{
 					"target_percentage": stage.TargetPercentage,
 					"duration":          stage.Duration,
@@ -344,7 +318,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			stages[i] = stageObj
 		}
 
-		stagesList := types.ListValueMust(automaticRollingReleaseElementType, stages)
+		stagesList := types.ListValueMust(AutomaticRollingReleaseElementType, stages)
 		result.AutomaticRollingRelease = stagesList
 
 	} else if response.RollingRelease.AdvancementType == "manual-approval" {
@@ -365,7 +339,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		stages := make([]attr.Value, len(manualStages))
 		for i, stage := range manualStages {
 			stageObj := types.ObjectValueMust(
-				manualRollingReleaseElementType.AttrTypes,
+				ManualRollingReleaseElementType.AttrTypes,
 				map[string]attr.Value{
 					"target_percentage": stage.TargetPercentage,
 				},
@@ -373,7 +347,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			stages[i] = stageObj
 		}
 
-		stagesList := types.ListValueMust(manualRollingReleaseElementType, stages)
+		stagesList := types.ListValueMust(ManualRollingReleaseElementType, stages)
 		result.ManualRollingRelease = stagesList
 	}
 
