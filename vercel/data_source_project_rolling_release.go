@@ -175,7 +175,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 	result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
 
 	// If disabled and no stages, return empty values
-	if !response.RollingRelease.Enabled && len(response.RollingRelease.Stages) == 0 {
+	if len(response.RollingRelease.Stages) == 0 {
 		return result, diags
 	}
 

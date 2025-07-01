@@ -20,7 +20,7 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 				Config: cfg(testAccProjectRollingReleasesConfigOnWithDataSource(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), "vercel_project_rolling_release.example", testTeam(t)),
-					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "automatic_rolling_release.#", "1"),
+					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "manual_rolling_release.#", "1"),
 				),
 			},
 		},
@@ -35,10 +35,9 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	automatic_rolling_release = [
+	manual_rolling_release = [
 		{
 			target_percentage = 10
-			duration = 10
 		}
 	]
 }
