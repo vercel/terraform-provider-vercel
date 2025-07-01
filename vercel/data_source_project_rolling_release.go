@@ -171,10 +171,10 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		TeamID:    types.StringValue(response.TeamID),
 	}
 	// Initialize empty lists for both types
-	result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
-	result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
+	result.AutomaticRollingRelease = types.ListValueMust(automaticRollingReleaseElementType, []attr.Value{})
+	result.ManualRollingRelease = types.ListValueMust(manualRollingReleaseElementType, []attr.Value{})
 
-	// If disabled and no stages, return empty values
+	// If no stages, return empty lists
 	if len(response.RollingRelease.Stages) == 0 {
 		return result, diags
 	}
@@ -274,6 +274,8 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		"enabled":                           response.RollingRelease.Enabled,
 		"automatic_rolling_release_is_null": result.AutomaticRollingRelease.IsNull(),
 		"manual_rolling_release_is_null":    result.ManualRollingRelease.IsNull(),
+		"automatic_rolling_release_unknown": result.AutomaticRollingRelease.IsUnknown(),
+		"manual_rolling_release_unknown":    result.ManualRollingRelease.IsUnknown(),
 	})
 
 	return result, diags
