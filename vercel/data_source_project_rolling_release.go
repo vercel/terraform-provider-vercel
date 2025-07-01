@@ -156,24 +156,49 @@ func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInfo, plan ProjectRollingReleaseDataSourceModel, ctx context.Context) (ProjectRollingReleaseDataSourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	// Log the raw response for debugging
+	tflog.Info(ctx, "raw rolling release response", map[string]any{
+		"project_id":       response.ProjectID,
+		"team_id":          response.TeamID,
+		"enabled":          response.RollingRelease.Enabled,
+		"advancement_type": response.RollingRelease.AdvancementType,
+		"stages_count":     len(response.RollingRelease.Stages),
+		"stages":           response.RollingRelease.Stages,
+	})
+
 	result := ProjectRollingReleaseDataSourceModel{
 		ProjectID: types.StringValue(response.ProjectID),
 		TeamID:    types.StringValue(response.TeamID),
 	}
-
-	// If disabled or advancementType is empty, return empty values
-	if response.RollingRelease.AdvancementType == "" {
-		result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
-		result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
-		return result, diags
-	}
-
 	// Initialize empty lists for both types
 	result.AutomaticRollingRelease = types.ListNull(automaticRollingReleaseElementType)
 	result.ManualRollingRelease = types.ListNull(manualRollingReleaseElementType)
 
+	// If disabled and no stages, return empty values
+	if !response.RollingRelease.Enabled && len(response.RollingRelease.Stages) == 0 {
+		return result, diags
+	}
+
 	// Determine which type of rolling release to use based on API response
-	if response.RollingRelease.AdvancementType == "automatic" {
+	// If advancementType is empty but stages exist, determine type from stage properties
+	advancementType := response.RollingRelease.AdvancementType
+	if advancementType == "" && len(response.RollingRelease.Stages) > 0 {
+		// Check if stages have duration (automatic) or not (manual)
+		hasDuration := false
+		for _, stage := range response.RollingRelease.Stages {
+			if stage.Duration != nil {
+				hasDuration = true
+				break
+			}
+		}
+		if hasDuration {
+			advancementType = "automatic"
+		} else {
+			advancementType = "manual-approval"
+		}
+	}
+
+	if advancementType == "automatic" {
 		// Convert API stages to automatic stages (excluding terminal stage)
 		var automaticStages []AutomaticStage
 		for _, stage := range response.RollingRelease.Stages {
@@ -211,7 +236,7 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		stagesList := types.ListValueMust(automaticRollingReleaseElementType, stages)
 		result.AutomaticRollingRelease = stagesList
 
-	} else if response.RollingRelease.AdvancementType == "manual-approval" {
+	} else if advancementType == "manual-approval" {
 		// Convert API stages to manual stages (excluding terminal stage)
 		var manualStages []ManualStage
 		for _, stage := range response.RollingRelease.Stages {
@@ -243,8 +268,12 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 
 	// Log the conversion result for debugging
 	tflog.Info(ctx, "converted rolling release response", map[string]any{
-		"advancement_type": response.RollingRelease.AdvancementType,
-		"stages_count":     len(response.RollingRelease.Stages),
+		"original_advancement_type":         response.RollingRelease.AdvancementType,
+		"determined_advancement_type":       advancementType,
+		"stages_count":                      len(response.RollingRelease.Stages),
+		"enabled":                           response.RollingRelease.Enabled,
+		"automatic_rolling_release_is_null": result.AutomaticRollingRelease.IsNull(),
+		"manual_rolling_release_is_null":    result.ManualRollingRelease.IsNull(),
 	})
 
 	return result, diags
