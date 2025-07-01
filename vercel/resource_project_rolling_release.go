@@ -257,7 +257,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		if !plan.AutomaticRollingRelease.IsNull() && !plan.AutomaticRollingRelease.IsUnknown() {
 			// Use the plan's automatic rolling release configuration
 			result.AutomaticRollingRelease = plan.AutomaticRollingRelease
-			result.ManualRollingRelease = types.ListNull(AutomaticRollingReleaseElementType)
+			result.ManualRollingRelease = types.ListNull(ManualRollingReleaseElementType)
 			return result, diags
 		} else if !plan.ManualRollingRelease.IsNull() && !plan.ManualRollingRelease.IsUnknown() {
 			// Use the plan's manual rolling release configuration
