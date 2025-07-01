@@ -20,24 +20,14 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	rolling_release = {
-		enabled          = true
-		advancement_type = "manual-approval"
-		stages = [
-			{
-				require_approval  = true
-				target_percentage = 20
-			},
-			{
-				require_approval  = true
-				target_percentage = 50
-			},
-			{
-				require_approval  = true
-				target_percentage = 100
-			}
-		]
-	}
+	manual_rolling_release = [
+		{
+			target_percentage = 20
+		},
+		{
+			target_percentage = 50
+		}
+	]
 }
 ```
 
