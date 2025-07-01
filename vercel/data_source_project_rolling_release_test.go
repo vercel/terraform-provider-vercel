@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
@@ -20,6 +21,14 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 				Config: cfg(testAccProjectRollingReleasesConfigOnWithDataSource(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), "vercel_project_rolling_release.example", testTeam(t)),
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources["data.vercel_project_rolling_release.example"]
+						if !ok {
+							return fmt.Errorf("data source not found")
+						}
+						t.Logf("Data source state: %+v", rs.Primary.Attributes)
+						return nil
+					},
 					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "manual_rolling_release.#", "2"),
 				),
 			},
@@ -37,7 +46,10 @@ resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
 	manual_rolling_release = [
 		{
-			target_percentage = 10
+			target_percentage = 20
+		},
+		{
+			target_percentage = 50
 		}
 	]
 }

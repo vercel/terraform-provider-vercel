@@ -3,5 +3,5 @@ data "vercel_project" "example" {
 }
 
 data "vercel_project_rolling_release" "example" {
-	project_id = data.vercel_project_rolling_release.example.id
+	project_id = data.vercel_project.example.id
 }
