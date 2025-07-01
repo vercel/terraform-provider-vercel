@@ -3,12 +3,12 @@
 page_title: "vercel_project_rolling_release Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  Manages rolling release configuration for a Vercel project.
+  Resource for a Vercel project rolling release configuration.
 ---
 
 # vercel_project_rolling_release (Resource)
 
-Manages rolling release configuration for a Vercel project.
+Resource for a Vercel project rolling release configuration.
 
 ## Example Usage
 
