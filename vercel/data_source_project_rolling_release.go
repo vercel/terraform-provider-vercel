@@ -239,9 +239,23 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 	} else if advancementType == "manual-approval" {
 		// Convert API stages to manual stages (excluding terminal stage)
 		var manualStages []ManualStage
-		for _, stage := range response.RollingRelease.Stages {
+		tflog.Info(ctx, "processing manual stages", map[string]any{
+			"total_stages": len(response.RollingRelease.Stages),
+		})
+
+		for i, stage := range response.RollingRelease.Stages {
+			tflog.Info(ctx, "processing stage", map[string]any{
+				"stage_index":       i,
+				"target_percentage": stage.TargetPercentage,
+				"require_approval":  stage.RequireApproval,
+				"duration":          stage.Duration,
+			})
+
 			// Skip the terminal stage (100%)
 			if stage.TargetPercentage == 100 {
+				tflog.Info(ctx, "skipping terminal stage", map[string]any{
+					"stage_index": i,
+				})
 				continue
 			}
 
@@ -249,6 +263,10 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 				TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
 			})
 		}
+
+		tflog.Info(ctx, "manual stages after filtering", map[string]any{
+			"manual_stages_count": len(manualStages),
+		})
 
 		// Convert to Terraform types
 		stages := make([]attr.Value, len(manualStages))
@@ -264,6 +282,12 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 
 		stagesList := types.ListValueMust(manualRollingReleaseElementType, stages)
 		result.ManualRollingRelease = stagesList
+
+		tflog.Info(ctx, "final manual rolling release result", map[string]any{
+			"stages_count": len(stages),
+			"is_null":      result.ManualRollingRelease.IsNull(),
+			"is_unknown":   result.ManualRollingRelease.IsUnknown(),
+		})
 	}
 
 	// Log the conversion result for debugging
