@@ -182,6 +182,12 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 	// Determine which type of rolling release to use based on API response
 	// If advancementType is empty but stages exist, determine type from stage properties
 	advancementType := response.RollingRelease.AdvancementType
+	tflog.Info(ctx, "determining advancement type", map[string]any{
+		"original_advancement_type": advancementType,
+		"stages_count":              len(response.RollingRelease.Stages),
+		"enabled":                   response.RollingRelease.Enabled,
+	})
+
 	if advancementType == "" && len(response.RollingRelease.Stages) > 0 {
 		// Check if stages have duration (automatic) or not (manual)
 		hasDuration := false
@@ -196,6 +202,10 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 		} else {
 			advancementType = "manual-approval"
 		}
+		tflog.Info(ctx, "determined advancement type", map[string]any{
+			"determined_advancement_type": advancementType,
+			"has_duration":                hasDuration,
+		})
 	}
 
 	if advancementType == "automatic" {
