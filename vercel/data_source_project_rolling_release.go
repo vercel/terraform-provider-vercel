@@ -3,13 +3,12 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
@@ -62,39 +61,22 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 				Computed:    true,
 				Description: "The ID of the Vercel team.",
 			},
-			"automatic_rolling_release": schema.ListNestedAttribute{
-				MarkdownDescription: "Automatic rolling release configuration.",
-				Optional:            true,
+			"advancement_type": schema.StringAttribute{
+				MarkdownDescription: "The type of advancement for the rolling release. Either 'automatic' or 'manual-approval'.",
+				Computed:            true,
+			},
+			"stages": schema.ListNestedAttribute{
+				MarkdownDescription: "The stages for the rolling release configuration.",
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"target_percentage": schema.Int64Attribute{
 							MarkdownDescription: "The percentage of traffic to route to this stage.",
-							Required:            true,
-							Validators: []validator.Int64{
-								int64validator.Between(0, 100),
-							},
+							Computed:            true,
 						},
 						"duration": schema.Int64Attribute{
-							MarkdownDescription: "The duration in minutes to wait before advancing to the next stage.",
-							Required:            true,
-							Validators: []validator.Int64{
-								int64validator.Between(1, 10000),
-							},
-						},
-					},
-				},
-			},
-			"manual_rolling_release": schema.ListNestedAttribute{
-				MarkdownDescription: "Manual rolling release configuration.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"target_percentage": schema.Int64Attribute{
-							MarkdownDescription: "The percentage of traffic to route to this stage.",
-							Required:            true,
-							Validators: []validator.Int64{
-								int64validator.Between(0, 100),
-							},
+							MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Present for automatic advancement type.",
+							Computed:            true,
 						},
 					},
 				},
@@ -105,23 +87,34 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 
 // ProjectRollingReleaseDataSourceModel reflects the structure of the data source.
 type ProjectRollingReleaseDataSourceModel struct {
-	AutomaticRollingRelease types.List   `tfsdk:"automatic_rolling_release"`
-	ManualRollingRelease    types.List   `tfsdk:"manual_rolling_release"`
-	ProjectID               types.String `tfsdk:"project_id"`
-	TeamID                  types.String `tfsdk:"team_id"`
+	AdvancementType types.String `tfsdk:"advancement_type"`
+	Stages          types.List   `tfsdk:"stages"`
+	ProjectID       types.String `tfsdk:"project_id"`
+	TeamID          types.String `tfsdk:"team_id"`
 }
 
 func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data ProjectRollingReleaseDataSourceModel
 
-	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	out, err := d.client.GetRollingRelease(ctx, data.ProjectID.ValueString(), data.TeamID.ValueString())
+	var out client.RollingReleaseInfo
+	var err error
+	var convertedData ProjectRollingReleaseDataSourceModel
+	var diags diag.Diagnostics
+
+	// Retry up to 10 times (10s) for eventual consistency
+	for i := 0; i < 10; i++ {
+		out, err = d.client.GetRollingRelease(ctx, data.ProjectID.ValueString(), data.TeamID.ValueString())
+		if err == nil && out.RollingRelease.Enabled && len(out.RollingRelease.Stages) > 0 {
+			break // found config
+		}
+		time.Sleep(1 * time.Second)
+	}
+
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error reading project rolling release",
@@ -141,55 +134,45 @@ func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 		return
 	}
 
-	// Convert the response to the data source model
-	convertedData, diags := convertResponseToRollingReleaseDataSource(out, ctx)
+	convertedData, diags = convertResponseToRollingReleaseDataSourceWithConfig(out, data, ctx)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Save data into Terraform state
+	tflog.Info(ctx, "converted data before setting state", map[string]any{
+		"project_id":       convertedData.ProjectID.ValueString(),
+		"team_id":          convertedData.TeamID.ValueString(),
+		"advancement_type": convertedData.AdvancementType.ValueString(),
+		"stages_is_null":   convertedData.Stages.IsNull(),
+		"stages_length":    len(convertedData.Stages.Elements()),
+	})
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &convertedData)...)
 }
 
-func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInfo, ctx context.Context) (ProjectRollingReleaseDataSourceModel, diag.Diagnostics) {
+// Like convertResponseToRollingReleaseDataSource, but if API is empty/disabled, use config if present
+func convertResponseToRollingReleaseDataSourceWithConfig(response client.RollingReleaseInfo, config ProjectRollingReleaseDataSourceModel, ctx context.Context) (ProjectRollingReleaseDataSourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
-
-	// Log the raw response for debugging
-	tflog.Info(ctx, "raw rolling release response", map[string]any{
-		"project_id":       response.ProjectID,
-		"team_id":          response.TeamID,
-		"enabled":          response.RollingRelease.Enabled,
-		"advancement_type": response.RollingRelease.AdvancementType,
-		"stages_count":     len(response.RollingRelease.Stages),
-		"stages":           response.RollingRelease.Stages,
-	})
 
 	result := ProjectRollingReleaseDataSourceModel{
 		ProjectID: types.StringValue(response.ProjectID),
 		TeamID:    types.StringValue(response.TeamID),
 	}
-	// Initialize empty lists for both types
-	result.AutomaticRollingRelease = types.ListValueMust(AutomaticRollingReleaseElementType, []attr.Value{})
-	result.ManualRollingRelease = types.ListValueMust(ManualRollingReleaseElementType, []attr.Value{})
 
-	// If no stages, return empty lists
+	// Always initialize advancement_type and stages, even if null
+	result.AdvancementType = types.StringValue("")
+	result.Stages = types.ListValueMust(RollingReleaseStageElementType, []attr.Value{})
+
+	// If API has no stages, return empty values
 	if len(response.RollingRelease.Stages) == 0 {
+		tflog.Info(ctx, "API has no stages, returning empty values")
 		return result, diags
 	}
 
-	// Determine which type of rolling release to use based on API response
-	// If advancementType is empty but stages exist, determine type from stage properties
+	// Infer advancement_type if not set
 	advancementType := response.RollingRelease.AdvancementType
-	tflog.Info(ctx, "determining advancement type", map[string]any{
-		"original_advancement_type": advancementType,
-		"stages_count":              len(response.RollingRelease.Stages),
-		"enabled":                   response.RollingRelease.Enabled,
-	})
-
-	if advancementType == "" && len(response.RollingRelease.Stages) > 0 {
-		// Check if stages have duration (automatic) or not (manual)
+	if advancementType == "" {
 		hasDuration := false
 		for _, stage := range response.RollingRelease.Stages {
 			if stage.Duration != nil {
@@ -207,117 +190,45 @@ func convertResponseToRollingReleaseDataSource(response client.RollingReleaseInf
 			"has_duration":                hasDuration,
 		})
 	}
+	result.AdvancementType = types.StringValue(advancementType)
 
-	if advancementType == "automatic" {
-		// Convert API stages to automatic stages (excluding terminal stage)
-		var automaticStages []AutomaticStage
-		for _, stage := range response.RollingRelease.Stages {
-			// Skip the terminal stage (100%)
-			if stage.TargetPercentage == 100 {
-				continue
-			}
-
-			var duration types.Int64
-			if stage.Duration != nil {
-				duration = types.Int64Value(int64(*stage.Duration))
-			} else {
-				duration = types.Int64Value(60) // Default duration
-			}
-
-			automaticStages = append(automaticStages, AutomaticStage{
-				TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
-				Duration:         duration,
-			})
+	// Map stages (excluding terminal stage)
+	var rollingReleaseStages []RollingReleaseStage
+	for _, stage := range response.RollingRelease.Stages {
+		if stage.TargetPercentage == 100 {
+			continue
 		}
-
-		// Convert to Terraform types
-		stages := make([]attr.Value, len(automaticStages))
-		for i, stage := range automaticStages {
-			stageObj := types.ObjectValueMust(
-				AutomaticRollingReleaseElementType.AttrTypes,
-				map[string]attr.Value{
-					"target_percentage": stage.TargetPercentage,
-					"duration":          stage.Duration,
-				},
-			)
-			stages[i] = stageObj
+		rollingReleaseStage := RollingReleaseStage{
+			TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
 		}
-
-		stagesList := types.ListValueMust(AutomaticRollingReleaseElementType, stages)
-		result.AutomaticRollingRelease = stagesList
-
-	} else if advancementType == "manual-approval" {
-		// Convert API stages to manual stages (excluding terminal stage)
-		var manualStages []ManualStage
-		tflog.Info(ctx, "processing manual stages", map[string]any{
-			"total_stages": len(response.RollingRelease.Stages),
-		})
-
-		for i, stage := range response.RollingRelease.Stages {
-			tflog.Info(ctx, "processing stage", map[string]any{
-				"stage_index":       i,
-				"target_percentage": stage.TargetPercentage,
-				"require_approval":  stage.RequireApproval,
-				"duration":          stage.Duration,
-			})
-
-			// Skip the terminal stage (100%)
-			if stage.TargetPercentage == 100 {
-				tflog.Info(ctx, "skipping terminal stage", map[string]any{
-					"stage_index": i,
-				})
-				continue
-			}
-
-			manualStages = append(manualStages, ManualStage{
-				TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
-			})
+		if stage.Duration != nil {
+			rollingReleaseStage.Duration = types.Int64Value(int64(*stage.Duration))
 		}
-
-		tflog.Info(ctx, "manual stages after filtering", map[string]any{
-			"manual_stages_count": len(manualStages),
-		})
-
-		// Convert to Terraform types
-		stages := make([]attr.Value, len(manualStages))
-		for i, stage := range manualStages {
-			stageObj := types.ObjectValueMust(
-				ManualRollingReleaseElementType.AttrTypes,
-				map[string]attr.Value{
-					"target_percentage": stage.TargetPercentage,
-				},
-			)
-			stages[i] = stageObj
-		}
-
-		stagesList := types.ListValueMust(ManualRollingReleaseElementType, stages)
-		tflog.Info(ctx, "created manual stages list", map[string]any{
-			"stages_count": len(stages),
-			"stages_list":  stagesList,
-			"is_null":      stagesList.IsNull(),
-			"is_unknown":   stagesList.IsUnknown(),
-		})
-		result.ManualRollingRelease = stagesList
-
-		tflog.Info(ctx, "final manual rolling release result", map[string]any{
-			"stages_count": len(stages),
-			"is_null":      result.ManualRollingRelease.IsNull(),
-			"is_unknown":   result.ManualRollingRelease.IsUnknown(),
-			"stages_list":  stagesList,
-		})
+		rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
 	}
-
-	// Log the conversion result for debugging
-	tflog.Info(ctx, "converted rolling release response", map[string]any{
-		"original_advancement_type":         response.RollingRelease.AdvancementType,
-		"determined_advancement_type":       advancementType,
-		"stages_count":                      len(response.RollingRelease.Stages),
-		"enabled":                           response.RollingRelease.Enabled,
-		"automatic_rolling_release_is_null": result.AutomaticRollingRelease.IsNull(),
-		"manual_rolling_release_is_null":    result.ManualRollingRelease.IsNull(),
-		"automatic_rolling_release_unknown": result.AutomaticRollingRelease.IsUnknown(),
-		"manual_rolling_release_unknown":    result.ManualRollingRelease.IsUnknown(),
+	tflog.Info(ctx, "converted stages", map[string]any{
+		"rolling_release_stages_count": len(rollingReleaseStages),
 	})
-
+	stages := make([]attr.Value, len(rollingReleaseStages))
+	for i, stage := range rollingReleaseStages {
+		stageObj := types.ObjectValueMust(
+			RollingReleaseStageElementType.AttrTypes,
+			map[string]attr.Value{
+				"target_percentage": stage.TargetPercentage,
+				"duration":          stage.Duration,
+			},
+		)
+		stages[i] = stageObj
+	}
+	stagesList := types.ListValueMust(RollingReleaseStageElementType, stages)
+	result.Stages = stagesList
+	tflog.Info(ctx, "converted rolling release response", map[string]any{
+		"advancement_type":        advancementType,
+		"stages_count":            len(response.RollingRelease.Stages),
+		"enabled":                 response.RollingRelease.Enabled,
+		"result_advancement_type": result.AdvancementType.ValueString(),
+		"result_stages_is_null":   result.Stages.IsNull(),
+		"result_stages_length":    len(result.Stages.Elements()),
+	})
 	return result, diags
 }

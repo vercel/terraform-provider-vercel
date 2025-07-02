@@ -31,22 +31,17 @@ data "vercel_project_rolling_release" "example" {
 
 ### Optional
 
-- `automatic_rolling_release` (Attributes List) Automatic rolling release configuration. (see [below for nested schema](#nestedatt--automatic_rolling_release))
-- `manual_rolling_release` (Attributes List) Manual rolling release configuration. (see [below for nested schema](#nestedatt--manual_rolling_release))
 - `team_id` (String) The ID of the Vercel team.
 
-<a id="nestedatt--automatic_rolling_release"></a>
-### Nested Schema for `automatic_rolling_release`
+### Read-Only
 
-Required:
+- `advancement_type` (String) The type of advancement for the rolling release. Either 'automatic' or 'manual-approval'.
+- `stages` (Attributes List) The stages for the rolling release configuration. (see [below for nested schema](#nestedatt--stages))
 
-- `duration` (Number) The duration in minutes to wait before advancing to the next stage.
-- `target_percentage` (Number) The percentage of traffic to route to this stage.
+<a id="nestedatt--stages"></a>
+### Nested Schema for `stages`
 
+Read-Only:
 
-<a id="nestedatt--manual_rolling_release"></a>
-### Nested Schema for `manual_rolling_release`
-
-Required:
-
+- `duration` (Number) The duration in minutes to wait before advancing to the next stage. Present for automatic advancement type.
 - `target_percentage` (Number) The percentage of traffic to route to this stage.

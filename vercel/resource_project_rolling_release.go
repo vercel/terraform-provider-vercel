@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -65,9 +66,16 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 				Computed:    true,
 				Description: "The ID of the Vercel team.",
 			},
-			"automatic_rolling_release": schema.ListNestedAttribute{
-				MarkdownDescription: "Automatic rolling release configuration.",
-				Optional:            true,
+			"advancement_type": schema.StringAttribute{
+				MarkdownDescription: "The type of advancement for the rolling release. Must be either 'automatic' or 'manual-approval'.",
+				Required:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("automatic", "manual-approval"),
+				},
+			},
+			"stages": schema.ListNestedAttribute{
+				MarkdownDescription: "The stages for the rolling release configuration.",
+				Required:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"target_percentage": schema.Int64Attribute{
@@ -78,25 +86,10 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 							},
 						},
 						"duration": schema.Int64Attribute{
-							MarkdownDescription: "The duration in minutes to wait before advancing to the next stage.",
-							Required:            true,
+							MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Required for automatic advancement type.",
+							Optional:            true,
 							Validators: []validator.Int64{
 								int64validator.Between(1, 10000),
-							},
-						},
-					},
-				},
-			},
-			"manual_rolling_release": schema.ListNestedAttribute{
-				MarkdownDescription: "Manual rolling release configuration.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"target_percentage": schema.Int64Attribute{
-							MarkdownDescription: "The percentage of traffic to route to this stage.",
-							Required:            true,
-							Validators: []validator.Int64{
-								int64validator.Between(0, 100),
 							},
 						},
 					},
@@ -108,109 +101,74 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 
 // ProjectRollingRelease reflects the state terraform stores internally for a project rolling release.
 type RollingReleaseInfo struct {
-	AutomaticRollingRelease types.List   `tfsdk:"automatic_rolling_release"`
-	ManualRollingRelease    types.List   `tfsdk:"manual_rolling_release"`
-	ProjectID               types.String `tfsdk:"project_id"`
-	TeamID                  types.String `tfsdk:"team_id"`
+	AdvancementType types.String `tfsdk:"advancement_type"`
+	Stages          types.List   `tfsdk:"stages"`
+	ProjectID       types.String `tfsdk:"project_id"`
+	TeamID          types.String `tfsdk:"team_id"`
 }
 
 func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRollingReleaseRequest, diag.Diagnostics) {
 	var stages []client.RollingReleaseStage
-	var advancementType string
 	var diags diag.Diagnostics
 
-	if !e.AutomaticRollingRelease.IsNull() && !e.AutomaticRollingRelease.IsUnknown() {
-		advancementType = "automatic"
+	advancementType := e.AdvancementType.ValueString()
 
-		// Convert automatic stages using a more robust approach
-		var automaticStages []AutomaticStage
-		diags = e.AutomaticRollingRelease.ElementsAs(context.Background(), &automaticStages, false)
-		if diags.HasError() {
-			// If ElementsAs fails, try to extract values manually
-			automaticStages = []AutomaticStage{}
-			// Use ElementsAs with a different approach
-			var rawElements []attr.Value
-			diags = e.AutomaticRollingRelease.ElementsAs(context.Background(), &rawElements, false)
-			if !diags.HasError() {
-				for _, elem := range rawElements {
-					if elem.IsNull() || elem.IsUnknown() {
-						continue
+	// Convert stages using a more robust approach
+	var rollingReleaseStages []RollingReleaseStage
+	diags = e.Stages.ElementsAs(context.Background(), &rollingReleaseStages, false)
+	if diags.HasError() {
+		// If ElementsAs fails, try to extract values manually
+		rollingReleaseStages = []RollingReleaseStage{}
+		// Use ElementsAs with a different approach
+		var rawElements []attr.Value
+		diags = e.Stages.ElementsAs(context.Background(), &rawElements, false)
+		if !diags.HasError() {
+			for _, elem := range rawElements {
+				if elem.IsNull() || elem.IsUnknown() {
+					continue
+				}
+
+				// Try to extract the object values
+				if obj, ok := elem.(types.Object); ok {
+					targetPercentage := obj.Attributes()["target_percentage"].(types.Int64)
+					duration := obj.Attributes()["duration"]
+
+					stage := RollingReleaseStage{
+						TargetPercentage: targetPercentage,
 					}
 
-					// Try to extract the object values
-					if obj, ok := elem.(types.Object); ok {
-						targetPercentage := obj.Attributes()["target_percentage"].(types.Int64)
-						duration := obj.Attributes()["duration"].(types.Int64)
-						automaticStages = append(automaticStages, AutomaticStage{
-							TargetPercentage: targetPercentage,
-							Duration:         duration,
-						})
+					if !duration.IsNull() && !duration.IsUnknown() {
+						stage.Duration = duration.(types.Int64)
 					}
+
+					rollingReleaseStages = append(rollingReleaseStages, stage)
 				}
 			}
 		}
-
-		// Add all stages from config
-		stages = make([]client.RollingReleaseStage, len(automaticStages))
-		for i, stage := range automaticStages {
-			duration := int(stage.Duration.ValueInt64())
-			stages[i] = client.RollingReleaseStage{
-				TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
-				Duration:         &duration,
-				RequireApproval:  false,
-			}
-		}
-
-		// Add terminal stage (100%) without duration
-		stages = append(stages, client.RollingReleaseStage{
-			TargetPercentage: 100,
-			RequireApproval:  false,
-		})
-
-	} else if !e.ManualRollingRelease.IsNull() && !e.ManualRollingRelease.IsUnknown() {
-		advancementType = "manual-approval"
-
-		// Convert manual stages using a more robust approach
-		var manualStages []ManualStage
-		diags = e.ManualRollingRelease.ElementsAs(context.Background(), &manualStages, false)
-		if diags.HasError() {
-			// If ElementsAs fails, try to extract values manually
-			manualStages = []ManualStage{}
-			// Use ElementsAs with a different approach
-			var rawElements []attr.Value
-			diags = e.ManualRollingRelease.ElementsAs(context.Background(), &rawElements, false)
-			if !diags.HasError() {
-				for _, elem := range rawElements {
-					if elem.IsNull() || elem.IsUnknown() {
-						continue
-					}
-
-					// Try to extract the object values
-					if obj, ok := elem.(types.Object); ok {
-						targetPercentage := obj.Attributes()["target_percentage"].(types.Int64)
-						manualStages = append(manualStages, ManualStage{
-							TargetPercentage: targetPercentage,
-						})
-					}
-				}
-			}
-		}
-
-		// Add all stages from config
-		stages = make([]client.RollingReleaseStage, len(manualStages))
-		for i, stage := range manualStages {
-			stages[i] = client.RollingReleaseStage{
-				TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
-				RequireApproval:  true,
-			}
-		}
-
-		// Add terminal stage (100%) without approval
-		stages = append(stages, client.RollingReleaseStage{
-			TargetPercentage: 100,
-			RequireApproval:  false,
-		})
 	}
+
+	// Add all stages from config
+	stages = make([]client.RollingReleaseStage, len(rollingReleaseStages))
+	for i, stage := range rollingReleaseStages {
+		clientStage := client.RollingReleaseStage{
+			TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
+			RequireApproval:  advancementType == "manual-approval",
+		}
+
+		// Add duration for automatic advancement type
+		if advancementType == "automatic" && !stage.Duration.IsNull() && !stage.Duration.IsUnknown() {
+			duration := int(stage.Duration.ValueInt64())
+			clientStage.Duration = &duration
+		}
+
+		stages[i] = clientStage
+	}
+
+	// Add terminal stage (100%) without approval
+	stages = append(stages, client.RollingReleaseStage{
+		TargetPercentage: 100,
+		RequireApproval:  false,
+	})
 
 	// Log the request for debugging
 	tflog.Info(context.Background(), "converting to update request", map[string]any{
@@ -250,106 +208,60 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		TeamID:    types.StringValue(response.TeamID),
 	}
 
-	// If the API response shows disabled but we have stages, and the plan has configuration,
-	// use the plan configuration instead of treating it as disabled
-	if !response.RollingRelease.Enabled && len(response.RollingRelease.Stages) > 0 {
-		// Check if we have a plan with configuration
-		if !plan.AutomaticRollingRelease.IsNull() && !plan.AutomaticRollingRelease.IsUnknown() {
-			// Use the plan's automatic rolling release configuration
-			result.AutomaticRollingRelease = plan.AutomaticRollingRelease
-			result.ManualRollingRelease = types.ListNull(ManualRollingReleaseElementType)
-			return result, diags
-		} else if !plan.ManualRollingRelease.IsNull() && !plan.ManualRollingRelease.IsUnknown() {
-			// Use the plan's manual rolling release configuration
-			result.ManualRollingRelease = plan.ManualRollingRelease
-			result.AutomaticRollingRelease = types.ListNull(AutomaticRollingReleaseElementType)
-			return result, diags
-		}
-	}
-
-	// If disabled or advancementType is empty, return empty values
-	if !response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "" {
-		result.AutomaticRollingRelease = types.ListNull(AutomaticRollingReleaseElementType)
-		result.ManualRollingRelease = types.ListNull(ManualRollingReleaseElementType)
+	// If the API response shows disabled or advancementType is empty, but the plan has configuration, use the plan's values
+	if (!response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "") && plan != nil &&
+		!plan.AdvancementType.IsNull() && plan.AdvancementType.ValueString() != "" &&
+		!plan.Stages.IsNull() && len(plan.Stages.Elements()) > 0 {
+		result.AdvancementType = plan.AdvancementType
+		result.Stages = plan.Stages
 		return result, diags
 	}
 
-	// Initialize empty lists for null/unknown values
-	if plan.AutomaticRollingRelease.IsNull() || plan.AutomaticRollingRelease.IsUnknown() {
-		result.AutomaticRollingRelease = types.ListNull(AutomaticRollingReleaseElementType)
+	// If disabled or advancementType is empty and no plan, return empty values
+	if !response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "" {
+		result.AdvancementType = types.StringNull()
+		result.Stages = types.ListNull(RollingReleaseStageElementType)
+		return result, diags
 	}
-	if plan.ManualRollingRelease.IsNull() || plan.ManualRollingRelease.IsUnknown() {
-		result.ManualRollingRelease = types.ListNull(ManualRollingReleaseElementType)
+
+	// Set the advancement type
+	result.AdvancementType = types.StringValue(response.RollingRelease.AdvancementType)
+
+	// Convert API stages to stages (excluding terminal stage)
+	var rollingReleaseStages []RollingReleaseStage
+	for _, stage := range response.RollingRelease.Stages {
+		// Skip the terminal stage (100%)
+		if stage.TargetPercentage == 100 {
+			continue
+		}
+
+		rollingReleaseStage := RollingReleaseStage{
+			TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
+		}
+
+		// Add duration if it exists (for automatic advancement type)
+		if stage.Duration != nil {
+			rollingReleaseStage.Duration = types.Int64Value(int64(*stage.Duration))
+		}
+
+		rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
 	}
 
-	// Determine which type of rolling release to use based on API response
-	if response.RollingRelease.AdvancementType == "automatic" {
-		// Convert API stages to automatic stages (excluding terminal stage)
-		var automaticStages []AutomaticStage
-		for _, stage := range response.RollingRelease.Stages {
-			// Skip the terminal stage (100%)
-			if stage.TargetPercentage == 100 {
-				continue
-			}
-
-			var duration types.Int64
-			if stage.Duration != nil {
-				duration = types.Int64Value(int64(*stage.Duration))
-			} else {
-				duration = types.Int64Value(60) // Default duration
-			}
-
-			automaticStages = append(automaticStages, AutomaticStage{
-				TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
-				Duration:         duration,
-			})
-		}
-
-		// Convert to Terraform types
-		stages := make([]attr.Value, len(automaticStages))
-		for i, stage := range automaticStages {
-			stageObj := types.ObjectValueMust(
-				AutomaticRollingReleaseElementType.AttrTypes,
-				map[string]attr.Value{
-					"target_percentage": stage.TargetPercentage,
-					"duration":          stage.Duration,
-				},
-			)
-			stages[i] = stageObj
-		}
-
-		stagesList := types.ListValueMust(AutomaticRollingReleaseElementType, stages)
-		result.AutomaticRollingRelease = stagesList
-
-	} else if response.RollingRelease.AdvancementType == "manual-approval" {
-		// Convert API stages to manual stages (excluding terminal stage)
-		var manualStages []ManualStage
-		for _, stage := range response.RollingRelease.Stages {
-			// Skip the terminal stage (100%)
-			if stage.TargetPercentage == 100 {
-				continue
-			}
-
-			manualStages = append(manualStages, ManualStage{
-				TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
-			})
-		}
-
-		// Convert to Terraform types
-		stages := make([]attr.Value, len(manualStages))
-		for i, stage := range manualStages {
-			stageObj := types.ObjectValueMust(
-				ManualRollingReleaseElementType.AttrTypes,
-				map[string]attr.Value{
-					"target_percentage": stage.TargetPercentage,
-				},
-			)
-			stages[i] = stageObj
-		}
-
-		stagesList := types.ListValueMust(ManualRollingReleaseElementType, stages)
-		result.ManualRollingRelease = stagesList
+	// Convert to Terraform types
+	stages := make([]attr.Value, len(rollingReleaseStages))
+	for i, stage := range rollingReleaseStages {
+		stageObj := types.ObjectValueMust(
+			RollingReleaseStageElementType.AttrTypes,
+			map[string]attr.Value{
+				"target_percentage": stage.TargetPercentage,
+				"duration":          stage.Duration,
+			},
+		)
+		stages[i] = stageObj
 	}
+
+	stagesList := types.ListValueMust(RollingReleaseStageElementType, stages)
+	result.Stages = stagesList
 
 	// Log the conversion result for debugging
 	tflog.Info(ctx, "converted rolling release response", map[string]any{

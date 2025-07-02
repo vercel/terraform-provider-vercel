@@ -20,7 +20,8 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	manual_rolling_release = [
+	advancement_type = "manual-approval"
+	stages = [
 		{
 			target_percentage = 20
 		},
@@ -36,26 +37,21 @@ resource "vercel_project_rolling_release" "example" {
 
 ### Required
 
+- `advancement_type` (String) The type of advancement for the rolling release. Must be either 'automatic' or 'manual-approval'.
 - `project_id` (String) The ID of the project.
+- `stages` (Attributes List) The stages for the rolling release configuration. (see [below for nested schema](#nestedatt--stages))
 
 ### Optional
 
-- `automatic_rolling_release` (Attributes List) Automatic rolling release configuration. (see [below for nested schema](#nestedatt--automatic_rolling_release))
-- `manual_rolling_release` (Attributes List) Manual rolling release configuration. (see [below for nested schema](#nestedatt--manual_rolling_release))
 - `team_id` (String) The ID of the Vercel team.
 
-<a id="nestedatt--automatic_rolling_release"></a>
-### Nested Schema for `automatic_rolling_release`
-
-Required:
-
-- `duration` (Number) The duration in minutes to wait before advancing to the next stage.
-- `target_percentage` (Number) The percentage of traffic to route to this stage.
-
-
-<a id="nestedatt--manual_rolling_release"></a>
-### Nested Schema for `manual_rolling_release`
+<a id="nestedatt--stages"></a>
+### Nested Schema for `stages`
 
 Required:
 
 - `target_percentage` (Number) The percentage of traffic to route to this stage.
+
+Optional:
+
+- `duration` (Number) The duration in minutes to wait before advancing to the next stage. Required for automatic advancement type.

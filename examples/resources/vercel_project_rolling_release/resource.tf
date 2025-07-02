@@ -5,7 +5,8 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_rolling_release" "example" {
 	project_id = vercel_project.example.id
-	manual_rolling_release = [
+	advancement_type = "manual-approval"
+	stages = [
 		{
 			target_percentage = 20
 		},
