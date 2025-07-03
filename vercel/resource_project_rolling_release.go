@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -52,6 +53,56 @@ func (r *projectRollingReleaseResource) Configure(ctx context.Context, req resou
 	r.client = client
 }
 
+// durationValidator validates that duration is only present when advancement_type is "automatic"
+type durationValidator struct{}
+
+func (v durationValidator) Description(ctx context.Context) string {
+	return "duration can only be set when advancement_type is 'automatic'"
+}
+
+func (v durationValidator) MarkdownDescription(ctx context.Context) string {
+	return "`duration` can only be set when `advancement_type` is `automatic`"
+}
+
+func (v durationValidator) ValidateObject(ctx context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) {
+	// Get the parent advancement_type value
+	parentPath := req.Path.ParentPath()
+	advancementTypePath := parentPath.AtName("advancement_type")
+
+	var advancementType types.String
+	diags := req.Config.GetAttribute(ctx, advancementTypePath, &advancementType)
+	if diags.HasError() {
+		return
+	}
+
+	// Check if duration is set
+	durationAttr, exists := req.ConfigValue.Attributes()["duration"]
+	if !exists {
+		return
+	}
+
+	duration := durationAttr.(types.Int64)
+	if duration.IsNull() || duration.IsUnknown() {
+		if advancementType.ValueString() == "manual-approval" {
+			return
+		}
+		resp.Diagnostics.AddAttributeError(
+			req.Path.AtName("duration"),
+			"Invalid duration configuration",
+			"duration can only be set when advancement_type is 'automatic'",
+		)
+	}
+
+	// If duration is set but advancement_type is not "automatic", add an error
+	if advancementType.ValueString() != "automatic" {
+		resp.Diagnostics.AddAttributeError(
+			req.Path.AtName("duration"),
+			"Invalid duration configuration",
+			"duration must be set when advancement_type is 'automatic'",
+		)
+	}
+}
+
 // Schema returns the schema information for a project rolling release resource.
 func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -76,6 +127,10 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 			"stages": schema.ListNestedAttribute{
 				MarkdownDescription: "The stages for the rolling release configuration.",
 				Required:            true,
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+					listvalidator.SizeAtMost(10),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"target_percentage": schema.Int64Attribute{
@@ -92,6 +147,9 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 								int64validator.Between(1, 10000),
 							},
 						},
+					},
+					Validators: []validator.Object{
+						durationValidator{},
 					},
 				},
 			},
