@@ -60,10 +60,10 @@ resource "vercel_project_deployment_retention" "example_customized" {
 
 ### Optional
 
-- `expiration_canceled` (String) The retention period for canceled deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.
-- `expiration_errored` (String) The retention period for errored deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.
-- `expiration_preview` (String) The retention period for preview deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.
-- `expiration_production` (String) The retention period for production deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.
+- `expiration_canceled` (String) The retention period for canceled deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.
+- `expiration_errored` (String) The retention period for errored deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.
+- `expiration_preview` (String) The retention period for preview deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.
+- `expiration_production` (String) The retention period for production deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.
 - `team_id` (String) The ID of the Vercel team.
 
 ## Import
