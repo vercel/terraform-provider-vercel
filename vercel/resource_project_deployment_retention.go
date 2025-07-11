@@ -66,37 +66,37 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"expiration_preview": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for preview deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
+				Description: "The retention period for preview deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
 				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
-					stringvalidator.OneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
+					stringvalidator.OneOf("1d", "1w", "1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"expiration_production": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for production deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
+				Description: "The retention period for production deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
 				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
-					stringvalidator.OneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
+					stringvalidator.OneOf("1d", "1w", "1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"expiration_canceled": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for canceled deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
+				Description: "The retention period for canceled deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
 				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
-					stringvalidator.OneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
+					stringvalidator.OneOf("1d", "1w", "1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"expiration_errored": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for errored deployments. Should be one of '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
+				Description: "The retention period for errored deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
 				Default:     stringdefault.StaticString("unlimited"),
 				Validators: []validator.String{
-					stringvalidator.OneOf("1m", "2m", "3m", "6m", "1y", "unlimited"),
+					stringvalidator.OneOf("1d", "1w", "1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
 			},
 			"project_id": schema.StringAttribute{

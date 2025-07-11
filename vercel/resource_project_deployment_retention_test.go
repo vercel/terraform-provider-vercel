@@ -49,9 +49,10 @@ func TestAcc_ProjectDeploymentRetention(t *testing.T) {
 				Config: cfg(testAccProjectDeploymentRetentionsConfig(nameSuffix, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectDeploymentRetentionExists(testClient(t), "vercel_project_deployment_retention.example", testTeam(t)),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_preview", "1m"),
+
+					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_preview", "1w"),
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_production", "2m"),
-					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_canceled", "3m"),
+					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_canceled", "1d"),
 					resource.TestCheckResourceAttr("vercel_project_deployment_retention.example", "expiration_errored", "1y"),
 				),
 			},
@@ -92,9 +93,9 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_deployment_retention" "example" {
 	project_id = vercel_project.example.id
-	expiration_preview    = "1m"
+	expiration_preview    = "1w"
 	expiration_production = "2m"
-	expiration_canceled   = "3m"
+	expiration_canceled   = "1d"
 	expiration_errored    = "1y"
 }
 `, projectName, githubRepo)
