@@ -81,6 +81,7 @@ resource "vercel_project" "example" {
 - `output_directory` (String) The output directory of the project. If omitted, this value will be automatically detected.
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
 - `preview_comments` (Boolean, Deprecated) Enables the Vercel Toolbar on your preview deployments.
+- `preview_deployments_disabled` (Boolean) Specifies whether preview deployments are disabled for this project.
 - `prioritise_production_builds` (Boolean) If enabled, builds for the Production environment will be prioritized over Preview environments.
 - `protection_bypass_for_automation` (Boolean) Allow automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `protection_bypass_for_automation_secret` field.
 - `protection_bypass_for_automation_secret` (String, Sensitive) If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.
@@ -92,7 +93,6 @@ resource "vercel_project" "example" {
 - `team_id` (String) The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
-- `preview_deployments_disabled` (Boolean) Specifies whether preview deployments are disabled for this project.
 
 ### Read-Only
 
