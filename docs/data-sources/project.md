@@ -74,6 +74,7 @@ data "vercel_project" "example" {
 - `skew_protection` (String) Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
+- `preview_deployments_disabled` (Boolean) Specifies whether preview deployments are disabled for this project.
 
 <a id="nestedatt--environment"></a>
 ### Nested Schema for `environment`

@@ -591,6 +591,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					stringvalidator.OneOf("enhanced", "turbo"),
 				},
 			},
+			"preview_deployments_disabled": schema.BoolAttribute{
+				Description:   "Specifies whether preview deployments are disabled for this project.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
 		},
 	}
 }
@@ -644,6 +650,7 @@ type Project struct {
 	ResourceConfig                      types.Object                    `tfsdk:"resource_config"`
 	OnDemandConcurrentBuilds            types.Bool                      `tfsdk:"on_demand_concurrent_builds"`
 	BuildMachineType                    types.String                    `tfsdk:"build_machine_type"`
+	PreviewDeploymentsDisabled          types.Bool                      `tfsdk:"preview_deployments_disabled"`
 }
 
 type GitComments struct {
@@ -766,6 +773,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		ResourceConfig:                    resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds, p.BuildMachineType),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
+		PreviewDeploymentsDisabled:        p.PreviewDeploymentsDisabled.ValueBoolPointer(),
 	}, diags
 }
 
@@ -846,6 +854,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		GitComments:                          gc.toUpdateProjectRequest(),
 		ResourceConfig:                       resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds, p.BuildMachineType),
 		NodeVersion:                          p.NodeVersion.ValueString(),
+		PreviewDeploymentsDisabled:           p.PreviewDeploymentsDisabled.ValueBoolPointer(),
 	}, nil
 }
 

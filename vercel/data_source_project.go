@@ -399,6 +399,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Optional:    true,
 				Computed:    true,
 			},
+			"preview_deployments_disabled": schema.BoolAttribute{
+				Description: "Specifies whether preview deployments are disabled for this project.",
+				Optional:    true,
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -444,6 +449,7 @@ type ProjectDataSource struct {
 	NodeVersion                         types.String          `tfsdk:"node_version"`
 	OnDemandConcurrentBuilds            types.Bool            `tfsdk:"on_demand_concurrent_builds"`
 	BuildMachineTYpe                    types.String          `tfsdk:"build_machine_type"`
+	PreviewDeploymentsDisabled          types.Bool            `tfsdk:"preview_deployments_disabled"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
@@ -511,6 +517,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		NodeVersion:                         project.NodeVersion,
 		OnDemandConcurrentBuilds:            project.OnDemandConcurrentBuilds,
 		BuildMachineTYpe:                    project.BuildMachineType,
+		PreviewDeploymentsDisabled:          project.PreviewDeploymentsDisabled,
 	}, nil
 }
 

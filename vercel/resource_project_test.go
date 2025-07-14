@@ -84,6 +84,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_timeout", "60"),
 					resource.TestCheckResourceAttr("vercel_project.test", "on_demand_concurrent_builds", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "enhanced"),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployments_disabled", "false"),
 				),
 			},
 			// Update testing
@@ -102,6 +103,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "on_demand_concurrent_builds", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", ""),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployments_disabled", "true"),
 				),
 			},
 			// Test mutual exclusivity validation
@@ -650,6 +652,7 @@ resource "vercel_project" "test" {
   on_demand_concurrent_builds = false
   enable_preview_feedback = false
   enable_production_feedback = true
+  preview_deployments_disabled = true
 }
 `, projectSuffix)
 }
@@ -1019,6 +1022,7 @@ resource "vercel_project" "test" {
   customer_success_code_visibility = true
   git_fork_protection = true
   prioritise_production_builds = true
+  preview_deployments_disabled = false
   directory_listing = true
   skew_protection = "7 days"
   oidc_token_config = {

@@ -92,6 +92,7 @@ resource "vercel_project" "example" {
 - `team_id` (String) The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
+- `preview_deployments_disabled` (Boolean) Specifies whether preview deployments are disabled for this project.
 
 ### Read-Only
 

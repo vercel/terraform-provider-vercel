@@ -61,6 +61,7 @@ type CreateProjectRequest struct {
 	ResourceConfig                    *ResourceConfig       `json:"resourceConfig,omitempty"`
 	EnablePreviewFeedback             *bool                 `json:"enablePreviewFeedback,omitempty"`
 	EnableProductionFeedback          *bool                 `json:"enableProductionFeedback,omitempty"`
+	PreviewDeploymentsDisabled        *bool                 `json:"previewDeploymentsDisabled,omitempty"`
 }
 
 // CreateProject will create a project within Vercel.
@@ -327,6 +328,7 @@ type UpdateProjectRequest struct {
 	GitComments                          *GitComments                    `json:"gitComments"`
 	ResourceConfig                       *ResourceConfig                 `json:"resourceConfig,omitempty"`
 	NodeVersion                          string                          `json:"nodeVersion,omitempty"`
+	PreviewDeploymentsDisabled           *bool                           `json:"previewDeploymentsDisabled,omitempty"`
 }
 
 // UpdateProject updates an existing projects configuration within Vercel.
