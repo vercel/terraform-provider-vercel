@@ -304,13 +304,6 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	// Log the request for debugging
-	tflog.Info(ctx, "creating rolling release", map[string]any{
-		"enabled":          request.RollingRelease.Enabled,
-		"advancement_type": request.RollingRelease.AdvancementType,
-		"stages":           request.RollingRelease.Stages,
-	})
-
 	out, err := r.client.UpdateRollingRelease(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
