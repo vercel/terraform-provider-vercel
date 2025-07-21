@@ -174,36 +174,6 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	// Convert stages using a more robust approach
 	var rollingReleaseStages []RollingReleaseStage
 	diags = e.Stages.ElementsAs(context.Background(), &rollingReleaseStages, false)
-	if diags.HasError() {
-		// If ElementsAs fails, try to extract values manually
-		rollingReleaseStages = []RollingReleaseStage{}
-		// Use ElementsAs with a different approach
-		var rawElements []attr.Value
-		diags = e.Stages.ElementsAs(context.Background(), &rawElements, false)
-		if !diags.HasError() {
-			for _, elem := range rawElements {
-				if elem.IsNull() || elem.IsUnknown() {
-					continue
-				}
-
-				// Try to extract the object values
-				if obj, ok := elem.(types.Object); ok {
-					targetPercentage := obj.Attributes()["target_percentage"].(types.Int64)
-					duration := obj.Attributes()["duration"]
-
-					stage := RollingReleaseStage{
-						TargetPercentage: targetPercentage,
-					}
-
-					if !duration.IsNull() && !duration.IsUnknown() {
-						stage.Duration = duration.(types.Int64)
-					}
-
-					rollingReleaseStages = append(rollingReleaseStages, stage)
-				}
-			}
-		}
-	}
 
 	// Add all stages from config
 	stages = make([]client.RollingReleaseStage, len(rollingReleaseStages))
