@@ -204,19 +204,6 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 		"stages_count":     len(stages),
 	})
 
-	// If no configuration is provided, disable the rolling release
-	if advancementType == "" {
-		return client.UpdateRollingReleaseRequest{
-			RollingRelease: client.RollingRelease{
-				Enabled:         false,
-				AdvancementType: "",
-				Stages:          []client.RollingReleaseStage{},
-			},
-			ProjectID: e.ProjectID.ValueString(),
-			TeamID:    e.TeamID.ValueString(),
-		}, diags
-	}
-
 	return client.UpdateRollingReleaseRequest{
 		RollingRelease: client.RollingRelease{
 			Enabled:         true,
@@ -473,18 +460,7 @@ func (r *projectRollingReleaseResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	// Disable rolling release
-	request := client.UpdateRollingReleaseRequest{
-		RollingRelease: client.RollingRelease{
-			Enabled:         false,
-			AdvancementType: "",
-			Stages:          []client.RollingReleaseStage{},
-		},
-		ProjectID: state.ProjectID.ValueString(),
-		TeamID:    state.TeamID.ValueString(),
-	}
-
-	_, err := r.client.UpdateRollingRelease(ctx, request)
+	err := r.client.DeleteRollingRelease(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting project rolling release",
