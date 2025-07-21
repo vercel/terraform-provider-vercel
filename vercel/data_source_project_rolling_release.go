@@ -136,7 +136,6 @@ func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 	resp.Diagnostics.Append(resp.State.Set(ctx, &convertedData)...)
 }
 
-// Like convertResponseToRollingReleaseDataSource, but if API is empty/disabled, use config if present
 func convertResponseToRollingReleaseDataSourceWithConfig(response client.RollingReleaseInfo, config ProjectRollingReleaseDataSourceModel, ctx context.Context) (ProjectRollingReleaseDataSourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
