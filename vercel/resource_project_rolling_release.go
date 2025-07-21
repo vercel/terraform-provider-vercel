@@ -223,17 +223,18 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		TeamID:    types.StringValue(response.TeamID),
 	}
 
-	// If the API response shows disabled or advancementType is empty, but the plan has configuration, use the plan's values
-	if (!response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "") && plan != nil &&
-		!plan.AdvancementType.IsNull() && plan.AdvancementType.ValueString() != "" &&
-		!plan.Stages.IsNull() && len(plan.Stages.Elements()) > 0 {
-		result.AdvancementType = plan.AdvancementType
-		result.Stages = plan.Stages
-		return result, diags
-	}
-
 	// If disabled or advancementType is empty and no plan, return empty values
 	if !response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "" {
+		// If the API response shows disabled or advancementType is empty, but the plan has configuration, use the plan's values
+		if plan != nil &&
+			!plan.AdvancementType.IsNull() && plan.AdvancementType.ValueString() != "" &&
+			!plan.Stages.IsNull() && len(plan.Stages.Elements()) > 0 {
+
+			result.AdvancementType = plan.AdvancementType
+			result.Stages = plan.Stages
+			return result, diags
+		}
+
 		result.AdvancementType = types.StringNull()
 		result.Stages = types.ListNull(RollingReleaseStageElementType)
 		return result, diags
