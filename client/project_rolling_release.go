@@ -60,57 +60,30 @@ type UpdateRollingReleaseRequest struct {
 // UpdateRollingRelease will update an existing rolling release to the latest information.
 func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRollingReleaseRequest) (RollingReleaseInfo, error) {
 	request.TeamID = c.TeamID(request.TeamID)
-	if request.RollingRelease.Enabled {
-		enableRequest := map[string]any{
-			"enabled":         true,
-			"advancementType": request.RollingRelease.AdvancementType,
-			"stages":          request.RollingRelease.Stages,
-		}
-
-		var result RollingReleaseInfo
-		err := c.doRequest(clientRequest{
-			ctx:    ctx,
-			method: "PATCH",
-			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
-			body:   string(mustMarshal(enableRequest)),
-		}, &result)
-		if err != nil {
-			return RollingReleaseInfo{}, fmt.Errorf("error enabling rolling release: %w", err)
-		}
-
-		result.ProjectID = request.ProjectID
-		result.TeamID = request.TeamID
-		tflog.Info(ctx, "enabled rolling release", map[string]any{
-			"response": result,
-			"request":  request,
-		})
-		return result, nil
-	} else {
-		// For disabling, just send the request as is
-		disabledRequest := UpdateRollingReleaseRequest{
-			RollingRelease: RollingRelease{
-				Enabled:         false,
-				AdvancementType: "",
-				Stages:          []RollingReleaseStage{},
-			},
-		}
-
-		var result RollingReleaseInfo
-		err := c.doRequest(clientRequest{
-			ctx:    ctx,
-			method: "PATCH",
-			url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
-			body:   string(mustMarshal(disabledRequest.RollingRelease)),
-		}, &result)
-		if err != nil {
-			return RollingReleaseInfo{}, fmt.Errorf("error disabling rolling release: %w", err)
-		}
-
-		result.ProjectID = request.ProjectID
-		result.TeamID = request.TeamID
-
-		return result, nil
+	enableRequest := map[string]any{
+		"enabled":         true,
+		"advancementType": request.RollingRelease.AdvancementType,
+		"stages":          request.RollingRelease.Stages,
 	}
+
+	var result RollingReleaseInfo
+	err := c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PATCH",
+		url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
+		body:   string(mustMarshal(enableRequest)),
+	}, &result)
+	if err != nil {
+		return RollingReleaseInfo{}, fmt.Errorf("error enabling rolling release: %w", err)
+	}
+
+	result.ProjectID = request.ProjectID
+	result.TeamID = request.TeamID
+	tflog.Info(ctx, "enabled rolling release", map[string]any{
+		"response": result,
+		"request":  request,
+	})
+	return result, nil
 }
 
 // DeleteRollingRelease will delete the rolling release for a given project.
