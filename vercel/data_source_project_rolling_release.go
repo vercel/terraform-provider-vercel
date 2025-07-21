@@ -53,8 +53,8 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 		MarkdownDescription: "Data source for a Vercel project rolling release configuration.",
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the project.",
-				Required:            true,
+				Description: "The ID of the project.",
+				Required:    true,
 			},
 			"team_id": schema.StringAttribute{
 				Optional:    true,
@@ -62,21 +62,21 @@ func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasour
 				Description: "The ID of the Vercel team.",
 			},
 			"advancement_type": schema.StringAttribute{
-				MarkdownDescription: "The type of advancement for the rolling release. Either 'automatic' or 'manual-approval'.",
-				Computed:            true,
+				Description: "The type of advancement for the rolling release. Either 'automatic' or 'manual-approval'.",
+				Computed:    true,
 			},
 			"stages": schema.ListNestedAttribute{
-				MarkdownDescription: "The stages for the rolling release configuration.",
-				Computed:            true,
+				Description: "The stages for the rolling release configuration.",
+				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"target_percentage": schema.Int64Attribute{
-							MarkdownDescription: "The percentage of traffic to route to this stage.",
-							Computed:            true,
+							Description: "The percentage of traffic to route to this stage.",
+							Computed:    true,
 						},
 						"duration": schema.Int64Attribute{
-							MarkdownDescription: "The duration in minutes to wait before advancing to the next stage. Present for automatic advancement type.",
-							Computed:            true,
+							Description: "The duration in minutes to wait before advancing to the next stage. Present for automatic advancement type.",
+							Computed:    true,
 						},
 					},
 				},
