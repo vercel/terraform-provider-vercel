@@ -125,14 +125,6 @@ func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 		return
 	}
 
-	tflog.Info(ctx, "converted data before setting state", map[string]any{
-		"project_id":       convertedData.ProjectID.ValueString(),
-		"team_id":          convertedData.TeamID.ValueString(),
-		"advancement_type": convertedData.AdvancementType.ValueString(),
-		"stages_is_null":   convertedData.Stages.IsNull(),
-		"stages_length":    len(convertedData.Stages.Elements()),
-	})
-
 	resp.Diagnostics.Append(resp.State.Set(ctx, &convertedData)...)
 }
 
