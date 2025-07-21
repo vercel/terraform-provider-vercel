@@ -3,7 +3,6 @@ package vercel
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -106,14 +105,7 @@ func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 	var convertedData ProjectRollingReleaseDataSourceModel
 	var diags diag.Diagnostics
 
-	// Retry up to 10 times (10s) for eventual consistency
-	for i := 0; i < 10; i++ {
-		out, err = d.client.GetRollingRelease(ctx, data.ProjectID.ValueString(), data.TeamID.ValueString())
-		if err == nil && out.RollingRelease.Enabled && len(out.RollingRelease.Stages) > 0 {
-			break // found config
-		}
-		time.Sleep(1 * time.Second)
-	}
+	out, err = d.client.GetRollingRelease(ctx, data.ProjectID.ValueString(), data.TeamID.ValueString())
 
 	if client.NotFound(err) {
 		resp.Diagnostics.AddError(
