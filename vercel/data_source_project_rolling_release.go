@@ -107,13 +107,6 @@ func (d *projectRollingReleaseDataSource) Read(ctx context.Context, req datasour
 
 	out, err = d.client.GetRollingRelease(ctx, data.ProjectID.ValueString(), data.TeamID.ValueString())
 
-	if client.NotFound(err) {
-		resp.Diagnostics.AddError(
-			"Error reading project rolling release",
-			fmt.Sprintf("No project rolling release found with id %s %s", data.TeamID.ValueString(), data.ProjectID.ValueString()),
-		)
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project rolling release",
