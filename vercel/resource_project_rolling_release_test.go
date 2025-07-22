@@ -118,39 +118,34 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					}
 					resource "vercel_project_rolling_release" "example" {
 						project_id = vercel_project.example.id
-						rolling_release = {
-							advancement_type = "automatic"
-							stages = [
-								{
-									target_percentage = 30
-									// Duration is omitted here for the first stage
-								},
-								{
-									target_percentage = 70
-									duration          = 30 // Explicit duration for a middle stage
-								}
-							]
-						}
+						advancement_type = "automatic"
+						stages = [
+							{
+								target_percentage = 30
+								// Duration is omitted here for the first stage
+							},
+							{
+								target_percentage = 70
+								duration          = 30 // Explicit duration for a middle stage
+							}
+						]
 					}
 					`, nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.advancement_type", "automatic"),
-					resource.TestCheckResourceAttr(resourceName, "rolling_release.stages.#", "3"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+					resource.TestCheckResourceAttr(resourceName, "advancement_type", "automatic"),
+					resource.TestCheckResourceAttr(resourceName, "stages.#", "3"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
 						"target_percentage": "30",
 						"duration":          "60", // Asserting the default value
-						"require_approval":  "false",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
 						"target_percentage": "70",
 						"duration":          "30", // Asserting the explicit value
-						"require_approval":  "false",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "rolling_release.stages.*", map[string]string{
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
 						"target_percentage": "100",
 						// Duration for the last stage is expected to be null or not present
-						"require_approval": "false",
 					}),
 				),
 			},
