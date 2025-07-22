@@ -317,6 +317,9 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 				// Add duration if it exists (for automatic advancement type)
 				if stage.Duration != nil {
 					rollingReleaseStage.Duration = types.Int64Value(int64(*stage.Duration))
+				} else {
+					// Set duration to null if not present
+					rollingReleaseStage.Duration = types.Int64Null()
 				}
 
 				rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
@@ -357,6 +360,9 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		// Add duration if it exists (for automatic advancement type)
 		if stage.Duration != nil {
 			rollingReleaseStage.Duration = types.Int64Value(int64(*stage.Duration))
+		} else {
+			// Set duration to null if not present
+			rollingReleaseStage.Duration = types.Int64Null()
 		}
 
 		rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)

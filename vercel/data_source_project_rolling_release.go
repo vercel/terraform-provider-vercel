@@ -176,6 +176,9 @@ func convertResponseToRollingReleaseDataSourceWithConfig(response client.Rolling
 		}
 		if stage.Duration != nil {
 			rollingReleaseStage.Duration = types.Int64Value(int64(*stage.Duration))
+		} else {
+			// Set duration to null if not present
+			rollingReleaseStage.Duration = types.Int64Null()
 		}
 		rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
 	}
