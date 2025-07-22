@@ -394,13 +394,6 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	var state RollingReleaseInfo
-	diags = req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	// Convert plan to client request
 	request, diags := plan.toUpdateRollingReleaseRequest()
 	resp.Diagnostics.Append(diags...)
