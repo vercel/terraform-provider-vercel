@@ -188,6 +188,10 @@ func (e *RollingReleaseInfo) toCreateRollingReleaseRequest() (client.CreateRolli
 			duration := int(stage.Duration.ValueInt64())
 			clientStage.Duration = &duration
 		}
+		if advancementType == "automatic" && (stage.Duration.IsNull() || stage.Duration.IsUnknown()) {
+			duration := int(60)
+			clientStage.Duration = &duration
+		}
 
 		stages[i] = clientStage
 	}
@@ -236,6 +240,11 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 		// Add duration for automatic advancement type
 		if advancementType == "automatic" && !stage.Duration.IsNull() && !stage.Duration.IsUnknown() {
 			duration := int(stage.Duration.ValueInt64())
+			clientStage.Duration = &duration
+		}
+
+		if advancementType == "automatic" && (stage.Duration.IsNull() || stage.Duration.IsUnknown()) {
+			duration := int(60)
 			clientStage.Duration = &duration
 		}
 
