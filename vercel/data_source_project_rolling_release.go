@@ -182,6 +182,22 @@ func convertResponseToRollingReleaseDataSourceWithConfig(response client.Rolling
 		}
 		rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
 	}
+
+	// Add terminal stage if not present
+	has100Stage := false
+	for _, stage := range response.RollingRelease.Stages {
+		if stage.TargetPercentage == 100 {
+			has100Stage = true
+			break
+		}
+	}
+
+	if !has100Stage {
+		rollingReleaseStages = append(rollingReleaseStages, RollingReleaseStage{
+			TargetPercentage: types.Int64Value(100),
+			Duration:         types.Int64Null(),
+		})
+	}
 	tflog.Info(ctx, "converted stages", map[string]any{
 		"rolling_release_stages_count": len(rollingReleaseStages),
 	})

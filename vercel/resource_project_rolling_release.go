@@ -325,6 +325,22 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 				rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
 			}
 
+			// Add terminal stage if not present
+			has100Stage := false
+			for _, stage := range response.RollingRelease.Stages {
+				if stage.TargetPercentage == 100 {
+					has100Stage = true
+					break
+				}
+			}
+
+			if !has100Stage {
+				rollingReleaseStages = append(rollingReleaseStages, RollingReleaseStage{
+					TargetPercentage: types.Int64Value(100),
+					Duration:         types.Int64Null(),
+				})
+			}
+
 			// Convert to Terraform types
 			stages := make([]attr.Value, len(rollingReleaseStages))
 			for i, stage := range rollingReleaseStages {
@@ -368,6 +384,22 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
 	}
 
+	// Add terminal stage if not present
+	has100Stage := false
+	for _, stage := range response.RollingRelease.Stages {
+		if stage.TargetPercentage == 100 {
+			has100Stage = true
+			break
+		}
+	}
+
+	if !has100Stage {
+		rollingReleaseStages = append(rollingReleaseStages, RollingReleaseStage{
+			TargetPercentage: types.Int64Value(100),
+			Duration:         types.Int64Null(),
+		})
+	}
+
 	// Convert to Terraform types
 	stages := make([]attr.Value, len(rollingReleaseStages))
 	for i, stage := range rollingReleaseStages {
@@ -386,8 +418,11 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 
 	// Log the conversion result for debugging
 	tflog.Info(ctx, "converted rolling release response", map[string]any{
-		"advancement_type": response.RollingRelease.AdvancementType,
-		"stages_count":     len(response.RollingRelease.Stages),
+		"advancement_type":       response.RollingRelease.AdvancementType,
+		"stages_count":           len(response.RollingRelease.Stages),
+		"api_stages":             response.RollingRelease.Stages,
+		"converted_stages_count": len(rollingReleaseStages),
+		"converted_stages":       rollingReleaseStages,
 	})
 
 	return result, diags
@@ -431,6 +466,13 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Log the request for debugging
+	tflog.Info(ctx, "creating rolling release", map[string]any{
+		"enabled":          request.RollingRelease.Enabled,
+		"advancement_type": request.RollingRelease.AdvancementType,
+		"stages":           request.RollingRelease.Stages,
+	})
 
 	out, err := r.client.CreateRollingRelease(ctx, request)
 	if err != nil {
