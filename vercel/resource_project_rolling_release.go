@@ -273,7 +273,7 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		TeamID:    types.StringValue(response.TeamID),
 	}
 
-	// If disabled or advancementType is empty and no plan, return empty values
+	// If disabled or advancementType is empty, check if we have stages to determine if it's configured
 	if !response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "" {
 		// If the API response shows disabled or advancementType is empty, but the plan has configuration, use the plan's values
 		if plan != nil &&
@@ -285,8 +285,58 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			return result, diags
 		}
 
-		result.AdvancementType = types.StringNull()
-		result.Stages = types.ListNull(RollingReleaseStageElementType)
+		// For import or when no plan is available, check if there are stages in the response
+		// If there are stages, assume the rolling release is configured and use the response data
+		if len(response.RollingRelease.Stages) > 0 {
+			// Try to infer the advancement type from the stages
+			advancementType := "manual-approval" // Default to manual-approval
+			for _, stage := range response.RollingRelease.Stages {
+				if stage.Duration != nil {
+					advancementType = "automatic"
+					break
+				}
+			}
+			result.AdvancementType = types.StringValue(advancementType)
+
+			// Convert the stages from the response
+			var rollingReleaseStages []RollingReleaseStage
+			for _, stage := range response.RollingRelease.Stages {
+				// Skip the terminal stage (100%)
+				if stage.TargetPercentage == 100 {
+					continue
+				}
+
+				rollingReleaseStage := RollingReleaseStage{
+					TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
+				}
+
+				// Add duration if it exists (for automatic advancement type)
+				if stage.Duration != nil {
+					rollingReleaseStage.Duration = types.Int64Value(int64(*stage.Duration))
+				}
+
+				rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
+			}
+
+			// Convert to Terraform types
+			stages := make([]attr.Value, len(rollingReleaseStages))
+			for i, stage := range rollingReleaseStages {
+				stageObj := types.ObjectValueMust(
+					RollingReleaseStageElementType.AttrTypes,
+					map[string]attr.Value{
+						"target_percentage": stage.TargetPercentage,
+						"duration":          stage.Duration,
+					},
+				)
+				stages[i] = stageObj
+			}
+
+			stagesList := types.ListValueMust(RollingReleaseStageElementType, stages)
+			result.Stages = stagesList
+		} else {
+			result.AdvancementType = types.StringNull()
+			result.Stages = types.ListNull(RollingReleaseStageElementType)
+		}
 		return result, diags
 	}
 
