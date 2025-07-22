@@ -406,6 +406,29 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 		return
 	}
 
+	// First, check if a rolling release already exists
+	existingRelease, err := r.client.GetRollingRelease(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	if err != nil && !client.NotFound(err) {
+		resp.Diagnostics.AddError(
+			"Error checking existing project rolling release",
+			fmt.Sprintf("Could not check if project rolling release exists, unexpected error: %s",
+				err,
+			),
+		)
+		return
+	}
+
+	// If a rolling release already exists and is enabled, return an error
+	if err == nil && existingRelease.RollingRelease.Enabled {
+		resp.Diagnostics.AddError(
+			"Project rolling release already exists",
+			fmt.Sprintf("A rolling release is already configured for project %s. Please use the update operation instead.",
+				plan.ProjectID.ValueString(),
+			),
+		)
+		return
+	}
+
 	// Convert plan to client request
 	request, diags := plan.toCreateRollingReleaseRequest()
 	resp.Diagnostics.Append(diags...)
