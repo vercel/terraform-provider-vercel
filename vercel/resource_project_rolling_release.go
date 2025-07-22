@@ -310,11 +310,6 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			// Convert the stages from the response
 			var rollingReleaseStages []RollingReleaseStage
 			for _, stage := range response.RollingRelease.Stages {
-				// Skip the terminal stage (100%)
-				if stage.TargetPercentage == 100 {
-					continue
-				}
-
 				rollingReleaseStage := RollingReleaseStage{
 					TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
 				}
@@ -352,14 +347,9 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 	// Set the advancement type
 	result.AdvancementType = types.StringValue(response.RollingRelease.AdvancementType)
 
-	// Convert API stages to stages (excluding terminal stage)
+	// Convert API stages to stages
 	var rollingReleaseStages []RollingReleaseStage
 	for _, stage := range response.RollingRelease.Stages {
-		// Skip the terminal stage (100%)
-		if stage.TargetPercentage == 100 {
-			continue
-		}
-
 		rollingReleaseStage := RollingReleaseStage{
 			TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
 		}

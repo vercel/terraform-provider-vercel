@@ -168,12 +168,9 @@ func convertResponseToRollingReleaseDataSourceWithConfig(response client.Rolling
 	}
 	result.AdvancementType = types.StringValue(advancementType)
 
-	// Map stages (excluding terminal stage)
+	// Map stages
 	var rollingReleaseStages []RollingReleaseStage
 	for _, stage := range response.RollingRelease.Stages {
-		if stage.TargetPercentage == 100 {
-			continue
-		}
 		rollingReleaseStage := RollingReleaseStage{
 			TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
 		}

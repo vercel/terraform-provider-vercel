@@ -21,14 +21,14 @@ func TestAcc_ProjectRollingReleaseDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectRollingReleaseExists(testClient(t), "vercel_project_rolling_release.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "advancement_type", "manual-approval"),
-					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "stages.#", "2"),
+					resource.TestCheckResourceAttr("vercel_project_rolling_release.example", "stages.#", "3"),
 				),
 			},
 			{
 				Config: cfg(testAccProjectRollingReleasesDataSourceConfigWithDataSource(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "advancement_type", "manual-approval"),
-					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "stages.#", "2"),
+					resource.TestCheckResourceAttr("data.vercel_project_rolling_release.example", "stages.#", "3"),
 				),
 			},
 		},

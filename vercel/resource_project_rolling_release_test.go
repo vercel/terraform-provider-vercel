@@ -53,12 +53,15 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "advancement_type", "manual-approval"),
-					resource.TestCheckResourceAttr(resourceName, "stages.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "stages.#", "3"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
 						"target_percentage": "20",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
 						"target_percentage": "50",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
+						"target_percentage": "100",
 					}),
 				),
 			},
@@ -77,7 +80,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "advancement_type", "manual-approval"),
-					resource.TestCheckResourceAttr(resourceName, "stages.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "stages.#", "4"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
 						"target_percentage": "20",
 					}),
@@ -86,6 +89,9 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
 						"target_percentage": "80",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
+						"target_percentage": "100",
 					}),
 				),
 			},
@@ -96,7 +102,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_project.example", "id"),
 					testAccProjectRollingReleaseExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "advancement_type", "automatic"),
-					resource.TestCheckResourceAttr(resourceName, "stages.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "stages.#", "4"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
 						"target_percentage": "20",
 						"duration":          "10",
@@ -108,6 +114,9 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
 						"target_percentage": "80",
 						"duration":          "10",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "stages.*", map[string]string{
+						"target_percentage": "100",
 					}),
 				),
 			},
