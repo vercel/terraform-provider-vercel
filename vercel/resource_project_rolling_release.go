@@ -165,6 +165,56 @@ type RollingReleaseInfo struct {
 	TeamID          types.String `tfsdk:"team_id"`
 }
 
+func (e *RollingReleaseInfo) toCreateRollingReleaseRequest() (client.CreateRollingReleaseRequest, diag.Diagnostics) {
+	var stages []client.RollingReleaseStage
+	var diags diag.Diagnostics
+
+	advancementType := e.AdvancementType.ValueString()
+
+	// Convert stages using a more robust approach
+	var rollingReleaseStages []RollingReleaseStage
+	diags = e.Stages.ElementsAs(context.Background(), &rollingReleaseStages, false)
+
+	// Add all stages from config
+	stages = make([]client.RollingReleaseStage, len(rollingReleaseStages))
+	for i, stage := range rollingReleaseStages {
+		clientStage := client.RollingReleaseStage{
+			TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
+			RequireApproval:  advancementType == "manual-approval",
+		}
+
+		// Add duration for automatic advancement type
+		if advancementType == "automatic" && !stage.Duration.IsNull() && !stage.Duration.IsUnknown() {
+			duration := int(stage.Duration.ValueInt64())
+			clientStage.Duration = &duration
+		}
+
+		stages[i] = clientStage
+	}
+
+	// Add terminal stage (100%) without approval
+	stages = append(stages, client.RollingReleaseStage{
+		TargetPercentage: 100,
+		RequireApproval:  false,
+	})
+
+	// Log the request for debugging
+	tflog.Info(context.Background(), "converting to update request", map[string]any{
+		"advancement_type": advancementType,
+		"stages_count":     len(stages),
+	})
+
+	return client.CreateRollingReleaseRequest{
+		RollingRelease: client.RollingRelease{
+			Enabled:         true,
+			AdvancementType: advancementType,
+			Stages:          stages,
+		},
+		ProjectID: e.ProjectID.ValueString(),
+		TeamID:    e.TeamID.ValueString(),
+	}, diags
+}
+
 func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRollingReleaseRequest, diag.Diagnostics) {
 	var stages []client.RollingReleaseStage
 	var diags diag.Diagnostics
@@ -298,13 +348,13 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 	}
 
 	// Convert plan to client request
-	request, diags := plan.toUpdateRollingReleaseRequest()
+	request, diags := plan.toCreateRollingReleaseRequest()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	out, err := r.client.UpdateRollingRelease(ctx, request)
+	out, err := r.client.CreateRollingRelease(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project rolling release",
