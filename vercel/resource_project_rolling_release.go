@@ -196,14 +196,8 @@ func (e *RollingReleaseInfo) toCreateRollingReleaseRequest() (client.CreateRolli
 		stages[i] = clientStage
 	}
 
-	// Add terminal stage (100%) without approval
-	stages = append(stages, client.RollingReleaseStage{
-		TargetPercentage: 100,
-		RequireApproval:  false,
-	})
-
 	// Log the request for debugging
-	tflog.Info(context.Background(), "converting to update request", map[string]any{
+	tflog.Info(context.Background(), "converting to create request", map[string]any{
 		"advancement_type": advancementType,
 		"stages_count":     len(stages),
 	})
@@ -251,11 +245,7 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 		stages[i] = clientStage
 	}
 
-	// Add terminal stage (100%) without approval
-	stages = append(stages, client.RollingReleaseStage{
-		TargetPercentage: 100,
-		RequireApproval:  false,
-	})
+	// Do NOT add a terminal 100% stage manually!
 
 	// Log the request for debugging
 	tflog.Info(context.Background(), "converting to update request", map[string]any{
@@ -274,7 +264,7 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	}, diags
 }
 
-func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *RollingReleaseInfo, ctx context.Context) (RollingReleaseInfo, diag.Diagnostics) {
+func ConvertResponseToRollingRelease(response client.RollingReleaseInfo, plan *RollingReleaseInfo, ctx context.Context) (RollingReleaseInfo, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	result := RollingReleaseInfo{
@@ -284,7 +274,6 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 
 	// If disabled or advancementType is empty, check if we have stages to determine if it's configured
 	if !response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "" {
-		// If the API response shows disabled or advancementType is empty, but the plan has configuration, use the plan's values
 		if plan != nil &&
 			!plan.AdvancementType.IsNull() && plan.AdvancementType.ValueString() != "" &&
 			!plan.Stages.IsNull() && len(plan.Stages.Elements()) > 0 {
@@ -294,11 +283,8 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			return result, diags
 		}
 
-		// For import or when no plan is available, check if there are stages in the response
-		// If there are stages, assume the rolling release is configured and use the response data
 		if len(response.RollingRelease.Stages) > 0 {
-			// Try to infer the advancement type from the stages
-			advancementType := "manual-approval" // Default to manual-approval
+			advancementType := "manual-approval"
 			for _, stage := range response.RollingRelease.Stages {
 				if stage.Duration != nil {
 					advancementType = "automatic"
@@ -307,41 +293,19 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 			}
 			result.AdvancementType = types.StringValue(advancementType)
 
-			// Convert the stages from the response
 			var rollingReleaseStages []RollingReleaseStage
 			for _, stage := range response.RollingRelease.Stages {
 				rollingReleaseStage := RollingReleaseStage{
 					TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
 				}
-
-				// Add duration if it exists (for automatic advancement type)
 				if stage.Duration != nil {
 					rollingReleaseStage.Duration = types.Int64Value(int64(*stage.Duration))
 				} else {
-					// Set duration to null if not present
 					rollingReleaseStage.Duration = types.Int64Null()
 				}
-
 				rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
 			}
-
-			// Add terminal stage if not present
-			has100Stage := false
-			for _, stage := range response.RollingRelease.Stages {
-				if stage.TargetPercentage == 100 {
-					has100Stage = true
-					break
-				}
-			}
-
-			if !has100Stage {
-				rollingReleaseStages = append(rollingReleaseStages, RollingReleaseStage{
-					TargetPercentage: types.Int64Value(100),
-					Duration:         types.Int64Null(),
-				})
-			}
-
-			// Convert to Terraform types
+			// Do NOT add a terminal 100% stage manually!
 			stages := make([]attr.Value, len(rollingReleaseStages))
 			for i, stage := range rollingReleaseStages {
 				stageObj := types.ObjectValueMust(
@@ -353,7 +317,6 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 				)
 				stages[i] = stageObj
 			}
-
 			stagesList := types.ListValueMust(RollingReleaseStageElementType, stages)
 			result.Stages = stagesList
 		} else {
@@ -363,44 +326,21 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		return result, diags
 	}
 
-	// Set the advancement type
 	result.AdvancementType = types.StringValue(response.RollingRelease.AdvancementType)
 
-	// Convert API stages to stages
 	var rollingReleaseStages []RollingReleaseStage
 	for _, stage := range response.RollingRelease.Stages {
 		rollingReleaseStage := RollingReleaseStage{
 			TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
 		}
-
-		// Add duration if it exists (for automatic advancement type)
 		if stage.Duration != nil {
 			rollingReleaseStage.Duration = types.Int64Value(int64(*stage.Duration))
 		} else {
-			// Set duration to null if not present
 			rollingReleaseStage.Duration = types.Int64Null()
 		}
-
 		rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
 	}
-
-	// Add terminal stage if not present
-	has100Stage := false
-	for _, stage := range response.RollingRelease.Stages {
-		if stage.TargetPercentage == 100 {
-			has100Stage = true
-			break
-		}
-	}
-
-	if !has100Stage {
-		rollingReleaseStages = append(rollingReleaseStages, RollingReleaseStage{
-			TargetPercentage: types.Int64Value(100),
-			Duration:         types.Int64Null(),
-		})
-	}
-
-	// Convert to Terraform types
+	// Do NOT add a terminal 100% stage manually!
 	stages := make([]attr.Value, len(rollingReleaseStages))
 	for i, stage := range rollingReleaseStages {
 		stageObj := types.ObjectValueMust(
@@ -412,10 +352,8 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		)
 		stages[i] = stageObj
 	}
-
 	stagesList := types.ListValueMust(RollingReleaseStageElementType, stages)
 	result.Stages = stagesList
-
 	// Log the conversion result for debugging
 	tflog.Info(ctx, "converted rolling release response", map[string]any{
 		"advancement_type":       response.RollingRelease.AdvancementType,
@@ -423,8 +361,11 @@ func convertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		"api_stages":             response.RollingRelease.Stages,
 		"converted_stages_count": len(rollingReleaseStages),
 		"converted_stages":       rollingReleaseStages,
+		"final_stages_count":     len(stages),
+		"final_stages":           stages,
+		"stages_list_type":       fmt.Sprintf("%T", stagesList),
+		"stages_list_elements":   stagesList.Elements(),
 	})
-
 	return result, diags
 }
 
@@ -486,7 +427,7 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 	}
 
 	// Convert response to state
-	result, diags := convertResponseToRollingRelease(out, &plan, ctx)
+	result, diags := ConvertResponseToRollingRelease(out, &plan, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -537,7 +478,7 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 		"stages":           out.RollingRelease.Stages,
 	})
 
-	result, diags := convertResponseToRollingRelease(out, &state, ctx)
+	result, diags := ConvertResponseToRollingRelease(out, &state, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -590,7 +531,7 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 	}
 
 	// Convert response to state
-	result, diags := convertResponseToRollingRelease(out, &plan, ctx)
+	result, diags := ConvertResponseToRollingRelease(out, &plan, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -654,7 +595,7 @@ func (r *projectRollingReleaseResource) ImportState(ctx context.Context, req res
 	}
 
 	// For import, we don't have any state to preserve
-	result, diags := convertResponseToRollingRelease(out, nil, ctx)
+	result, diags := ConvertResponseToRollingRelease(out, nil, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
