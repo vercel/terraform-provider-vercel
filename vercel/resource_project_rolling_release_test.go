@@ -114,7 +114,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 			{
 				Config: cfg(fmt.Sprintf(`
 					resource "vercel_project" "example" {
-						name = "test-acc-rolling-releases-auto-duration-%s"
+						name = "test-acc-rr-auto-duration-%s"
 					}
 					resource "vercel_project_rolling_release" "example" {
 						project_id = vercel_project.example.id
