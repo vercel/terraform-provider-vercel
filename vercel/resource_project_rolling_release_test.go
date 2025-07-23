@@ -5,11 +5,97 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
+	"github.com/vercel/terraform-provider-vercel/v3/vercel"
 )
+
+// TestRollingReleaseRequestConversion tests the request conversion logic
+func TestRollingReleaseRequestConversion(t *testing.T) {
+	// Test manual-approval advancement type
+	info := vercel.RollingReleaseInfo{
+		AdvancementType: types.StringValue("manual-approval"),
+		ProjectID:       types.StringValue("test-project"),
+		TeamID:          types.StringValue("test-team"),
+		Stages: types.ListValueMust(vercel.RollingReleaseStageElementType, []attr.Value{
+			types.ObjectValueMust(vercel.RollingReleaseStageElementType.AttrTypes, map[string]attr.Value{
+				"target_percentage": types.Int64Value(20),
+				"duration":          types.Int64Null(),
+			}),
+			types.ObjectValueMust(vercel.RollingReleaseStageElementType.AttrTypes, map[string]attr.Value{
+				"target_percentage": types.Int64Value(50),
+				"duration":          types.Int64Null(),
+			}),
+		}),
+	}
+
+	request, diags := info.ToCreateRollingReleaseRequest()
+	if diags.HasError() {
+		t.Fatalf("Expected no errors, got: %v", diags)
+	}
+
+	// Should have 3 stages: 20%, 50%, and 100%
+	if len(request.RollingRelease.Stages) != 3 {
+		t.Errorf("Expected 3 stages, got %d", len(request.RollingRelease.Stages))
+	}
+
+	// Check that the 100% stage is present
+	found100 := false
+	for _, stage := range request.RollingRelease.Stages {
+		if stage.TargetPercentage == 100 {
+			found100 = true
+			if stage.RequireApproval {
+				t.Error("100% stage should not require approval")
+			}
+			break
+		}
+	}
+	if !found100 {
+		t.Error("100% stage not found in request")
+	}
+
+	// Test automatic advancement type
+	info2 := vercel.RollingReleaseInfo{
+		AdvancementType: types.StringValue("automatic"),
+		ProjectID:       types.StringValue("test-project"),
+		TeamID:          types.StringValue("test-team"),
+		Stages: types.ListValueMust(vercel.RollingReleaseStageElementType, []attr.Value{
+			types.ObjectValueMust(vercel.RollingReleaseStageElementType.AttrTypes, map[string]attr.Value{
+				"target_percentage": types.Int64Value(30),
+				"duration":          types.Int64Value(60),
+			}),
+		}),
+	}
+
+	request2, diags2 := info2.ToCreateRollingReleaseRequest()
+	if diags2.HasError() {
+		t.Fatalf("Expected no errors, got: %v", diags2)
+	}
+
+	// Should have 2 stages: 30% and 100%
+	if len(request2.RollingRelease.Stages) != 2 {
+		t.Errorf("Expected 2 stages, got %d", len(request2.RollingRelease.Stages))
+	}
+
+	// Check that the 100% stage is present
+	found100_2 := false
+	for _, stage := range request2.RollingRelease.Stages {
+		if stage.TargetPercentage == 100 {
+			found100_2 = true
+			if stage.RequireApproval {
+				t.Error("100% stage should not require approval")
+			}
+			break
+		}
+	}
+	if !found100_2 {
+		t.Error("100% stage not found in request")
+	}
+}
 
 func getRollingReleaseImportId(n string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {

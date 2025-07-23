@@ -165,7 +165,7 @@ type RollingReleaseInfo struct {
 	TeamID          types.String `tfsdk:"team_id"`
 }
 
-func (e *RollingReleaseInfo) toCreateRollingReleaseRequest() (client.CreateRollingReleaseRequest, diag.Diagnostics) {
+func (e *RollingReleaseInfo) ToCreateRollingReleaseRequest() (client.CreateRollingReleaseRequest, diag.Diagnostics) {
 	var stages []client.RollingReleaseStage
 	var diags diag.Diagnostics
 
@@ -195,6 +195,12 @@ func (e *RollingReleaseInfo) toCreateRollingReleaseRequest() (client.CreateRolli
 
 		stages[i] = clientStage
 	}
+
+	// Add terminal stage (100%) without approval - API requires this
+	stages = append(stages, client.RollingReleaseStage{
+		TargetPercentage: 100,
+		RequireApproval:  false,
+	})
 
 	// Log the request for debugging
 	tflog.Info(context.Background(), "converting to create request", map[string]any{
@@ -245,7 +251,11 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 		stages[i] = clientStage
 	}
 
-	// Do NOT add a terminal 100% stage manually!
+	// Add terminal stage (100%) without approval - API requires this
+	stages = append(stages, client.RollingReleaseStage{
+		TargetPercentage: 100,
+		RequireApproval:  false,
+	})
 
 	// Log the request for debugging
 	tflog.Info(context.Background(), "converting to update request", map[string]any{
@@ -402,7 +412,7 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 	}
 
 	// Convert plan to client request
-	request, diags := plan.toCreateRollingReleaseRequest()
+	request, diags := plan.ToCreateRollingReleaseRequest()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
