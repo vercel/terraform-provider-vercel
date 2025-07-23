@@ -39,7 +39,7 @@ resource "vercel_project_rolling_release" "example" {
 
 - `advancement_type` (String) The type of advancement for the rolling release. Must be either 'automatic' or 'manual-approval'.
 - `project_id` (String) The ID of the project.
-- `stages` (Attributes List) The stages for the rolling release configuration. (see [below for nested schema](#nestedatt--stages))
+- `stages` (Attributes List) The stages for the rolling release configuration. The last stage must have target_percentage = 100. (see [below for nested schema](#nestedatt--stages))
 
 ### Optional
 
