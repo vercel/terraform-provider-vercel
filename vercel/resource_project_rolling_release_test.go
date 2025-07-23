@@ -30,6 +30,10 @@ func TestRollingReleaseRequestConversion(t *testing.T) {
 				"target_percentage": types.Int64Value(50),
 				"duration":          types.Int64Null(),
 			}),
+			types.ObjectValueMust(vercel.RollingReleaseStageElementType.AttrTypes, map[string]attr.Value{
+				"target_percentage": types.Int64Value(100),
+				"duration":          types.Int64Null(),
+			}),
 		}),
 	}
 
@@ -38,7 +42,7 @@ func TestRollingReleaseRequestConversion(t *testing.T) {
 		t.Fatalf("Expected no errors, got: %v", diags)
 	}
 
-	// Should have 3 stages: 20%, 50%, and 100%
+	// Should have 3 stages: 20%, 50%, and 100% (all user-specified)
 	if len(request.RollingRelease.Stages) != 3 {
 		t.Errorf("Expected 3 stages, got %d", len(request.RollingRelease.Stages))
 	}
@@ -68,6 +72,10 @@ func TestRollingReleaseRequestConversion(t *testing.T) {
 				"target_percentage": types.Int64Value(30),
 				"duration":          types.Int64Value(60),
 			}),
+			types.ObjectValueMust(vercel.RollingReleaseStageElementType.AttrTypes, map[string]attr.Value{
+				"target_percentage": types.Int64Value(100),
+				"duration":          types.Int64Null(),
+			}),
 		}),
 	}
 
@@ -76,7 +84,7 @@ func TestRollingReleaseRequestConversion(t *testing.T) {
 		t.Fatalf("Expected no errors, got: %v", diags2)
 	}
 
-	// Should have 2 stages: 30% and 100%
+	// Should have 2 stages: 30% and 100% (all user-specified)
 	if len(request2.RollingRelease.Stages) != 2 {
 		t.Errorf("Expected 2 stages, got %d", len(request2.RollingRelease.Stages))
 	}
@@ -210,6 +218,7 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 				Config: cfg(fmt.Sprintf(`
 					resource "vercel_project" "example" {
 						name = "test-acc-rr-auto-duration-%s"
+						skew_protection = "12 hours"
 					}
 					resource "vercel_project_rolling_release" "example" {
 						project_id = vercel_project.example.id
@@ -217,11 +226,15 @@ func TestAcc_ProjectRollingRelease(t *testing.T) {
 						stages = [
 							{
 								target_percentage = 30
-								// Duration is omitted here for the first stage
+								duration          = 60 // Explicit duration for a middle stage
 							},
 							{
 								target_percentage = 70
 								duration          = 30 // Explicit duration for a middle stage
+							},
+							{
+								target_percentage = 100
+								// Duration for the last stage is expected to be null or not present
 							}
 						]
 					}
@@ -264,6 +277,9 @@ resource "vercel_project_rolling_release" "example" {
 		},
 		{
 			target_percentage = 50
+		},
+		{
+			target_percentage = 100
 		}
 	]
 }
@@ -289,6 +305,9 @@ resource "vercel_project_rolling_release" "example" {
 		},
 		{
 			target_percentage = 80
+		},
+		{
+			target_percentage = 100
 		}
 	]
 }
@@ -316,6 +335,9 @@ resource "vercel_project_rolling_release" "example" {
 		{
 			target_percentage = 80
 			duration          = 10
+		},
+		{
+			target_percentage = 100
 		}
 	]
 }

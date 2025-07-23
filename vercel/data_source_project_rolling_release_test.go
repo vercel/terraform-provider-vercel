@@ -51,6 +51,9 @@ resource "vercel_project_rolling_release" "example" {
 		},
 		{
 			target_percentage = 50
+		},
+		{
+			target_percentage = 100
 		}
 	]
 }
@@ -73,6 +76,9 @@ resource "vercel_project_rolling_release" "example" {
 		},
 		{
 			target_percentage = 50
+		},
+		{
+			target_percentage = 100
 		}
 	]
 }

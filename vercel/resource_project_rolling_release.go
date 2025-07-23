@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -57,17 +58,17 @@ func (r *projectRollingReleaseResource) Configure(ctx context.Context, req resou
 type durationValidator struct{}
 
 func (v durationValidator) Description(ctx context.Context) string {
-	return "duration can only be set when advancement_type is 'automatic'"
+	return "Duration is required when advancement_type is 'automatic'"
 }
 
 func (v durationValidator) MarkdownDescription(ctx context.Context) string {
-	return "`duration` can only be set when `advancement_type` is `automatic`"
+	return "Duration is required when advancement_type is 'automatic'"
 }
 
 func (v durationValidator) ValidateObject(ctx context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) {
 	// Get the parent advancement_type value
 	parentPath := req.Path.ParentPath()
-	advancementTypePath := parentPath.AtName("advancement_type")
+	advancementTypePath := parentPath.ParentPath().AtName("advancement_type")
 
 	var advancementType types.String
 	diags := req.Config.GetAttribute(ctx, advancementTypePath, &advancementType)
@@ -80,17 +81,27 @@ func (v durationValidator) ValidateObject(ctx context.Context, req validator.Obj
 	if !exists {
 		return
 	}
+	// Check if target_percentage is set
+	targetPercentageAttr, exists := req.ConfigValue.Attributes()["target_percentage"]
+	if !exists {
+		resp.Diagnostics.AddAttributeError(
+			req.Path.AtName("target_percentage"),
+			"Invalid target_percentage configuration",
+			"target_percentage must be set",
+		)
+	}
 
 	duration := durationAttr.(types.Int64)
+	targetPercentage := targetPercentageAttr.(types.Int64)
 	if duration.IsNull() || duration.IsUnknown() {
-		if advancementType.ValueString() == "manual-approval" {
-			return
+		if advancementType.ValueString() == "automatic" && targetPercentage.ValueInt64() != 100 {
+			resp.Diagnostics.AddAttributeError(
+				req.Path.AtName("duration"),
+				"Invalid duration configuration",
+				"duration must be set when advancement_type is 'automatic'",
+			)
 		}
-		resp.Diagnostics.AddAttributeError(
-			req.Path.AtName("duration"),
-			"Invalid duration configuration",
-			"duration can only be set when advancement_type is 'automatic'",
-		)
+		return
 	}
 
 	// If duration is set but advancement_type is not "automatic", add an error
@@ -98,8 +109,57 @@ func (v durationValidator) ValidateObject(ctx context.Context, req validator.Obj
 		resp.Diagnostics.AddAttributeError(
 			req.Path.AtName("duration"),
 			"Invalid duration configuration",
-			"duration must be set when advancement_type is 'automatic'",
+			"duration can only be set when advancement_type is 'automatic'",
 		)
+	}
+}
+
+// terminalStageValidator validates that the last stage has target_percentage = 100
+type terminalStageValidator struct{}
+
+func (v terminalStageValidator) Description(ctx context.Context) string {
+	return "The last stage must have target_percentage = 100"
+}
+
+func (v terminalStageValidator) MarkdownDescription(ctx context.Context) string {
+	return "The last stage must have target_percentage = 100"
+}
+
+func (v terminalStageValidator) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	var stages []RollingReleaseStage
+	diags := req.ConfigValue.ElementsAs(ctx, &stages, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if len(stages) == 0 {
+		return
+	}
+
+	// Check that the last stage has target_percentage = 100
+	lastStage := stages[len(stages)-1]
+	if lastStage.TargetPercentage.ValueInt64() != 100 {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("stages").AtListIndex(len(stages)-1).AtName("target_percentage"),
+			"Invalid terminal stage",
+			"The last stage must have target_percentage = 100",
+		)
+	}
+
+	// Check that no other stage has target_percentage = 100
+	for i, stage := range stages[:len(stages)-1] {
+		if stage.TargetPercentage.ValueInt64() == 100 {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("stages").AtListIndex(i).AtName("target_percentage"),
+				"Invalid stage percentage",
+				"Only the last stage can have target_percentage = 100",
+			)
+		}
 	}
 }
 
@@ -125,11 +185,12 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 				},
 			},
 			"stages": schema.ListNestedAttribute{
-				MarkdownDescription: "The stages for the rolling release configuration.",
+				MarkdownDescription: "The stages for the rolling release configuration. The last stage must have target_percentage = 100.",
 				Required:            true,
 				Validators: []validator.List{
 					listvalidator.SizeAtLeast(1),
 					listvalidator.SizeAtMost(10),
+					terminalStageValidator{},
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -175,7 +236,7 @@ func (e *RollingReleaseInfo) ToCreateRollingReleaseRequest() (client.CreateRolli
 	var rollingReleaseStages []RollingReleaseStage
 	diags = e.Stages.ElementsAs(context.Background(), &rollingReleaseStages, false)
 
-	// Add all stages from config
+	// Add all stages from config (including the terminal 100% stage)
 	stages = make([]client.RollingReleaseStage, len(rollingReleaseStages))
 	for i, stage := range rollingReleaseStages {
 		clientStage := client.RollingReleaseStage{
@@ -183,24 +244,13 @@ func (e *RollingReleaseInfo) ToCreateRollingReleaseRequest() (client.CreateRolli
 			RequireApproval:  advancementType == "manual-approval",
 		}
 
-		// Add duration for automatic advancement type
 		if advancementType == "automatic" && !stage.Duration.IsNull() && !stage.Duration.IsUnknown() {
 			duration := int(stage.Duration.ValueInt64())
-			clientStage.Duration = &duration
-		}
-		if advancementType == "automatic" && (stage.Duration.IsNull() || stage.Duration.IsUnknown()) {
-			duration := int(60)
 			clientStage.Duration = &duration
 		}
 
 		stages[i] = clientStage
 	}
-
-	// Add terminal stage (100%) without approval - API requires this
-	stages = append(stages, client.RollingReleaseStage{
-		TargetPercentage: 100,
-		RequireApproval:  false,
-	})
 
 	// Log the request for debugging
 	tflog.Info(context.Background(), "converting to create request", map[string]any{
@@ -229,7 +279,7 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	var rollingReleaseStages []RollingReleaseStage
 	diags = e.Stages.ElementsAs(context.Background(), &rollingReleaseStages, false)
 
-	// Add all stages from config
+	// Add all stages from config (including the terminal 100% stage)
 	stages = make([]client.RollingReleaseStage, len(rollingReleaseStages))
 	for i, stage := range rollingReleaseStages {
 		clientStage := client.RollingReleaseStage{
@@ -243,19 +293,8 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 			clientStage.Duration = &duration
 		}
 
-		if advancementType == "automatic" && (stage.Duration.IsNull() || stage.Duration.IsUnknown()) {
-			duration := int(60)
-			clientStage.Duration = &duration
-		}
-
 		stages[i] = clientStage
 	}
-
-	// Add terminal stage (100%) without approval - API requires this
-	stages = append(stages, client.RollingReleaseStage{
-		TargetPercentage: 100,
-		RequireApproval:  false,
-	})
 
 	// Log the request for debugging
 	tflog.Info(context.Background(), "converting to update request", map[string]any{
