@@ -443,7 +443,7 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 	if err == nil && existingRelease.RollingRelease.Enabled {
 		resp.Diagnostics.AddError(
 			"Project rolling release already exists",
-			fmt.Sprintf("A rolling release is already configured for project %s. Please use the update operation instead.",
+			fmt.Sprintf("A rolling release is already configured for project %s. To change an existing configuration, you must import the rolling release or remove the existing configuration.",
 				plan.ProjectID.ValueString(),
 			),
 		)
