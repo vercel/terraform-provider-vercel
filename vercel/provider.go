@@ -81,6 +81,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newTeamConfigResource,
 		newTeamMemberResource,
 		newWebhookResource,
+		newProjectRollingReleaseResource,
 	}
 }
 
@@ -109,6 +110,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newTeamMemberDataSource,
 		newMicrofrontendGroupDataSource,
 		newMicrofrontendGroupMembershipDataSource,
+		newProjectRollingReleaseDataSource,
 		newDsyncGroupsDataSource,
 	}
 }
