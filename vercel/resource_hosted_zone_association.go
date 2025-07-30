@@ -20,6 +20,10 @@ var (
 	_ resource.ResourceWithImportState = &hostedZoneAssociationResource{}
 )
 
+func newHostedZoneAssociationResource() resource.Resource {
+	return &hostedZoneAssociationResource{}
+}
+
 type hostedZoneAssociationResource struct {
 	client *client.Client
 }
@@ -66,8 +70,8 @@ func (r *hostedZoneAssociationResource) Create(ctx context.Context, req resource
 
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error deleting Hosted Zone Association",
-			fmt.Sprintf("Could not delete Hosted Zone Association %s %s, unexpected error: %s",
+			"Error creating Hosted Zone Association",
+			fmt.Sprintf("Could not create Hosted Zone Association %s %s, unexpected error: %s",
 				plan.ConfigurationID.ValueString(),
 				plan.HostedZoneID.ValueString(),
 				err,
@@ -286,7 +290,7 @@ func (r *hostedZoneAssociationResource) Update(ctx context.Context, req resource
 	// This function should never be called since all schema
 	// properties are annotated with the `RequiresReplace` plan
 	// modifier, but we need to implement it regardless to
-	// satifsfy the interface.
+	// satisfy the interface.
 	resp.Diagnostics.AddError(
 		"Update Not Supported",
 		"The Hosted Zone Association resource does not support in-place updates. All changes require recreation of the resource.",
