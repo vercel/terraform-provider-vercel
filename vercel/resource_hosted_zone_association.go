@@ -139,7 +139,6 @@ For more detailed information, please see the [Vercel documentation](https://ver
 	}
 }
 
-// Update implements resource.Resource.
-func (r *hostedZoneAssociationResource) Update(context.Context, resource.UpdateRequest, *resource.UpdateResponse) {
-	panic("unimplemented")
+func (r *hostedZoneAssociationResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
+	resp.State.RemoveResource(ctx)
 }
