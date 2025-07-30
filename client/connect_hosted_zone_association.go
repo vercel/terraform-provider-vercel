@@ -27,7 +27,7 @@ func (c *Client) GetHostedZoneAssociation(ctx context.Context, req GetHostedZone
 
 	tflog.Info(ctx, "Getting Hosted Zone Association", map[string]any{"url": url})
 
-	err = c.doRequest(clientRequest{ // TODO: This endpoint actually returns a different shape, we should change it to return HostedZoneAssociation
+	err = c.doRequest(clientRequest{
 		body:   "",
 		ctx:    ctx,
 		method: "GET",
@@ -62,7 +62,7 @@ func (c *Client) CreateHostedZoneAssociation(ctx context.Context, req CreateHost
 		"url":  url,
 	})
 
-	err = c.doRequest(clientRequest{
+	err = c.doRequest(clientRequest{ // TODO: This endpoint actually returns a different shape, we should change it to return HostedZoneAssociation
 		body:   body,
 		ctx:    ctx,
 		method: "POST",
