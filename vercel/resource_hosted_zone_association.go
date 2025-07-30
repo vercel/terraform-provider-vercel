@@ -50,9 +50,49 @@ func (r *hostedZoneAssociationResource) Configure(_ context.Context, req resourc
 	r.client = client
 }
 
-// Create implements resource.Resource.
-func (r *hostedZoneAssociationResource) Create(context.Context, resource.CreateRequest, *resource.CreateResponse) {
-	panic("unimplemented")
+func (r *hostedZoneAssociationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan HostedZoneAssociationState
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	out, err := r.client.CreateHostedZoneAssociation(ctx, client.CreateHostedZoneAssociationRequest{
+		ConfigurationID: plan.ConfigurationID.ValueString(),
+		HostedZoneID:    plan.HostedZoneID.ValueString(),
+		TeamID:          plan.TeamID.ValueString(),
+	})
+
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting Hosted Zone Association",
+			fmt.Sprintf("Could not delete Hosted Zone Association %s %s, unexpected error: %s",
+				plan.ConfigurationID.ValueString(),
+				plan.HostedZoneID.ValueString(),
+				err,
+			),
+		)
+		return
+	}
+
+	result := HostedZoneAssociationState{
+		ConfigurationID: types.StringValue(plan.ConfigurationID.ValueString()),
+		HostedZoneID:    types.StringValue(out.HostedZoneID),
+		HostedZoneName:  types.StringValue(out.HostedZoneName),
+		Owner:           types.StringValue(out.Owner),
+		TeamID:          toTeamID(plan.TeamID.ValueString()),
+	}
+
+	tflog.Info(ctx, "Created Hosted Zone Association", map[string]any{
+		"configuration_id": result.ConfigurationID.ValueString(),
+		"hosted_zone_id":   result.HostedZoneID.ValueString(),
+		"hosted_zone_name": result.HostedZoneName.ValueString(),
+		"owner":            result.Owner.ValueString(),
+		"team_id":          result.TeamID.ValueString(),
+	})
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
 func (r *hostedZoneAssociationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
