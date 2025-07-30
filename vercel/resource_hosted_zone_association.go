@@ -52,9 +52,41 @@ func (r *hostedZoneAssociationResource) Create(context.Context, resource.CreateR
 	panic("unimplemented")
 }
 
-// Delete implements resource.Resource.
-func (r *hostedZoneAssociationResource) Delete(context.Context, resource.DeleteRequest, *resource.DeleteResponse) {
-	panic("unimplemented")
+func (r *hostedZoneAssociationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state HostedZoneAssociationState
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err := r.client.DeleteHostedZoneAssociation(ctx, client.DeleteHostedZoneAssociationRequest{
+		ConfigurationID: state.ConfigurationID.ValueString(),
+		HostedZoneID:    state.HostedZoneID.ValueString(),
+	})
+
+	if client.NotFound(err) {
+		return
+	}
+
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting Hosted Zone Association",
+			fmt.Sprintf("Could not delete Hosted Zone Association %s %s, unexpected error: %s",
+				state.ConfigurationID.ValueString(),
+				state.HostedZoneID.ValueString(),
+				err,
+			),
+		)
+		return
+	}
+
+	tflog.Info(ctx, "Deleted Hosted Zone Association", map[string]any{
+		"configuration_id": state.ConfigurationID.ValueString(),
+		"hosted_zone_id":   state.HostedZoneID.ValueString(),
+		"hosted_zone_name": state.HostedZoneName.ValueString(),
+		"owner":            state.Owner.ValueString(),
+	})
 }
 
 // ImportState implements resource.ResourceWithImportState.
