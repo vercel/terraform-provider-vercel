@@ -167,6 +167,14 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
+			"hosted_zone_name": schema.StringAttribute{
+				Description: "The name of the Hosted Zone.",
+				Computed:    true,
+			},
+			"owner": schema.StringAttribute{
+				Description: "The ID of the AWS Account that owns the Hosted Zone.",
+				Computed:    true,
+			},
 		},
 	}
 }
