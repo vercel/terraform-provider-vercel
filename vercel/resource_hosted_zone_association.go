@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
 )
 
@@ -19,7 +20,7 @@ type hostedZoneAssociationResource struct {
 	client *client.Client
 }
 
-func (r *hostedZoneAssociationResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *hostedZoneAssociationResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -52,7 +53,7 @@ func (r *hostedZoneAssociationResource) ImportState(context.Context, resource.Im
 	panic("unimplemented")
 }
 
-func (r *hostedZoneAssociationResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *hostedZoneAssociationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_hosted_zone_association"
 }
 
@@ -61,9 +62,30 @@ func (r *hostedZoneAssociationResource) Read(context.Context, resource.ReadReque
 	panic("unimplemented")
 }
 
-// Schema implements resource.Resource.
-func (r *hostedZoneAssociationResource) Schema(context.Context, resource.SchemaRequest, *resource.SchemaResponse) {
-	panic("unimplemented")
+func (r *hostedZoneAssociationResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: `
+Provides a Hosted Zone Association resource.
+
+Hosted Zone Associations provide a way to associate an AWS Route53 Hosted Zone with a Secure Compute network.
+
+For more detailed information, please see the [Vercel documentation](https://vercel.com/docs).
+`,
+		Attributes: map[string]schema.Attribute{
+			"hostedZoneId": schema.StringAttribute{
+				Description: "The ID of the Hosted Zone.",
+				Required:    true,
+			},
+			"hostedZoneName": schema.StringAttribute{
+				Description: "The name of the Hosted Zone.",
+				Required:    true,
+			},
+			"owner": schema.StringAttribute{
+				Description: "The ID of the AWS Account that owns the Hosted Zone.",
+				Required:    true,
+			},
+		},
+	}
 }
 
 // Update implements resource.Resource.
