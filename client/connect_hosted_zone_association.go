@@ -43,7 +43,12 @@ type CreateHostedZoneAssociationRequest struct {
 	TeamID          string
 }
 
-func (c *Client) CreateHostedZoneAssociation(ctx context.Context, req CreateHostedZoneAssociationRequest) (r HostedZoneAssociation, err error) {
+type CreateHostedZoneAssociationResponse struct {
+	ConfigurationID string `json:"configurationId"`
+	HostedZoneID    string `json:"hostedZoneId"`
+}
+
+func (c *Client) CreateHostedZoneAssociation(ctx context.Context, req CreateHostedZoneAssociationRequest) (r CreateHostedZoneAssociationResponse, err error) {
 	url := fmt.Sprintf("%s/v1/connect/configurations/%s/hosted-zones", c.baseURL, req.ConfigurationID)
 	if c.TeamID(req.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
@@ -62,7 +67,7 @@ func (c *Client) CreateHostedZoneAssociation(ctx context.Context, req CreateHost
 		"url":  url,
 	})
 
-	err = c.doRequest(clientRequest{ // TODO: This endpoint actually returns a different shape, we should change it to return HostedZoneAssociation
+	err = c.doRequest(clientRequest{
 		body:   body,
 		ctx:    ctx,
 		method: "POST",

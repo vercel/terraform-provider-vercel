@@ -80,11 +80,33 @@ func (r *hostedZoneAssociationResource) Create(ctx context.Context, req resource
 		return
 	}
 
+	// The create endpoint, unlike other verbs, only returns
+	// the `configurationId` and `hostedZoneId` fields. We
+	// need to make a follow-up read to get the complete
+	// information.
+	association, err := r.client.GetHostedZoneAssociation(ctx, client.GetHostedZoneAssociationRequest{
+		ConfigurationID: out.ConfigurationID,
+		HostedZoneID:    out.HostedZoneID,
+		TeamID:          plan.TeamID.ValueString(),
+	})
+
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading Hosted Zone Association after creation",
+			fmt.Sprintf("Could not read Hosted Zone Association %s %s after creation, unexpected error: %s",
+				out.ConfigurationID,
+				out.HostedZoneID,
+				err,
+			),
+		)
+		return
+	}
+
 	result := HostedZoneAssociationState{
-		ConfigurationID: types.StringValue(plan.ConfigurationID.ValueString()),
-		HostedZoneID:    types.StringValue(out.HostedZoneID),
-		HostedZoneName:  types.StringValue(out.HostedZoneName),
-		Owner:           types.StringValue(out.Owner),
+		ConfigurationID: types.StringValue(out.ConfigurationID), // Use the create response configurationID
+		HostedZoneID:    types.StringValue(association.HostedZoneID),
+		HostedZoneName:  types.StringValue(association.HostedZoneName),
+		Owner:           types.StringValue(association.Owner),
 		TeamID:          toTeamID(plan.TeamID.ValueString()),
 	}
 
