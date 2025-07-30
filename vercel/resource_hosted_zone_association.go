@@ -91,9 +91,52 @@ func (r *hostedZoneAssociationResource) Delete(ctx context.Context, req resource
 	})
 }
 
-// ImportState implements resource.ResourceWithImportState.
-func (r *hostedZoneAssociationResource) ImportState(context.Context, resource.ImportStateRequest, *resource.ImportStateResponse) {
-	panic("unimplemented")
+func (r *hostedZoneAssociationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	configurationId, hostedZoneId, ok := splitInto2(req.ID)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Error importing Hosted Zone Association",
+			fmt.Sprintf("Invalid ID '%s' specified. It should match the following format \"configuration_id/hosted_zone_id\"", req.ID),
+		)
+	}
+
+	out, err := r.client.GetHostedZoneAssociation(ctx, client.GetHostedZoneAssociationRequest{
+		ConfigurationID: configurationId,
+		HostedZoneID:    hostedZoneId,
+	})
+
+	if client.NotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading Hosted Zone Association",
+			fmt.Sprintf("Could not read Hosted Zone Association %s %s, unexpected error: %s",
+				configurationId,
+				hostedZoneId,
+				err,
+			),
+		)
+		return
+	}
+
+	result := HostedZoneAssociationState{
+		ConfigurationID: types.StringValue(configurationId),
+		HostedZoneID:    types.StringValue(out.HostedZoneID),
+		HostedZoneName:  types.StringValue(out.HostedZoneName),
+		Owner:           types.StringValue(out.Owner),
+	}
+
+	tflog.Info(ctx, "Read Hosted Zone Association", map[string]any{
+		"configuration_id": result.ConfigurationID.ValueString(),
+		"hosted_zone_id":   result.HostedZoneID.ValueString(),
+		"hosted_zone_name": result.HostedZoneName.ValueString(),
+		"owner":            result.Owner.ValueString(),
+	})
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
 func (r *hostedZoneAssociationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
