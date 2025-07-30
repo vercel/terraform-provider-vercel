@@ -29,6 +29,7 @@ type HostedZoneAssociationState struct {
 	HostedZoneID    types.String `tfsdk:"hosted_zone_id"`
 	HostedZoneName  types.String `tfsdk:"hosted_zone_name"`
 	Owner           types.String `tfsdk:"owner"`
+	TeamID          types.String `tfsdk:"team_id"`
 }
 
 func (r *hostedZoneAssociationResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -65,6 +66,7 @@ func (r *hostedZoneAssociationResource) Delete(ctx context.Context, req resource
 	err := r.client.DeleteHostedZoneAssociation(ctx, client.DeleteHostedZoneAssociationRequest{
 		ConfigurationID: state.ConfigurationID.ValueString(),
 		HostedZoneID:    state.HostedZoneID.ValueString(),
+		TeamID:          state.TeamID.ValueString(),
 	})
 
 	if client.NotFound(err) {
@@ -88,21 +90,24 @@ func (r *hostedZoneAssociationResource) Delete(ctx context.Context, req resource
 		"hosted_zone_id":   state.HostedZoneID.ValueString(),
 		"hosted_zone_name": state.HostedZoneName.ValueString(),
 		"owner":            state.Owner.ValueString(),
+		"team_id":          state.TeamID.ValueString(),
 	})
 }
 
 func (r *hostedZoneAssociationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	configurationId, hostedZoneId, ok := splitInto2(req.ID)
+	teamIDOrEmpty, configurationID, hostedZoneID, ok := splitInto2Or3(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing Hosted Zone Association",
-			fmt.Sprintf("Invalid ID '%s' specified. It should match the following format \"configuration_id/hosted_zone_id\"", req.ID),
+			fmt.Sprintf("Invalid ID '%s' specified. It should match the following format \"configuration_id/hosted_zone_id\" or \"team_id/configuration_id/hosted_zone_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetHostedZoneAssociation(ctx, client.GetHostedZoneAssociationRequest{
-		ConfigurationID: configurationId,
-		HostedZoneID:    hostedZoneId,
+		ConfigurationID: configurationID,
+		HostedZoneID:    hostedZoneID,
+		TeamID:          teamIDOrEmpty,
 	})
 
 	if client.NotFound(err) {
@@ -114,8 +119,8 @@ func (r *hostedZoneAssociationResource) ImportState(ctx context.Context, req res
 		resp.Diagnostics.AddError(
 			"Error reading Hosted Zone Association",
 			fmt.Sprintf("Could not read Hosted Zone Association %s %s, unexpected error: %s",
-				configurationId,
-				hostedZoneId,
+				configurationID,
+				hostedZoneID,
 				err,
 			),
 		)
@@ -123,10 +128,11 @@ func (r *hostedZoneAssociationResource) ImportState(ctx context.Context, req res
 	}
 
 	result := HostedZoneAssociationState{
-		ConfigurationID: types.StringValue(configurationId),
+		ConfigurationID: types.StringValue(configurationID),
 		HostedZoneID:    types.StringValue(out.HostedZoneID),
 		HostedZoneName:  types.StringValue(out.HostedZoneName),
 		Owner:           types.StringValue(out.Owner),
+		TeamID:          toTeamID(teamIDOrEmpty),
 	}
 
 	tflog.Info(ctx, "Read Hosted Zone Association", map[string]any{
@@ -134,6 +140,7 @@ func (r *hostedZoneAssociationResource) ImportState(ctx context.Context, req res
 		"hosted_zone_id":   result.HostedZoneID.ValueString(),
 		"hosted_zone_name": result.HostedZoneName.ValueString(),
 		"owner":            result.Owner.ValueString(),
+		"team_id":          result.TeamID.ValueString(),
 	})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
@@ -154,6 +161,7 @@ func (r *hostedZoneAssociationResource) Read(ctx context.Context, req resource.R
 	out, err := r.client.GetHostedZoneAssociation(ctx, client.GetHostedZoneAssociationRequest{
 		ConfigurationID: state.ConfigurationID.ValueString(),
 		HostedZoneID:    state.HostedZoneID.ValueString(),
+		TeamID:          state.TeamID.ValueString(),
 	})
 
 	if client.NotFound(err) {
@@ -178,6 +186,7 @@ func (r *hostedZoneAssociationResource) Read(ctx context.Context, req resource.R
 		HostedZoneID:    types.StringValue(out.HostedZoneID),
 		HostedZoneName:  types.StringValue(out.HostedZoneName),
 		Owner:           types.StringValue(out.Owner),
+		TeamID:          toTeamID(state.TeamID.ValueString()),
 	}
 
 	tflog.Info(ctx, "Read Hosted Zone Association", map[string]any{
@@ -185,6 +194,7 @@ func (r *hostedZoneAssociationResource) Read(ctx context.Context, req resource.R
 		"hosted_zone_id":   result.HostedZoneID.ValueString(),
 		"hosted_zone_name": result.HostedZoneName.ValueString(),
 		"owner":            result.Owner.ValueString(),
+		"team_id":          result.TeamID.ValueString(),
 	})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
@@ -217,6 +227,12 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"owner": schema.StringAttribute{
 				Description: "The ID of the AWS Account that owns the Hosted Zone.",
 				Computed:    true,
+			},
+			"team_id": schema.StringAttribute{
+				Description:   "The ID of the team the Hosted Zone Association should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
 		},
 	}
