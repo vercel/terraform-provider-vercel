@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
@@ -155,22 +157,31 @@ Hosted Zone Associations provide a way to associate an AWS Route53 Hosted Zone w
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs).
 `,
 		Attributes: map[string]schema.Attribute{
-			"hostedZoneId": schema.StringAttribute{
-				Description: "The ID of the Hosted Zone.",
-				Required:    true,
+			"configuration_id": schema.StringAttribute{
+				Description:   "The ID of the Secure Compute network to associate the Hosted Zone with.",
+				Required:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"hostedZoneName": schema.StringAttribute{
-				Description: "The name of the Hosted Zone.",
-				Required:    true,
-			},
-			"owner": schema.StringAttribute{
-				Description: "The ID of the AWS Account that owns the Hosted Zone.",
-				Required:    true,
+			"hosted_zone_id": schema.StringAttribute{
+				Description:   "The ID of the Hosted Zone to associate.",
+				Required:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 		},
 	}
 }
 
-func (r *hostedZoneAssociationResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.State.RemoveResource(ctx)
+func (r *hostedZoneAssociationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	// All changes to this resource should require recreation, as
+	// the underlying API does not expose a method to perform in-place
+	// updates (not that it should).
+	//
+	// This function should never be called since all schema
+	// properties are annotated with the `RequiresReplace` plan
+	// modifier, but we need to implement it regardless to
+	// satifsfy the interface.
+	resp.Diagnostics.AddError(
+		"Update Not Supported",
+		"The Hosted Zone Association resource does not support in-place updates. All changes require recreation of the resource.",
+	)
 }
