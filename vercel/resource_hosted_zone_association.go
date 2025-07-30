@@ -38,9 +38,8 @@ func (h *hostedZoneAssociationResource) ImportState(context.Context, resource.Im
 	panic("unimplemented")
 }
 
-// Metadata implements resource.Resource.
-func (h *hostedZoneAssociationResource) Metadata(context.Context, resource.MetadataRequest, *resource.MetadataResponse) {
-	panic("unimplemented")
+func (h *hostedZoneAssociationResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_hosted_zone_association"
 }
 
 // Read implements resource.Resource.
