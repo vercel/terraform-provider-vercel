@@ -100,6 +100,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newEdgeConfigTokenDataSource,
 		newEndpointVerificationDataSource,
 		newFileDataSource,
+		newHostedZoneAssociationDataSource,
 		newLogDrainDataSource,
 		newPrebuiltProjectDataSource,
 		newProjectDataSource,
