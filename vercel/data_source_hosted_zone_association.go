@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
 )
 
@@ -50,7 +51,37 @@ func (r *hostedZoneAssociationDataSource) Read(context.Context, datasource.ReadR
 	panic("unimplemented")
 }
 
-// Schema implements datasource.DataSource.
-func (r *hostedZoneAssociationDataSource) Schema(context.Context, datasource.SchemaRequest, *datasource.SchemaResponse) {
-	panic("unimplemented")
+func (r *hostedZoneAssociationDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: `
+Provides information about an existing Hosted Zone Association.
+
+Hosted Zone Associations provide a way to associate an AWS Route53 Hosted Zone with a Secure Compute network.
+
+For more detailed information, please see the [Vercel documentation](https://vercel.com/docs).
+`,
+		Attributes: map[string]schema.Attribute{
+			"configuration_id": schema.StringAttribute{
+				Description: "The ID of the Secure Compute network to associate the Hosted Zone with.",
+				Required:    true,
+			},
+			"hosted_zone_id": schema.StringAttribute{
+				Description: "The ID of the Hosted Zone to associate.",
+				Required:    true,
+			},
+			"hosted_zone_name": schema.StringAttribute{
+				Description: "The name of the Hosted Zone.",
+				Computed:    true,
+			},
+			"owner": schema.StringAttribute{
+				Description: "The ID of the AWS Account that owns the Hosted Zone.",
+				Computed:    true,
+			},
+			"team_id": schema.StringAttribute{
+				Description: "The ID of the team the Hosted Zone Association should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
+				Optional:    true,
+				Computed:    true,
+			},
+		},
+	}
 }
