@@ -80,10 +80,17 @@ func (r *hostedZoneAssociationResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	// The create endpoint, unlike other verbs, only returns
-	// the `configurationId` and `hostedZoneId` fields. We
-	// need to make a follow-up read to get the complete
-	// information.
+	result := HostedZoneAssociationState{
+		ConfigurationID: types.StringValue(out.ConfigurationID),
+		HostedZoneID:    types.StringValue(out.HostedZoneID),
+		HostedZoneName:  types.StringValue(""), // Will be populated on next read
+		Owner:           types.StringValue(""), // Will be populated on next read
+		TeamID:          toTeamID(plan.TeamID.ValueString()),
+	}
+
+	// The create endpoint, unlike other verbs, only returns the
+	// `configurationId` and `hostedZoneId` fields. We need to make a
+	// follow-up read to get the complete information.
 	association, err := r.client.GetHostedZoneAssociation(ctx, client.GetHostedZoneAssociationRequest{
 		ConfigurationID: out.ConfigurationID,
 		HostedZoneID:    out.HostedZoneID,
@@ -91,23 +98,17 @@ func (r *hostedZoneAssociationResource) Create(ctx context.Context, req resource
 	})
 
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading Hosted Zone Association after creation",
-			fmt.Sprintf("Could not read Hosted Zone Association %s %s after creation, unexpected error: %s",
-				out.ConfigurationID,
-				out.HostedZoneID,
-				err,
-			),
-		)
-		return
-	}
-
-	result := HostedZoneAssociationState{
-		ConfigurationID: types.StringValue(out.ConfigurationID), // Use the create response configurationID
-		HostedZoneID:    types.StringValue(association.HostedZoneID),
-		HostedZoneName:  types.StringValue(association.HostedZoneName),
-		Owner:           types.StringValue(association.Owner),
-		TeamID:          toTeamID(plan.TeamID.ValueString()),
+		// If the read fails after successful creation, we'll proceed with
+		// partial information to at least register the resource into state.
+		// Subsequent read operations will populate the missing fields.
+		tflog.Warn(ctx, "Could not read complete Hosted Zone Association data after creation, proceeding with partial state", map[string]any{
+			"configuration_id": out.ConfigurationID,
+			"hosted_zone_id":   out.HostedZoneID,
+			"error":            err.Error(),
+		})
+	} else {
+		result.HostedZoneName = types.StringValue(association.HostedZoneName)
+		result.Owner = types.StringValue(association.Owner)
 	}
 
 	tflog.Info(ctx, "Created Hosted Zone Association", map[string]any{
@@ -164,7 +165,7 @@ func (r *hostedZoneAssociationResource) ImportState(ctx context.Context, req res
 	teamIDOrEmpty, configurationID, hostedZoneID, ok := splitInto2Or3(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
-			"Error importing Hosted Zone Association",
+			"Invalid ID specified",
 			fmt.Sprintf("Invalid ID '%s' specified. It should match the following format \"configuration_id/hosted_zone_id\" or \"team_id/configuration_id/hosted_zone_id\"", req.ID),
 		)
 		return
@@ -305,14 +306,13 @@ For more detailed information, please see the [Vercel documentation](https://ver
 }
 
 func (r *hostedZoneAssociationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// All changes to this resource should require recreation, as
-	// the underlying API does not expose a method to perform in-place
-	// updates (not that it should).
+	// All changes to this resource should require recreation, as the
+	// underlying API does not expose a method to perform in-place updates
+	// (not that it should).
 	//
-	// This function should never be called since all schema
-	// properties are annotated with the `RequiresReplace` plan
-	// modifier, but we need to implement it regardless to
-	// satisfy the interface.
+	// This function should never be called since all schema properties are
+	// annotated with the `RequiresReplace` plan modifier, but we need to
+	// implement it regardless to satisfy the interface.
 	resp.Diagnostics.AddError(
 		"Update Not Supported",
 		"The Hosted Zone Association resource does not support in-place updates. All changes require recreation of the resource.",
