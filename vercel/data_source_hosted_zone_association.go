@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
@@ -22,20 +23,34 @@ type hostedZoneAssociationDataSource struct {
 }
 
 // Configure implements datasource.DataSourceWithConfigure.
-func (h *hostedZoneAssociationDataSource) Configure(context.Context, datasource.ConfigureRequest, *datasource.ConfigureResponse) {
-	panic("unimplemented")
+func (r *hostedZoneAssociationDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*client.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	r.client = client
 }
 
-func (h *hostedZoneAssociationDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (r *hostedZoneAssociationDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_hosted_zone_association"
 }
 
 // Read implements datasource.DataSource.
-func (h *hostedZoneAssociationDataSource) Read(context.Context, datasource.ReadRequest, *datasource.ReadResponse) {
+func (r *hostedZoneAssociationDataSource) Read(context.Context, datasource.ReadRequest, *datasource.ReadResponse) {
 	panic("unimplemented")
 }
 
 // Schema implements datasource.DataSource.
-func (h *hostedZoneAssociationDataSource) Schema(context.Context, datasource.SchemaRequest, *datasource.SchemaResponse) {
+func (r *hostedZoneAssociationDataSource) Schema(context.Context, datasource.SchemaRequest, *datasource.SchemaResponse) {
 	panic("unimplemented")
 }
