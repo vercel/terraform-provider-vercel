@@ -8,4 +8,5 @@ terraform-provider-vercel
 .task/
 Dist/
 dist/
+bin/
 .DS_Store
