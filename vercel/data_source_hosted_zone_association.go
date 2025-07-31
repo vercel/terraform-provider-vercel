@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
 )
 
@@ -23,7 +25,6 @@ type hostedZoneAssociationDataSource struct {
 	client *client.Client
 }
 
-// Configure implements datasource.DataSourceWithConfigure.
 func (r *hostedZoneAssociationDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -46,9 +47,49 @@ func (r *hostedZoneAssociationDataSource) Metadata(_ context.Context, req dataso
 	resp.TypeName = req.ProviderTypeName + "_hosted_zone_association"
 }
 
-// Read implements datasource.DataSource.
-func (r *hostedZoneAssociationDataSource) Read(context.Context, datasource.ReadRequest, *datasource.ReadResponse) {
-	panic("unimplemented")
+func (r *hostedZoneAssociationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state HostedZoneAssociationState
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	out, err := r.client.GetHostedZoneAssociation(ctx, client.GetHostedZoneAssociationRequest{
+		ConfigurationID: state.ConfigurationID.ValueString(),
+		HostedZoneID:    state.HostedZoneID.ValueString(),
+		TeamID:          state.TeamID.ValueString(),
+	})
+
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading Hosted Zone Association",
+			fmt.Sprintf("Could not read Hosted Zone Association %s %s, unexpected error: %s",
+				state.ConfigurationID.ValueString(),
+				state.HostedZoneID.ValueString(),
+				err,
+			),
+		)
+		return
+	}
+
+	result := HostedZoneAssociationState{
+		ConfigurationID: types.StringValue(state.ConfigurationID.ValueString()),
+		HostedZoneID:    types.StringValue(out.HostedZoneID),
+		HostedZoneName:  types.StringValue(out.HostedZoneName),
+		Owner:           types.StringValue(out.Owner),
+		TeamID:          toTeamID(state.TeamID.ValueString()),
+	}
+
+	tflog.Info(ctx, "Read Hosted Zone Association", map[string]any{
+		"configuration_id": result.ConfigurationID.ValueString(),
+		"hosted_zone_id":   result.HostedZoneID.ValueString(),
+		"hosted_zone_name": result.HostedZoneName.ValueString(),
+		"owner":            result.Owner.ValueString(),
+		"team_id":          result.TeamID.ValueString(),
+	})
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
 func (r *hostedZoneAssociationDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
