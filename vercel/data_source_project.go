@@ -383,6 +383,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Description: "The default timeout for Serverless Functions.",
 						Computed:    true,
 					},
+					"function_default_regions": schema.SetAttribute{
+						Description: "The default regions for Serverless Functions.",
+						ElementType: types.StringType,
+						Computed:    true,
+					},
 					"fluid": schema.BoolAttribute{
 						Description: "Enable fluid compute for your Vercel Functions to automatically manage concurrency and optimize performance. Vercel will handle the defaults to ensure the best experience for your workload.",
 						Computed:    true,

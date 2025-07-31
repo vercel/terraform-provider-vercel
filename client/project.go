@@ -227,19 +227,21 @@ type Security struct {
 }
 
 type ResourceConfigResponse struct {
-	FunctionDefaultMemoryType *string `json:"functionDefaultMemoryType"`
-	FunctionDefaultTimeout    *int64  `json:"functionDefaultTimeout"`
-	Fluid                     bool    `json:"fluid"`
-	ElasticConcurrencyEnabled bool    `json:"elasticConcurrencyEnabled"`
-	BuildMachineType          string  `json:"buildMachineType"`
+	FunctionDefaultMemoryType *string  `json:"functionDefaultMemoryType"`
+	FunctionDefaultTimeout    *int64   `json:"functionDefaultTimeout"`
+	FunctionDefaultRegions    []string `json:"functionDefaultRegions"`
+	Fluid                     bool     `json:"fluid"`
+	ElasticConcurrencyEnabled bool     `json:"elasticConcurrencyEnabled"`
+	BuildMachineType          string   `json:"buildMachineType"`
 }
 
 type ResourceConfig struct {
-	FunctionDefaultMemoryType *string `json:"functionDefaultMemoryType,omitempty"`
-	FunctionDefaultTimeout    *int64  `json:"functionDefaultTimeout,omitempty"`
-	Fluid                     *bool   `json:"fluid,omitempty"`
-	ElasticConcurrencyEnabled *bool   `json:"elasticConcurrencyEnabled,omitempty"`
-	BuildMachineType          *string `json:"buildMachineType,omitempty"`
+	FunctionDefaultMemoryType *string   `json:"functionDefaultMemoryType,omitempty"`
+	FunctionDefaultTimeout    *int64    `json:"functionDefaultTimeout,omitempty"`
+	FunctionDefaultRegions    *[]string `json:"functionDefaultRegions,omitempty"`
+	Fluid                     *bool     `json:"fluid,omitempty"`
+	ElasticConcurrencyEnabled *bool     `json:"elasticConcurrencyEnabled,omitempty"`
+	BuildMachineType          *string   `json:"buildMachineType,omitempty"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.
