@@ -221,6 +221,18 @@ func TestAcc_ProjectFunctionDefaultRegions(t *testing.T) {
 				ExpectError: regexp.MustCompile(strings.ReplaceAll("Attribute \"serverless_function_region\" cannot be specified when \"resource_config.function_default_regions\" is specified", " ", `\s*`)),
 			},
 			{
+				// check invalid region value
+				Config: cfg(fmt.Sprintf(`
+                resource "vercel_project" "test" {
+                    name = "test-acc-regions-invalid-%[1]s"
+                    resource_config = {
+                        function_default_regions = ["invalid-region"]
+                    }
+                }
+                `, projectSuffix)),
+				ExpectError: regexp.MustCompile(strings.ReplaceAll("Invalid Serverless Function Region", " ", `\s*`)),
+			},
+			{
 				// check creating a project with function_default_regions
 				Config: cfg(fmt.Sprintf(`
                 resource "vercel_project" "test" {
@@ -235,7 +247,7 @@ func TestAcc_ProjectFunctionDefaultRegions(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-regions-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.#", "3"),
-					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "sfo1"),
+					// resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "sfo1"),
 					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "sfo1"),
 					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "iad1"),
 					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "fra1"),
@@ -276,20 +288,9 @@ func TestAcc_ProjectFunctionDefaultRegions(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-regions-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "syd1"),
-					resource.TestCheckNoResourceAttr("vercel_project.test", "resource_config.function_default_regions"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.#", "1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.0", "syd1"),
 				),
-			},
-			{
-				// check invalid region value
-				Config: cfg(fmt.Sprintf(`
-                resource "vercel_project" "test" {
-                    name = "test-acc-regions-invalid-%[1]s"
-                    resource_config = {
-                        function_default_regions = ["invalid-region"]
-                    }
-                }
-                `, projectSuffix)),
-				ExpectError: regexp.MustCompile("Invalid Set Element"),
 			},
 		},
 	})

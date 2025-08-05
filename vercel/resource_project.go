@@ -115,11 +115,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				DeprecationMessage: "This attribute is deprecated. Please use resource_config.function_default_regions instead.",
 				Optional:           true,
 				Computed:           true,
-				PlanModifiers:      []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Description:        "The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.",
 				Validators: []validator.String{
 					validateServerlessFunctionRegion(),
 					stringvalidator.ConflictsWith(
+						path.MatchRoot("serverless_function_region"),
 						path.MatchRoot("resource_config").AtName("function_default_regions"),
 					),
 				},
@@ -548,10 +548,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"resource_config": schema.SingleNestedAttribute{
-				Description:   "Resource Configuration for the project.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Description: "Resource Configuration for the project.",
+				Optional:    true,
+				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					// This is actually "function_default_memory_type" in the API schema, but for better convention, we use "cpu" and do translation in the provider.
 					"function_default_cpu_type": schema.StringAttribute{
@@ -579,16 +578,14 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Optional:    true,
 						Computed:    true,
 						Validators: []validator.Set{
-							setvalidator.ValueStringsAre(stringvalidator.OneOf(
-								"arn1", "bom1", "cdg1", "cle1", "cpt1", "dub1", "dxb1", "fra1",
-								"gru1", "hkg1", "hnd1", "iad1", "icn1", "kix1", "lhr1", "pdx1",
-								"sfo1", "sin1", "syd1",
-							)),
+							setvalidator.ValueStringsAre(
+								validateServerlessFunctionRegion(),
+							),
 							setvalidator.ConflictsWith(
 								path.MatchRoot("serverless_function_region"),
+								path.MatchRoot("resource_config").AtName("function_default_regions"),
 							),
 						},
-						PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 					},
 					"fluid": schema.BoolAttribute{
 						Description:   "Enable fluid compute for your Vercel Functions to automatically manage concurrency and optimize performance. Vercel will handle the defaults to ensure the best experience for your workload.",
@@ -783,7 +780,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		OutputDirectory:                   p.OutputDirectory.ValueStringPointer(),
 		PublicSource:                      p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
-		ResourceConfig:                    resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
+		ResourceConfig:                    resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
 	}, diags
@@ -864,7 +861,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		DirectoryListing:                     p.DirectoryListing.ValueBool(),
 		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
 		GitComments:                          gc.toUpdateProjectRequest(),
-		ResourceConfig:                       resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
+		ResourceConfig:                       resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		NodeVersion:                          p.NodeVersion.ValueString(),
 	}, nil
 }
@@ -1118,32 +1115,40 @@ func (p *Project) resourceConfig(ctx context.Context) (rc *ResourceConfig, diags
 	return rc, diags
 }
 
-func (r *ResourceConfig) toClientResourceConfig(onDemandConcurrentBuilds types.Bool, buildMachineType types.String, serverlessFunctionRegion types.String) *client.ResourceConfig {
-	if r == nil {
-		return nil
+func (r *ResourceConfig) toClientResourceConfig(ctx context.Context, onDemandConcurrentBuilds types.Bool, buildMachineType types.String, serverlessFunctionRegion types.String) *client.ResourceConfig {
+	var resourceConfig *client.ResourceConfig = nil
+	if r != nil {
+		resourceConfig = &client.ResourceConfig{}
 	}
-	var resourceConfig = &client.ResourceConfig{}
-
-	if !r.FunctionDefaultCPUType.IsUnknown() {
+	if r != nil && !r.FunctionDefaultCPUType.IsUnknown() {
 		resourceConfig.FunctionDefaultMemoryType = r.FunctionDefaultCPUType.ValueStringPointer()
 	}
-	if !r.FunctionDefaultTimeout.IsUnknown() {
+	if r != nil && !r.FunctionDefaultTimeout.IsUnknown() {
 		resourceConfig.FunctionDefaultTimeout = r.FunctionDefaultTimeout.ValueInt64Pointer()
 	}
-	if !r.FunctionDefaultRegions.IsUnknown() {
+	if r != nil && !r.FunctionDefaultRegions.IsUnknown() && !r.FunctionDefaultRegions.IsNull() {
 		var regions []string
-		r.FunctionDefaultRegions.ElementsAs(context.Background(), &regions, false)
-		resourceConfig.FunctionDefaultRegions = &regions
-	} else if !serverlessFunctionRegion.IsUnknown() {
-		resourceConfig.FunctionDefaultRegions = &[]string{serverlessFunctionRegion.ValueString()}
+		r.FunctionDefaultRegions.ElementsAs(ctx, &regions, false)
+		resourceConfig.FunctionDefaultRegions = regions
+	} else if !serverlessFunctionRegion.IsUnknown() && !serverlessFunctionRegion.IsNull() {
+		if resourceConfig == nil {
+			resourceConfig = &client.ResourceConfig{}
+		}
+		resourceConfig.FunctionDefaultRegions = []string{serverlessFunctionRegion.ValueString()}
 	}
-	if !r.Fluid.IsUnknown() {
+	if r != nil && !r.Fluid.IsUnknown() {
 		resourceConfig.Fluid = r.Fluid.ValueBoolPointer()
 	}
 	if !onDemandConcurrentBuilds.IsUnknown() {
+		if resourceConfig == nil {
+			resourceConfig = &client.ResourceConfig{}
+		}
 		resourceConfig.ElasticConcurrencyEnabled = onDemandConcurrentBuilds.ValueBoolPointer()
 	}
 	if !buildMachineType.IsUnknown() {
+		if resourceConfig == nil {
+			resourceConfig = &client.ResourceConfig{}
+		}
 		resourceConfig.BuildMachineType = buildMachineType.ValueStringPointer()
 	}
 	return resourceConfig

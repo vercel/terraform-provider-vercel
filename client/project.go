@@ -236,12 +236,12 @@ type ResourceConfigResponse struct {
 }
 
 type ResourceConfig struct {
-	FunctionDefaultMemoryType *string   `json:"functionDefaultMemoryType,omitempty"`
-	FunctionDefaultTimeout    *int64    `json:"functionDefaultTimeout,omitempty"`
-	FunctionDefaultRegions    *[]string `json:"functionDefaultRegions,omitempty"`
-	Fluid                     *bool     `json:"fluid,omitempty"`
-	ElasticConcurrencyEnabled *bool     `json:"elasticConcurrencyEnabled,omitempty"`
-	BuildMachineType          *string   `json:"buildMachineType,omitempty"`
+	FunctionDefaultMemoryType *string  `json:"functionDefaultMemoryType,omitempty"`
+	FunctionDefaultTimeout    *int64   `json:"functionDefaultTimeout,omitempty"`
+	FunctionDefaultRegions    []string `json:"functionDefaultRegions,omitempty"`
+	Fluid                     *bool    `json:"fluid,omitempty"`
+	ElasticConcurrencyEnabled *bool    `json:"elasticConcurrencyEnabled,omitempty"`
+	BuildMachineType          *string  `json:"buildMachineType,omitempty"`
 }
 
 // GetProject retrieves information about an existing project from Vercel.
@@ -286,7 +286,7 @@ func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectRe
 		url:    url,
 		body:   "",
 	}, &pr)
-	for i := 0; i < len(pr.Projects); i++ {
+	for i := range pr.Projects {
 		pr.Projects[i].TeamID = c.TeamID(teamID)
 	}
 	return pr.Projects, err
