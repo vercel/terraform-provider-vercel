@@ -11,22 +11,24 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
-func validateServerlessFunctionRegion() validatorServerlessFunctionRegion {
-	return validatorServerlessFunctionRegion{}
+var _validatorServerlessFunctionRegion = validatorServerlessFunctionRegion{}
+
+func validateServerlessFunctionRegion() *validatorServerlessFunctionRegion {
+	return &_validatorServerlessFunctionRegion
 }
 
 type validatorServerlessFunctionRegion struct {
 	regions map[string]struct{}
 }
 
-func (v validatorServerlessFunctionRegion) Description(ctx context.Context) string {
+func (v *validatorServerlessFunctionRegion) Description(ctx context.Context) string {
 	if v.regions == nil {
 		return "The serverless function region provided is not supported on Vercel"
 	}
 	return fmt.Sprintf("The serverless function region provided is not supported on Vercel. Must be one of %s.", strings.Join(keys(v.regions), ", "))
 }
 
-func (v validatorServerlessFunctionRegion) MarkdownDescription(ctx context.Context) string {
+func (v *validatorServerlessFunctionRegion) MarkdownDescription(ctx context.Context) string {
 	if v.regions == nil {
 		return "The serverless function region provided is not supported on Vercel"
 	}
@@ -40,10 +42,12 @@ func keys(v map[string]struct{}) (out []string) {
 	return
 }
 
-func (v validatorServerlessFunctionRegion) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+func (v *validatorServerlessFunctionRegion) loadRegions(req validator.StringRequest, resp *validator.StringResponse) {
+	if v.regions != nil {
+		// Regions are already loaded onto the validator
 		return
 	}
+
 	apires, err := http.Get("https://dcs.vercel-infra.com")
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
@@ -86,15 +90,24 @@ func (v validatorServerlessFunctionRegion) ValidateString(ctx context.Context, r
 		return
 	}
 
+	regionsToSet := map[string]struct{}{}
 	for region, regionInfo := range regions {
 		if contains(regionInfo.Caps, "V2_DEPLOYMENT_CREATE") {
-			if v.regions == nil {
-				v.regions = map[string]struct{}{}
-			}
-			v.regions[region] = struct{}{}
+			regionsToSet[region] = struct{}{}
 		}
 	}
+	v.regions = regionsToSet
+}
 
+func (v *validatorServerlessFunctionRegion) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+
+	v.loadRegions(req, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	if _, ok := v.regions[req.ConfigValue.ValueString()]; !ok {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,

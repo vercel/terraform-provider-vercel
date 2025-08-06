@@ -112,12 +112,16 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.",
 			},
 			"serverless_function_region": schema.StringAttribute{
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Description:   "The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.",
+				DeprecationMessage: "This attribute is deprecated. Please use resource_config.function_default_regions instead.",
+				Optional:           true,
+				Computed:           true,
+				Description:        "The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.",
 				Validators: []validator.String{
 					validateServerlessFunctionRegion(),
+					stringvalidator.ConflictsWith(
+						path.MatchRoot("serverless_function_region"),
+						path.MatchRoot("resource_config").AtName("function_default_regions"),
+					),
 				},
 			},
 			"node_version": schema.StringAttribute{
@@ -544,10 +548,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"resource_config": schema.SingleNestedAttribute{
-				Description:   "Resource Configuration for the project.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Description: "Resource Configuration for the project.",
+				Optional:    true,
+				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					// This is actually "function_default_memory_type" in the API schema, but for better convention, we use "cpu" and do translation in the provider.
 					"function_default_cpu_type": schema.StringAttribute{
@@ -568,6 +571,21 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							int64validator.AtMost(900),
 						},
 						PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
+					},
+					"function_default_regions": schema.SetAttribute{
+						Description: "The default regions for Serverless Functions. Must be an array of valid region identifiers.",
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+						Validators: []validator.Set{
+							setvalidator.ValueStringsAre(
+								validateServerlessFunctionRegion(),
+							),
+							setvalidator.ConflictsWith(
+								path.MatchRoot("serverless_function_region"),
+								path.MatchRoot("resource_config").AtName("function_default_regions"),
+							),
+						},
 					},
 					"fluid": schema.BoolAttribute{
 						Description:   "Enable fluid compute for your Vercel Functions to automatically manage concurrency and optimize performance. Vercel will handle the defaults to ensure the best experience for your workload.",
@@ -762,8 +780,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		OutputDirectory:                   p.OutputDirectory.ValueStringPointer(),
 		PublicSource:                      p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
-		ServerlessFunctionRegion:          p.ServerlessFunctionRegion.ValueString(),
-		ResourceConfig:                    resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds, p.BuildMachineType),
+		ResourceConfig:                    resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
 	}, diags
@@ -815,6 +832,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	if diags.HasError() {
 		return req, diags
 	}
+
 	return client.UpdateProjectRequest{
 		BuildCommand:                         p.BuildCommand.ValueStringPointer(),
 		CommandForIgnoringBuildStep:          p.IgnoreCommand.ValueStringPointer(),
@@ -825,7 +843,6 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		OutputDirectory:                      p.OutputDirectory.ValueStringPointer(),
 		PublicSource:                         p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                        p.RootDirectory.ValueStringPointer(),
-		ServerlessFunctionRegion:             p.ServerlessFunctionRegion.ValueString(),
 		PasswordProtection:                   p.PasswordProtection.toUpdateProjectRequest(),
 		VercelAuthentication:                 p.VercelAuthentication.toUpdateProjectRequest(),
 		TrustedIps:                           p.TrustedIps.toUpdateProjectRequest(),
@@ -844,7 +861,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		DirectoryListing:                     p.DirectoryListing.ValueBool(),
 		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
 		GitComments:                          gc.toUpdateProjectRequest(),
-		ResourceConfig:                       resourceConfig.toClientResourceConfig(p.OnDemandConcurrentBuilds, p.BuildMachineType),
+		ResourceConfig:                       resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		NodeVersion:                          p.NodeVersion.ValueString(),
 	}, nil
 }
@@ -1078,6 +1095,7 @@ var resourceConfigAttrType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
 		"function_default_cpu_type": types.StringType,
 		"function_default_timeout":  types.Int64Type,
+		"function_default_regions":  types.SetType{ElemType: types.StringType},
 		"fluid":                     types.BoolType,
 	},
 }
@@ -1085,6 +1103,7 @@ var resourceConfigAttrType = types.ObjectType{
 type ResourceConfig struct {
 	FunctionDefaultCPUType types.String `tfsdk:"function_default_cpu_type"`
 	FunctionDefaultTimeout types.Int64  `tfsdk:"function_default_timeout"`
+	FunctionDefaultRegions types.Set    `tfsdk:"function_default_regions"`
 	Fluid                  types.Bool   `tfsdk:"fluid"`
 }
 
@@ -1096,25 +1115,40 @@ func (p *Project) resourceConfig(ctx context.Context) (rc *ResourceConfig, diags
 	return rc, diags
 }
 
-func (r *ResourceConfig) toClientResourceConfig(onDemandConcurrentBuilds types.Bool, buildMachineType types.String) *client.ResourceConfig {
-	if r == nil {
-		return nil
+func (r *ResourceConfig) toClientResourceConfig(ctx context.Context, onDemandConcurrentBuilds types.Bool, buildMachineType types.String, serverlessFunctionRegion types.String) *client.ResourceConfig {
+	var resourceConfig *client.ResourceConfig = nil
+	if r != nil {
+		resourceConfig = &client.ResourceConfig{}
 	}
-	var resourceConfig = &client.ResourceConfig{}
-
-	if !r.FunctionDefaultCPUType.IsUnknown() {
+	if r != nil && !r.FunctionDefaultCPUType.IsUnknown() {
 		resourceConfig.FunctionDefaultMemoryType = r.FunctionDefaultCPUType.ValueStringPointer()
 	}
-	if !r.FunctionDefaultTimeout.IsUnknown() {
+	if r != nil && !r.FunctionDefaultTimeout.IsUnknown() {
 		resourceConfig.FunctionDefaultTimeout = r.FunctionDefaultTimeout.ValueInt64Pointer()
 	}
-	if !r.Fluid.IsUnknown() {
+	if r != nil && !r.FunctionDefaultRegions.IsUnknown() && !r.FunctionDefaultRegions.IsNull() {
+		var regions []string
+		r.FunctionDefaultRegions.ElementsAs(ctx, &regions, false)
+		resourceConfig.FunctionDefaultRegions = regions
+	} else if !serverlessFunctionRegion.IsUnknown() && !serverlessFunctionRegion.IsNull() {
+		if resourceConfig == nil {
+			resourceConfig = &client.ResourceConfig{}
+		}
+		resourceConfig.FunctionDefaultRegions = []string{serverlessFunctionRegion.ValueString()}
+	}
+	if r != nil && !r.Fluid.IsUnknown() {
 		resourceConfig.Fluid = r.Fluid.ValueBoolPointer()
 	}
 	if !onDemandConcurrentBuilds.IsUnknown() {
+		if resourceConfig == nil {
+			resourceConfig = &client.ResourceConfig{}
+		}
 		resourceConfig.ElasticConcurrencyEnabled = onDemandConcurrentBuilds.ValueBoolPointer()
 	}
 	if !buildMachineType.IsUnknown() {
+		if resourceConfig == nil {
+			resourceConfig = &client.ResourceConfig{}
+		}
 		resourceConfig.BuildMachineType = buildMachineType.ValueStringPointer()
 	}
 	return resourceConfig
@@ -1336,9 +1370,17 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 
 	resourceConfig := types.ObjectNull(resourceConfigAttrType.AttrTypes)
 	if response.ResourceConfig != nil {
+		var functionDefaultRegions attr.Value
+		regions := make([]attr.Value, 0, len(response.ResourceConfig.FunctionDefaultRegions))
+		for _, region := range response.ResourceConfig.FunctionDefaultRegions {
+			regions = append(regions, types.StringValue(region))
+		}
+		functionDefaultRegions = types.SetValueMust(types.StringType, regions)
+
 		resourceConfig = types.ObjectValueMust(resourceConfigAttrType.AttrTypes, map[string]attr.Value{
 			"function_default_cpu_type": types.StringPointerValue(response.ResourceConfig.FunctionDefaultMemoryType),
 			"function_default_timeout":  types.Int64PointerValue(response.ResourceConfig.FunctionDefaultTimeout),
+			"function_default_regions":  functionDefaultRegions,
 			"fluid":                     types.BoolValue(response.ResourceConfig.Fluid),
 		})
 	}

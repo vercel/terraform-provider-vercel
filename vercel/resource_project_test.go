@@ -200,6 +200,102 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectFunctionDefaultRegions(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				// check if legacy setting serverless_function_region conflicts with resource_config.function_default_regions
+				Config: cfg(fmt.Sprintf(`
+                resource "vercel_project" "test" {
+                    name = "test-acc-regions-conflict-%[1]s"
+                    serverless_function_region = "sfo1"
+                    resource_config = {
+                        function_default_regions = ["iad1", "fra1"]
+                    }
+                }
+                `, projectSuffix)),
+				ExpectError: regexp.MustCompile(strings.ReplaceAll("Attribute \"serverless_function_region\" cannot be specified when \"resource_config.function_default_regions\" is specified", " ", `\s*`)),
+			},
+			{
+				// check invalid region value
+				Config: cfg(fmt.Sprintf(`
+                resource "vercel_project" "test" {
+                    name = "test-acc-regions-invalid-%[1]s"
+                    resource_config = {
+                        function_default_regions = ["invalid-region"]
+                    }
+                }
+                `, projectSuffix)),
+				ExpectError: regexp.MustCompile(strings.ReplaceAll("Invalid Serverless Function Region", " ", `\s*`)),
+			},
+			{
+				// check creating a project with function_default_regions
+				Config: cfg(fmt.Sprintf(`
+                resource "vercel_project" "test" {
+                    name = "test-acc-regions-%[1]s"
+                    resource_config = {
+                        function_default_regions = ["sfo1", "iad1", "fra1"]
+                        function_default_cpu_type = "standard"
+                        function_default_timeout = 30
+                    }
+                }
+                `, projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-regions-%s", projectSuffix)),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.#", "3"),
+					// resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "sfo1"),
+					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "sfo1"),
+					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "iad1"),
+					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "fra1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_cpu_type", "standard"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_timeout", "30"),
+				),
+			},
+			{
+				// check updating a projects function_default_regions
+				Config: cfg(fmt.Sprintf(`
+                resource "vercel_project" "test" {
+                    name = "test-acc-regions-%[1]s"
+                    resource_config = {
+                        function_default_regions = ["hkg1", "sin1"]
+                        function_default_cpu_type = "performance"
+                        function_default_timeout = 60
+                    }
+                }
+                `, projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-regions-%s", projectSuffix)),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.#", "2"),
+					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "hkg1"),
+					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "hkg1"),
+					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "sin1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_cpu_type", "performance"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_timeout", "60"),
+				),
+			},
+			{
+				// check switching project from function_default_regions to serverless_function_region
+				Config: cfg(fmt.Sprintf(`
+                resource "vercel_project" "test" {
+                    name = "test-acc-regions-%[1]s"
+                    serverless_function_region = "syd1"
+                }
+                `, projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-regions-%s", projectSuffix)),
+					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "syd1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.#", "1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.0", "syd1"),
+				),
+			},
+		},
+	})
+}
+
 func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
@@ -957,12 +1053,14 @@ resource "vercel_project" "test" {
   build_command = "npm run build"
   dev_command = "npm run serve"
   ignore_command = "echo 'wat'"
-  serverless_function_region = "syd1"
   framework = "nextjs"
   install_command = "npm install"
   output_directory = ".output"
   public_source = true
   root_directory = "ui/src"
+	resource_config = {
+		function_default_regions = ["syd1"]
+	}
 }
 `, projectSuffix)
 }
@@ -1000,7 +1098,6 @@ resource "vercel_project" "test" {
   build_command = "npm run build"
   dev_command = "npm run serve"
   ignore_command = "echo 'wat'"
-  serverless_function_region = "syd1"
   framework = "nextjs"
   install_command = "npm install"
   output_directory = ".output"
@@ -1026,8 +1123,9 @@ resource "vercel_project" "test" {
     issuer_mode = "team"
   }
   resource_config = {
-      function_default_cpu_type = "standard"
-      function_default_timeout = 60
+		function_default_regions = ["syd1"]
+		function_default_cpu_type = "standard"
+		function_default_timeout = 60
   }
   environment = [
     {
