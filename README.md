@@ -86,6 +86,8 @@ task test -- -run 'TestAcc_Project*'
 ## Building The Documentation
 
 ```sh
+export GOBIN=~/go/bin
+export PATH=$GOBIN:$PATH
 task docs
 ```
 
