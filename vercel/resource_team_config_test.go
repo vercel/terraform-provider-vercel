@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAcc_TeamConfig(t *testing.T) {
@@ -35,6 +36,13 @@ func TestAcc_TeamConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "hide_ip_addresses", "true"),
 					resource.TestCheckResourceAttr(resourceName, "hide_ip_addresses_in_log_drains", "true"),
 				),
+			},
+			{
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"avatar"},
+				ImportStateIdFunc:       getTeamConfigImportID(resourceName),
+				ResourceName:            resourceName,
 			},
 		},
 	})
@@ -71,4 +79,14 @@ resource "vercel_team_config" "test" {
   hide_ip_addresses_in_log_drains = true
 }
 `, teamID)
+}
+
+func getTeamConfigImportID(n string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", n)
+		}
+		return rs.Primary.Attributes["id"], nil
+	}
 }
