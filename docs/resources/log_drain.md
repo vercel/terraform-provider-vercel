@@ -56,7 +56,7 @@ resource "vercel_project" "example" {
 - `delivery_format` (String) The format log data should be delivered in. Can be `json` or `ndjson`.
 - `endpoint` (String) Logs will be sent as POST requests to this URL. The endpoint will be verified, and must return a `200` status code and an `x-vercel-verify` header taken from the endpoint_verification data source. The value the `x-vercel-verify` header should be can be read from the `vercel_endpoint_verification_code` data source.
 - `environments` (Set of String) Logs from the selected environments will be forwarded to your webhook. At least one must be present.
-- `sources` (Set of String) A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build` and `lambda`.
+- `sources` (Set of String) A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build`, `lambda` and `firewall`.
 
 ### Optional
 
