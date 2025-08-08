@@ -84,3 +84,13 @@ Optional:
 
 - `access_group_id` (String) The access group id to assign to the user.
 - `role` (String) The team level role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Team config can be imported via the team ID.
+# - team_id can be found in the team `settings` tab in the Vercel UI.
+terraform import vercel_team_config.example team_xxxxxxxxxxxxxxxxxxxxxxxx
+```

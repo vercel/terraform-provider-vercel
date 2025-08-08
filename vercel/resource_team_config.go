@@ -32,6 +32,7 @@ var (
 	_ resource.Resource                 = &teamConfigResource{}
 	_ resource.ResourceWithConfigure    = &teamConfigResource{}
 	_ resource.ResourceWithUpgradeState = &teamConfigResource{}
+	_ resource.ResourceWithImportState  = &teamConfigResource{}
 )
 
 func newTeamConfigResource() resource.Resource {
@@ -835,4 +836,31 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 			},
 		},
 	}
+}
+
+// ImportState takes an identifier and reads all the team configuration information from the Vercel API.
+func (r *teamConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	teamID := req.ID
+
+	out, err := r.client.GetTeam(ctx, teamID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading team",
+			fmt.Sprintf("Could not get team %s, unexpected error: %s", teamID, err),
+		)
+		return
+	}
+
+	result, diags := convertResponseToTeamConfig(ctx, out, types.MapNull(types.StringType))
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
+	tflog.Info(ctx, "imported team config", map[string]any{
+		"team_id": result.ID.ValueString(),
+	})
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
 }
