@@ -1362,8 +1362,8 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	var oidcTokenConfig = &OIDCTokenConfig{
-		Enabled:    types.BoolValue(false),
-		IssuerMode: types.StringValue("global"),
+		Enabled:    types.BoolValue(true),
+		IssuerMode: types.StringValue("team"),
 	}
 	if response.OIDCTokenConfig != nil {
 		oidcTokenConfig.Enabled = types.BoolValue(response.OIDCTokenConfig.Enabled)
