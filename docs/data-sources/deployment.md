@@ -34,6 +34,7 @@ data "vercel_deployment" "example" {
 
 ### Read-Only
 
+- `custom_environment_id` (String) The ID of the Custom Environment that the deployment was deployed to, if any.
 - `domains` (List of String) A list of all the domains (default domains, staging domains and production domains) that were assigned upon deployment creation.
 - `production` (Boolean) true if the deployment is a production deployment, meaning production aliases will be assigned.
 - `project_id` (String) The project ID to add the deployment to.

@@ -87,18 +87,23 @@ A Deployment is the result of building your Project and making it available thro
 				Description: "The branch or commit hash that has been deployed. Note this will only work if the project is configured to use a Git repository.",
 				Computed:    true,
 			},
+			"custom_environment_id": schema.StringAttribute{
+				Description: "The ID of the Custom Environment that the deployment was deployed to, if any.",
+				Computed:    true,
+			},
 		},
 	}
 }
 
 type DeploymentDataSource struct {
-	Domains    types.List   `tfsdk:"domains"`
-	ID         types.String `tfsdk:"id"`
-	Production types.Bool   `tfsdk:"production"`
-	ProjectID  types.String `tfsdk:"project_id"`
-	TeamID     types.String `tfsdk:"team_id"`
-	URL        types.String `tfsdk:"url"`
-	Ref        types.String `tfsdk:"ref"`
+	Domains             types.List   `tfsdk:"domains"`
+	ID                  types.String `tfsdk:"id"`
+	Production          types.Bool   `tfsdk:"production"`
+	ProjectID           types.String `tfsdk:"project_id"`
+	TeamID              types.String `tfsdk:"team_id"`
+	URL                 types.String `tfsdk:"url"`
+	Ref                 types.String `tfsdk:"ref"`
+	CustomEnvironmentID types.String `tfsdk:"custom_environment_id"`
 }
 
 func convertResponseToDeploymentDataSource(in client.DeploymentResponse) DeploymentDataSource {
@@ -111,14 +116,21 @@ func convertResponseToDeploymentDataSource(in client.DeploymentResponse) Deploym
 	for _, a := range in.Aliases {
 		domains = append(domains, types.StringValue(a))
 	}
+
+	customEnvironmentID := types.StringNull()
+	if in.CustomEnvironment != nil && in.CustomEnvironment.ID != "" {
+		customEnvironmentID = types.StringValue(in.CustomEnvironment.ID)
+	}
+
 	return DeploymentDataSource{
-		Domains:    types.ListValueMust(types.StringType, domains),
-		Production: types.BoolValue(in.Target != nil && *in.Target == "production"),
-		TeamID:     toTeamID(in.TeamID),
-		ProjectID:  types.StringValue(in.ProjectID),
-		ID:         types.StringValue(in.ID),
-		URL:        types.StringValue(in.URL),
-		Ref:        ref,
+		Domains:             types.ListValueMust(types.StringType, domains),
+		Production:          types.BoolValue(in.Target != nil && *in.Target == "production"),
+		TeamID:              toTeamID(in.TeamID),
+		ProjectID:           types.StringValue(in.ProjectID),
+		ID:                  types.StringValue(in.ID),
+		URL:                 types.StringValue(in.URL),
+		Ref:                 ref,
+		CustomEnvironmentID: customEnvironmentID,
 	}
 }
 
