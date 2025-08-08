@@ -67,3 +67,52 @@ resource "vercel_deployment" "test" {
 }
 `, name)
 }
+
+func TestAcc_DeploymentDataSourceWithCustomEnvironment(t *testing.T) {
+	name := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccDeploymentDataSourceWithCustomEnvironmentConfig(name)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.vercel_deployment.test", "id"),
+					resource.TestCheckResourceAttrSet("data.vercel_deployment.test", "project_id"),
+					resource.TestCheckResourceAttrSet("data.vercel_deployment.test", "url"),
+					resource.TestCheckResourceAttrSet("data.vercel_deployment.test", "custom_environment_id"),
+					resource.TestCheckResourceAttrPair("data.vercel_deployment.test", "custom_environment_id", "vercel_custom_environment.test", "id"),
+				),
+			},
+		},
+	})
+}
+
+func testAccDeploymentDataSourceWithCustomEnvironmentConfig(name string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-deployment-ds-custom-env-%[1]s"
+}
+
+resource "vercel_custom_environment" "test" {
+  project_id = vercel_project.test.id
+  name = "test-custom-env-%[1]s"
+  description = "test custom environment for deployment data source"
+}
+
+data "vercel_prebuilt_project" "test" {
+    path = "examples/two"
+}
+
+resource "vercel_deployment" "test" {
+  project_id = vercel_project.test.id
+  custom_environment_id = vercel_custom_environment.test.id
+
+  files       = data.vercel_prebuilt_project.test.output
+  path_prefix = data.vercel_prebuilt_project.test.path
+}
+
+data "vercel_deployment" "test" {
+   id = vercel_deployment.test.id
+}
+`, name)
+}

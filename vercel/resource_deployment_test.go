@@ -443,3 +443,54 @@ resource "vercel_deployment" "test" {
   path_prefix   = data.vercel_project_directory.test.path
 }`, projectSuffix)
 }
+
+func TestAcc_DeploymentWithCustomEnvironment(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	testTeamID := resource.TestCheckNoResourceAttr("vercel_deployment.test", "team_id")
+	if testTeam(t) != "" {
+		testTeamID = resource.TestCheckResourceAttr("vercel_deployment.test", "team_id", testTeam(t))
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccDeploymentWithCustomEnvironment(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testTeamID,
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
+					resource.TestCheckResourceAttrSet("vercel_deployment.test", "custom_environment_id"),
+					resource.TestCheckResourceAttrPair("vercel_deployment.test", "custom_environment_id", "vercel_custom_environment.test", "id"),
+				),
+			},
+		},
+	})
+}
+
+func testAccDeploymentWithCustomEnvironment(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-deployment-custom-env-%[1]s"
+}
+
+resource "vercel_custom_environment" "test" {
+  project_id = vercel_project.test.id
+  name = "test-custom-env-%[1]s"
+  description = "test custom environment for deployment"
+}
+
+data "vercel_prebuilt_project" "test" {
+    path = "examples/two"
+}
+
+resource "vercel_deployment" "test" {
+  project_id = vercel_project.test.id
+  custom_environment_id = vercel_custom_environment.test.id
+
+  files       = data.vercel_prebuilt_project.test.output
+  path_prefix = data.vercel_prebuilt_project.test.path
+}
+`, projectSuffix)
+}

@@ -176,6 +176,11 @@ terraform to your Deployment.
 				Description: "Set to true to hard delete the Vercel deployment when destroying the Terraform resource. If unspecified, deployments are retained indefinitely. Note that deleted deployments are not recoverable.",
 				Optional:    true,
 			},
+			"custom_environment_id": schema.StringAttribute{
+				Description:   "The ID of the Custom Environment to deploy to. If not specified, the deployment will use the standard environments (production/preview).",
+				Optional:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
 		},
 	}
 }
@@ -192,18 +197,19 @@ type ProjectSettings struct {
 
 // Deployment represents the terraform state for a deployment resource.
 type Deployment struct {
-	Domains         types.List       `tfsdk:"domains"`
-	Environment     types.Map        `tfsdk:"environment"`
-	Files           types.Map        `tfsdk:"files"`
-	ID              types.String     `tfsdk:"id"`
-	Production      types.Bool       `tfsdk:"production"`
-	ProjectID       types.String     `tfsdk:"project_id"`
-	PathPrefix      types.String     `tfsdk:"path_prefix"`
-	ProjectSettings *ProjectSettings `tfsdk:"project_settings"`
-	TeamID          types.String     `tfsdk:"team_id"`
-	URL             types.String     `tfsdk:"url"`
-	DeleteOnDestroy types.Bool       `tfsdk:"delete_on_destroy"`
-	Ref             types.String     `tfsdk:"ref"`
+	Domains             types.List       `tfsdk:"domains"`
+	Environment         types.Map        `tfsdk:"environment"`
+	Files               types.Map        `tfsdk:"files"`
+	ID                  types.String     `tfsdk:"id"`
+	Production          types.Bool       `tfsdk:"production"`
+	ProjectID           types.String     `tfsdk:"project_id"`
+	PathPrefix          types.String     `tfsdk:"path_prefix"`
+	ProjectSettings     *ProjectSettings `tfsdk:"project_settings"`
+	TeamID              types.String     `tfsdk:"team_id"`
+	URL                 types.String     `tfsdk:"url"`
+	DeleteOnDestroy     types.Bool       `tfsdk:"delete_on_destroy"`
+	Ref                 types.String     `tfsdk:"ref"`
+	CustomEnvironmentID types.String     `tfsdk:"custom_environment_id"`
 }
 
 // setIfNotUnknown is a helper function to set a value in a map if it is not unknown.
@@ -377,19 +383,25 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		ref = types.StringValue(response.GitSource.Ref)
 	}
 
+	customEnvironmentID := types.StringNull()
+	if response.CustomEnvironment != nil && response.CustomEnvironment.ID != "" {
+		customEnvironmentID = types.StringValue(response.CustomEnvironment.ID)
+	}
+
 	return Deployment{
-		Domains:         types.ListValueMust(types.StringType, domains),
-		TeamID:          toTeamID(response.TeamID),
-		Environment:     plan.Environment,
-		ProjectID:       types.StringValue(response.ProjectID),
-		ID:              types.StringValue(response.ID),
-		URL:             types.StringValue(response.URL),
-		Production:      production,
-		Files:           plan.Files,
-		PathPrefix:      fillStringNull(plan.PathPrefix),
-		ProjectSettings: plan.ProjectSettings.fillNulls(),
-		DeleteOnDestroy: plan.DeleteOnDestroy,
-		Ref:             ref,
+		Domains:             types.ListValueMust(types.StringType, domains),
+		TeamID:              toTeamID(response.TeamID),
+		Environment:         plan.Environment,
+		ProjectID:           types.StringValue(response.ProjectID),
+		ID:                  types.StringValue(response.ID),
+		URL:                 types.StringValue(response.URL),
+		Production:          production,
+		Files:               plan.Files,
+		PathPrefix:          fillStringNull(plan.PathPrefix),
+		ProjectSettings:     plan.ProjectSettings.fillNulls(),
+		DeleteOnDestroy:     plan.DeleteOnDestroy,
+		Ref:                 ref,
+		CustomEnvironmentID: customEnvironmentID,
 	}
 }
 
@@ -528,12 +540,13 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 		files[i].File = normaliseFilename(files[i].File, plan.PathPrefix)
 	}
 	cdr := client.CreateDeploymentRequest{
-		Files:           files,
-		Environment:     filterNullFromMap(environment),
-		ProjectID:       plan.ProjectID.ValueString(),
-		ProjectSettings: plan.ProjectSettings.toRequest(),
-		Target:          target,
-		Ref:             plan.Ref.ValueString(),
+		Files:                     files,
+		Environment:               filterNullFromMap(environment),
+		ProjectID:                 plan.ProjectID.ValueString(),
+		ProjectSettings:           plan.ProjectSettings.toRequest(),
+		Target:                    target,
+		Ref:                       plan.Ref.ValueString(),
+		CustomEnvironmentSlugOrID: plan.CustomEnvironmentID.ValueString(),
 	}
 
 	_, err = r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
