@@ -1171,3 +1171,34 @@ resource "vercel_project" "test" {
 }
 `, projectSuffix)
 }
+
+func TestAcc_Project_OIDCToken(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectConfigOIDCToken(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.enabled", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "oidc_token_config.issuer_mode", "global"),
+				),
+			},
+		},
+	})
+}
+
+func testAccProjectConfigOIDCToken(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name      = "test-acc-oidc-%s"
+  framework = "nextjs"
+  oidc_token_config = {
+    issuer_mode = "global"
+  }
+}
+`, projectSuffix)
+}
