@@ -92,7 +92,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				Computed:    true,
 			},
 			"sources": schema.SetAttribute{
-				Description: "A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build` and `function`.",
+				Description: "A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build`, `lambda` and `firewall`.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
