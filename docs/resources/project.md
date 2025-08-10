@@ -137,9 +137,9 @@ Required:
 
 Optional:
 
+- `branch_tracking` (Attributes) Branch Tracking configuration for the production branch. When specified, the provider will set the production branch using a matcher rule. (see [below for nested schema](#nestedatt--git_repository--branch_tracking))
 - `deploy_hooks` (Attributes Set) Deploy hooks are unique URLs that allow you to trigger a deployment of a given branch. See https://vercel.com/docs/deployments/deploy-hooks for full information. (see [below for nested schema](#nestedatt--git_repository--deploy_hooks))
 - `production_branch` (String) By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.
-- `branch_tracking` (Attributes) Branch Tracking configuration for the production branch. When specified, the provider will set the production branch using a matcher rule.
 
 <a id="nestedatt--git_repository--branch_tracking"></a>
 ### Nested Schema for `git_repository.branch_tracking`
@@ -147,7 +147,8 @@ Optional:
 Required:
 
 - `pattern` (String) The pattern of the branch name to track.
-- `type` (String) How a branch name should be matched against the pattern. One of `startsWith`, `endsWith`, or `equals`.
+- `type` (String) How a branch name should be matched against the pattern. Must be one of 'startsWith', 'endsWith' or 'equals'.
+
 
 <a id="nestedatt--git_repository--deploy_hooks"></a>
 ### Nested Schema for `git_repository.deploy_hooks`
