@@ -237,6 +237,23 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Computed:      true,
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
+					"branch_tracking": schema.SingleNestedAttribute{
+						Description:   "Branch Tracking configuration for the production branch. When specified, the provider will set the production branch using a matcher rule.",
+						Optional:      true,
+						Attributes: map[string]schema.Attribute{
+							"pattern": schema.StringAttribute{
+								Description: "The pattern of the branch name to track.",
+								Required:    true,
+							},
+							"type": schema.StringAttribute{
+								Description: "How a branch name should be matched against the pattern. Must be one of 'startsWith', 'endsWith' or 'equals'.",
+								Required:    true,
+								Validators: []validator.String{
+									stringvalidator.OneOf("startsWith", "endsWith", "equals"),
+								},
+							},
+						},
+					},
 					"deploy_hooks": schema.SetNestedAttribute{
 						Description: "Deploy hooks are unique URLs that allow you to trigger a deployment of a given branch. See https://vercel.com/docs/deployments/deploy-hooks for full information.",
 						Optional:    true,
@@ -945,7 +962,45 @@ type GitRepository struct {
 	Type             types.String `tfsdk:"type"`
 	Repo             types.String `tfsdk:"repo"`
 	ProductionBranch types.String `tfsdk:"production_branch"`
+    BranchTracking   types.Object `tfsdk:"branch_tracking"`
 	DeployHooks      types.Set    `tfsdk:"deploy_hooks"`
+}
+
+// ProjectBranchTracking is the typed representation for the nested branch_tracking object.
+type ProjectBranchTracking struct {
+    Pattern types.String `tfsdk:"pattern"`
+    Type    types.String `tfsdk:"type"`
+}
+
+var projectBranchTrackingAttrType = types.ObjectType{
+    AttrTypes: map[string]attr.Type{
+        "pattern": types.StringType,
+        "type":    types.StringType,
+    },
+}
+
+// branchMatcher derives the API branch matcher and branch string from the repo config.
+func (g *GitRepository) branchMatcher(ctx context.Context) (*client.BranchMatcher, string, diag.Diagnostics) {
+    if g == nil {
+        return nil, "", nil
+    }
+    // Prefer explicit branch_tracking if provided, otherwise fall back to production_branch
+    if !g.BranchTracking.IsNull() && !g.BranchTracking.IsUnknown() {
+        var bt ProjectBranchTracking
+        diags := g.BranchTracking.As(ctx, &bt, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+        if diags.HasError() {
+            return nil, "", diags
+        }
+        // If either field is unknown, do not attempt to set
+        if bt.Pattern.IsUnknown() || bt.Type.IsUnknown() || bt.Pattern.IsNull() || bt.Type.IsNull() {
+            return nil, "", nil
+        }
+        return &client.BranchMatcher{Pattern: bt.Pattern.ValueString(), Type: bt.Type.ValueString()}, bt.Pattern.ValueString(), nil
+    }
+    if !g.ProductionBranch.IsNull() && !g.ProductionBranch.IsUnknown() {
+        return nil, g.ProductionBranch.ValueString(), nil
+    }
+    return nil, "", nil
 }
 
 func (g *GitRepository) isDifferentRepo(other *GitRepository) bool {
@@ -1317,6 +1372,12 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 				return Project{}, fmt.Errorf("error reading project deploy hooks: %s - %s", diags[0].Summary(), diags[0].Detail())
 			}
 			gr.DeployHooks = hooks
+		}
+		// Preserve configured branch_tracking in state since API does not return it
+		if plan.GitRepository != nil && !plan.GitRepository.BranchTracking.IsUnknown() {
+			gr.BranchTracking = plan.GitRepository.BranchTracking
+		} else {
+			gr.BranchTracking = types.ObjectNull(projectBranchTrackingAttrType.AttrTypes)
 		}
 	}
 
@@ -1760,14 +1821,25 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		}
 	}
 
-	if plan.GitRepository == nil || plan.GitRepository.ProductionBranch.IsNull() || plan.GitRepository.ProductionBranch.IsUnknown() {
+	if plan.GitRepository == nil || (plan.GitRepository.BranchTracking.IsNull() && plan.GitRepository.ProductionBranch.IsNull()) || (plan.GitRepository.BranchTracking.IsUnknown() && plan.GitRepository.ProductionBranch.IsUnknown()) {
+		return
+	}
+
+	// Determine branch and optional matcher
+	bm, branch, diags := plan.GitRepository.branchMatcher(ctx)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if branch == "" { // nothing to set
 		return
 	}
 
 	out, err = r.client.UpdateProductionBranch(ctx, client.UpdateProductionBranchRequest{
-		ProjectID: out.ID,
-		Branch:    plan.GitRepository.ProductionBranch.ValueString(),
-		TeamID:    plan.TeamID.ValueString(),
+		ProjectID:     out.ID,
+		Branch:        branch,
+		TeamID:        plan.TeamID.ValueString(),
+		BranchMatcher: bm,
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -2127,18 +2199,34 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	if plan.GitRepository != nil && !plan.GitRepository.ProductionBranch.IsUnknown() &&
-		!plan.GitRepository.ProductionBranch.IsNull() && // we know the value the production branch _should_ be
-		(wasUnlinked || // and we either unlinked the repo,
-			(state.GitRepository == nil || // or the production branch was never set
-				// or the production branch was/is something else
-				state.GitRepository.ProductionBranch.ValueString() != plan.GitRepository.ProductionBranch.ValueString())) {
-
-		out, err = r.client.UpdateProductionBranch(ctx, client.UpdateProductionBranchRequest{
-			ProjectID: plan.ID.ValueString(),
-			TeamID:    plan.TeamID.ValueString(),
-			Branch:    plan.GitRepository.ProductionBranch.ValueString(),
-		})
+	if plan.GitRepository != nil {
+		bm, branch, diags := plan.GitRepository.branchMatcher(ctx)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if branch != "" && (wasUnlinked || state.GitRepository == nil || state.GitRepository.ProductionBranch.ValueString() != branch) {
+			out, err = r.client.UpdateProductionBranch(ctx, client.UpdateProductionBranchRequest{
+				ProjectID:     plan.ID.ValueString(),
+				TeamID:        plan.TeamID.ValueString(),
+				Branch:        branch,
+				BranchMatcher: bm,
+			})
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error updating project",
+					fmt.Sprintf(
+						"Could not update project production branch %s %s to '%s', unexpected error: %s",
+						state.TeamID.ValueString(),
+						state.ID.ValueString(),
+						branch,
+						err,
+					),
+				)
+				return
+			}
+		}
+	}
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating project",

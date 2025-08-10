@@ -359,7 +359,10 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 type UpdateProductionBranchRequest struct {
 	TeamID    string `json:"-"`
 	ProjectID string `json:"-"`
-	Branch    string `json:"branch"`
+    Branch    string `json:"branch"`
+    // BranchMatcher allows selecting the production branch by a matcher rule.
+    // If provided, `branch` should contain the same pattern value.
+    BranchMatcher *BranchMatcher `json:"branchMatcher,omitempty"`
 }
 
 func (c *Client) UpdateProductionBranch(ctx context.Context, request UpdateProductionBranchRequest) (r ProjectResponse, err error) {
