@@ -2227,20 +2227,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			}
 		}
 	}
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error updating project",
-				fmt.Sprintf(
-					"Could not update project production branch %s %s to '%s', unexpected error: %s",
-					state.TeamID.ValueString(),
-					state.ID.ValueString(),
-					plan.GitRepository.ProductionBranch.ValueString(),
-					err,
-				),
-			)
-			return
-		}
-	}
+
 
 	hooksToCreate, hooksToRemove, diags := diffDeployHooks(ctx, plan.GitRepository, state.GitRepository)
 	resp.Diagnostics.Append(diags...)
