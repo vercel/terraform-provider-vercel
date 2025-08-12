@@ -364,6 +364,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						DeprecationMessage: "This field is deprecated and will be removed in a future version.",
 						Description:        "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
 						Optional:           true,
+						Computed:           true,
 						Validators: []validator.Bool{
 							onlyTrueValidator("This field is deprecated and can no longer be specified as 'false'"),
 						},
@@ -1073,22 +1074,38 @@ func (o *OIDCTokenConfig) toCreateProjectRequest() *client.OIDCTokenConfig {
 		return nil
 	}
 
+	// If the block is present but `enabled` is unspecified, default to true
+	var enabled *bool
+	if o.Enabled.IsUnknown() || o.Enabled.IsNull() {
+		v := true
+		enabled = &v
+	} else {
+		enabled = o.Enabled.ValueBoolPointer()
+	}
+
 	return &client.OIDCTokenConfig{
-		Enabled:    o.Enabled.ValueBool(),
+		Enabled:    enabled,
 		IssuerMode: o.IssuerMode.ValueString(),
 	}
 }
 
 func (o *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
 	if o == nil {
-		return &client.OIDCTokenConfig{
-			Enabled:    types.BoolValue(false).ValueBool(),
-			IssuerMode: types.StringValue("global").ValueString(),
-		}
+		// No block provided; do not update OIDC token config
+		return nil
+	}
+
+	// If the block is present but `enabled` is unspecified, default to true
+	var enabled *bool
+	if o.Enabled.IsUnknown() || o.Enabled.IsNull() {
+		v := true
+		enabled = &v
+	} else {
+		enabled = o.Enabled.ValueBoolPointer()
 	}
 
 	return &client.OIDCTokenConfig{
-		Enabled:    o.Enabled.ValueBool(),
+		Enabled:    enabled,
 		IssuerMode: o.IssuerMode.ValueString(),
 	}
 }
@@ -1362,11 +1379,15 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	var oidcTokenConfig = &OIDCTokenConfig{
-		Enabled:    types.BoolValue(false),
-		IssuerMode: types.StringValue("global"),
+		Enabled:    types.BoolValue(true),
+		IssuerMode: types.StringValue("team"),
 	}
 	if response.OIDCTokenConfig != nil {
-		oidcTokenConfig.Enabled = types.BoolValue(response.OIDCTokenConfig.Enabled)
+		if response.OIDCTokenConfig.Enabled == nil {
+			oidcTokenConfig.Enabled = types.BoolValue(true)
+		} else {
+			oidcTokenConfig.Enabled = types.BoolPointerValue(response.OIDCTokenConfig.Enabled)
+		}
 		oidcTokenConfig.IssuerMode = types.StringValue(response.OIDCTokenConfig.IssuerMode)
 	}
 
