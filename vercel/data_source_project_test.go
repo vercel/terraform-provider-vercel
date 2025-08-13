@@ -46,6 +46,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "preview_comments", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "enable_preview_feedback", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "enable_production_feedback", "false"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "preview_deployments_disabled", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "auto_assign_custom_domains", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "git_lfs", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "function_failover", "true"),
@@ -80,6 +81,7 @@ resource "vercel_project" "test" {
   output_directory = ".output"
   public_source = true
   root_directory = "ui/src"
+  preview_deployments_disabled = true
   vercel_authentication = {
     deployment_type = "standard_protection"
   }

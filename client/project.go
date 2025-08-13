@@ -61,6 +61,7 @@ type CreateProjectRequest struct {
 	ResourceConfig                    *ResourceConfig       `json:"resourceConfig,omitempty"`
 	EnablePreviewFeedback             *bool                 `json:"enablePreviewFeedback,omitempty"`
 	EnableProductionFeedback          *bool                 `json:"enableProductionFeedback,omitempty"`
+	PreviewDeploymentsDisabled        *bool                 `json:"previewDeploymentsDisabled,omitempty"`
 }
 
 // CreateProject will create a project within Vercel.
@@ -196,6 +197,7 @@ type ProjectResponse struct {
 	EnablePreviewFeedback                *bool                       `json:"enablePreviewFeedback"`
 	EnableProductionFeedback             *bool                       `json:"enableProductionFeedback"`
 	EnableAffectedProjectsDeployments    *bool                       `json:"enableAffectedProjectsDeployments"`
+	PreviewDeploymentsDisabled           bool                        `json:"previewDeploymentsDisabled"`
 	AutoAssignCustomDomains              bool                        `json:"autoAssignCustomDomains"`
 	GitLFS                               bool                        `json:"gitLFS"`
 	ServerlessFunctionZeroConfigFailover bool                        `json:"serverlessFunctionZeroConfigFailover"`
@@ -318,6 +320,7 @@ type UpdateProjectRequest struct {
 	EnablePreviewFeedback                *bool                           `json:"enablePreviewFeedback"`
 	EnableProductionFeedback             *bool                           `json:"enableProductionFeedback"`
 	EnableAffectedProjectsDeployments    *bool                           `json:"enableAffectedProjectsDeployments,omitempty"`
+	PreviewDeploymentsDisabled           bool                            `json:"previewDeploymentsDisabled"`
 	AutoAssignCustomDomains              bool                            `json:"autoAssignCustomDomains"`
 	GitLFS                               bool                            `json:"gitLFS"`
 	ServerlessFunctionZeroConfigFailover bool                            `json:"serverlessFunctionZeroConfigFailover"`
