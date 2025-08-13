@@ -2313,7 +2313,6 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 // ImportState takes an identifier and reads all the project information from the Vercel API.
 // Note that environment variables are also read. The results are then stored in terraform state.
 func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	fmt.Println("ImportState")
 	teamID, projectID, ok := splitInto1Or2(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
