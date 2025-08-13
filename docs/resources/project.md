@@ -211,7 +211,7 @@ Required:
 
 Optional:
 
-- `protection_mode` (String) Whether or not Trusted IPs is optional to access a deployment. Must be `trusted_ip_required`.
+- `protection_mode` (String) Whether or not Trusted IPs is optional to access a deployment. Must be either `trusted_ip_required` or `trusted_ip_optional`. `trusted_ip_optional` is only available with Standalone Trusted IPs.
 
 <a id="nestedatt--trusted_ips--addresses"></a>
 ### Nested Schema for `trusted_ips.addresses`
@@ -231,7 +231,7 @@ Optional:
 
 Required:
 
-- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_preview_deployments`, or `none`.
+- `deployment_type` (String) The deployment environment to protect. The default value is `standard_protection_new` (Standard Protection). Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_preview_deployments`, or `none`.
 
 ## Import
 
