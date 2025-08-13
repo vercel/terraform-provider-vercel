@@ -61,6 +61,7 @@ type CreateProjectRequest struct {
 	ResourceConfig                    *ResourceConfig       `json:"resourceConfig,omitempty"`
 	EnablePreviewFeedback             *bool                 `json:"enablePreviewFeedback,omitempty"`
 	EnableProductionFeedback          *bool                 `json:"enableProductionFeedback,omitempty"`
+	VercelAuthentication              *VercelAuthentication `json:"ssoProtection,omitempty"`
 	PreviewDeploymentsDisabled        *bool                 `json:"previewDeploymentsDisabled,omitempty"`
 }
 
