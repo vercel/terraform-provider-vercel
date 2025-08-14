@@ -21,10 +21,11 @@ import (
 )
 
 var (
-	_ resource.Resource                = &sharedEnvironmentVariableResource{}
-	_ resource.ResourceWithConfigure   = &sharedEnvironmentVariableResource{}
-	_ resource.ResourceWithImportState = &sharedEnvironmentVariableResource{}
-	_ resource.ResourceWithModifyPlan  = &sharedEnvironmentVariableResource{}
+	_ resource.Resource                     = &sharedEnvironmentVariableResource{}
+	_ resource.ResourceWithConfigure        = &sharedEnvironmentVariableResource{}
+	_ resource.ResourceWithImportState      = &sharedEnvironmentVariableResource{}
+	_ resource.ResourceWithModifyPlan       = &sharedEnvironmentVariableResource{}
+	_ resource.ResourceWithConfigValidators = &sharedEnvironmentVariableResource{}
 )
 
 func newSharedEnvironmentVariableResource() resource.Resource {
@@ -112,12 +113,12 @@ For more detailed information, please see the [Vercel documentation](https://ver
 `,
 		Attributes: map[string]schema.Attribute{
 			"target": schema.SetAttribute{
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(stringvalidator.OneOf("production", "preview", "development")),
-					setvalidator.SizeAtLeast(1),
 				},
 			},
 			"key": schema.StringAttribute{
@@ -169,6 +170,57 @@ For more detailed information, please see the [Vercel documentation](https://ver
 	}
 }
 
+func (r *sharedEnvironmentVariableResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		&sharedEnvTargetValidator{},
+	}
+}
+
+type sharedEnvTargetValidator struct{}
+
+func (v *sharedEnvTargetValidator) Description(ctx context.Context) string {
+	return "When `apply_to_all_custom_environments` is `false` or not set, you must specify `target` with at least one value."
+}
+
+func (v *sharedEnvTargetValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v *sharedEnvTargetValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var sev SharedEnvironmentVariable
+	diags := req.Config.Get(ctx, &sev)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// If apply_to_all_custom_environments is explicitly true, allow target to be omitted or empty.
+	if !sev.ApplyToAllCustomEnvironments.IsNull() && !sev.ApplyToAllCustomEnvironments.IsUnknown() && sev.ApplyToAllCustomEnvironments.ValueBool() {
+		return
+	}
+	// Otherwise, target must be provided with at least one element.
+	if sev.Target.IsNull() || sev.Target.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("target"),
+			"Missing required attribute",
+			v.Description(ctx),
+		)
+		return
+	}
+	var targets []string
+	diags = sev.Target.ElementsAs(ctx, &targets, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if len(targets) == 0 {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("target"),
+			"Invalid attribute value",
+			v.Description(ctx),
+		)
+	}
+}
+
 // SharedEnvironmentVariable reflects the state terraform stores internally for a project environment variable.
 type SharedEnvironmentVariable struct {
 	Target                       types.Set    `tfsdk:"target"`
@@ -184,14 +236,18 @@ type SharedEnvironmentVariable struct {
 
 func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics) (req client.CreateSharedEnvironmentVariableRequest, ok bool) {
 	var target []string
-	ds := e.Target.ElementsAs(ctx, &target, false)
-	diags = append(diags, ds...)
-	if diags.HasError() {
-		return req, false
+	if e.Target.IsNull() || e.Target.IsUnknown() {
+		target = []string{}
+	} else {
+		ds := e.Target.ElementsAs(ctx, &target, false)
+		diags = append(diags, ds...)
+		if diags.HasError() {
+			return req, false
+		}
 	}
 
 	var projectIDs []string
-	ds = e.ProjectIDs.ElementsAs(ctx, &projectIDs, false)
+	ds := e.ProjectIDs.ElementsAs(ctx, &projectIDs, false)
 	diags = append(diags, ds...)
 	if diags.HasError() {
 		return req, false
@@ -225,14 +281,18 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx
 
 func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics) (req client.UpdateSharedEnvironmentVariableRequest, ok bool) {
 	var target []string
-	ds := e.Target.ElementsAs(ctx, &target, false)
-	diags = append(diags, ds...)
-	if diags.HasError() {
-		return req, false
+	if e.Target.IsNull() || e.Target.IsUnknown() {
+		target = []string{}
+	} else {
+		ds := e.Target.ElementsAs(ctx, &target, false)
+		diags = append(diags, ds...)
+		if diags.HasError() {
+			return req, false
+		}
 	}
 
 	var projectIDs []string
-	ds = e.ProjectIDs.ElementsAs(ctx, &projectIDs, false)
+	ds := e.ProjectIDs.ElementsAs(ctx, &projectIDs, false)
 	diags = append(diags, ds...)
 	if diags.HasError() {
 		return req, false
