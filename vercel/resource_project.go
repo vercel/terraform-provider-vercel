@@ -501,6 +501,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
+			"preview_deployments_disabled": schema.BoolAttribute{
+				Description:   "Disable creation of Preview Deployments for this project.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
 			"auto_assign_custom_domains": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -653,6 +659,7 @@ type Project struct {
 	PreviewComments                     types.Bool                      `tfsdk:"preview_comments"`
 	EnablePreviewFeedback               types.Bool                      `tfsdk:"enable_preview_feedback"`
 	EnableProductionFeedback            types.Bool                      `tfsdk:"enable_production_feedback"`
+	PreviewDeploymentsDisabled          types.Bool                      `tfsdk:"preview_deployments_disabled"`
 	AutoAssignCustomDomains             types.Bool                      `tfsdk:"auto_assign_custom_domains"`
 	GitLFS                              types.Bool                      `tfsdk:"git_lfs"`
 	FunctionFailover                    types.Bool                      `tfsdk:"function_failover"`
@@ -786,6 +793,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		ResourceConfig:                    resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
+		PreviewDeploymentsDisabled:        p.PreviewDeploymentsDisabled.ValueBoolPointer(),
 	}, diags
 }
 
@@ -855,6 +863,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		EnablePreviewFeedback:                oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:             p.EnableProductionFeedback.ValueBoolPointer(),
 		EnableAffectedProjectsDeployments:    p.EnableAffectedProjectsDeployments.ValueBoolPointer(),
+		PreviewDeploymentsDisabled:           p.PreviewDeploymentsDisabled.ValueBool(),
 		AutoAssignCustomDomains:              p.AutoAssignCustomDomains.ValueBool(),
 		GitLFS:                               p.GitLFS.ValueBool(),
 		ServerlessFunctionZeroConfigFailover: p.FunctionFailover.ValueBool(),
@@ -1541,6 +1550,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		EnablePreviewFeedback:               types.BoolPointerValue(response.EnablePreviewFeedback),
 		EnableProductionFeedback:            types.BoolPointerValue(response.EnableProductionFeedback),
 		EnableAffectedProjectsDeployments:   uncoerceBool(fields.EnableAffectedProjectsDeployments, types.BoolPointerValue(response.EnableAffectedProjectsDeployments)),
+		PreviewDeploymentsDisabled:          types.BoolValue(response.PreviewDeploymentsDisabled),
 		AutoAssignCustomDomains:             types.BoolValue(response.AutoAssignCustomDomains),
 		GitLFS:                              types.BoolValue(response.GitLFS),
 		FunctionFailover:                    types.BoolValue(response.ServerlessFunctionZeroConfigFailover),

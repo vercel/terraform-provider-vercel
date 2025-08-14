@@ -70,6 +70,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployments_disabled", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "auto_assign_custom_domains", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_lfs", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "function_failover", "true"),
@@ -100,6 +101,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployments_disabled", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "on_demand_concurrent_builds", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", ""),
 				),
@@ -747,6 +749,7 @@ resource "vercel_project" "test" {
   on_demand_concurrent_builds = false
   enable_preview_feedback = false
   enable_production_feedback = true
+  preview_deployments_disabled = false
 }
 `, projectSuffix)
 }
@@ -1059,6 +1062,7 @@ resource "vercel_project" "test" {
   output_directory = ".output"
   public_source = true
   root_directory = "ui/src"
+  preview_deployments_disabled = true
 	resource_config = {
 		function_default_regions = ["syd1"]
 	}
@@ -1119,6 +1123,7 @@ resource "vercel_project" "test" {
   prioritise_production_builds = true
   directory_listing = true
   skew_protection = "7 days"
+  preview_deployments_disabled = false
   oidc_token_config = {
     enabled = true
     issuer_mode = "team"

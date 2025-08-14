@@ -81,6 +81,7 @@ resource "vercel_project" "example" {
 - `output_directory` (String) The output directory of the project. If omitted, this value will be automatically detected.
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
 - `preview_comments` (Boolean, Deprecated) Enables the Vercel Toolbar on your preview deployments.
+- `preview_deployments_disabled` (Boolean) Disable creation of Preview Deployments for this project.
 - `prioritise_production_builds` (Boolean) If enabled, builds for the Production environment will be prioritized over Preview environments.
 - `protection_bypass_for_automation` (Boolean) Allow automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `protection_bypass_for_automation_secret` field.
 - `protection_bypass_for_automation_secret` (String, Sensitive) If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.

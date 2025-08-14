@@ -338,6 +338,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Description: "Whether the Vercel Toolbar is enabled on your production deployments. If unspecified, defaults to team setting.",
 			},
+			"preview_deployments_disabled": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Whether Preview Deployments are disabled for this project.",
+			},
 			"auto_assign_custom_domains": schema.BoolAttribute{
 				Computed:    true,
 				Description: "Automatically assign custom production domains after each Production deployment via merge to the production branch or Vercel CLI deploy with --prod. Defaults to `true`",
@@ -436,6 +440,7 @@ type ProjectDataSource struct {
 	PreviewComments                     types.Bool            `tfsdk:"preview_comments"`
 	EnablePreviewFeedback               types.Bool            `tfsdk:"enable_preview_feedback"`
 	EnableProductionFeedback            types.Bool            `tfsdk:"enable_production_feedback"`
+	PreviewDeploymentsDisabled          types.Bool            `tfsdk:"preview_deployments_disabled"`
 	AutoAssignCustomDomains             types.Bool            `tfsdk:"auto_assign_custom_domains"`
 	GitLFS                              types.Bool            `tfsdk:"git_lfs"`
 	FunctionFailover                    types.Bool            `tfsdk:"function_failover"`
@@ -503,6 +508,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		PreviewComments:                     project.PreviewComments,
 		EnablePreviewFeedback:               project.EnablePreviewFeedback,
 		EnableProductionFeedback:            project.EnableProductionFeedback,
+		PreviewDeploymentsDisabled:          project.PreviewDeploymentsDisabled,
 		AutoAssignCustomDomains:             project.AutoAssignCustomDomains,
 		GitLFS:                              project.GitLFS,
 		FunctionFailover:                    project.FunctionFailover,
