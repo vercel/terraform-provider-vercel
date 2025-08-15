@@ -186,7 +186,7 @@ Required:
 
 Required:
 
-- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, or `only_preview_deployments`.
+- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, or `only_preview_deployments`.
 - `password` (String, Sensitive) The password that visitors must enter to gain access to your Preview Deployments. Drift detection is not possible for this field.
 
 
@@ -207,7 +207,7 @@ Optional:
 Required:
 
 - `addresses` (Attributes Set) The allowed IP addressses and CIDR ranges with optional descriptions. (see [below for nested schema](#nestedatt--trusted_ips--addresses))
-- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.
+- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.
 
 Optional:
 
@@ -229,9 +229,9 @@ Optional:
 <a id="nestedatt--vercel_authentication"></a>
 ### Nested Schema for `vercel_authentication`
 
-Required:
+Optional:
 
-- `deployment_type` (String) The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_preview_deployments`, or `none`.
+- `deployment_type` (String) The deployment environment to protect. The default value is `standard_protection_new` (Standard Protection). Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_preview_deployments`, or `none`.
 
 ## Import
 

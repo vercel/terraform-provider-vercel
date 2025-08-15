@@ -269,21 +269,14 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
-				Default: objectdefault.StaticValue(types.ObjectValueMust(
-					map[string]attr.Type{
-						"deployment_type": types.StringType,
-					},
-					map[string]attr.Value{
-						"deployment_type": types.StringValue("standard_protection"),
-					},
-				)),
 				Attributes: map[string]schema.Attribute{
 					"deployment_type": schema.StringAttribute{
-						Required:      true,
-						Description:   "The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_preview_deployments`, or `none`.",
+						Description:   "The deployment environment to protect. The default value is `standard_protection_new` (Standard Protection). Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_preview_deployments`, or `none`.",
+						Optional:      true,
+						Computed:      true,
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
-							stringvalidator.OneOf("standard_protection", "all_deployments", "only_preview_deployments", "none"),
+							stringvalidator.OneOf("standard_protection_new", "standard_protection", "all_deployments", "only_preview_deployments", "none"),
 						},
 					},
 				},
@@ -302,10 +295,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 					"deployment_type": schema.StringAttribute{
 						Required:      true,
-						Description:   "The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, or `only_preview_deployments`.",
+						Description:   "The deployment environment to protect. Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, or `only_preview_deployments`.",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
-							stringvalidator.OneOf("standard_protection", "all_deployments", "only_preview_deployments"),
+							stringvalidator.OneOf("standard_protection_new", "standard_protection", "all_deployments", "only_preview_deployments"),
 						},
 					},
 				},
@@ -337,10 +330,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 					"deployment_type": schema.StringAttribute{
 						Required:      true,
-						Description:   "The deployment environment to protect. Must be one of `standard_protection`, `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.",
+						Description:   "The deployment environment to protect. Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.",
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
-							stringvalidator.OneOf("standard_protection", "all_deployments", "only_production_deployments", "only_preview_deployments"),
+							stringvalidator.OneOf("standard_protection_new", "standard_protection", "all_deployments", "only_production_deployments", "only_preview_deployments"),
 						},
 					},
 					"protection_mode": schema.StringAttribute{
@@ -647,7 +640,7 @@ type Project struct {
 	RootDirectory                       types.String                    `tfsdk:"root_directory"`
 	ServerlessFunctionRegion            types.String                    `tfsdk:"serverless_function_region"`
 	TeamID                              types.String                    `tfsdk:"team_id"`
-	VercelAuthentication                *VercelAuthentication           `tfsdk:"vercel_authentication"`
+	VercelAuthentication                types.Object                    `tfsdk:"vercel_authentication"`
 	PasswordProtection                  *PasswordProtectionWithPassword `tfsdk:"password_protection"`
 	TrustedIps                          *TrustedIps                     `tfsdk:"trusted_ips"`
 	OIDCTokenConfig                     *OIDCTokenConfig                `tfsdk:"oidc_token_config"`
@@ -691,7 +684,6 @@ func (g *GitComments) toUpdateProjectRequest() *client.GitComments {
 
 func (p Project) RequiresUpdateAfterCreation() bool {
 	return p.PasswordProtection != nil ||
-		p.VercelAuthentication != nil ||
 		p.TrustedIps != nil ||
 		p.OIDCTokenConfig != nil ||
 		p.OptionsAllowlist != nil ||
@@ -775,6 +767,10 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 	if diags.HasError() {
 		return req, diags
 	}
+	vercelAuthentication, diags := p.vercelAuthentication(ctx)
+	if diags.HasError() {
+		return req, diags
+	}
 
 	return client.CreateProjectRequest{
 		BuildCommand:                      p.BuildCommand.ValueStringPointer(),
@@ -793,6 +789,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		ResourceConfig:                    resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
+		VercelAuthentication:              vercelAuthentication.toVercelAuthentication(),
 		PreviewDeploymentsDisabled:        p.PreviewDeploymentsDisabled.ValueBoolPointer(),
 	}, diags
 }
@@ -843,7 +840,10 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	if diags.HasError() {
 		return req, diags
 	}
-
+	vercelAuthentication, diags := p.vercelAuthentication(ctx)
+	if diags.HasError() {
+		return req, diags
+	}
 	return client.UpdateProjectRequest{
 		BuildCommand:                         p.BuildCommand.ValueStringPointer(),
 		CommandForIgnoringBuildStep:          p.IgnoreCommand.ValueStringPointer(),
@@ -855,7 +855,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		PublicSource:                         p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                        p.RootDirectory.ValueStringPointer(),
 		PasswordProtection:                   p.PasswordProtection.toUpdateProjectRequest(),
-		VercelAuthentication:                 p.VercelAuthentication.toUpdateProjectRequest(),
+		VercelAuthentication:                 vercelAuthentication.toVercelAuthentication(),
 		TrustedIps:                           p.TrustedIps.toUpdateProjectRequest(),
 		OIDCTokenConfig:                      p.OIDCTokenConfig.toUpdateProjectRequest(),
 		OptionsAllowlist:                     p.OptionsAllowlist.toUpdateProjectRequest(),
@@ -984,6 +984,8 @@ func toApiDeploymentProtectionType(dt types.String) string {
 	switch dt {
 	case types.StringValue("standard_protection"):
 		return "prod_deployment_urls_and_all_previews"
+	case types.StringValue("standard_protection_new"):
+		return "all_except_custom_domains"
 	case types.StringValue("all_deployments"):
 		return "all"
 	case types.StringValue("only_preview_deployments"):
@@ -999,6 +1001,8 @@ func fromApiDeploymentProtectionType(dt string) types.String {
 	switch dt {
 	case "prod_deployment_urls_and_all_previews":
 		return types.StringValue("standard_protection")
+	case "all_except_custom_domains":
+		return types.StringValue("standard_protection_new")
 	case "all":
 		return types.StringValue("all_deployments")
 	case "preview":
@@ -1007,16 +1011,6 @@ func fromApiDeploymentProtectionType(dt string) types.String {
 		return types.StringValue("only_production_deployments")
 	default:
 		return types.StringValue(dt)
-	}
-}
-
-func (v *VercelAuthentication) toUpdateProjectRequest() *client.VercelAuthentication {
-	if v == nil {
-		return nil
-	}
-
-	return &client.VercelAuthentication{
-		DeploymentType: toApiDeploymentProtectionType(v.DeploymentType),
 	}
 }
 
@@ -1128,6 +1122,12 @@ var resourceConfigAttrType = types.ObjectType{
 	},
 }
 
+var vercelAuthenticationAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"deployment_type": types.StringType,
+	},
+}
+
 type ResourceConfig struct {
 	FunctionDefaultCPUType types.String `tfsdk:"function_default_cpu_type"`
 	FunctionDefaultTimeout types.Int64  `tfsdk:"function_default_timeout"`
@@ -1141,6 +1141,26 @@ func (p *Project) resourceConfig(ctx context.Context) (rc *ResourceConfig, diags
 		UnhandledUnknownAsEmpty: true,
 	})
 	return rc, diags
+}
+
+func (p *Project) vercelAuthentication(ctx context.Context) (va *VercelAuthentication, diags diag.Diagnostics) {
+	diags = p.VercelAuthentication.As(ctx, &va, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	return va, diags
+}
+
+func (v *VercelAuthentication) toVercelAuthentication() *client.VercelAuthentication {
+	if v == nil {
+		return &client.VercelAuthentication{
+			DeploymentType: toApiDeploymentProtectionType(types.StringValue("standard_protection_new")),
+		}
+	}
+
+	return &client.VercelAuthentication{
+		DeploymentType: toApiDeploymentProtectionType(v.DeploymentType),
+	}
 }
 
 func (r *ResourceConfig) toClientResourceConfig(ctx context.Context, onDemandConcurrentBuilds types.Bool, buildMachineType types.String, serverlessFunctionRegion types.String) *client.ResourceConfig {
@@ -1358,13 +1378,13 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 	}
 
-	var va = &VercelAuthentication{
-		DeploymentType: types.StringValue("none"),
-	}
+	va := types.ObjectValueMust(vercelAuthenticationAttrType.AttrTypes, map[string]attr.Value{
+		"deployment_type": types.StringValue("none"),
+	})
 	if response.VercelAuthentication != nil {
-		va = &VercelAuthentication{
-			DeploymentType: fromApiDeploymentProtectionType(response.VercelAuthentication.DeploymentType),
-		}
+		va = types.ObjectValueMust(vercelAuthenticationAttrType.AttrTypes, map[string]attr.Value{
+			"deployment_type": fromApiDeploymentProtectionType(response.VercelAuthentication.DeploymentType),
+		})
 	}
 
 	var tip *TrustedIps

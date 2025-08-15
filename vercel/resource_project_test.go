@@ -457,7 +457,7 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.enabled_to_start", "protection_bypass_for_automation_secret"),
 					testAccProjectExists(testClient(t), "vercel_project.disabled_to_start", testTeam(t)),
-					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "vercel_authentication.deployment_type", "standard_protection"),
+					resource.TestCheckResourceAttr("vercel_project.disabled_to_start", "vercel_authentication.deployment_type", "standard_protection_new"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "password_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "trusted_ips"),
 					resource.TestCheckNoResourceAttr("vercel_project.disabled_to_start", "protection_bypass_for_automation"),
@@ -482,7 +482,7 @@ func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.
 			{
 				Config: cfg(testAccProjectConfigWithVercelAuthAndPasswordAndTrustedIpsAndOptionsAllowlistUpdated(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.deployment_type", "standard_protection"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_to_start", "vercel_authentication.deployment_type", "all_deployments"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "password_protection"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "protection_bypass_for_automation"),
 					resource.TestCheckNoResourceAttr("vercel_project.enabled_to_start", "trusted_ips"),
