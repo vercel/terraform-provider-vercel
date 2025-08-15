@@ -272,6 +272,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Attributes: map[string]schema.Attribute{
 					"deployment_type": schema.StringAttribute{
 						Description:   "The deployment environment to protect. The default value is `standard_protection_new` (Standard Protection). Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_preview_deployments`, or `none`.",
+						Optional:      true,
 						Computed:      true,
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 						Validators: []validator.String{
