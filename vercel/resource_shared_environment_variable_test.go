@@ -185,3 +185,97 @@ resource "vercel_project" "example2" {
 }
     `, projectName)
 }
+
+func TestAcc_SharedEnvironmentVariables_CustomOnly_OmitTarget(t *testing.T) {
+	nameSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
+		),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccSharedEnvironmentVariablesCustomOnlyOmitTargetConfig(nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.custom_only_omit", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.custom_only_omit", "apply_to_all_custom_environments", "true"),
+					testAccCheckSetEmpty("vercel_shared_environment_variable.custom_only_omit", "target.#"),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_SharedEnvironmentVariables_CustomOnly_EmptyTarget(t *testing.T) {
+	nameSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
+		),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccSharedEnvironmentVariablesCustomOnlyEmptyTargetConfig(nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.custom_only_empty", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.custom_only_empty", "apply_to_all_custom_environments", "true"),
+					testAccCheckSetEmpty("vercel_shared_environment_variable.custom_only_empty", "target.#"),
+				),
+			},
+		},
+	})
+}
+
+func testAccSharedEnvironmentVariablesCustomOnlyOmitTargetConfig(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+}
+
+resource "vercel_shared_environment_variable" "custom_only_omit" {
+	key         = "test_acc_custom_only_omit_%[1]s"
+	value       = "bar"
+	project_ids = [
+		vercel_project.example.id
+	]
+	apply_to_all_custom_environments = true
+	# target intentionally omitted
+}
+`, projectName)
+}
+
+func testAccSharedEnvironmentVariablesCustomOnlyEmptyTargetConfig(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+}
+
+resource "vercel_shared_environment_variable" "custom_only_empty" {
+	key         = "test_acc_custom_only_empty_%[1]s"
+	value       = "bar"
+	# explicitly pass an empty set
+	target      = []
+	project_ids = [
+		vercel_project.example.id
+	]
+	apply_to_all_custom_environments = true
+}
+`, projectName)
+}
+
+// testAccCheckSetEmpty asserts that either the attribute is absent or equals "0".
+func testAccCheckSetEmpty(n, attr string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("not found: %s", n)
+		}
+		if v, ok := rs.Primary.Attributes[attr]; ok {
+			if v == "0" {
+				return nil
+			}
+			return fmt.Errorf("expected %s to be empty, got %s", attr, v)
+		}
+		return nil
+	}
+}

@@ -48,7 +48,6 @@ resource "vercel_shared_environment_variable" "example" {
 
 - `key` (String) The name of the Environment Variable.
 - `project_ids` (Set of String) The ID of the Vercel project.
-- `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.
 - `value` (String, Sensitive) The value of the Environment Variable.
 
 ### Optional
@@ -56,6 +55,7 @@ resource "vercel_shared_environment_variable" "example" {
 - `apply_to_all_custom_environments` (Boolean) Whether the shared environment variable should be applied to all custom environments in the linked projects.
 - `comment` (String) A comment explaining what the environment variable is for.
 - `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))
+- `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.
 - `team_id` (String) The ID of the Vercel team. Shared environment variables require a team.
 
 ### Read-Only
