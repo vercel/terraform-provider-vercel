@@ -108,7 +108,7 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			},
 			"on_demand_concurrent_builds": schema.BoolAttribute{
 				Computed:    true,
-				Description: "Instantly scale build capacity to skip the queue, even if all build slots are in use. You can also choose a larger build machine; charges apply per minute if it exceeds your team's default.",
+				Description: "(Beta) Instantly scale build capacity to skip the queue, even if all build slots are in use. You can also choose a larger build machine; charges apply per minute if it exceeds your team's default.",
 			},
 			"saml": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
