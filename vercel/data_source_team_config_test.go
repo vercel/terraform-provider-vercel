@@ -26,6 +26,7 @@ func TestAcc_TeamConfigDataSource(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "enable_production_feedback"),
 					resource.TestCheckResourceAttrSet(resourceName, "hide_ip_addresses"),
 					resource.TestCheckResourceAttrSet(resourceName, "hide_ip_addresses_in_log_drains"),
+					resource.TestCheckResourceAttrSet(resourceName, "on_demand_concurrent_builds"),
 				),
 			},
 		},

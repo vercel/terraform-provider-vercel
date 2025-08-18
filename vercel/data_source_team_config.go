@@ -106,6 +106,10 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Computed:    true,
 				Description: "Indicates if ip addresses should be accessible in log drains.",
 			},
+			"on_demand_concurrent_builds": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Instantly scale build capacity to skip the queue, even if all build slots are in use. You can also choose a larger build machine; charges apply per minute if it exceeds your team's default.",
+			},
 			"saml": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"enforced": schema.BoolAttribute{
@@ -150,6 +154,7 @@ type TeamConfigData struct {
 	EnableProductionFeedback           types.String `tfsdk:"enable_production_feedback"`
 	HideIPAddresses                    types.Bool   `tfsdk:"hide_ip_addresses"`
 	HideIPAddressesInLogDrains         types.Bool   `tfsdk:"hide_ip_addresses_in_log_drains"`
+	OnDemandConcurrentBuilds           types.Bool   `tfsdk:"on_demand_concurrent_builds"`
 	Saml                               types.Object `tfsdk:"saml"`
 }
 
@@ -190,6 +195,7 @@ func (d *teamConfigDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		EnableProductionFeedback:           out.EnableProductionFeedback,
 		HideIPAddresses:                    out.HideIPAddresses,
 		HideIPAddressesInLogDrains:         out.HideIPAddressesInLogDrains,
+		OnDemandConcurrentBuilds:           out.OnDemandConcurrentBuilds,
 		RemoteCaching:                      out.RemoteCaching,
 		Saml:                               out.Saml,
 	})
