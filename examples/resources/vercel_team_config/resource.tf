@@ -16,4 +16,5 @@ resource "vercel_team_config" "example" {
   enable_production_feedback      = "off"
   hide_ip_addresses               = true
   hide_ip_addresses_in_log_drains = true
+  on_demand_concurrent_builds     = true
 }

@@ -216,6 +216,12 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				Description:   "Indicates if ip addresses should be accessible in log drains.",
 			},
+			"on_demand_concurrent_builds": schema.BoolAttribute{
+				Description:   "Instantly scale build capacity to skip the queue, even if all build slots are in use. You can also choose a larger build machine; charges apply per minute if it exceeds your team's default.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
 		},
 	}
 }
@@ -285,6 +291,7 @@ type TeamConfig struct {
 	HideIPAddresses                    types.Bool   `tfsdk:"hide_ip_addresses"`
 	HideIPAddressesInLogDrains         types.Bool   `tfsdk:"hide_ip_addresses_in_log_drains"`
 	Saml                               types.Object `tfsdk:"saml"`
+	OnDemandConcurrentBuilds           types.Bool   `tfsdk:"on_demand_concurrent_builds"`
 }
 
 type RemoteCaching struct {
@@ -355,6 +362,11 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		v := t.HideIPAddressesInLogDrains.ValueBool()
 		hideIPAddresssesInLogDrains = &v
 	}
+	var elasticConcurrencyEnabled *bool
+	if !t.OnDemandConcurrentBuilds.IsUnknown() && !t.OnDemandConcurrentBuilds.IsNull() {
+		v := t.OnDemandConcurrentBuilds.ValueBool()
+		elasticConcurrencyEnabled = &v
+	}
 	return client.UpdateTeamRequest{
 		TeamID:                             t.ID.ValueString(),
 		Avatar:                             avatar,
@@ -370,6 +382,7 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		HideIPAddresses:                    hideIPAddressses,
 		HideIPAddressesInLogDrains:         hideIPAddresssesInLogDrains,
 		Saml:                               saml.toUpdateTeamRequest(),
+		ElasticConcurrencyEnabled:          elasticConcurrencyEnabled,
 	}, nil
 }
 
@@ -414,6 +427,12 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 		}
 	}
 
+	// If the team resource config is nil, we need to create a new one with the default values.
+	teamResourceConfig := response.ResourceConfig;
+	if (teamResourceConfig == nil) {
+		teamResourceConfig = &client.TeamResourceConfig{}
+	}
+
 	return TeamConfig{
 		Avatar:                             avatar,
 		ID:                                 types.StringValue(response.ID),
@@ -430,6 +449,7 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 		HideIPAddressesInLogDrains:         types.BoolPointerValue(response.HideIPAddressesInLogDrains),
 		RemoteCaching:                      remoteCaching,
 		Saml:                               saml,
+		OnDemandConcurrentBuilds:           types.BoolPointerValue(teamResourceConfig.ElasticConcurrencyEnabled),
 	}, nil
 }
 
@@ -800,6 +820,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 					EnableProductionFeedback:           priorStateData.EnableProductionFeedback,
 					HideIPAddresses:                    priorStateData.HideIPAddresses,
 					HideIPAddressesInLogDrains:         priorStateData.HideIPAddressesInLogDrains,
+					OnDemandConcurrentBuilds:           types.BoolNull(),
 				}
 
 				if !priorStateData.Saml.IsNull() {

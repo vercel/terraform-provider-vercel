@@ -98,24 +98,29 @@ type SpacesConfig struct {
 	Enabled bool `json:"enabled"`
 }
 
+type TeamResourceConfig struct {
+	ElasticConcurrencyEnabled *bool `json:"elasticConcurrencyEnabled"`
+}
+
 // Team is the information returned by the vercel api when a team is created.
 type Team struct {
-	ID                                 string         `json:"id"`
-	Name                               string         `json:"name"`
-	Avatar                             *string        `json:"avatar"` // hash of uploaded image
-	Description                        *string        `json:"description"`
-	Slug                               string         `json:"slug"`
-	SensitiveEnvironmentVariablePolicy *string        `json:"sensitiveEnvironmentVariablePolicy"`
-	EmailDomain                        *string        `json:"emailDomain"`
-	Saml                               *SamlConfig    `json:"saml"`
-	InviteCode                         *string        `json:"inviteCode"`
-	PreviewDeploymentSuffix            *string        `json:"previewDeploymentSuffix"`
-	RemoteCaching                      *RemoteCaching `json:"remoteCaching"`
-	EnablePreviewFeedback              *string        `json:"enablePreviewFeedback"`
-	EnableProductionFeedback           *string        `json:"enableProductionFeedback"`
-	Spaces                             *SpacesConfig  `json:"spaces"`
-	HideIPAddresses                    *bool          `json:"hideIpAddresses"`
-	HideIPAddressesInLogDrains         *bool          `json:"hideIpAddressesInLogDrains,omitempty"`
+	ID                                 string                `json:"id"`
+	Name                               string                `json:"name"`
+	Avatar                             *string               `json:"avatar"` // hash of uploaded image
+	Description                        *string               `json:"description"`
+	Slug                               string                `json:"slug"`
+	SensitiveEnvironmentVariablePolicy *string               `json:"sensitiveEnvironmentVariablePolicy"`
+	EmailDomain                        *string               `json:"emailDomain"`
+	Saml                               *SamlConfig           `json:"saml"`
+	InviteCode                         *string               `json:"inviteCode"`
+	PreviewDeploymentSuffix            *string               `json:"previewDeploymentSuffix"`
+	RemoteCaching                      *RemoteCaching        `json:"remoteCaching"`
+	EnablePreviewFeedback              *string               `json:"enablePreviewFeedback"`
+	EnableProductionFeedback           *string               `json:"enableProductionFeedback"`
+	Spaces                             *SpacesConfig         `json:"spaces"`
+	HideIPAddresses                    *bool                 `json:"hideIpAddresses"`
+	HideIPAddressesInLogDrains         *bool                 `json:"hideIpAddressesInLogDrains,omitempty"`
+	ResourceConfig                     *TeamResourceConfig   `json:"resourceConfig,omitempty"`
 }
 
 // GetTeam returns information about an existing team within vercel.
@@ -181,6 +186,7 @@ type UpdateTeamRequest struct {
 	RemoteCaching                      *RemoteCaching    `json:"remoteCaching,omitempty"`
 	HideIPAddresses                    *bool             `json:"hideIpAddresses,omitempty"`
 	HideIPAddressesInLogDrains         *bool             `json:"hideIpAddressesInLogDrains,omitempty"`
+	ElasticConcurrencyEnabled          *bool             `json:"elasticConcurrencyEnabled,omitempty"`
 }
 
 func (c *Client) UpdateTeam(ctx context.Context, request UpdateTeamRequest) (t Team, err error) {

@@ -35,6 +35,7 @@ func TestAcc_TeamConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "enable_production_feedback", "off"),
 					resource.TestCheckResourceAttr(resourceName, "hide_ip_addresses", "true"),
 					resource.TestCheckResourceAttr(resourceName, "hide_ip_addresses_in_log_drains", "true"),
+					resource.TestCheckResourceAttr(resourceName, "on_demand_concurrent_builds", "true"),
 				),
 			},
 			{
@@ -77,6 +78,7 @@ resource "vercel_team_config" "test" {
   enable_production_feedback = "off"
   hide_ip_addresses = true
   hide_ip_addresses_in_log_drains = true
+  on_demand_concurrent_builds = true
 }
 `, teamID)
 }
