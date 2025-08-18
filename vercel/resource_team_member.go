@@ -75,7 +75,7 @@ func (r *teamMemberResource) userIsUnconfirmed(ctx context.Context, req planmodi
 
 func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Provider a resource for managing a team member.",
+		Description: "Provider a resource for managing a team member.\n\n~> **Note:** Users can no longer be added to a team by their user_id. This field is maintained purely for backwards compatibility.",
 		Attributes: map[string]schema.Attribute{
 			"team_id": schema.StringAttribute{
 				Description: "The ID of the existing Vercel Team.",
@@ -86,9 +86,10 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				},
 			},
 			"user_id": schema.StringAttribute{
-				Description: "The ID of the user to add to the team. Must specify one of user_id or email.",
-				Optional:    true,
-				Computed:    true,
+				Description:        "The ID of the user to add to the team. Must specify one of user_id or email.",
+				DeprecationMessage: "Users can no longer be added to a team by their user_id. This field is maintained purely for backwards compatibility.",
+				Optional:           true,
+				Computed:           true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplaceIfConfigured(),
@@ -214,7 +215,6 @@ func (t TeamMember) toInviteTeamMemberRequest(ctx context.Context) (client.TeamM
 
 	return client.TeamMemberInviteRequest{
 		TeamID:       t.TeamID.ValueString(),
-		UserID:       t.UserID.ValueString(),
 		Email:        t.Email.ValueString(),
 		Role:         t.Role.ValueString(),
 		Projects:     projects,
@@ -359,6 +359,15 @@ func (r *teamMemberResource) Create(ctx context.Context, req resource.CreateRequ
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Check if user_id is provided and return an error
+	if !plan.UserID.IsNull() && !plan.UserID.IsUnknown() {
+		resp.Diagnostics.AddError(
+			"user_id is no longer supported",
+			"Users can no longer be added to a team by their user_id. This field is maintained purely for backwards compatibility.",
+		)
 		return
 	}
 

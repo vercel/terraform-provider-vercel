@@ -13,7 +13,7 @@ type ProjectRole struct {
 }
 
 type TeamMemberInviteRequest struct {
-	UserID       string        `json:"uid,omitempty"`
+	UserID       string        `json:"uid,omitempty"` // Deprecated: UserID is no longer supported by Vercel API
 	Email        string        `json:"email,omitempty"`
 	Role         string        `json:"role,omitempty"`
 	Projects     []ProjectRole `json:"projects,omitempty"`

@@ -81,10 +81,10 @@ func testDomain(t *testing.T) string {
 	return value
 }
 
-func testAdditionalUser(t *testing.T) string {
-	value := os.Getenv("VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
+func testAdditionalUserEmail(t *testing.T) string {
+	value := os.Getenv("VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER_EMAIL")
 	if value == "" {
-		t.Fatalf("Missing required environment variable VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER")
+		t.Fatalf("Missing required environment variable VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER_EMAIL")
 	}
 	return value
 }

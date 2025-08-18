@@ -12,7 +12,7 @@ func TestAcc_TeamMemberDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccTeamMemberDataSourceConfig(testAdditionalUser(t), testTeam(t))),
+				Config: cfg(testAccTeamMemberDataSourceConfig(testAdditionalUserEmail(t), testTeam(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vercel_team_member.test", "team_id"),
 					resource.TestCheckResourceAttrSet("data.vercel_team_member.test", "user_id"),
@@ -23,10 +23,10 @@ func TestAcc_TeamMemberDataSource(t *testing.T) {
 	})
 }
 
-func testAccTeamMemberDataSourceConfig(user, teamID string) string {
+func testAccTeamMemberDataSourceConfig(userEmail, teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_team_member" "test" {
-  user_id = "%[1]s"
+  email   = "%[1]s"
   team_id = "%[2]s"
   role    = "MEMBER"
 }
@@ -35,5 +35,5 @@ data "vercel_team_member" "test" {
     user_id = vercel_team_member.test.user_id
     team_id = vercel_team_member.test.team_id
 }
-`, user, teamID)
+`, userEmail, teamID)
 }
