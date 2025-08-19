@@ -75,7 +75,7 @@ including recommended CNAME and IPv4 values.
 				Computed:    true,
 				Description: "The recommended CNAME value for the domain.",
 			},
-			"recommended_ipv4": schema.ListAttribute{
+			"recommended_ipv4s": schema.ListAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "The recommended IPv4 values for the domain.",
@@ -86,11 +86,11 @@ including recommended CNAME and IPv4 values.
 
 // DomainConfigDataSource reflects the state terraform stores internally for a domain config.
 type DomainConfigDataSource struct {
-	Domain           types.String `tfsdk:"domain"`
-	ProjectIdOrName  types.String `tfsdk:"project_id_or_name"`
-	TeamID           types.String `tfsdk:"team_id"`
-	RecommendedCNAME types.String `tfsdk:"recommended_cname"`
-	RecommendedIPv4  types.List   `tfsdk:"recommended_ipv4"`
+	Domain            types.String `tfsdk:"domain"`
+	ProjectIdOrName   types.String `tfsdk:"project_id_or_name"`
+	TeamID            types.String `tfsdk:"team_id"`
+	RecommendedCNAME  types.String `tfsdk:"recommended_cname"`
+	RecommendedIPv4s  types.List   `tfsdk:"recommended_ipv4s"`
 }
 
 // Read will read domain config information by requesting it from the Vercel API, and will update terraform
@@ -118,24 +118,24 @@ func (d *domainConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	var ipv4Values []attr.Value
-	for _, ip := range out.RecommendedIPv4 {
+	for _, ip := range out.RecommendedIPv4s {
 		ipv4Values = append(ipv4Values, types.StringValue(ip))
 	}
 
 	result := DomainConfigDataSource{
-		Domain:           config.Domain,
-		ProjectIdOrName:  config.ProjectIdOrName,
-		TeamID:           config.TeamID,
-		RecommendedCNAME: types.StringValue(out.RecommendedCNAME),
-		RecommendedIPv4:  types.ListValueMust(types.StringType, ipv4Values),
+		Domain:            config.Domain,
+		ProjectIdOrName:   config.ProjectIdOrName,
+		TeamID:            config.TeamID,
+		RecommendedCNAME:  types.StringValue(out.RecommendedCNAME),
+		RecommendedIPv4s:  types.ListValueMust(types.StringType, ipv4Values),
 	}
 
 	tflog.Info(ctx, "read domain config", map[string]any{
-		"domain":           result.Domain.ValueString(),
-		"projectIdOrName":  result.ProjectIdOrName.ValueString(),
-		"teamId":           result.TeamID.ValueString(),
-		"recommendedCNAME": result.RecommendedCNAME.ValueString(),
-		"recommendedIPv4":  result.RecommendedIPv4.Elements(),
+		"domain":            result.Domain.ValueString(),
+		"projectIdOrName":   result.ProjectIdOrName.ValueString(),
+		"teamId":            result.TeamID.ValueString(),
+		"recommendedCNAME":  result.RecommendedCNAME.ValueString(),
+		"recommendedIPv4s":  result.RecommendedIPv4s.Elements(),
 	})
 
 	diags = resp.State.Set(ctx, result)

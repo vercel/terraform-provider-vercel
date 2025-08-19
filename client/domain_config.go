@@ -24,7 +24,7 @@ type domainConfigAPIResponse struct {
 
 type DomainConfigResponse struct {
 	RecommendedCNAME string
-	RecommendedIPv4  []string
+	RecommendedIPv4s []string
 }
 
 func (c *Client) GetDomainConfig(ctx context.Context, domain, projectIdOrName, teamID string) (DomainConfigResponse, error) {
@@ -60,7 +60,7 @@ func (c *Client) GetDomainConfig(ctx context.Context, domain, projectIdOrName, t
 
 	for _, ipv4 := range apiResponse.RecommendedIPv4 {
 		if ipv4.Rank == 1 {
-			response.RecommendedIPv4 = ipv4.Value
+			response.RecommendedIPv4s = ipv4.Value
 			break
 		}
 	}
