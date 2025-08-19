@@ -33,8 +33,8 @@ func (c *Client) GetDomainConfig(ctx context.Context, domain, projectIdOrName, t
 		url = fmt.Sprintf("%s&teamId=%s", url, c.TeamID(teamID))
 	}
 	tflog.Info(ctx, "getting domain config", map[string]any{
-		"url":       url,
-		"domain":    domain,
+		"url":             url,
+		"domain":          domain,
 		"projectIdOrName": projectIdOrName,
 	})
 
