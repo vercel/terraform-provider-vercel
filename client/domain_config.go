@@ -58,9 +58,9 @@ func (c *Client) GetDomainConfig(ctx context.Context, domain, projectIdOrName, t
 		}
 	}
 
-	for _, ipv4 := range apiResponse.RecommendedIPv4 {
-		if ipv4.Rank == 1 {
-			response.RecommendedIPv4s = ipv4.Value
+	for _, reccomendation := range apiResponse.RecommendedIPv4 {
+		if reccomendation.Rank == 1 {
+			response.RecommendedIPv4s = reccomendation.Value
 			break
 		}
 	}
