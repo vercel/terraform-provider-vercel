@@ -93,6 +93,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newAttackChallengeModeDataSource,
 		newCustomEnvironmentDataSource,
 		newDeploymentDataSource,
+		newDomainConfigDataSource,
 		newEdgeConfigDataSource,
 		newEdgeConfigItemDataSource,
 		newEdgeConfigSchemaDataSource,
