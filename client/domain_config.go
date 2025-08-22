@@ -51,9 +51,9 @@ func (c *Client) GetDomainConfig(ctx context.Context, domain, projectIdOrName, t
 
 	response := DomainConfigResponse{}
 
-	for _, cname := range apiResponse.RecommendedCNAME {
-		if cname.Rank == 1 {
-			response.RecommendedCNAME = cname.Value
+	for _, reccomendation := range apiResponse.RecommendedCNAME {
+		if reccomendation.Rank == 1 {
+			response.RecommendedCNAME = reccomendation.Value
 			break
 		}
 	}
