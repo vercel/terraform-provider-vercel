@@ -279,3 +279,47 @@ func testAccCheckSetEmpty(n, attr string) resource.TestCheckFunc {
 		return nil
 	}
 }
+
+func TestAcc_SharedEnvironmentVariables_ComputedCustomOnly(t *testing.T) {
+	nameSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
+		),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccSharedEnvironmentVariablesComputedCustomOnlyConfig(nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.computed_custom", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.computed_custom", "apply_to_all_custom_environments", "true"),
+					testAccCheckSetEmpty("vercel_shared_environment_variable.computed_custom", "target.#"),
+				),
+			},
+		},
+	})
+}
+
+func testAccSharedEnvironmentVariablesComputedCustomOnlyConfig(projectName string) string {
+	return fmt.Sprintf(`
+locals {
+  env_config = {
+    key      = "test_acc_computed_custom_%[1]s"
+    value    = "bar"
+    target   = ["sandbox"]
+  }
+}
+
+resource "vercel_project" "example" {
+  name = "test-acc-example-project-%[1]s"
+}
+
+resource "vercel_shared_environment_variable" "computed_custom" {
+  key                              = local.env_config.key
+  value                            = local.env_config.value
+  target                           = contains(local.env_config.target, "sandbox") ? tolist(setsubtract(toset(local.env_config.target), toset(["sandbox"]))) : local.env_config.target
+  apply_to_all_custom_environments = contains(local.env_config.target, "sandbox")
+  project_ids                      = [vercel_project.example.id]
+}
+`, projectName)
+}

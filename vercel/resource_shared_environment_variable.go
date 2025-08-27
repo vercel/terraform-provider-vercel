@@ -193,8 +193,15 @@ func (v *sharedEnvTargetValidator) ValidateResource(ctx context.Context, req res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// If apply_to_all_custom_environments is unknown (computed), skip validation
+	// since we can't determine the configuration's validity during planning.
+	if sev.ApplyToAllCustomEnvironments.IsUnknown() {
+		return
+	}
+
 	// If apply_to_all_custom_environments is explicitly true, allow target to be omitted or empty.
-	if !sev.ApplyToAllCustomEnvironments.IsNull() && !sev.ApplyToAllCustomEnvironments.IsUnknown() && sev.ApplyToAllCustomEnvironments.ValueBool() {
+	if !sev.ApplyToAllCustomEnvironments.IsNull() && sev.ApplyToAllCustomEnvironments.ValueBool() {
 		return
 	}
 	// Otherwise, target must be provided with at least one element.
