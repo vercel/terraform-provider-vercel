@@ -25,6 +25,13 @@ func (v *fluidComputeBasicCPUValidator) ValidateResource(ctx context.Context, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// If ResourceConfig is unknown (computed), skip validation
+	// since we can't determine the configuration's validity during planning.
+	if project.ResourceConfig.IsUnknown() || project.ResourceConfig.IsNull() {
+		return
+	}
+
 	resourceConfig, diags := project.resourceConfig(ctx)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
@@ -33,6 +40,14 @@ func (v *fluidComputeBasicCPUValidator) ValidateResource(ctx context.Context, re
 	if resourceConfig == nil {
 		return
 	}
+
+	// Note: Due to UnhandledUnknownAsEmpty: true in resourceConfig(),
+	// unknown values are converted to zero values (false, "").
+	// We can't distinguish between explicitly set zero values and unknown values here.
+	// This is acceptable because:
+	// 1. If values are truly unknown, they'll be validated at apply time by the API
+	// 2. If values are explicitly set to zero values, validation should proceed
+
 	if !resourceConfig.Fluid.ValueBool() {
 		return
 	}

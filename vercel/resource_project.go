@@ -31,11 +31,11 @@ import (
 )
 
 var (
-	_ resource.Resource                = &projectResource{}
-	_ resource.ResourceWithConfigure   = &projectResource{}
-	_ resource.ResourceWithImportState = &projectResource{}
-	_ resource.ResourceWithModifyPlan  = &projectResource{}
-	// _ resource.ResourceWithConfigValidators = &projectResource{}
+	_ resource.Resource                     = &projectResource{}
+	_ resource.ResourceWithConfigure        = &projectResource{}
+	_ resource.ResourceWithImportState      = &projectResource{}
+	_ resource.ResourceWithModifyPlan       = &projectResource{}
+	_ resource.ResourceWithConfigValidators = &projectResource{}
 )
 
 func newProjectResource() resource.Resource {
@@ -615,13 +615,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 	}
 }
 
-/*
 func (r *projectResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		&fluidComputeBasicCPUValidator{},
 	}
 }
-*/
 
 // Project reflects the state terraform stores internally for a project.
 type Project struct {

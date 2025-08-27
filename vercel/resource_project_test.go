@@ -152,7 +152,7 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
                     }
                 }
                 `, projectSuffix)),
-				ExpectError: regexp.MustCompile(strings.ReplaceAll("\"standard_legacy\" is not a valid memory type for Fluid compute", " ", `\s*`)),
+				ExpectError: regexp.MustCompile(strings.ReplaceAll("Fluid compute is only supported with the standard or performance CPU types", " ", `\s*`)),
 			},
 			{
 				// check creating a project with Fluid
