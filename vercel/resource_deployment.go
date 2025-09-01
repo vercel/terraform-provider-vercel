@@ -92,6 +92,13 @@ terraform to your Deployment.
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 				ElementType:   types.StringType,
 			},
+			"meta": schema.MapAttribute{
+				Description:   "Arbitrary key/value metadata to attach to the deployment (equivalent to the Vercel CLI --meta flags).",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplaceIfConfigured(), mapplanmodifier.UseStateForUnknown()},
+				ElementType:   types.StringType,
+			},
 			"team_id": schema.StringAttribute{
 				Description:   "The team ID to add the deployment to. Required when configuring a team resource if a default team has not been set in the provider.",
 				Optional:      true,
@@ -199,6 +206,7 @@ type ProjectSettings struct {
 type Deployment struct {
 	Domains             types.List       `tfsdk:"domains"`
 	Environment         types.Map        `tfsdk:"environment"`
+	Meta                types.Map        `tfsdk:"meta"`
 	Files               types.Map        `tfsdk:"files"`
 	ID                  types.String     `tfsdk:"id"`
 	Production          types.Bool       `tfsdk:"production"`
@@ -374,6 +382,10 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		plan.Environment = types.MapNull(types.StringType)
 	}
 
+	if plan.Meta.IsUnknown() || plan.Meta.IsNull() {
+		plan.Meta = types.MapNull(types.StringType)
+	}
+
 	if plan.Files.IsUnknown() || plan.Files.IsNull() {
 		plan.Files = types.MapNull(types.StringType)
 	}
@@ -388,10 +400,16 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		customEnvironmentID = types.StringValue(response.CustomEnvironment.ID)
 	}
 
+	metaAttrs := map[string]attr.Value{}
+	for k, v := range response.Meta {
+		metaAttrs[k] = types.StringValue(v)
+	}
+
 	return Deployment{
 		Domains:             types.ListValueMust(types.StringType, domains),
 		TeamID:              toTeamID(response.TeamID),
 		Environment:         plan.Environment,
+		Meta:                types.MapValueMust(types.StringType, metaAttrs),
 		ProjectID:           types.StringValue(response.ProjectID),
 		ID:                  types.StringValue(response.ID),
 		URL:                 types.StringValue(response.URL),
@@ -531,6 +549,15 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
+	var metaInput map[string]types.String
+	if !plan.Meta.IsNull() && !plan.Meta.IsUnknown() {
+		diags = plan.Meta.ElementsAs(ctx, &metaInput, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	target := ""
 	if plan.Production.ValueBool() {
 		target = "production"
@@ -547,6 +574,9 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 		Target:                    target,
 		Ref:                       plan.Ref.ValueString(),
 		CustomEnvironmentSlugOrID: plan.CustomEnvironmentID.ValueString(),
+	}
+	if len(metaInput) > 0 {
+		cdr.Meta = filterNullFromMap(metaInput)
 	}
 
 	_, err = r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())

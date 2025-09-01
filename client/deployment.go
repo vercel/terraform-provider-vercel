@@ -38,15 +38,16 @@ type CreateDeploymentRequest struct {
 	Build       struct {
 		Environment map[string]string `json:"env,omitempty"`
 	} `json:"build,omitempty"`
-	ProjectID                 string         `json:"project,omitempty"`
-	ProjectSettings           map[string]any `json:"projectSettings"`
-	Name                      string         `json:"name"`
-	Regions                   []string       `json:"regions,omitempty"`
-	Routes                    []any          `json:"routes,omitempty"`
-	Target                    string         `json:"target,omitempty"`
-	GitSource                 *gitSource     `json:"gitSource,omitempty"`
-	CustomEnvironmentSlugOrID string         `json:"customEnvironmentSlugOrId,omitempty"`
-	Ref                       string         `json:"-"`
+	ProjectID                 string            `json:"project,omitempty"`
+	ProjectSettings           map[string]any    `json:"projectSettings"`
+	Name                      string            `json:"name"`
+	Regions                   []string          `json:"regions,omitempty"`
+	Routes                    []any             `json:"routes,omitempty"`
+	Target                    string            `json:"target,omitempty"`
+	GitSource                 *gitSource        `json:"gitSource,omitempty"`
+	CustomEnvironmentSlugOrID string            `json:"customEnvironmentSlugOrId,omitempty"`
+	Meta                      map[string]string `json:"meta,omitempty"`
+	Ref                       string            `json:"-"`
 }
 
 // DeploymentResponse defines the response the Vercel API returns when a deployment is created or updated.
@@ -71,17 +72,18 @@ type DeploymentResponse struct {
 	Build struct {
 		Environment []string `json:"env"`
 	} `json:"build"`
-	AliasAssigned     bool      `json:"aliasAssigned"`
-	ChecksConclusion  string    `json:"checksConclusion"`
-	ErrorCode         string    `json:"errorCode"`
-	ErrorMessage      string    `json:"errorMessage"`
-	ID                string    `json:"id"`
-	ProjectID         string    `json:"projectId"`
-	TeamID            string    `json:"-"`
-	ReadyState        string    `json:"readyState"`
-	Target            *string   `json:"target"`
-	URL               string    `json:"url"`
-	GitSource         gitSource `json:"gitSource"`
+	AliasAssigned     bool              `json:"aliasAssigned"`
+	ChecksConclusion  string            `json:"checksConclusion"`
+	ErrorCode         string            `json:"errorCode"`
+	ErrorMessage      string            `json:"errorMessage"`
+	ID                string            `json:"id"`
+	ProjectID         string            `json:"projectId"`
+	TeamID            string            `json:"-"`
+	ReadyState        string            `json:"readyState"`
+	Target            *string           `json:"target"`
+	URL               string            `json:"url"`
+	GitSource         gitSource         `json:"gitSource"`
+	Meta              map[string]string `json:"meta"`
 	CustomEnvironment *struct {
 		ID string `json:"id"`
 	} `json:"customEnvironment"`

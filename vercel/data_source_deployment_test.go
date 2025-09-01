@@ -21,15 +21,18 @@ func TestAcc_DeploymentDataSource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_id", "url"),
 					resource.TestCheckResourceAttr("data.vercel_deployment.by_id", "production", "true"),
 					resource.TestCheckResourceAttr("data.vercel_deployment.by_id", "domains.#", "2"),
+					resource.TestCheckResourceAttr("data.vercel_deployment.by_id", "meta.build", "123"),
+					resource.TestCheckResourceAttr("data.vercel_deployment.by_id", "meta.env", "staging"),
 
 					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_url", "id"),
 					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_url", "project_id"),
 					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_url", "url"),
 					resource.TestCheckResourceAttr("data.vercel_deployment.by_url", "production", "true"),
 					resource.TestCheckResourceAttr("data.vercel_deployment.by_url", "domains.#", "2"),
+					resource.TestCheckResourceAttr("data.vercel_deployment.by_url", "meta.build", "123"),
+					resource.TestCheckResourceAttr("data.vercel_deployment.by_url", "meta.env", "staging"),
 				),
-			},
-		},
+			}},
 	})
 }
 
@@ -64,6 +67,11 @@ resource "vercel_deployment" "test" {
   production  = true
   files       = data.vercel_prebuilt_project.test.output
   path_prefix = data.vercel_prebuilt_project.test.path
+
+  meta = {
+    build = "123"
+    env   = "staging"
+  }
 }
 `, name)
 }
