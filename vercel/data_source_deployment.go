@@ -87,6 +87,11 @@ A Deployment is the result of building your Project and making it available thro
 				Description: "The branch or commit hash that has been deployed. Note this will only work if the project is configured to use a Git repository.",
 				Computed:    true,
 			},
+			"meta": schema.MapAttribute{
+				Description: "Arbitrary key/value metadata associated with the deployment.",
+				Computed:    true,
+				ElementType: types.StringType,
+			},
 			"custom_environment_id": schema.StringAttribute{
 				Description: "The ID of the Custom Environment that the deployment was deployed to, if any.",
 				Computed:    true,
@@ -103,6 +108,7 @@ type DeploymentDataSource struct {
 	TeamID              types.String `tfsdk:"team_id"`
 	URL                 types.String `tfsdk:"url"`
 	Ref                 types.String `tfsdk:"ref"`
+	Meta                types.Map    `tfsdk:"meta"`
 	CustomEnvironmentID types.String `tfsdk:"custom_environment_id"`
 }
 
@@ -122,6 +128,11 @@ func convertResponseToDeploymentDataSource(in client.DeploymentResponse) Deploym
 		customEnvironmentID = types.StringValue(in.CustomEnvironment.ID)
 	}
 
+	metaAttrs := map[string]attr.Value{}
+	for k, v := range in.Meta {
+		metaAttrs[k] = types.StringValue(v)
+	}
+
 	return DeploymentDataSource{
 		Domains:             types.ListValueMust(types.StringType, domains),
 		Production:          types.BoolValue(in.Target != nil && *in.Target == "production"),
@@ -130,6 +141,7 @@ func convertResponseToDeploymentDataSource(in client.DeploymentResponse) Deploym
 		ID:                  types.StringValue(in.ID),
 		URL:                 types.StringValue(in.URL),
 		Ref:                 ref,
+		Meta:                types.MapValueMust(types.StringType, metaAttrs),
 		CustomEnvironmentID: customEnvironmentID,
 	}
 }

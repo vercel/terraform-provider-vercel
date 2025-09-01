@@ -82,11 +82,16 @@ func TestAcc_Deployment(t *testing.T) {
 		CheckDestroy:             noopDestroyCheck,
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccDeploymentConfig(projectSuffix, "")),
+				Config: cfg(testAccDeploymentConfig(projectSuffix, `meta = {
+					build = "123"
+					env   = "staging"
+				}`)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testTeamID,
 					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
 					resource.TestCheckResourceAttr("vercel_deployment.test", "production", "true"),
+					resource.TestCheckResourceAttr("vercel_deployment.test", "meta.build", "123"),
+					resource.TestCheckResourceAttr("vercel_deployment.test", "meta.env", "staging"),
 				),
 			},
 			{
@@ -94,6 +99,8 @@ func TestAcc_Deployment(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testTeamID,
 					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
+					resource.TestCheckNoResourceAttr("vercel_deployment.test", "meta.build"),
+					resource.TestCheckNoResourceAttr("vercel_deployment.test", "meta.env"),
 				),
 			},
 		},
