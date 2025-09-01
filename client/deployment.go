@@ -30,6 +30,18 @@ type gitSource struct {
 	Ref       string `json:"ref"`
 }
 
+// GitMetadata mirrors the fields used by the Vercel CLI when sending gitMetadata
+// to the deployments API. All fields are optional and omitted when empty.
+type GitMetadata struct {
+	CommitAuthorName  string `json:"commitAuthorName,omitempty"`
+	CommitAuthorEmail string `json:"commitAuthorEmail,omitempty"`
+	CommitMessage     string `json:"commitMessage,omitempty"`
+	CommitRef         string `json:"commitRef,omitempty"`
+	CommitSha         string `json:"commitSha,omitempty"`
+	Dirty             bool   `json:"dirty,omitempty"`
+	RemoteUrl         string `json:"remoteUrl,omitempty"`
+}
+
 // CreateDeploymentRequest defines the request the Vercel API expects in order to create a deployment.
 type CreateDeploymentRequest struct {
 	Files       []DeploymentFile  `json:"files,omitempty"`
@@ -47,6 +59,7 @@ type CreateDeploymentRequest struct {
 	GitSource                 *gitSource        `json:"gitSource,omitempty"`
 	CustomEnvironmentSlugOrID string            `json:"customEnvironmentSlugOrId,omitempty"`
 	Meta                      map[string]string `json:"meta,omitempty"`
+	GitMetadata               *GitMetadata      `json:"gitMetadata,omitempty"`
 	Ref                       string            `json:"-"`
 }
 

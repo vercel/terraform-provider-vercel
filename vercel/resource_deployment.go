@@ -566,14 +566,20 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	var environment map[string]types.String
-	diags = plan.Environment.ElementsAs(ctx, &environment, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if plan.Environment.IsUnknown() || plan.Environment.IsNull() {
+		environment = map[string]types.String{}
+	} else {
+		diags = plan.Environment.ElementsAs(ctx, &environment, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	var metaInput map[string]types.String
-	if !plan.Meta.IsNull() && !plan.Meta.IsUnknown() {
+	if plan.Meta.IsUnknown() || plan.Meta.IsNull() {
+		metaInput = map[string]types.String{}
+	} else {
 		diags = plan.Meta.ElementsAs(ctx, &metaInput, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -585,15 +591,41 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	if plan.Production.ValueBool() {
 		target = "production"
 	}
-	// normalise filenames.
+	// Fetch project to validate existence and get link info for git metadata
+	pr, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	if client.NotFound(err) {
+		resp.Diagnostics.AddError(
+			"Error creating deployment",
+			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
+		)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating deployment",
+			"Unexpected error reading project: "+err.Error(),
+		)
+		return
+	}
+
+	// Prepare git metadata BEFORE normalising filenames so we use real filesystem paths
+	gitMeta := prepareGitMetadata(ctx, files, plan.Ref.ValueString(), pr)
+
+	// normalise filenames for upload
 	for i := 0; i < len(files); i++ {
 		files[i].File = normaliseFilename(files[i].File, plan.PathPrefix)
 	}
-	// Decode project_settings object to request map
+
+	// Decode project_settings object (types.Object) to request map via Go struct
 	var ps *ProjectSettings
 	if !plan.ProjectSettings.IsNull() && !plan.ProjectSettings.IsUnknown() {
-		_ = plan.ProjectSettings.As(ctx, &ps, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+		_ = plan.ProjectSettings.As(
+			ctx,
+			&ps,
+			basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true},
+		)
 	}
+
 	cdr := client.CreateDeploymentRequest{
 		Files:                     files,
 		Environment:               filterNullFromMap(environment),
@@ -603,20 +635,17 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 		Ref:                       plan.Ref.ValueString(),
 		CustomEnvironmentSlugOrID: plan.CustomEnvironmentID.ValueString(),
 	}
+	// Only include user-provided meta if any keys were configured
 	if len(metaInput) > 0 {
 		cdr.Meta = filterNullFromMap(metaInput)
 	}
-
-	_, err = r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	if client.NotFound(err) {
-		resp.Diagnostics.AddError(
-			"Error creating deployment",
-			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
-		)
-		return
+	// Attach git metadata if detected
+	if gitMeta != nil {
+		cdr.GitMetadata = gitMeta
 	}
 
 	out, err := r.client.CreateDeployment(ctx, cdr, plan.TeamID.ValueString())
+
 	var mfErr client.MissingFilesError
 	if errors.As(err, &mfErr) {
 		// Then we need to upload the files, and create the deployment again.
