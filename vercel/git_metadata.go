@@ -19,7 +19,7 @@ import (
 // - .vercel/repo.json (treat as repo root), OR
 // - .git/config (or a .git file for worktrees/submodules)
 // Returns the directory path or empty string if not found.
-func findRepoRoot(ctx context.Context, startDir string) string {
+func findRepoRoot(startDir string) string {
 	curr := startDir
 	for {
 		if curr == "/" || curr == "." || len(curr) == 0 {
@@ -196,14 +196,11 @@ func startingDirsFromFiles(files []client.DeploymentFile) []string {
 
 // detectRepoRootFromFiles picks a small number of shallowest candidates and tries to
 // discover a repo root by traversing upwards from each.
-func detectRepoRootFromFiles(ctx context.Context, files []client.DeploymentFile) string {
+func detectRepoRootFromFiles(files []client.DeploymentFile) string {
 	cands := startingDirsFromFiles(files)
-	limit := 5
-	if len(cands) < limit {
-		limit = len(cands)
-	}
-	for i := 0; i < limit; i++ {
-		root := findRepoRoot(ctx, cands[i])
+	limit := min(len(cands), 5)
+	for i := range limit {
+		root := findRepoRoot(cands[i])
 		if root != "" {
 			return root
 		}
@@ -221,6 +218,9 @@ func getLinkRepo(pr client.ProjectResponse) string {
 		return fmt.Sprintf("%s/%s", pr.Link.Org, pr.Link.Repo)
 	case "gitlab":
 		if pr.Link.ProjectNamespace != "" && pr.Link.ProjectURL != "" {
+			// For GitLab the CLI matches by org/repo; construct a best-effort "namespace/repo"
+			// repo name inferred from URL is handled elsewhere in client.Repository(), but here
+			// a simple contains match on namespace is still useful, so return namespace.
 			return pr.Link.ProjectNamespace
 		}
 	case "bitbucket":
@@ -235,12 +235,12 @@ func getLinkRepo(pr client.ProjectResponse) string {
 func prepareGitMetadata(ctx context.Context, files []client.DeploymentFile, _ string, project client.ProjectResponse) *client.GitMetadata {
 	var startRoot string
 	if len(files) > 0 {
-		startRoot = detectRepoRootFromFiles(ctx, files)
+		startRoot = detectRepoRootFromFiles(files)
 	}
 	if startRoot == "" {
 		// Ref-only deployments or failed detection: try from current working dir
 		cwd, _ := os.Getwd()
-		startRoot = findRepoRoot(ctx, cwd)
+		startRoot = findRepoRoot(cwd)
 	}
 	if startRoot == "" {
 		return nil

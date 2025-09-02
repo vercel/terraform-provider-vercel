@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -500,4 +502,129 @@ resource "vercel_deployment" "test" {
   path_prefix = data.vercel_prebuilt_project.test.path
 }
 `, projectSuffix)
+}
+
+// --- Git metadata e2e tests ---
+
+// runGit executes a git command in the given directory for tests.
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Env = os.Environ()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v failed: %v\n%s", args, err, string(out))
+	}
+}
+
+func TestAcc_DeploymentWithGitMetadata_FileUpload(t *testing.T) {
+	projectSuffix := acctest.RandString(8)
+
+	// Prepare a real git repo in the examples/one directory
+	repoDir := filepath.Join("..", "vercel", "examples", "one")
+	_ = os.RemoveAll(filepath.Join(repoDir, ".git"))
+	runGit(t, repoDir, "init")
+	runGit(t, repoDir, "checkout", "-b", "main")
+	runGit(t, repoDir, "config", "user.email", "test@example.com")
+	runGit(t, repoDir, "config", "user.name", "Test User")
+	runGit(t, repoDir, "add", ".")
+	runGit(t, repoDir, "commit", "-m", "e2e: git metadata test")
+	runGit(t, repoDir, "remote", "add", "origin", fmt.Sprintf("https://github.com/%s", testGithubRepo(t)))
+	t.Cleanup(func() {
+		_ = os.RemoveAll(filepath.Join(repoDir, ".git"))
+	})
+
+	// HCL config that links project to the same GitHub repo and deploys via file upload
+	cfgHCL := fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-deployment-gitmeta-%[1]s"
+  git_repository = {
+    type = "github"
+    repo = "%[2]s"
+  }
+}
+
+data "vercel_project_directory" "test" {
+  path = "%[3]s"
+}
+
+resource "vercel_deployment" "test" {
+  project_id  = vercel_project.test.id
+  files       = data.vercel_project_directory.test.files
+  path_prefix = data.vercel_project_directory.test.path
+  production  = true
+}
+
+data "vercel_deployment" "by_id" {
+  id = vercel_deployment.test.id
+}
+
+data "vercel_deployment" "by_url" {
+  id = vercel_deployment.test.url
+}
+`, projectSuffix, testGithubRepo(t), filepath.Clean(repoDir))
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(cfgHCL),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
+					// Assert provider-enriched metadata via data sources, not resource state
+					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_id", "meta.githubCommitSha"),
+					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_id", "meta.githubCommitMessage"),
+					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_url", "meta.githubCommitSha"),
+					resource.TestCheckResourceAttrSet("data.vercel_deployment.by_url", "meta.githubCommitMessage"),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_DeploymentGitMetadata_NoGitRepo_FailOpen(t *testing.T) {
+	projectSuffix := acctest.RandString(8)
+
+	// Create a temp directory with a simple file, but no git repo
+	tmpDir, err := os.MkdirTemp("", "vercel-gitmeta-nogit-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(tmpDir) })
+
+	indexPath := filepath.Join(tmpDir, "index.html")
+	if err := os.WriteFile(indexPath, []byte("<html><body>no git</body></html>"), 0644); err != nil {
+		t.Fatalf("failed to write temp index.html: %v", err)
+	}
+
+	cfgHCL := fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-deployment-nogit-%[1]s"
+}
+
+data "vercel_project_directory" "test" {
+  path = "%[2]s"
+}
+
+resource "vercel_deployment" "test" {
+  project_id  = vercel_project.test.id
+  files       = data.vercel_project_directory.test.files
+  path_prefix = data.vercel_project_directory.test.path
+}
+`, projectSuffix, filepath.Clean(tmpDir))
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(cfgHCL),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDeploymentExists(testClient(t), "vercel_deployment.test", ""),
+					// Should proceed without git metadata when no git repo is present
+					resource.TestCheckNoResourceAttr("vercel_deployment.test", "meta.githubCommitSha"),
+				),
+			},
+		},
+	})
 }
