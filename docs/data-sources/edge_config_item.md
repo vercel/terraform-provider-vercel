@@ -23,9 +23,16 @@ data "vercel_edge_config" "example" {
   id = "ecfg_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 }
 
-data "vercel_edge_config_item" "test" {
+# Read a string item
+data "vercel_edge_config_item" "string_item" {
   id  = data.vercel_edge_config.example.id
   key = "foobar"
+}
+
+# Read a JSON item
+data "vercel_edge_config_item" "json_item" {
+  id  = data.vercel_edge_config.example.id
+  key = "flags"
 }
 ```
 
@@ -43,4 +50,5 @@ data "vercel_edge_config_item" "test" {
 
 ### Read-Only
 
-- `value` (String) The value assigned to the key.
+- `value` (String) The value assigned to the key (only set for string values).
+- `value_json` (Dynamic) Structured JSON value (object/array/number/bool/null) assigned to the key.
