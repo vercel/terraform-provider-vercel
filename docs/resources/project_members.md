@@ -54,7 +54,7 @@ resource "vercel_project_members" "example" {
 
 Required:
 
-- `role` (String) The role that the user should have in the project. One of 'MEMBER', 'PROJECT_DEVELOPER', or 'PROJECT_VIEWER'.
+- `role` (String) The role that the user should have in the project. One of 'ADMIN', 'PROJECT_DEVELOPER', or 'PROJECT_VIEWER'.
 
 Optional:
 

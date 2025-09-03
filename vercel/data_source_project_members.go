@@ -77,7 +77,7 @@ func (d *projectMembersDataSource) Schema(_ context.Context, _ datasource.Schema
 						},
 						"role": schema.StringAttribute{
 							Computed:    true,
-							Description: "The role of the user in the project. One of 'MEMBER', 'PROJECT_DEVELOPER', or 'PROJECT_VIEWER'.",
+							Description: "The role of the user in the project. One of 'ADMIN', 'PROJECT_DEVELOPER', or 'PROJECT_VIEWER'.",
 						},
 					},
 				},
