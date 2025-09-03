@@ -127,10 +127,10 @@ This, however, means config drift will not be detected for members that are adde
 							},
 						},
 						"role": schema.StringAttribute{
-							Description: "The role that the user should have in the project. One of 'MEMBER', 'PROJECT_DEVELOPER', or 'PROJECT_VIEWER'.",
+							Description: "The role that the user should have in the project. One of 'ADMIN', 'PROJECT_DEVELOPER', or 'PROJECT_VIEWER'.",
 							Required:    true,
 							Validators: []validator.String{
-								stringvalidator.OneOf("MEMBER", "PROJECT_DEVELOPER", "PROJECT_VIEWER"),
+								stringvalidator.OneOf("ADMIN", "PROJECT_DEVELOPER", "PROJECT_VIEWER"),
 							},
 						},
 					},

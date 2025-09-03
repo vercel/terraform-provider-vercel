@@ -43,6 +43,6 @@ data "vercel_project_members" "example" {
 Read-Only:
 
 - `email` (String) The email of the user.
-- `role` (String) The role of the user in the project. One of 'MEMBER', 'PROJECT_DEVELOPER', or 'PROJECT_VIEWER'.
+- `role` (String) The role of the user in the project. One of 'ADMIN', 'PROJECT_DEVELOPER', or 'PROJECT_VIEWER'.
 - `user_id` (String) The ID of the user.
 - `username` (String) The username of the user.
