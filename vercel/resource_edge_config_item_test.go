@@ -83,6 +83,23 @@ func TestAcc_EdgeConfigItemResource(t *testing.T) {
 	})
 }
 
+func TestAcc_EdgeConfigItemResource_JSON(t *testing.T) {
+	name := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testCheckEdgeConfigDeleted(testClient(t), "vercel_edge_config.test_item", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccResourceEdgeConfigItemJSON(name)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckEdgeConfigExists(testClient(t), testTeam(t), "vercel_edge_config.test_item"),
+					resource.TestCheckResourceAttr("vercel_edge_config_item.test_json", "key", "flags"),
+				),
+			},
+		},
+	})
+}
+
 func testAccResourceEdgeConfigItem(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_edge_config" "test_item" {
@@ -93,6 +110,23 @@ resource "vercel_edge_config_item" "test" {
     edge_config_id = vercel_edge_config.test_item.id
     key = "foobar"
     value = "baz"
+}
+`, name)
+}
+
+func testAccResourceEdgeConfigItemJSON(name string) string {
+	return fmt.Sprintf(`
+resource "vercel_edge_config" "test_item" {
+    name         = "%[1]s"
+}
+
+resource "vercel_edge_config_item" "test_json" {
+    edge_config_id = vercel_edge_config.test_item.id
+    key = "flags"
+    value_json = {
+      featureA = true
+      nested = { a = 1, b = [1,2,3] }
+    }
 }
 `, name)
 }

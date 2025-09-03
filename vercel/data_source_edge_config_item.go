@@ -2,11 +2,13 @@ package vercel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
 )
@@ -71,7 +73,11 @@ An Edge Config Item is a value within an Edge Config.`,
 				Required:    true,
 			},
 			"value": schema.StringAttribute{
-				Description: "The value assigned to the key.",
+				Description: "The value assigned to the key (only set for string values).",
+				Computed:    true,
+			},
+			"value_json": schema.DynamicAttribute{
+				Description: "Structured JSON value (object/array/number/bool/null) assigned to the key.",
 				Computed:    true,
 			},
 		},
@@ -79,10 +85,11 @@ An Edge Config Item is a value within an Edge Config.`,
 }
 
 type EdgeConfigItemDataSource struct {
-	EdgeConfigID types.String `tfsdk:"id"`
-	TeamID       types.String `tfsdk:"team_id"`
-	Key          types.String `tfsdk:"key"`
-	Value        types.String `tfsdk:"value"`
+	EdgeConfigID types.String  `tfsdk:"id"`
+	TeamID       types.String  `tfsdk:"team_id"`
+	Key          types.String  `tfsdk:"key"`
+	Value        types.String  `tfsdk:"value"`
+	ValueJSON    types.Dynamic `tfsdk:"value_json"`
 }
 
 // Read will read the edgeConfigItem information by requesting it from the Vercel API, and will update terraform
@@ -113,14 +120,39 @@ func (d *edgeConfigItemDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	result := responseToEdgeConfigItem(out)
+	// Parse API value
+	var result EdgeConfigItemDataSource
+	result.EdgeConfigID = types.StringValue(out.EdgeConfigID)
+	result.TeamID = types.StringValue(out.TeamID)
+	result.Key = types.StringValue(out.Key)
+	if len(out.Value) > 0 {
+		var sv string
+		if err := json.Unmarshal(out.Value, &sv); err == nil {
+			result.Value = types.StringValue(sv)
+			result.ValueJSON = types.DynamicNull()
+		} else {
+			tfval, err := tftypes.ValueFromJSONWithOpts(out.Value, tftypes.DynamicPseudoType, tftypes.ValueFromJSONOpts{IgnoreUndefinedAttributes: true})
+			if err != nil {
+				resp.Diagnostics.AddError("Error parsing Edge Config Item value", err.Error())
+				return
+			}
+			av, err := types.DynamicType.ValueFromTerraform(ctx, tfval)
+			if err != nil {
+				resp.Diagnostics.AddError("Error converting Edge Config Item value", err.Error())
+				return
+			}
+			result.Value = types.StringNull()
+			result.ValueJSON = av.(types.Dynamic)
+		}
+	}
+
 	tflog.Info(ctx, "read edge config item", map[string]any{
 		"edge_config_id": result.EdgeConfigID.ValueString(),
 		"team_id":        result.TeamID.ValueString(),
 		"key":            result.Key.ValueString(),
 	})
 
-	diags = resp.State.Set(ctx, EdgeConfigItemDataSource(result))
+	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

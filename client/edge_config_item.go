@@ -2,29 +2,33 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type EdgeConfigOperation struct {
-	Operation string `json:"operation"`
-	Key       string `json:"key"`
-	Value     string `json:"value"`
+	Operation string          `json:"operation"`
+	Key       string          `json:"key"`
+	Value     json.RawMessage `json:"value,omitempty"`
 }
 
 type EdgeConfigItem struct {
-	TeamID       string
-	Key          string `json:"key"`
-	Value        string `json:"value"`
-	EdgeConfigID string `json:"edgeConfigId"`
+	TeamID       string          `json:"-"`
+	Key          string          `json:"key"`
+	Value        json.RawMessage `json:"value"`
+	EdgeConfigID string          `json:"edgeConfigId"`
 }
 
 type CreateEdgeConfigItemRequest struct {
 	EdgeConfigID string
 	TeamID       string
 	Key          string
-	Value        string
+	// Value should be a valid JSON encoding of the item value. For strings,
+	// include quotes (e.g. "\"hello\""). For objects/arrays/numbers/bools/null,
+	// provide the raw JSON representation.
+	Value json.RawMessage
 }
 
 func (c *Client) CreateEdgeConfigItem(ctx context.Context, request CreateEdgeConfigItemRequest) (e EdgeConfigItem, err error) {
@@ -70,7 +74,6 @@ type EdgeConfigItemRequest struct {
 	EdgeConfigID string
 	TeamID       string
 	Key          string
-	Value        string
 }
 
 func (c *Client) DeleteEdgeConfigItem(ctx context.Context, request EdgeConfigItemRequest) error {
@@ -87,7 +90,6 @@ func (c *Client) DeleteEdgeConfigItem(ctx context.Context, request EdgeConfigIte
 				{
 					Operation: "delete",
 					Key:       request.Key,
-					Value:     request.Value,
 				},
 			},
 		},
