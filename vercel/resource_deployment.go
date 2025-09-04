@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
 	"github.com/vercel/terraform-provider-vercel/v3/file"
@@ -204,20 +205,20 @@ type ProjectSettings struct {
 
 // Deployment represents the terraform state for a deployment resource.
 type Deployment struct {
-	Domains             types.List       `tfsdk:"domains"`
-	Environment         types.Map        `tfsdk:"environment"`
-	Meta                types.Map        `tfsdk:"meta"`
-	Files               types.Map        `tfsdk:"files"`
-	ID                  types.String     `tfsdk:"id"`
-	Production          types.Bool       `tfsdk:"production"`
-	ProjectID           types.String     `tfsdk:"project_id"`
-	PathPrefix          types.String     `tfsdk:"path_prefix"`
-	ProjectSettings     *ProjectSettings `tfsdk:"project_settings"`
-	TeamID              types.String     `tfsdk:"team_id"`
-	URL                 types.String     `tfsdk:"url"`
-	DeleteOnDestroy     types.Bool       `tfsdk:"delete_on_destroy"`
-	Ref                 types.String     `tfsdk:"ref"`
-	CustomEnvironmentID types.String     `tfsdk:"custom_environment_id"`
+	Domains             types.List   `tfsdk:"domains"`
+	Environment         types.Map    `tfsdk:"environment"`
+	Meta                types.Map    `tfsdk:"meta"`
+	Files               types.Map    `tfsdk:"files"`
+	ID                  types.String `tfsdk:"id"`
+	Production          types.Bool   `tfsdk:"production"`
+	ProjectID           types.String `tfsdk:"project_id"`
+	PathPrefix          types.String `tfsdk:"path_prefix"`
+	ProjectSettings     types.Object `tfsdk:"project_settings"`
+	TeamID              types.String `tfsdk:"team_id"`
+	URL                 types.String `tfsdk:"url"`
+	DeleteOnDestroy     types.Bool   `tfsdk:"delete_on_destroy"`
+	Ref                 types.String `tfsdk:"ref"`
+	CustomEnvironmentID types.String `tfsdk:"custom_environment_id"`
 }
 
 // setIfNotUnknown is a helper function to set a value in a map if it is not unknown.
@@ -267,21 +268,6 @@ func fillStringNull(t types.String) types.String {
 		return types.StringNull()
 	}
 	return types.StringValue(t.ValueString())
-}
-
-// fillNulls takes a ProjectSettings and ensures that none of the values are unknown.
-// Any unknown values are instead converted to nulls.
-func (p *ProjectSettings) fillNulls() *ProjectSettings {
-	if p == nil {
-		return nil
-	}
-	return &ProjectSettings{
-		BuildCommand:    fillStringNull(p.BuildCommand),
-		Framework:       fillStringNull(p.Framework),
-		InstallCommand:  fillStringNull(p.InstallCommand),
-		OutputDirectory: fillStringNull(p.OutputDirectory),
-		RootDirectory:   fillStringNull(p.RootDirectory),
-	}
 }
 
 func withSlashAtEndIfNeeded(path string) string {
@@ -353,6 +339,16 @@ func getFiles(unparsedFiles map[string]string) ([]client.DeploymentFile, map[str
 	return files, filesBySha, nil
 }
 
+var projectSettingsAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"build_command":    types.StringType,
+		"framework":        types.StringType,
+		"install_command":  types.StringType,
+		"output_directory": types.StringType,
+		"root_directory":   types.StringType,
+	},
+}
+
 // convertResponseToDeployment is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from the existing deployment state are used.
@@ -405,6 +401,33 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		metaAttrs[k] = types.StringValue(v)
 	}
 
+	// Build project_settings object; coerce unknowns in plan to nulls
+	psObj := types.ObjectNull(projectSettingsAttrType.AttrTypes)
+	if !plan.ProjectSettings.IsNull() && !plan.ProjectSettings.IsUnknown() {
+		var ps *ProjectSettings
+		_ = plan.ProjectSettings.As(context.Background(), &ps, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+		// ps may be nil if empty; that's fine
+		bc := types.StringNull()
+		fw := types.StringNull()
+		ic := types.StringNull()
+		od := types.StringNull()
+		rd := types.StringNull()
+		if ps != nil {
+			bc = fillStringNull(ps.BuildCommand)
+			fw = fillStringNull(ps.Framework)
+			ic = fillStringNull(ps.InstallCommand)
+			od = fillStringNull(ps.OutputDirectory)
+			rd = fillStringNull(ps.RootDirectory)
+		}
+		psObj = types.ObjectValueMust(projectSettingsAttrType.AttrTypes, map[string]attr.Value{
+			"build_command":    bc,
+			"framework":        fw,
+			"install_command":  ic,
+			"output_directory": od,
+			"root_directory":   rd,
+		})
+	}
+
 	return Deployment{
 		Domains:             types.ListValueMust(types.StringType, domains),
 		TeamID:              toTeamID(response.TeamID),
@@ -416,7 +439,7 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		Production:          production,
 		Files:               plan.Files,
 		PathPrefix:          fillStringNull(plan.PathPrefix),
-		ProjectSettings:     plan.ProjectSettings.fillNulls(),
+		ProjectSettings:     psObj,
 		DeleteOnDestroy:     plan.DeleteOnDestroy,
 		Ref:                 ref,
 		CustomEnvironmentID: customEnvironmentID,
@@ -566,11 +589,16 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	for i := 0; i < len(files); i++ {
 		files[i].File = normaliseFilename(files[i].File, plan.PathPrefix)
 	}
+	// Decode project_settings object to request map
+	var ps *ProjectSettings
+	if !plan.ProjectSettings.IsNull() && !plan.ProjectSettings.IsUnknown() {
+		_ = plan.ProjectSettings.As(ctx, &ps, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+	}
 	cdr := client.CreateDeploymentRequest{
 		Files:                     files,
 		Environment:               filterNullFromMap(environment),
 		ProjectID:                 plan.ProjectID.ValueString(),
-		ProjectSettings:           plan.ProjectSettings.toRequest(),
+		ProjectSettings:           ps.toRequest(),
 		Target:                    target,
 		Ref:                       plan.Ref.ValueString(),
 		CustomEnvironmentSlugOrID: plan.CustomEnvironmentID.ValueString(),

@@ -623,46 +623,46 @@ func (r *projectResource) ConfigValidators(ctx context.Context) []resource.Confi
 
 // Project reflects the state terraform stores internally for a project.
 type Project struct {
-	BuildCommand                        types.String                    `tfsdk:"build_command"`
-	DevCommand                          types.String                    `tfsdk:"dev_command"`
-	Environment                         types.Set                       `tfsdk:"environment"`
-	Framework                           types.String                    `tfsdk:"framework"`
-	GitRepository                       *GitRepository                  `tfsdk:"git_repository"`
-	ID                                  types.String                    `tfsdk:"id"`
-	IgnoreCommand                       types.String                    `tfsdk:"ignore_command"`
-	InstallCommand                      types.String                    `tfsdk:"install_command"`
-	Name                                types.String                    `tfsdk:"name"`
-	NodeVersion                         types.String                    `tfsdk:"node_version"`
-	OutputDirectory                     types.String                    `tfsdk:"output_directory"`
-	PublicSource                        types.Bool                      `tfsdk:"public_source"`
-	RootDirectory                       types.String                    `tfsdk:"root_directory"`
-	ServerlessFunctionRegion            types.String                    `tfsdk:"serverless_function_region"`
-	TeamID                              types.String                    `tfsdk:"team_id"`
-	VercelAuthentication                types.Object                    `tfsdk:"vercel_authentication"`
-	PasswordProtection                  *PasswordProtectionWithPassword `tfsdk:"password_protection"`
-	TrustedIps                          *TrustedIps                     `tfsdk:"trusted_ips"`
-	OIDCTokenConfig                     *OIDCTokenConfig                `tfsdk:"oidc_token_config"`
-	OptionsAllowlist                    *OptionsAllowlist               `tfsdk:"options_allowlist"`
-	ProtectionBypassForAutomation       types.Bool                      `tfsdk:"protection_bypass_for_automation"`
-	ProtectionBypassForAutomationSecret types.String                    `tfsdk:"protection_bypass_for_automation_secret"`
-	AutoExposeSystemEnvVars             types.Bool                      `tfsdk:"automatically_expose_system_environment_variables"`
-	GitComments                         types.Object                    `tfsdk:"git_comments"`
-	PreviewComments                     types.Bool                      `tfsdk:"preview_comments"`
-	EnablePreviewFeedback               types.Bool                      `tfsdk:"enable_preview_feedback"`
-	EnableProductionFeedback            types.Bool                      `tfsdk:"enable_production_feedback"`
-	PreviewDeploymentsDisabled          types.Bool                      `tfsdk:"preview_deployments_disabled"`
-	AutoAssignCustomDomains             types.Bool                      `tfsdk:"auto_assign_custom_domains"`
-	GitLFS                              types.Bool                      `tfsdk:"git_lfs"`
-	FunctionFailover                    types.Bool                      `tfsdk:"function_failover"`
-	CustomerSuccessCodeVisibility       types.Bool                      `tfsdk:"customer_success_code_visibility"`
-	GitForkProtection                   types.Bool                      `tfsdk:"git_fork_protection"`
-	PrioritiseProductionBuilds          types.Bool                      `tfsdk:"prioritise_production_builds"`
-	DirectoryListing                    types.Bool                      `tfsdk:"directory_listing"`
-	EnableAffectedProjectsDeployments   types.Bool                      `tfsdk:"enable_affected_projects_deployments"`
-	SkewProtection                      types.String                    `tfsdk:"skew_protection"`
-	ResourceConfig                      types.Object                    `tfsdk:"resource_config"`
-	OnDemandConcurrentBuilds            types.Bool                      `tfsdk:"on_demand_concurrent_builds"`
-	BuildMachineType                    types.String                    `tfsdk:"build_machine_type"`
+	BuildCommand                        types.String `tfsdk:"build_command"`
+	DevCommand                          types.String `tfsdk:"dev_command"`
+	Environment                         types.Set    `tfsdk:"environment"`
+	Framework                           types.String `tfsdk:"framework"`
+	GitRepository                       types.Object `tfsdk:"git_repository"`
+	ID                                  types.String `tfsdk:"id"`
+	IgnoreCommand                       types.String `tfsdk:"ignore_command"`
+	InstallCommand                      types.String `tfsdk:"install_command"`
+	Name                                types.String `tfsdk:"name"`
+	NodeVersion                         types.String `tfsdk:"node_version"`
+	OutputDirectory                     types.String `tfsdk:"output_directory"`
+	PublicSource                        types.Bool   `tfsdk:"public_source"`
+	RootDirectory                       types.String `tfsdk:"root_directory"`
+	ServerlessFunctionRegion            types.String `tfsdk:"serverless_function_region"`
+	TeamID                              types.String `tfsdk:"team_id"`
+	VercelAuthentication                types.Object `tfsdk:"vercel_authentication"`
+	PasswordProtection                  types.Object `tfsdk:"password_protection"`
+	TrustedIps                          types.Object `tfsdk:"trusted_ips"`
+	OIDCTokenConfig                     types.Object `tfsdk:"oidc_token_config"`
+	OptionsAllowlist                    types.Object `tfsdk:"options_allowlist"`
+	ProtectionBypassForAutomation       types.Bool   `tfsdk:"protection_bypass_for_automation"`
+	ProtectionBypassForAutomationSecret types.String `tfsdk:"protection_bypass_for_automation_secret"`
+	AutoExposeSystemEnvVars             types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
+	GitComments                         types.Object `tfsdk:"git_comments"`
+	PreviewComments                     types.Bool   `tfsdk:"preview_comments"`
+	EnablePreviewFeedback               types.Bool   `tfsdk:"enable_preview_feedback"`
+	EnableProductionFeedback            types.Bool   `tfsdk:"enable_production_feedback"`
+	PreviewDeploymentsDisabled          types.Bool   `tfsdk:"preview_deployments_disabled"`
+	AutoAssignCustomDomains             types.Bool   `tfsdk:"auto_assign_custom_domains"`
+	GitLFS                              types.Bool   `tfsdk:"git_lfs"`
+	FunctionFailover                    types.Bool   `tfsdk:"function_failover"`
+	CustomerSuccessCodeVisibility       types.Bool   `tfsdk:"customer_success_code_visibility"`
+	GitForkProtection                   types.Bool   `tfsdk:"git_fork_protection"`
+	PrioritiseProductionBuilds          types.Bool   `tfsdk:"prioritise_production_builds"`
+	DirectoryListing                    types.Bool   `tfsdk:"directory_listing"`
+	EnableAffectedProjectsDeployments   types.Bool   `tfsdk:"enable_affected_projects_deployments"`
+	SkewProtection                      types.String `tfsdk:"skew_protection"`
+	ResourceConfig                      types.Object `tfsdk:"resource_config"`
+	OnDemandConcurrentBuilds            types.Bool   `tfsdk:"on_demand_concurrent_builds"`
+	BuildMachineType                    types.String `tfsdk:"build_machine_type"`
 }
 
 type GitComments struct {
@@ -681,10 +681,10 @@ func (g *GitComments) toUpdateProjectRequest() *client.GitComments {
 }
 
 func (p Project) RequiresUpdateAfterCreation() bool {
-	return p.PasswordProtection != nil ||
-		p.TrustedIps != nil ||
-		p.OIDCTokenConfig != nil ||
-		p.OptionsAllowlist != nil ||
+	return (!p.PasswordProtection.IsNull() && !p.PasswordProtection.IsUnknown()) ||
+		(!p.TrustedIps.IsNull() && !p.TrustedIps.IsUnknown()) ||
+		(!p.OIDCTokenConfig.IsNull() && !p.OIDCTokenConfig.IsUnknown()) ||
+		(!p.OptionsAllowlist.IsNull() && !p.OptionsAllowlist.IsUnknown()) ||
 		!p.AutoExposeSystemEnvVars.IsNull() ||
 		p.GitComments.IsNull() ||
 		(!p.AutoAssignCustomDomains.IsNull() && !p.AutoAssignCustomDomains.ValueBool()) ||
@@ -696,7 +696,6 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 		!p.DirectoryListing.IsNull() ||
 		!p.SkewProtection.IsNull() ||
 		!p.NodeVersion.IsNull()
-
 }
 
 var nullProject = Project{
@@ -756,6 +755,69 @@ func parseEnvironment(ctx context.Context, vars []EnvironmentItem) (out []client
 	return out, nil
 }
 
+func (p *Project) gitRepository(ctx context.Context) (*GitRepository, diag.Diagnostics) {
+	if p.GitRepository.IsNull() || p.GitRepository.IsUnknown() {
+		return nil, nil
+	}
+	var gr GitRepository
+	diags := p.GitRepository.As(ctx, &gr, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
+	})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return &gr, nil
+}
+
+func (p *Project) passwordProtection(ctx context.Context) (*PasswordProtectionWithPassword, diag.Diagnostics) {
+	if p.PasswordProtection.IsNull() || p.PasswordProtection.IsUnknown() {
+		return nil, nil
+	}
+	var pp PasswordProtectionWithPassword
+	diags := p.PasswordProtection.As(ctx, &pp, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return &pp, nil
+}
+
+func (p *Project) trustedIps(ctx context.Context) (*TrustedIps, diag.Diagnostics) {
+	if p.TrustedIps.IsNull() || p.TrustedIps.IsUnknown() {
+		return nil, nil
+	}
+	var ti TrustedIps
+	diags := p.TrustedIps.As(ctx, &ti, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return &ti, nil
+}
+
+func (p *Project) oidcTokenConfigObj(ctx context.Context) (*OIDCTokenConfig, diag.Diagnostics) {
+	if p.OIDCTokenConfig.IsNull() || p.OIDCTokenConfig.IsUnknown() {
+		return nil, nil
+	}
+	var o OIDCTokenConfig
+	diags := p.OIDCTokenConfig.As(ctx, &o, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return &o, nil
+}
+
+func (p *Project) optionsAllowlistObj(ctx context.Context) (*OptionsAllowlist, diag.Diagnostics) {
+	if p.OptionsAllowlist.IsNull() || p.OptionsAllowlist.IsUnknown() {
+		return nil, nil
+	}
+	var o OptionsAllowlist
+	diags := p.OptionsAllowlist.As(ctx, &o, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return &o, nil
+}
+
 func (p *Project) toCreateProjectRequest(ctx context.Context, envs []EnvironmentItem) (req client.CreateProjectRequest, diags diag.Diagnostics) {
 	clientEnvs, diags := parseEnvironment(ctx, envs)
 	if diags.HasError() {
@@ -770,6 +832,17 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		return req, diags
 	}
 
+	gr, d1 := p.gitRepository(ctx)
+	diags.Append(d1...)
+	if diags.HasError() {
+		return req, diags
+	}
+	oidc, d2 := p.oidcTokenConfigObj(ctx)
+	diags.Append(d2...)
+	if diags.HasError() {
+		return req, diags
+	}
+
 	return client.CreateProjectRequest{
 		BuildCommand:                      p.BuildCommand.ValueStringPointer(),
 		CommandForIgnoringBuildStep:       p.IgnoreCommand.ValueStringPointer(),
@@ -777,10 +850,10 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		EnableAffectedProjectsDeployments: p.EnableAffectedProjectsDeployments.ValueBoolPointer(),
 		EnvironmentVariables:              clientEnvs,
 		Framework:                         p.Framework.ValueStringPointer(),
-		GitRepository:                     p.GitRepository.toCreateProjectRequest(),
+		GitRepository:                     gr.toCreateProjectRequest(),
 		InstallCommand:                    p.InstallCommand.ValueStringPointer(),
 		Name:                              p.Name.ValueString(),
-		OIDCTokenConfig:                   p.OIDCTokenConfig.toCreateProjectRequest(),
+		OIDCTokenConfig:                   oidc.toCreateProjectRequest(),
 		OutputDirectory:                   p.OutputDirectory.ValueStringPointer(),
 		PublicSource:                      p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
@@ -842,6 +915,17 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	if diags.HasError() {
 		return req, diags
 	}
+	pp, d1 := p.passwordProtection(ctx)
+	diags.Append(d1...)
+	ti, d2 := p.trustedIps(ctx)
+	diags.Append(d2...)
+	oidc, d3 := p.oidcTokenConfigObj(ctx)
+	diags.Append(d3...)
+	oal, d4 := p.optionsAllowlistObj(ctx)
+	diags.Append(d4...)
+	if diags.HasError() {
+		return req, diags
+	}
 	return client.UpdateProjectRequest{
 		BuildCommand:                         p.BuildCommand.ValueStringPointer(),
 		CommandForIgnoringBuildStep:          p.IgnoreCommand.ValueStringPointer(),
@@ -852,11 +936,11 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		OutputDirectory:                      p.OutputDirectory.ValueStringPointer(),
 		PublicSource:                         p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                        p.RootDirectory.ValueStringPointer(),
-		PasswordProtection:                   p.PasswordProtection.toUpdateProjectRequest(),
+		PasswordProtection:                   pp.toUpdateProjectRequest(),
 		VercelAuthentication:                 vercelAuthentication.toVercelAuthentication(),
-		TrustedIps:                           p.TrustedIps.toUpdateProjectRequest(),
-		OIDCTokenConfig:                      p.OIDCTokenConfig.toUpdateProjectRequest(),
-		OptionsAllowlist:                     p.OptionsAllowlist.toUpdateProjectRequest(),
+		TrustedIps:                           ti.toUpdateProjectRequest(),
+		OIDCTokenConfig:                      oidc.toUpdateProjectRequest(),
+		OptionsAllowlist:                     oal.toUpdateProjectRequest(),
 		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
 		EnablePreviewFeedback:                oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:             p.EnableProductionFeedback.ValueBoolPointer(),
@@ -1126,6 +1210,56 @@ var vercelAuthenticationAttrType = types.ObjectType{
 	},
 }
 
+var gitRepositoryAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"type":              types.StringType,
+		"repo":              types.StringType,
+		"production_branch": types.StringType,
+		"deploy_hooks":      types.SetType{ElemType: deployHookType},
+	},
+}
+
+var passwordProtectionWithPasswordAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"deployment_type": types.StringType,
+		"password":        types.StringType,
+	},
+}
+
+var trustedIpAddressAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"value": types.StringType,
+		"note":  types.StringType,
+	},
+}
+
+var trustedIpsAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"deployment_type": types.StringType,
+		"protection_mode": types.StringType,
+		"addresses":       types.SetType{ElemType: trustedIpAddressAttrType},
+	},
+}
+
+var oidcTokenConfigAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"enabled":     types.BoolType,
+		"issuer_mode": types.StringType,
+	},
+}
+
+var optionsAllowlistPathAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"value": types.StringType,
+	},
+}
+
+var optionsAllowlistAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"paths": types.SetType{ElemType: optionsAllowlistPathAttrType},
+	},
+}
+
 type ResourceConfig struct {
 	FunctionDefaultCPUType types.String `tfsdk:"function_default_cpu_type"`
 	FunctionDefaultTimeout types.Int64  `tfsdk:"function_default_timeout"`
@@ -1335,18 +1469,13 @@ func fromSkewProtectionMaxAge(sp int) types.String {
 func convertResponseToProject(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (Project, error) {
 	fields := plan.coercedFields()
 
-	var gr *GitRepository
+	// Decode planned git repository to know whether to populate deploy hooks
+	planGit, _ := plan.gitRepository(ctx)
+
+	gitRepoObj := types.ObjectNull(gitRepositoryAttrType.AttrTypes)
 	if repo := response.Repository(); repo != nil {
-		gr = &GitRepository{
-			Type:             types.StringValue(repo.Type),
-			Repo:             types.StringValue(repo.Repo),
-			ProductionBranch: types.StringNull(),
-			DeployHooks:      types.SetNull(deployHookType),
-		}
-		if repo.ProductionBranch != nil {
-			gr.ProductionBranch = types.StringValue(*repo.ProductionBranch)
-		}
-		if repo.DeployHooks != nil && plan.GitRepository != nil && !plan.GitRepository.DeployHooks.IsNull() {
+		deployHooks := types.SetNull(deployHookType)
+		if repo.DeployHooks != nil && planGit != nil && !planGit.DeployHooks.IsNull() {
 			var dh []deployHook
 			for _, h := range repo.DeployHooks {
 				dh = append(dh, deployHook{
@@ -1356,26 +1485,40 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 					ID:   h.ID,
 				})
 			}
-			hooks, diags := types.SetValueFrom(ctx, deployHookType, dh)
+			h, diags := types.SetValueFrom(ctx, deployHookType, dh)
 			if diags.HasError() {
 				return Project{}, fmt.Errorf("error reading project deploy hooks: %s - %s", diags[0].Summary(), diags[0].Detail())
 			}
-			gr.DeployHooks = hooks
+			deployHooks = h
 		}
+		prodBranch := types.StringNull()
+		if repo.ProductionBranch != nil {
+			prodBranch = types.StringValue(*repo.ProductionBranch)
+		}
+		gitRepoObj = types.ObjectValueMust(gitRepositoryAttrType.AttrTypes, map[string]attr.Value{
+			"type":              types.StringValue(repo.Type),
+			"repo":              types.StringValue(repo.Repo),
+			"production_branch": prodBranch,
+			"deploy_hooks":      deployHooks,
+		})
 	}
 
-	var pp *PasswordProtectionWithPassword
+	// Password protection
+	passwordObj := types.ObjectNull(passwordProtectionWithPasswordAttrType.AttrTypes)
 	if response.PasswordProtection != nil {
+		// preserve password if present in plan
+		plannedPP, _ := plan.passwordProtection(ctx)
 		pass := types.StringValue("")
-		if plan.PasswordProtection != nil {
-			pass = plan.PasswordProtection.Password
+		if plannedPP != nil {
+			pass = plannedPP.Password
 		}
-		pp = &PasswordProtectionWithPassword{
-			Password:       pass,
-			DeploymentType: fromApiDeploymentProtectionType(response.PasswordProtection.DeploymentType),
-		}
+		passwordObj = types.ObjectValueMust(passwordProtectionWithPasswordAttrType.AttrTypes, map[string]attr.Value{
+			"password":        pass,
+			"deployment_type": fromApiDeploymentProtectionType(response.PasswordProtection.DeploymentType),
+		})
 	}
 
+	// Vercel auth
 	va := types.ObjectValueMust(vercelAuthenticationAttrType.AttrTypes, map[string]attr.Value{
 		"deployment_type": types.StringValue("none"),
 	})
@@ -1385,37 +1528,42 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		})
 	}
 
-	var tip *TrustedIps
+	// Trusted IPs
+	trustedIpsObj := types.ObjectNull(trustedIpsAttrType.AttrTypes)
 	if response.TrustedIps != nil {
-		var addresses []TrustedIpAddress
+		// addresses set
+		addrVals := make([]attr.Value, 0, len(response.TrustedIps.Addresses))
 		for _, address := range response.TrustedIps.Addresses {
-			var note = types.StringNull()
+			note := types.StringNull()
 			if address.Note != nil {
 				note = types.StringValue(*address.Note)
 			}
-			addresses = append(addresses, TrustedIpAddress{
-				Value: types.StringValue(address.Value),
-				Note:  note,
-			})
+			addrVals = append(addrVals, types.ObjectValueMust(trustedIpAddressAttrType.AttrTypes, map[string]attr.Value{
+				"value": types.StringValue(address.Value),
+				"note":  note,
+			}))
 		}
-		tip = &TrustedIps{
-			DeploymentType: fromApiDeploymentProtectionType(response.TrustedIps.DeploymentType),
-			Addresses:      addresses,
-			ProtectionMode: fromApiTrustedIpProtectionMode(response.TrustedIps.ProtectionMode),
-		}
+		trustedIpsObj = types.ObjectValueMust(trustedIpsAttrType.AttrTypes, map[string]attr.Value{
+			"deployment_type": fromApiDeploymentProtectionType(response.TrustedIps.DeploymentType),
+			"protection_mode": fromApiTrustedIpProtectionMode(response.TrustedIps.ProtectionMode),
+			"addresses":       types.SetValueMust(trustedIpAddressAttrType, addrVals),
+		})
 	}
 
-	var oidcTokenConfig = &OIDCTokenConfig{
-		Enabled:    types.BoolValue(true),
-		IssuerMode: types.StringValue("team"),
-	}
+	// OIDC token config
+	oidcObj := types.ObjectValueMust(oidcTokenConfigAttrType.AttrTypes, map[string]attr.Value{
+		"enabled":     types.BoolValue(true),
+		"issuer_mode": types.StringValue("team"),
+	})
 	if response.OIDCTokenConfig != nil {
-		if response.OIDCTokenConfig.Enabled == nil {
-			oidcTokenConfig.Enabled = types.BoolValue(true)
-		} else {
-			oidcTokenConfig.Enabled = types.BoolPointerValue(response.OIDCTokenConfig.Enabled)
+		enabled := types.BoolValue(true)
+		if response.OIDCTokenConfig.Enabled != nil {
+			enabled = types.BoolPointerValue(response.OIDCTokenConfig.Enabled)
 		}
-		oidcTokenConfig.IssuerMode = types.StringValue(response.OIDCTokenConfig.IssuerMode)
+		oidcObj = types.ObjectValueMust(oidcTokenConfigAttrType.AttrTypes, map[string]attr.Value{
+			"enabled":     enabled,
+			"issuer_mode": types.StringValue(response.OIDCTokenConfig.IssuerMode),
+		})
 	}
 
 	resourceConfig := types.ObjectNull(resourceConfigAttrType.AttrTypes)
@@ -1435,17 +1583,18 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		})
 	}
 
-	var oal *OptionsAllowlist
+	// Options allowlist
+	oalObj := types.ObjectNull(optionsAllowlistAttrType.AttrTypes)
 	if response.OptionsAllowlist != nil {
-		var paths []OptionsAllowlistPath
-		for _, path := range response.OptionsAllowlist.Paths {
-			paths = append(paths, OptionsAllowlistPath{
-				Value: types.StringValue(path.Value),
-			})
+		paths := make([]attr.Value, 0, len(response.OptionsAllowlist.Paths))
+		for _, pth := range response.OptionsAllowlist.Paths {
+			paths = append(paths, types.ObjectValueMust(optionsAllowlistPathAttrType.AttrTypes, map[string]attr.Value{
+				"value": types.StringValue(pth.Value),
+			}))
 		}
-		oal = &OptionsAllowlist{
-			Paths: paths,
-		}
+		oalObj = types.ObjectValueMust(optionsAllowlistAttrType.AttrTypes, map[string]attr.Value{
+			"paths": types.SetValueMust(optionsAllowlistPathAttrType, paths),
+		})
 	}
 
 	var env []attr.Value
@@ -1546,7 +1695,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		DevCommand:                          uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
 		Environment:                         environmentEntry,
 		Framework:                           types.StringPointerValue(response.Framework),
-		GitRepository:                       gr,
+		GitRepository:                       gitRepoObj,
 		ID:                                  types.StringValue(response.ID),
 		IgnoreCommand:                       types.StringPointerValue(response.CommandForIgnoringBuildStep),
 		InstallCommand:                      uncoerceString(fields.InstallCommand, types.StringPointerValue(response.InstallCommand)),
@@ -1556,11 +1705,11 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		RootDirectory:                       types.StringPointerValue(response.RootDirectory),
 		ServerlessFunctionRegion:            types.StringPointerValue(response.ServerlessFunctionRegion),
 		TeamID:                              toTeamID(response.TeamID),
-		PasswordProtection:                  pp,
+		PasswordProtection:                  passwordObj,
 		VercelAuthentication:                va,
-		TrustedIps:                          tip,
-		OIDCTokenConfig:                     oidcTokenConfig,
-		OptionsAllowlist:                    oal,
+		TrustedIps:                          trustedIpsObj,
+		OIDCTokenConfig:                     oidcObj,
+		OptionsAllowlist:                    oalObj,
 		ProtectionBypassForAutomation:       protectionBypass,
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
@@ -1712,9 +1861,15 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	if plan.GitRepository != nil && !plan.GitRepository.DeployHooks.IsNull() && !plan.GitRepository.DeployHooks.IsUnknown() {
+	// Deploy hooks
+	planGit, dgr := plan.gitRepository(ctx)
+	resp.Diagnostics.Append(dgr...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if planGit != nil && !planGit.DeployHooks.IsNull() && !planGit.DeployHooks.IsUnknown() {
 		var hooks []DeployHook
-		diags := plan.GitRepository.DeployHooks.ElementsAs(ctx, &hooks, false)
+		diags := planGit.DeployHooks.ElementsAs(ctx, &hooks, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -1809,13 +1964,19 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		}
 	}
 
-	if plan.GitRepository == nil || plan.GitRepository.ProductionBranch.IsNull() || plan.GitRepository.ProductionBranch.IsUnknown() {
+	// Production branch
+	planGit, dgb := plan.gitRepository(ctx)
+	resp.Diagnostics.Append(dgb...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if planGit == nil || planGit.ProductionBranch.IsNull() || planGit.ProductionBranch.IsUnknown() {
 		return
 	}
 
 	out, err = r.client.UpdateProductionBranch(ctx, client.UpdateProductionBranchRequest{
 		ProjectID: out.ID,
-		Branch:    plan.GitRepository.ProductionBranch.ValueString(),
+		Branch:    planGit.ProductionBranch.ValueString(),
 		TeamID:    plan.TeamID.ValueString(),
 	})
 	if err != nil {
@@ -2119,7 +2280,15 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	if plan.GitRepository == nil && state.GitRepository != nil {
+	planGit, dpg := plan.gitRepository(ctx)
+	resp.Diagnostics.Append(dpg...)
+	stateGit, dsg := state.gitRepository(ctx)
+	resp.Diagnostics.Append(dsg...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if planGit == nil && stateGit != nil {
 		out, err = r.client.UnlinkGitRepoFromProject(ctx, plan.ID.ValueString(), plan.TeamID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
@@ -2136,8 +2305,8 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	wasUnlinked := false
-	if plan.GitRepository.isDifferentRepo(state.GitRepository) {
-		if state.GitRepository != nil {
+	if (planGit != nil && planGit.isDifferentRepo(stateGit)) || (planGit == nil && stateGit != nil) {
+		if stateGit != nil {
 			_, err = r.client.UnlinkGitRepoFromProject(ctx, plan.ID.ValueString(), plan.TeamID.ValueString())
 			wasUnlinked = true
 			if err != nil {
@@ -2154,12 +2323,12 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			}
 		}
 
-		if plan.GitRepository != nil {
+		if planGit != nil {
 			out, err = r.client.LinkGitRepoToProject(ctx, client.LinkGitRepoToProjectRequest{
 				ProjectID: plan.ID.ValueString(),
 				TeamID:    plan.TeamID.ValueString(),
-				Repo:      plan.GitRepository.Repo.ValueString(),
-				Type:      plan.GitRepository.Type.ValueString(),
+				Repo:      planGit.Repo.ValueString(),
+				Type:      planGit.Type.ValueString(),
 			})
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -2176,17 +2345,17 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	if plan.GitRepository != nil && !plan.GitRepository.ProductionBranch.IsUnknown() &&
-		!plan.GitRepository.ProductionBranch.IsNull() && // we know the value the production branch _should_ be
+	if planGit != nil && !planGit.ProductionBranch.IsUnknown() &&
+		!planGit.ProductionBranch.IsNull() && // we know the value the production branch _should_ be
 		(wasUnlinked || // and we either unlinked the repo,
-			(state.GitRepository == nil || // or the production branch was never set
+			(stateGit == nil || // or the production branch was never set
 				// or the production branch was/is something else
-				state.GitRepository.ProductionBranch.ValueString() != plan.GitRepository.ProductionBranch.ValueString())) {
+				stateGit.ProductionBranch.ValueString() != planGit.ProductionBranch.ValueString())) {
 
 		out, err = r.client.UpdateProductionBranch(ctx, client.UpdateProductionBranchRequest{
 			ProjectID: plan.ID.ValueString(),
 			TeamID:    plan.TeamID.ValueString(),
-			Branch:    plan.GitRepository.ProductionBranch.ValueString(),
+			Branch:    planGit.ProductionBranch.ValueString(),
 		})
 		if err != nil {
 			resp.Diagnostics.AddError(
@@ -2195,7 +2364,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 					"Could not update project production branch %s %s to '%s', unexpected error: %s",
 					state.TeamID.ValueString(),
 					state.ID.ValueString(),
-					plan.GitRepository.ProductionBranch.ValueString(),
+					planGit.ProductionBranch.ValueString(),
 					err,
 				),
 			)
@@ -2203,7 +2372,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	hooksToCreate, hooksToRemove, diags := diffDeployHooks(ctx, plan.GitRepository, state.GitRepository)
+	hooksToCreate, hooksToRemove, diags := diffDeployHooks(ctx, planGit, stateGit)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
