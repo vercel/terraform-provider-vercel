@@ -352,7 +352,7 @@ var projectSettingsAttrType = types.ObjectType{
 // convertResponseToDeployment is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from the existing deployment state are used.
-func convertResponseToDeployment(response client.DeploymentResponse, plan Deployment) Deployment {
+func convertResponseToDeployment(ctx context.Context, response client.DeploymentResponse, plan Deployment) Deployment {
 	production := types.BoolValue(false)
 	/*
 	 * TODO - the first deployment to a new project is currently _always_ a
@@ -378,10 +378,7 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		plan.Environment = types.MapNull(types.StringType)
 	}
 
-	if plan.Meta.IsUnknown() || plan.Meta.IsNull() {
-		plan.Meta = types.MapNull(types.StringType)
-	}
-
+	// Files should preserve plan shape
 	if plan.Files.IsUnknown() || plan.Files.IsNull() {
 		plan.Files = types.MapNull(types.StringType)
 	}
@@ -396,9 +393,28 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		customEnvironmentID = types.StringValue(response.CustomEnvironment.ID)
 	}
 
-	metaAttrs := map[string]attr.Value{}
-	for k, v := range response.Meta {
-		metaAttrs[k] = types.StringValue(v)
+	// Prepare Meta for state: only include keys that were configured by the user
+	var metaState types.Map
+	if plan.Meta.IsUnknown() || plan.Meta.IsNull() {
+		metaState = types.MapNull(types.StringType)
+	} else {
+		configured := map[string]types.String{}
+		// Best-effort to read configured keys
+		_ = plan.Meta.ElementsAs(ctx, &configured, false)
+
+		metaAttrs := map[string]attr.Value{}
+		for k, v := range configured {
+			if v.IsNull() || v.IsUnknown() {
+				continue
+			}
+			if rv, ok := response.Meta[k]; ok {
+				metaAttrs[k] = types.StringValue(rv)
+			} else {
+				// Fallback to configured value if API didn't echo the key
+				metaAttrs[k] = types.StringValue(v.ValueString())
+			}
+		}
+		metaState = types.MapValueMust(types.StringType, metaAttrs)
 	}
 
 	// Build project_settings object; coerce unknowns in plan to nulls
@@ -432,7 +448,7 @@ func convertResponseToDeployment(response client.DeploymentResponse, plan Deploy
 		Domains:             types.ListValueMust(types.StringType, domains),
 		TeamID:              toTeamID(response.TeamID),
 		Environment:         plan.Environment,
-		Meta:                types.MapValueMust(types.StringType, metaAttrs),
+		Meta:                metaState,
 		ProjectID:           types.StringValue(response.ProjectID),
 		ID:                  types.StringValue(response.ID),
 		URL:                 types.StringValue(response.URL),
@@ -523,9 +539,10 @@ func getPrebuiltBuildsFile(files []client.DeploymentFile) (string, bool) {
 func filterNullFromMap(m map[string]types.String) map[string]string {
 	out := map[string]string{}
 	for k, v := range m {
-		if !v.IsNull() {
-			out[k] = v.ValueString()
+		if v.IsNull() || v.IsUnknown() {
+			continue
 		}
+		out[k] = v.ValueString()
 	}
 	return out
 }
@@ -566,14 +583,20 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	var environment map[string]types.String
-	diags = plan.Environment.ElementsAs(ctx, &environment, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if plan.Environment.IsUnknown() || plan.Environment.IsNull() {
+		environment = map[string]types.String{}
+	} else {
+		diags = plan.Environment.ElementsAs(ctx, &environment, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	var metaInput map[string]types.String
-	if !plan.Meta.IsNull() && !plan.Meta.IsUnknown() {
+	if plan.Meta.IsUnknown() || plan.Meta.IsNull() {
+		metaInput = map[string]types.String{}
+	} else {
 		diags = plan.Meta.ElementsAs(ctx, &metaInput, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -585,15 +608,41 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 	if plan.Production.ValueBool() {
 		target = "production"
 	}
-	// normalise filenames.
+	// Fetch project to validate existence and get link info for git metadata
+	pr, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+	if client.NotFound(err) {
+		resp.Diagnostics.AddError(
+			"Error creating deployment",
+			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
+		)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating deployment",
+			"Unexpected error reading project: "+err.Error(),
+		)
+		return
+	}
+
+	// Prepare git metadata BEFORE normalising filenames so we use real filesystem paths
+	gitMeta := prepareGitMetadata(ctx, files, plan.Ref.ValueString(), pr)
+
+	// normalise filenames for upload
 	for i := 0; i < len(files); i++ {
 		files[i].File = normaliseFilename(files[i].File, plan.PathPrefix)
 	}
-	// Decode project_settings object to request map
+
+	// Decode project_settings object (types.Object) to request map via Go struct
 	var ps *ProjectSettings
 	if !plan.ProjectSettings.IsNull() && !plan.ProjectSettings.IsUnknown() {
-		_ = plan.ProjectSettings.As(ctx, &ps, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+		_ = plan.ProjectSettings.As(
+			ctx,
+			&ps,
+			basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true},
+		)
 	}
+
 	cdr := client.CreateDeploymentRequest{
 		Files:                     files,
 		Environment:               filterNullFromMap(environment),
@@ -603,20 +652,17 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 		Ref:                       plan.Ref.ValueString(),
 		CustomEnvironmentSlugOrID: plan.CustomEnvironmentID.ValueString(),
 	}
+	// Only include user-provided meta if any keys were configured
 	if len(metaInput) > 0 {
 		cdr.Meta = filterNullFromMap(metaInput)
 	}
-
-	_, err = r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
-	if client.NotFound(err) {
-		resp.Diagnostics.AddError(
-			"Error creating deployment",
-			"Could not find project, please make sure both the project_id and team_id match the project and team you wish to deploy to.",
-		)
-		return
+	// Attach git metadata if detected
+	if gitMeta != nil {
+		cdr.GitMetadata = gitMeta
 	}
 
 	out, err := r.client.CreateDeployment(ctx, cdr, plan.TeamID.ValueString())
+
 	var mfErr client.MissingFilesError
 	if errors.As(err, &mfErr) {
 		// Then we need to upload the files, and create the deployment again.
@@ -724,7 +770,7 @@ func (r *deploymentResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	result := convertResponseToDeployment(out, plan)
+	result := convertResponseToDeployment(ctx, out, plan)
 	tflog.Info(ctx, "created deployment", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
@@ -764,7 +810,7 @@ func (r *deploymentResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	result := convertResponseToDeployment(out, state)
+	result := convertResponseToDeployment(ctx, out, state)
 	tflog.Info(ctx, "read deployment", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
