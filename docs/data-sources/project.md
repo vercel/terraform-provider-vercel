@@ -139,7 +139,7 @@ Read-Only:
 
 Read-Only:
 
-- `paths` (List of Object) The allowed paths for the OPTIONS Allowlist. Incoming requests will bypass Deployment Protection if they have the method `OPTIONS` and **start with** one of the path values. (see [below for nested schema](#nestedatt--options_allowlist--paths))
+- `paths` (Set of Object) The allowed paths for the OPTIONS Allowlist. Incoming requests will bypass Deployment Protection if they have the method `OPTIONS` and **start with** one of the path values. (see [below for nested schema](#nestedatt--options_allowlist--paths))
 
 <a id="nestedatt--options_allowlist--paths"></a>
 ### Nested Schema for `options_allowlist.paths`
@@ -174,7 +174,7 @@ Read-Only:
 
 Read-Only:
 
-- `addresses` (List of Object) The allowed IP addressses and CIDR ranges with optional descriptions. (see [below for nested schema](#nestedatt--trusted_ips--addresses))
+- `addresses` (Set of Object) The allowed IP addressses and CIDR ranges with optional descriptions. (see [below for nested schema](#nestedatt--trusted_ips--addresses))
 - `deployment_type` (String) The deployment environment that will be protected.
 - `protection_mode` (String) Whether or not Trusted IPs is required or optional to access a deployment.
 

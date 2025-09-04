@@ -218,7 +218,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Description: "The deployment environment that will be protected.",
 						Computed:    true,
 					},
-					"addresses": schema.ListAttribute{
+					"addresses": schema.SetAttribute{
 						Description: "The allowed IP addressses and CIDR ranges with optional descriptions.",
 						Computed:    true,
 						ElementType: types.ObjectType{
@@ -257,7 +257,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
-					"paths": schema.ListAttribute{
+					"paths": schema.SetAttribute{
 						Description: "The allowed paths for the OPTIONS Allowlist. Incoming requests will bypass Deployment Protection if they have the method `OPTIONS` and **start with** one of the path values.",
 						Computed:    true,
 						ElementType: types.ObjectType{
@@ -414,46 +414,46 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 // Project reflects the state terraform stores internally for a project.
 type ProjectDataSource struct {
-	BuildCommand                        types.String        `tfsdk:"build_command"`
-	DevCommand                          types.String        `tfsdk:"dev_command"`
-	Environment                         types.Set           `tfsdk:"environment"`
-	Framework                           types.String        `tfsdk:"framework"`
-	GitRepository                       *GitRepository      `tfsdk:"git_repository"`
-	ID                                  types.String        `tfsdk:"id"`
-	IgnoreCommand                       types.String        `tfsdk:"ignore_command"`
-	InstallCommand                      types.String        `tfsdk:"install_command"`
-	Name                                types.String        `tfsdk:"name"`
-	OutputDirectory                     types.String        `tfsdk:"output_directory"`
-	PublicSource                        types.Bool          `tfsdk:"public_source"`
-	RootDirectory                       types.String        `tfsdk:"root_directory"`
-	ServerlessFunctionRegion            types.String        `tfsdk:"serverless_function_region"`
-	TeamID                              types.String        `tfsdk:"team_id"`
-	VercelAuthentication                types.Object        `tfsdk:"vercel_authentication"`
-	PasswordProtection                  *PasswordProtection `tfsdk:"password_protection"`
-	TrustedIps                          *TrustedIps         `tfsdk:"trusted_ips"`
-	OIDCTokenConfig                     *OIDCTokenConfig    `tfsdk:"oidc_token_config"`
-	OptionsAllowlist                    *OptionsAllowlist   `tfsdk:"options_allowlist"`
-	ProtectionBypassForAutomation       types.Bool          `tfsdk:"protection_bypass_for_automation"`
-	ProtectionBypassForAutomationSecret types.String        `tfsdk:"protection_bypass_for_automation_secret"`
-	AutoExposeSystemEnvVars             types.Bool          `tfsdk:"automatically_expose_system_environment_variables"`
-	GitComments                         types.Object        `tfsdk:"git_comments"`
-	PreviewComments                     types.Bool          `tfsdk:"preview_comments"`
-	EnablePreviewFeedback               types.Bool          `tfsdk:"enable_preview_feedback"`
-	EnableProductionFeedback            types.Bool          `tfsdk:"enable_production_feedback"`
-	PreviewDeploymentsDisabled          types.Bool          `tfsdk:"preview_deployments_disabled"`
-	AutoAssignCustomDomains             types.Bool          `tfsdk:"auto_assign_custom_domains"`
-	GitLFS                              types.Bool          `tfsdk:"git_lfs"`
-	FunctionFailover                    types.Bool          `tfsdk:"function_failover"`
-	CustomerSuccessCodeVisibility       types.Bool          `tfsdk:"customer_success_code_visibility"`
-	GitForkProtection                   types.Bool          `tfsdk:"git_fork_protection"`
-	PrioritiseProductionBuilds          types.Bool          `tfsdk:"prioritise_production_builds"`
-	DirectoryListing                    types.Bool          `tfsdk:"directory_listing"`
-	EnableAffectedProjectsDeployments   types.Bool          `tfsdk:"enable_affected_projects_deployments"`
-	SkewProtection                      types.String        `tfsdk:"skew_protection"`
-	ResourceConfig                      types.Object        `tfsdk:"resource_config"`
-	NodeVersion                         types.String        `tfsdk:"node_version"`
-	OnDemandConcurrentBuilds            types.Bool          `tfsdk:"on_demand_concurrent_builds"`
-	BuildMachineTYpe                    types.String        `tfsdk:"build_machine_type"`
+	BuildCommand                        types.String `tfsdk:"build_command"`
+	DevCommand                          types.String `tfsdk:"dev_command"`
+	Environment                         types.Set    `tfsdk:"environment"`
+	Framework                           types.String `tfsdk:"framework"`
+	GitRepository                       types.Object `tfsdk:"git_repository"`
+	ID                                  types.String `tfsdk:"id"`
+	IgnoreCommand                       types.String `tfsdk:"ignore_command"`
+	InstallCommand                      types.String `tfsdk:"install_command"`
+	Name                                types.String `tfsdk:"name"`
+	OutputDirectory                     types.String `tfsdk:"output_directory"`
+	PublicSource                        types.Bool   `tfsdk:"public_source"`
+	RootDirectory                       types.String `tfsdk:"root_directory"`
+	ServerlessFunctionRegion            types.String `tfsdk:"serverless_function_region"`
+	TeamID                              types.String `tfsdk:"team_id"`
+	VercelAuthentication                types.Object `tfsdk:"vercel_authentication"`
+	PasswordProtection                  types.Object `tfsdk:"password_protection"`
+	TrustedIps                          types.Object `tfsdk:"trusted_ips"`
+	OIDCTokenConfig                     types.Object `tfsdk:"oidc_token_config"`
+	OptionsAllowlist                    types.Object `tfsdk:"options_allowlist"`
+	ProtectionBypassForAutomation       types.Bool   `tfsdk:"protection_bypass_for_automation"`
+	ProtectionBypassForAutomationSecret types.String `tfsdk:"protection_bypass_for_automation_secret"`
+	AutoExposeSystemEnvVars             types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
+	GitComments                         types.Object `tfsdk:"git_comments"`
+	PreviewComments                     types.Bool   `tfsdk:"preview_comments"`
+	EnablePreviewFeedback               types.Bool   `tfsdk:"enable_preview_feedback"`
+	EnableProductionFeedback            types.Bool   `tfsdk:"enable_production_feedback"`
+	PreviewDeploymentsDisabled          types.Bool   `tfsdk:"preview_deployments_disabled"`
+	AutoAssignCustomDomains             types.Bool   `tfsdk:"auto_assign_custom_domains"`
+	GitLFS                              types.Bool   `tfsdk:"git_lfs"`
+	FunctionFailover                    types.Bool   `tfsdk:"function_failover"`
+	CustomerSuccessCodeVisibility       types.Bool   `tfsdk:"customer_success_code_visibility"`
+	GitForkProtection                   types.Bool   `tfsdk:"git_fork_protection"`
+	PrioritiseProductionBuilds          types.Bool   `tfsdk:"prioritise_production_builds"`
+	DirectoryListing                    types.Bool   `tfsdk:"directory_listing"`
+	EnableAffectedProjectsDeployments   types.Bool   `tfsdk:"enable_affected_projects_deployments"`
+	SkewProtection                      types.String `tfsdk:"skew_protection"`
+	ResourceConfig                      types.Object `tfsdk:"resource_config"`
+	NodeVersion                         types.String `tfsdk:"node_version"`
+	OnDemandConcurrentBuilds            types.Bool   `tfsdk:"on_demand_concurrent_builds"`
+	BuildMachineTYpe                    types.String `tfsdk:"build_machine_type"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
@@ -474,11 +474,13 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		return ProjectDataSource{}, err
 	}
 
-	var pp *PasswordProtection
-	if project.PasswordProtection != nil {
-		pp = &PasswordProtection{
-			DeploymentType: project.PasswordProtection.DeploymentType,
-		}
+	// Build data-source specific password_protection object without password field
+	ppAttrTypes := map[string]attr.Type{"deployment_type": types.StringType}
+	ppObj := types.ObjectNull(ppAttrTypes)
+	if response.PasswordProtection != nil {
+		ppObj = types.ObjectValueMust(ppAttrTypes, map[string]attr.Value{
+			"deployment_type": fromApiDeploymentProtectionType(response.PasswordProtection.DeploymentType),
+		})
 	}
 
 	return ProjectDataSource{
@@ -497,7 +499,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		ServerlessFunctionRegion:            project.ServerlessFunctionRegion,
 		TeamID:                              project.TeamID,
 		VercelAuthentication:                project.VercelAuthentication,
-		PasswordProtection:                  pp,
+		PasswordProtection:                  ppObj,
 		TrustedIps:                          project.TrustedIps,
 		OIDCTokenConfig:                     project.OIDCTokenConfig,
 		OptionsAllowlist:                    project.OptionsAllowlist,

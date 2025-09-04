@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
 )
@@ -108,11 +110,18 @@ type MicrofrontendGroupDefaultApp struct {
 }
 
 type MicrofrontendGroup struct {
-	TeamID     types.String                  `tfsdk:"team_id"`
-	ID         types.String                  `tfsdk:"id"`
-	Name       types.String                  `tfsdk:"name"`
-	Slug       types.String                  `tfsdk:"slug"`
-	DefaultApp *MicrofrontendGroupDefaultApp `tfsdk:"default_app"`
+	TeamID     types.String `tfsdk:"team_id"`
+	ID         types.String `tfsdk:"id"`
+	Name       types.String `tfsdk:"name"`
+	Slug       types.String `tfsdk:"slug"`
+	DefaultApp types.Object `tfsdk:"default_app"`
+}
+
+var microfrontendDefaultAppAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"project_id":    types.StringType,
+		"default_route": types.StringType,
+	},
 }
 
 func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup) MicrofrontendGroup {
@@ -121,10 +130,10 @@ func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup) Microf
 		Name:   types.StringValue(group.Name),
 		Slug:   types.StringValue(group.Slug),
 		TeamID: types.StringValue(group.TeamID),
-		DefaultApp: &MicrofrontendGroupDefaultApp{
-			ProjectID:    types.StringValue(group.DefaultApp.ProjectID),
-			DefaultRoute: types.StringValue(group.DefaultApp.DefaultRoute),
-		},
+		DefaultApp: types.ObjectValueMust(microfrontendDefaultAppAttrType.AttrTypes, map[string]attr.Value{
+			"project_id":    types.StringValue(group.DefaultApp.ProjectID),
+			"default_route": types.StringValue(group.DefaultApp.DefaultRoute),
+		}),
 	}
 }
 
@@ -154,17 +163,19 @@ func (r *microfrontendGroupResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
+	var da MicrofrontendGroupDefaultApp
+	_ = plan.DefaultApp.As(ctx, &da, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
 	tflog.Info(ctx, "creating default group membership", map[string]any{
 		"team_id":     plan.TeamID.ValueString(),
 		"name":        plan.Name.ValueString(),
-		"default_app": plan.DefaultApp.ProjectID.ValueString(),
+		"default_app": da.ProjectID.ValueString(),
 	})
 
 	default_app, err := r.client.AddOrUpdateMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
-		ProjectID:            plan.DefaultApp.ProjectID.ValueString(),
+		ProjectID:            da.ProjectID.ValueString(),
 		MicrofrontendGroupID: out.ID,
 		TeamID:               plan.TeamID.ValueString(),
-		DefaultRoute:         plan.DefaultApp.DefaultRoute.ValueString(),
+		DefaultRoute:         da.DefaultRoute.ValueString(),
 		IsDefaultApp:         true,
 	})
 
@@ -193,12 +204,14 @@ func (r *microfrontendGroupResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	result := convertResponseToMicrofrontendGroup(group)
+	var resDa MicrofrontendGroupDefaultApp
+	_ = result.DefaultApp.As(ctx, &resDa, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
 	tflog.Info(ctx, "created microfrontend group", map[string]any{
 		"team_id":     result.TeamID.ValueString(),
 		"group_id":    result.ID.ValueString(),
 		"slug":        result.Slug.ValueString(),
 		"name":        result.Name.ValueString(),
-		"default_app": result.DefaultApp.ProjectID.ValueString(),
+		"default_app": resDa.ProjectID.ValueString(),
 	})
 
 	diags = resp.State.Set(ctx, result)
@@ -234,8 +247,10 @@ func (r *microfrontendGroupResource) Read(ctx context.Context, req resource.Read
 	}
 
 	result := convertResponseToMicrofrontendGroup(out)
+	var resDa MicrofrontendGroupDefaultApp
+	_ = result.DefaultApp.As(ctx, &resDa, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
 	tflog.Info(ctx, "read microfrontend group", map[string]any{
-		"defaultApp": result.DefaultApp.ProjectID.ValueString(),
+		"defaultApp": resDa.ProjectID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
 		"group_id":   result.ID.ValueString(),
 		"slug":       result.Slug.ValueString(),
@@ -310,16 +325,18 @@ func (r *microfrontendGroupResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
+	var stDa MicrofrontendGroupDefaultApp
+	_ = state.DefaultApp.As(ctx, &stDa, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
 	tflog.Info(ctx, "deleting microfrontend default app group membership", map[string]any{
 		"group_id":   state.ID.ValueString(),
-		"project_id": state.DefaultApp.ProjectID.ValueString(),
+		"project_id": stDa.ProjectID.ValueString(),
 		"team_id":    state.TeamID.ValueString(),
 	})
 
 	_, err := r.client.RemoveMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
 		MicrofrontendGroupID: state.ID.ValueString(),
 		TeamID:               state.TeamID.ValueString(),
-		ProjectID:            state.DefaultApp.ProjectID.ValueString(),
+		ProjectID:            stDa.ProjectID.ValueString(),
 	})
 
 	if err != nil {
@@ -328,7 +345,7 @@ func (r *microfrontendGroupResource) Delete(ctx context.Context, req resource.De
 			fmt.Sprintf(
 				"Could not delete microfrontend default app group membership %s %s, unexpected error: %s",
 				state.ID.ValueString(),
-				state.DefaultApp.ProjectID.ValueString(),
+				stDa.ProjectID.ValueString(),
 				err,
 			),
 		)
@@ -387,8 +404,10 @@ func (r *microfrontendGroupResource) ImportState(ctx context.Context, req resour
 	}
 
 	result := convertResponseToMicrofrontendGroup(out)
+	var resDa2 MicrofrontendGroupDefaultApp
+	_ = result.DefaultApp.As(ctx, &resDa2, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
 	tflog.Info(ctx, "import microfrontend group", map[string]any{
-		"defaultApp": result.DefaultApp.ProjectID.ValueString(),
+		"defaultApp": resDa2.ProjectID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
 		"group_id":   result.ID.ValueString(),
 		"slug":       result.Slug.ValueString(),

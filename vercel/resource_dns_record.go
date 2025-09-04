@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
 )
@@ -170,13 +172,22 @@ type SRV struct {
 	Weight   types.Int64  `tfsdk:"weight"`
 }
 
+var srvAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"port":     types.Int64Type,
+		"priority": types.Int64Type,
+		"target":   types.StringType,
+		"weight":   types.Int64Type,
+	},
+}
+
 // DNSRecord reflects the state terraform stores internally for a DNS Record.
 type DNSRecord struct {
 	ID         types.String `tfsdk:"id"`
 	Domain     types.String `tfsdk:"domain"`
 	MXPriority types.Int64  `tfsdk:"mx_priority"`
 	Name       types.String `tfsdk:"name"`
-	SRV        *SRV         `tfsdk:"srv"`
+	SRV        types.Object `tfsdk:"srv"`
 	TTL        types.Int64  `tfsdk:"ttl"`
 	TeamID     types.String `tfsdk:"team_id"`
 	Type       types.String `tfsdk:"type"`
@@ -187,11 +198,15 @@ type DNSRecord struct {
 func (d DNSRecord) toCreateDNSRecordRequest() client.CreateDNSRecordRequest {
 	var srv *client.SRV = nil
 	if d.Type.ValueString() == "SRV" {
-		srv = &client.SRV{
-			Port:     d.SRV.Port.ValueInt64(),
-			Priority: d.SRV.Priority.ValueInt64(),
-			Target:   d.SRV.Target.ValueString(),
-			Weight:   d.SRV.Weight.ValueInt64(),
+		if !d.SRV.IsNull() && !d.SRV.IsUnknown() {
+			var s SRV
+			_ = d.SRV.As(context.Background(), &s, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+			srv = &client.SRV{
+				Port:     s.Port.ValueInt64(),
+				Priority: s.Priority.ValueInt64(),
+				Target:   s.Target.ValueString(),
+				Weight:   s.Weight.ValueInt64(),
+			}
 		}
 	}
 
@@ -209,12 +224,14 @@ func (d DNSRecord) toCreateDNSRecordRequest() client.CreateDNSRecordRequest {
 
 func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 	var srv *client.SRVUpdate = nil
-	if d.SRV != nil {
+	if !d.SRV.IsNull() && !d.SRV.IsUnknown() {
+		var s SRV
+		_ = d.SRV.As(context.Background(), &s, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
 		srv = &client.SRVUpdate{
-			Port:     d.SRV.Port.ValueInt64Pointer(),
-			Priority: d.SRV.Priority.ValueInt64Pointer(),
-			Target:   d.SRV.Target.ValueStringPointer(),
-			Weight:   d.SRV.Weight.ValueInt64Pointer(),
+			Port:     s.Port.ValueInt64Pointer(),
+			Priority: s.Priority.ValueInt64Pointer(),
+			Target:   s.Target.ValueStringPointer(),
+			Weight:   s.Weight.ValueInt64Pointer(),
 		}
 	}
 	return client.UpdateDNSRecordRequest{
@@ -227,7 +244,7 @@ func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 	}
 }
 
-func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srv *SRV) (record DNSRecord, err error) {
+func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj types.Object) (record DNSRecord, err error) {
 	record = DNSRecord{
 		Domain:     types.StringValue(r.Domain),
 		ID:         types.StringValue(r.ID),
@@ -262,17 +279,23 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srv *SRV
 		if len(split) == 4 {
 			target = split[3]
 		}
-		record.SRV = &SRV{
-			Weight:   types.Int64Value(int64(weight)),
-			Port:     types.Int64Value(int64(port)),
-			Priority: types.Int64Value(int64(priority)),
-			Target:   types.StringValue(target),
+		// Preserve user formatting for target (without trailing dot) if planned target matches
+		targetVal := types.StringValue(target)
+		if !srvObj.IsNull() && !srvObj.IsUnknown() {
+			var s SRV
+			_ = srvObj.As(context.Background(), &s, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+			if fmt.Sprintf("%s.", s.Target.ValueString()) == targetVal.ValueString() {
+				targetVal = s.Target
+			}
 		}
+		record.SRV = types.ObjectValueMust(srvAttrType.AttrTypes, map[string]attr.Value{
+			"weight":   types.Int64Value(int64(weight)),
+			"port":     types.Int64Value(int64(port)),
+			"priority": types.Int64Value(int64(priority)),
+			"target":   targetVal,
+		})
 		// SRV records have no value
 		record.Value = types.StringNull()
-		if srv != nil && fmt.Sprintf("%s.", srv.Target.ValueString()) == record.SRV.Target.ValueString() {
-			record.SRV.Target = srv.Target
-		}
 		return record, nil
 	}
 
@@ -310,7 +333,7 @@ func (r *dnsRecordResource) ValidateConfig(ctx context.Context, req resource.Val
 		return
 	}
 
-	if config.Type.ValueString() == "SRV" && config.SRV == nil {
+	if config.Type.ValueString() == "SRV" && (config.SRV.IsNull() || config.SRV.IsUnknown()) {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"A DNS Record type of 'SRV' requires the `srv` attribute to be set",
@@ -331,7 +354,7 @@ func (r *dnsRecordResource) ValidateConfig(ctx context.Context, req resource.Val
 		)
 	}
 
-	if config.Type.ValueString() != "SRV" && config.SRV != nil {
+	if config.Type.ValueString() != "SRV" && !config.SRV.IsNull() && !config.SRV.IsUnknown() {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"The `srv` attribute should only be set on records of `type` 'SRV'",
@@ -554,7 +577,7 @@ func (r *dnsRecordResource) ImportState(ctx context.Context, req resource.Import
 		return
 	}
 
-	result, err := convertResponseToDNSRecord(out, types.String{}, nil)
+	result, err := convertResponseToDNSRecord(out, types.String{}, types.ObjectNull(srvAttrType.AttrTypes))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error processing DNS Record response",
