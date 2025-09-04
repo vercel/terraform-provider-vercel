@@ -6,19 +6,21 @@ import (
 	"fmt"
 	"regexp"
 
+	"math/big"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/dynamicplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
-	"math/big"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -109,9 +111,10 @@ An Edge Config Item is a value within an Edge Config.
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured()},
 			},
 			"value_json": schema.DynamicAttribute{
-				Description: "Structured JSON value to assign to the key (object/array/number/bool/null).",
-				Optional:    true,
-				Computed:    true,
+				Description:   "Structured JSON value to assign to the key (object/array/number/bool/null).",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Dynamic{dynamicplanmodifier.RequiresReplaceIfConfigured()},
 			},
 		},
 	}
