@@ -21,6 +21,16 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v3/client"
 )
 
+func strPtrEqual(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
 var (
 	_ resource.Resource               = &projectEnvironmentVariablesResource{}
 	_ resource.ResourceWithConfigure  = &projectEnvironmentVariablesResource{}
@@ -330,7 +340,7 @@ func convertResponseToProjectEnvironmentVariables(
 				if diags.HasError() {
 					return ProjectEnvironmentVariables{}, diags
 				}
-				if p.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
+				if p.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) && strPtrEqual(p.GitBranch.ValueStringPointer(), e.GitBranch) {
 					value = p.Value
 					break
 				}
@@ -405,6 +415,7 @@ func (r *projectEnvironmentVariablesResource) Create(ctx context.Context, req re
 			"Error creating project environment variables",
 			"Could not create project environment variables, unexpected error: "+err.Error(),
 		)
+		return
 	}
 
 	result, diags := convertResponseToProjectEnvironmentVariables(ctx, created, plan, nil)
@@ -490,7 +501,7 @@ func (r *projectEnvironmentVariablesResource) Read(ctx context.Context, req reso
 					resp.Diagnostics.Append(diags...)
 					return
 				}
-				if ee.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
+				if ee.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) && strPtrEqual(ee.GitBranch.ValueStringPointer(), e.GitBranch) {
 					toUse = append(toUse, e)
 				}
 			}
@@ -599,7 +610,7 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 					resp.Diagnostics.Append(diags...)
 					return
 				}
-				if ee.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
+				if ee.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) && strPtrEqual(ee.GitBranch.ValueStringPointer(), e.GitBranch) {
 					if e.Decrypted != nil && !*e.Decrypted {
 						continue // We don't know if it's value is encrypted.
 					}

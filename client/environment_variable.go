@@ -2,7 +2,10 @@ package client
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -60,11 +63,53 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 	}
 
 	if err != nil {
+		// Try to parse detailed failure information from the API error response
+		var apiErr APIError
+		if errors.As(err, &apiErr) && len(apiErr.RawMessage) > 0 {
+			var parsed struct {
+				Error struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"error"`
+				Failed []FailedItem `json:"failed"`
+			}
+			if json.Unmarshal(apiErr.RawMessage, &parsed) == nil && len(parsed.Failed) > 0 {
+				// Prefer the first failed item for single create
+				f := parsed.Failed[0]
+				// If it's a conflict, try to locate the conflicting env ID for a better message
+				if f.Error.Code == "ENV_CONFLICT" {
+					envs, errList := c.GetEnvironmentVariables(ctx, request.ProjectID, request.TeamID)
+					if errList == nil {
+						id, found := findConflictingEnvID(request.TeamID, request.ProjectID, EnvConflictError{
+							Key:       derefString(f.Error.EnvVarKey),
+							Target:    f.Error.Target,
+							GitBranch: f.Error.GitBranch,
+						}, envs)
+						if found {
+							return e, fmt.Errorf("failed to create environment variable, %s, conflicting environment variable ID is %s", f.Error.Message, id)
+						}
+					}
+				}
+				// Fallback to the message returned by the API for clarity
+				msg := f.Error.Message
+				if f.Error.Link != nil && *f.Error.Link != "" {
+					msg = fmt.Sprintf("%s (see %s)", msg, *f.Error.Link)
+				}
+				return e, fmt.Errorf("failed to create environment variable, %s", msg)
+			}
+		}
 		return e, fmt.Errorf("%w - %s", err, payload)
 	}
 	response.Created.Value = request.EnvironmentVariable.Value
 	response.Created.TeamID = c.TeamID(request.TeamID)
 	return response.Created, err
+}
+
+func derefString(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
 }
 
 func overlaps(s []string, e []string) bool {
@@ -159,37 +204,102 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 		body:   payload,
 	}, &response)
 	if err != nil {
+		// Attempt to parse detailed failure reasons from API error body
+		var apiErr APIError
+		if errors.As(err, &apiErr) && len(apiErr.RawMessage) > 0 {
+			var parsed struct {
+				Error struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"error"`
+				Failed []FailedItem `json:"failed"`
+			}
+			if json.Unmarshal(apiErr.RawMessage, &parsed) == nil && len(parsed.Failed) > 0 {
+				// Optionally fetch envs once to augment conflict errors with IDs
+				var envs []EnvironmentVariable
+				var listErr error
+				needsList := false
+				for _, f := range parsed.Failed {
+					if f.Error.Code == "ENV_CONFLICT" {
+						needsList = true
+						break
+					}
+				}
+				if needsList {
+					envs, listErr = c.GetEnvironmentVariables(ctx, request.ProjectID, request.TeamID)
+				}
+				msgs := make([]string, 0, len(parsed.Failed))
+				for _, f := range parsed.Failed {
+					msg := f.Error.Message
+					if f.Error.Code == "ENV_CONFLICT" && listErr == nil {
+						id, found := findConflictingEnvID(request.TeamID, request.ProjectID, EnvConflictError{
+							Key:       derefString(f.Error.EnvVarKey),
+							Target:    f.Error.Target,
+							GitBranch: f.Error.GitBranch,
+						}, envs)
+						if found {
+							msg = fmt.Sprintf("%s, conflicting environment variable ID is %s", msg, id)
+						}
+					}
+					if f.Error.Link != nil && *f.Error.Link != "" {
+						msg = fmt.Sprintf("%s (see %s)", msg, *f.Error.Link)
+					}
+					msgs = append(msgs, msg)
+				}
+				// de-duplicate while preserving order
+				seen := make(map[string]struct{}, len(msgs))
+				uniq := make([]string, 0, len(msgs))
+				for _, m := range msgs {
+					if _, ok := seen[m]; !ok {
+						seen[m] = struct{}{}
+						uniq = append(uniq, m)
+					}
+				}
+				return nil, fmt.Errorf("failed to create environment variables, %s", strings.Join(uniq, "; "))
+			}
+		}
 		return nil, fmt.Errorf("%w - %s", err, payload)
 	}
 
 	decrypted := false
-	for i := 0; i < len(response.Created); i++ {
+	for i := range response.Created {
 		// When env vars are created, their values are encrypted
 		response.Created[i].Decrypted = &decrypted
 	}
 
 	if len(response.Failed) > 0 {
-		envs, err := c.GetEnvironmentVariables(ctx, request.ProjectID, request.TeamID)
-		if err != nil {
-			return response.Created, fmt.Errorf("failed to create environment variables. error detecting conflicting environment variables: %w", err)
+		envs, listErr := c.GetEnvironmentVariables(ctx, request.ProjectID, request.TeamID)
+		if listErr != nil {
+			return response.Created, fmt.Errorf("failed to create environment variables. error detecting conflicting environment variables: %w", listErr)
 		}
+		msgs := make([]string, 0, len(response.Failed))
 		for _, failed := range response.Failed {
+			msg := failed.Error.Message
 			if failed.Error.Code == "ENV_CONFLICT" {
 				id, found := findConflictingEnvID(request.TeamID, request.ProjectID, EnvConflictError{
-					Key:       *failed.Error.EnvVarKey,
+					Key:       derefString(failed.Error.EnvVarKey),
 					Target:    failed.Error.Target,
 					GitBranch: failed.Error.GitBranch,
 				}, envs)
 				if found {
-					err = fmt.Errorf("%w, conflicting environment variable ID is %s", err, id)
-				} else {
-					err = fmt.Errorf("failed to create environment variables, %s", failed.Error.Message)
+					msg = fmt.Sprintf("%s, conflicting environment variable ID is %s", msg, id)
 				}
-			} else {
-				err = fmt.Errorf("failed to create environment variables, %s", failed.Error.Message)
+			}
+			if failed.Error.Link != nil && *failed.Error.Link != "" {
+				msg = fmt.Sprintf("%s (see %s)", msg, *failed.Error.Link)
+			}
+			msgs = append(msgs, msg)
+		}
+		// de-duplicate while preserving order
+		seen := make(map[string]struct{}, len(msgs))
+		uniq := make([]string, 0, len(msgs))
+		for _, m := range msgs {
+			if _, ok := seen[m]; !ok {
+				seen[m] = struct{}{}
+				uniq = append(uniq, m)
 			}
 		}
-		return response.Created, err
+		return response.Created, fmt.Errorf("failed to create environment variables, %s", strings.Join(uniq, "; "))
 	}
 
 	return response.Created, err
