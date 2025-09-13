@@ -314,6 +314,7 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj t
 		if split[1] == fmt.Sprintf("%s.", value.ValueString()) {
 			record.Value = value
 		}
+		record.SRV = types.ObjectNull(srvAttrType.AttrTypes)
 		return record, nil
 	}
 
@@ -321,6 +322,7 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj t
 	if r.Value == fmt.Sprintf("%s.", value.ValueString()) {
 		record.Value = value
 	}
+	record.SRV = types.ObjectNull(srvAttrType.AttrTypes)
 	return record, nil
 }
 
