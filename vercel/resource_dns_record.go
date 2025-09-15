@@ -227,18 +227,28 @@ func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 	if !d.SRV.IsNull() && !d.SRV.IsUnknown() {
 		var s SRV
 		_ = d.SRV.As(context.Background(), &s, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+		targetStr := strings.TrimSpace(s.Target.ValueString())
+		var targetPtr *string
+		if targetStr != "" {
+			targetPtr = &targetStr
+		}
 		srv = &client.SRVUpdate{
 			Port:     s.Port.ValueInt64Pointer(),
 			Priority: s.Priority.ValueInt64Pointer(),
-			Target:   s.Target.ValueStringPointer(),
+			Target:   targetPtr,
 			Weight:   s.Weight.ValueInt64Pointer(),
 		}
+	}
+	var ttlPtr *int64
+	if !d.TTL.IsNull() && !d.TTL.IsUnknown() {
+		ttlVal := d.TTL.ValueInt64()
+		ttlPtr = &ttlVal
 	}
 	return client.UpdateDNSRecordRequest{
 		MXPriority: d.MXPriority.ValueInt64Pointer(),
 		Name:       d.Name.ValueStringPointer(),
 		SRV:        srv,
-		TTL:        d.TTL.ValueInt64Pointer(),
+		TTL:        ttlPtr,
 		Value:      d.Value.ValueStringPointer(),
 		Comment:    d.Comment.ValueString(),
 	}
@@ -265,15 +275,15 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj t
 		}
 		priority, err := strconv.Atoi(split[0])
 		if err != nil {
-			return record, fmt.Errorf("expected SRV record weight to be an int, but got %s", split[0])
+			return record, fmt.Errorf("expected SRV record priority to be an int, but got %s", split[0])
 		}
 		weight, err := strconv.Atoi(split[1])
 		if err != nil {
-			return record, fmt.Errorf("expected SRV record port to be an int, but got %s", split[1])
+			return record, fmt.Errorf("expected SRV record weight to be an int, but got %s", split[1])
 		}
 		port, err := strconv.Atoi(split[2])
 		if err != nil {
-			return record, fmt.Errorf("expected SRV record port to be an int, but got %s", split[1])
+			return record, fmt.Errorf("expected SRV record port to be an int, but got %s", split[2])
 		}
 		target := ""
 		if len(split) == 4 {
@@ -314,6 +324,8 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj t
 		if split[1] == fmt.Sprintf("%s.", value.ValueString()) {
 			record.Value = value
 		}
+		// Ensure SRV is properly initialized for non-SRV records
+		record.SRV = types.ObjectNull(srvAttrType.AttrTypes)
 		return record, nil
 	}
 
@@ -321,6 +333,8 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj t
 	if r.Value == fmt.Sprintf("%s.", value.ValueString()) {
 		record.Value = value
 	}
+	// Ensure SRV is properly initialized for non-SRV records
+	record.SRV = types.ObjectNull(srvAttrType.AttrTypes)
 	return record, nil
 }
 

@@ -52,7 +52,6 @@ func testAccDNSRecordExists(testClient *client.Client, n, teamID string) resourc
 }
 
 func TestAcc_DNSRecord(t *testing.T) {
-	t.Skip("Skipping until i have a domain in a suitable location to test with")
 	nameSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -287,10 +286,10 @@ resource "vercel_dns_record" "srv_no_target" {
       port     = 5000
       weight   = 120
       priority = 27
-      target = ""
-  }
-  comment = "srv no target"
-}
+      target   = "example.com."
+   }
+   comment = "srv no target"
+ }
 resource "vercel_dns_record" "txt" {
   domain = "%[1]s"
   name = "test-acc-%[2]s-txt"

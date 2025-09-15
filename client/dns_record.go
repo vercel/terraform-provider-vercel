@@ -11,7 +11,7 @@ import (
 type SRV struct {
 	Port     int64  `json:"port"`
 	Priority int64  `json:"priority"`
-	Target   string `json:"target"`
+	Target   string `json:"target,omitempty"`
 	Weight   int64  `json:"weight"`
 }
 
@@ -125,7 +125,7 @@ func (c *Client) ListDNSRecords(ctx context.Context, domain, teamID string) (r [
 type SRVUpdate struct {
 	Port     *int64  `json:"port"`
 	Priority *int64  `json:"priority"`
-	Target   *string `json:"target"`
+	Target   *string `json:"target,omitempty"`
 	Weight   *int64  `json:"weight"`
 }
 
