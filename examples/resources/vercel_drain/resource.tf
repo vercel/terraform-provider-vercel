@@ -9,7 +9,7 @@ resource "vercel_drain" "basic_http" {
 
   schemas = {
     log = {
-      version = "1"
+      version = "v1"
     }
   }
 
@@ -34,16 +34,16 @@ resource "vercel_drain" "advanced" {
 
   schemas = {
     log = {
-      version = "1"
+      version = "v1"
     }
     trace = {
-      version = "1"
+      version = "v1"
     }
     analytics = {
-      version = "1"
+      version = "v1"
     }
     speed_insights = {
-      version = "1"
+      version = "v1"
     }
   }
 
@@ -93,7 +93,7 @@ resource "vercel_drain" "otlp_traces" {
 
   schemas = {
     trace = {
-      version = "1"
+      version = "v1"
     }
   }
 

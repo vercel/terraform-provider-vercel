@@ -63,7 +63,7 @@ func TestAcc_DrainResource(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_drain.minimal", "name", "minimal-drain"),
 					resource.TestCheckResourceAttr("vercel_drain.minimal", "projects", "all"),
 					resource.TestCheckResourceAttr("vercel_drain.minimal", "schemas.%", "1"),
-					resource.TestCheckResourceAttr("vercel_drain.minimal", "schemas.log.version", "1"),
+					resource.TestCheckResourceAttr("vercel_drain.minimal", "schemas.log.version", "v1"),
 					resource.TestCheckResourceAttr("vercel_drain.minimal", "delivery.type", "http"),
 					resource.TestCheckResourceAttr("vercel_drain.minimal", "delivery.encoding", "json"),
 					resource.TestCheckResourceAttr("vercel_drain.minimal", "delivery.endpoint.url", "https://example.com/webhook"),
@@ -76,8 +76,8 @@ func TestAcc_DrainResource(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_drain.maximal", "projects", "some"),
 					resource.TestCheckResourceAttr("vercel_drain.maximal", "project_ids.#", "1"),
 					resource.TestCheckResourceAttr("vercel_drain.maximal", "schemas.%", "2"),
-					resource.TestCheckResourceAttr("vercel_drain.maximal", "schemas.log.version", "1"),
-					resource.TestCheckResourceAttr("vercel_drain.maximal", "schemas.trace.version", "1"),
+					resource.TestCheckResourceAttr("vercel_drain.maximal", "schemas.log.version", "v1"),
+					resource.TestCheckResourceAttr("vercel_drain.maximal", "schemas.trace.version", "v1"),
 					resource.TestCheckResourceAttr("vercel_drain.maximal", "delivery.type", "http"),
 					resource.TestCheckResourceAttr("vercel_drain.maximal", "delivery.encoding", "ndjson"),
 					resource.TestCheckResourceAttr("vercel_drain.maximal", "delivery.endpoint.url", "https://example.com/drain"),
@@ -188,7 +188,7 @@ resource "vercel_drain" "minimal" {
     projects = "all"
     schemas = {
         log = {
-            version = "1"
+            version = "v1"
         }
     }
     delivery = {
@@ -208,10 +208,10 @@ resource "vercel_drain" "maximal" {
     filter      = "level >= 'info'"
     schemas = {
         log = {
-            version = "1"
+            version = "v1"
         }
         trace = {
-            version = "1"
+            version = "v1"
         }
     }
     delivery = {
@@ -256,7 +256,7 @@ resource "vercel_drain" "update_test" {
     projects = "all"
     schemas = {
         log = {
-            version = "1"
+            version = "v1"
         }
     }
     delivery = {
@@ -277,7 +277,7 @@ resource "vercel_drain" "update_test" {
     projects = "all"
     schemas = {
         log = {
-            version = "1"
+            version = "v1"
         }
     }
     delivery = {
@@ -298,7 +298,7 @@ resource "vercel_drain" "for_data_source" {
     projects = "all"
     schemas = {
         log = {
-            version = "1"
+            version = "v1"
         }
     }
     delivery = {
@@ -323,7 +323,7 @@ resource "vercel_drain" "otlp_test" {
     projects = "all"
     schemas = {
         trace = {
-            version = "1"
+            version = "v1"
         }
     }
     delivery = {
@@ -344,7 +344,7 @@ resource "vercel_drain" "for_otlp_data_source" {
     projects = "all"
     schemas = {
         trace = {
-            version = "1"
+            version = "v1"
         }
     }
     delivery = {
