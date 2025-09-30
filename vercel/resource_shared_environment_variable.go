@@ -205,7 +205,7 @@ func (v *sharedEnvTargetValidator) ValidateResource(ctx context.Context, req res
 		return
 	}
 	// Otherwise, target must be provided with at least one element.
-	if sev.Target.IsNull() || sev.Target.IsUnknown() {
+	if sev.Target.IsNull() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("target"),
 			"Missing required attribute",
