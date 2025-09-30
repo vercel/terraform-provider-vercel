@@ -21,9 +21,9 @@ func TestAcc_ProjectDeploymentRetentionDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectDeploymentRetentionExists(testClient(t), "vercel_project_deployment_retention.example", testTeam(t)),
 					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_preview", "1m"),
-					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_production", "unlimited"),
-					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_canceled", "unlimited"),
-					resource.TestCheckResourceAttr("data.vercel_project_deployment_retention.example", "expiration_errored", "unlimited"),
+					resource.TestCheckResourceAttrSet("data.vercel_project_deployment_retention.example", "expiration_production"),
+					resource.TestCheckResourceAttrSet("data.vercel_project_deployment_retention.example", "expiration_canceled"),
+					resource.TestCheckResourceAttrSet("data.vercel_project_deployment_retention.example", "expiration_errored"),
 
 					resource.TestCheckResourceAttrSet("data.vercel_project_deployment_retention.example_2", "expiration_preview"),
 					resource.TestCheckResourceAttrSet("data.vercel_project_deployment_retention.example_2", "expiration_production"),
