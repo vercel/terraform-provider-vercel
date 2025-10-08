@@ -187,8 +187,9 @@ func (v *sharedEnvTargetValidator) MarkdownDescription(ctx context.Context) stri
 }
 
 func (v *sharedEnvTargetValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var sev SharedEnvironmentVariable
-	diags := req.Config.Get(ctx, &sev)
+	// Read only the required attributes to avoid decoding Unknowns.
+	var applyAll types.Bool
+	diags := req.Config.GetAttribute(ctx, path.Root("apply_to_all_custom_environments"), &applyAll)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -196,16 +197,30 @@ func (v *sharedEnvTargetValidator) ValidateResource(ctx context.Context, req res
 
 	// If apply_to_all_custom_environments is unknown (computed), skip validation
 	// since we can't determine the configuration's validity during planning.
-	if sev.ApplyToAllCustomEnvironments.IsUnknown() {
+	if applyAll.IsUnknown() {
 		return
 	}
 
 	// If apply_to_all_custom_environments is explicitly true, allow target to be omitted or empty.
-	if !sev.ApplyToAllCustomEnvironments.IsNull() && sev.ApplyToAllCustomEnvironments.ValueBool() {
+	if !applyAll.IsNull() && applyAll.ValueBool() {
 		return
 	}
+
+	// Read target attribute without decoding the entire resource.
+	var target types.Set
+	diags = req.Config.GetAttribute(ctx, path.Root("target"), &target)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If target is unknown, skip validation at this stage.
+	if target.IsUnknown() {
+		return
+	}
+
 	// Otherwise, target must be provided with at least one element.
-	if sev.Target.IsNull() {
+	if target.IsNull() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("target"),
 			"Missing required attribute",
@@ -213,8 +228,9 @@ func (v *sharedEnvTargetValidator) ValidateResource(ctx context.Context, req res
 		)
 		return
 	}
+
 	var targets []string
-	diags = sev.Target.ElementsAs(ctx, &targets, false)
+	diags = target.ElementsAs(ctx, &targets, true)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
