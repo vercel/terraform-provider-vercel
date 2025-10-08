@@ -29,28 +29,6 @@ type DeploymentExpirationResponse struct {
 	TeamID string `json:"-"`
 }
 
-// DeleteDeploymentRetention will remove any existing deployment retention for a given project.
-func (c *Client) DeleteDeploymentRetention(ctx context.Context, projectID, teamID string) error {
-	url := fmt.Sprintf("%s/v9/projects/%s/deployment-expiration", c.baseURL, projectID)
-	if c.TeamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
-	}
-	unlimited := "unlimited"
-	payload := string(mustMarshal(DeploymentRetentionRequest{ExpirationPreview: unlimited, ExpirationProduction: unlimited, ExpirationCanceled: unlimited, ExpirationErrored: unlimited}))
-
-	tflog.Info(ctx, "updating deployment expiration", map[string]any{
-		"url":     url,
-		"payload": payload,
-	})
-	err := c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "PATCH",
-		url:    url,
-		body:   payload,
-	}, nil)
-	return err
-}
-
 type deploymentExpirationResponse struct {
 	DeploymentExpiration struct {
 		Expiration           string `json:"expiration"`

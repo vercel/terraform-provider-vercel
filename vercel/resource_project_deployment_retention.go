@@ -61,13 +61,15 @@ Provides a Project Deployment Retention resource.
 A Project Deployment Retention resource defines an Deployment Retention on a Vercel Project.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/security/deployment-retention).
+
+~> Note that deleting a Deployment Retention will not update the settings in the project, it will only prevent it from being managed via Terraform.
 `,
 		Attributes: map[string]schema.Attribute{
 			"expiration_preview": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for preview deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
-				Default:     stringdefault.StaticString("unlimited"),
+				Description: "The retention period for preview deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y'.",
+				Default:     stringdefault.StaticString("6m"),
 				Validators: []validator.String{
 					stringvalidator.OneOf("1d", "1w", "1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
@@ -75,8 +77,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"expiration_production": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for production deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
-				Default:     stringdefault.StaticString("unlimited"),
+				Description: "The retention period for production deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y'.",
+				Default:     stringdefault.StaticString("1y"),
 				Validators: []validator.String{
 					stringvalidator.OneOf("1d", "1w", "1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
@@ -84,8 +86,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"expiration_canceled": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for canceled deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
-				Default:     stringdefault.StaticString("unlimited"),
+				Description: "The retention period for canceled deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y'.",
+				Default:     stringdefault.StaticString("1m"),
 				Validators: []validator.String{
 					stringvalidator.OneOf("1d", "1w", "1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
@@ -93,8 +95,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"expiration_errored": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "The retention period for errored deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y', 'unlimited'.",
-				Default:     stringdefault.StaticString("unlimited"),
+				Description: "The retention period for errored deployments. Should be one of '1d', '1w', '1m', '2m', '3m', '6m', '1y'.",
+				Default:     stringdefault.StaticString("3m"),
 				Validators: []validator.String{
 					stringvalidator.OneOf("1d", "1w", "1m", "2m", "3m", "6m", "1y", "unlimited"),
 				},
@@ -246,22 +248,6 @@ func (r *projectDeploymentRetentionResource) Delete(ctx context.Context, req res
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	err := r.client.DeleteDeploymentRetention(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
-	if client.NotFound(err) {
-		return
-	}
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error deleting project deployment retention",
-			fmt.Sprintf(
-				"Could not delete project deployment retention %s, unexpected error: %s",
-				state.ProjectID.ValueString(),
-				err,
-			),
-		)
 		return
 	}
 
