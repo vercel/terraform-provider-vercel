@@ -9,6 +9,7 @@ type FirewallBypassRule struct {
 	Domain       string `json:"domain,omitempty"`
 	SourceIp     string `json:"sourceIp"`
 	ProjectScope bool   `json:"projectScope,omitempty"`
+	Note         string `json:"note,omitempty"`
 }
 
 type FirewallBypass struct {
@@ -17,6 +18,7 @@ type FirewallBypass struct {
 	Domain        string `json:"Domain"`
 	Ip            string `json:"Ip"`
 	IsProjectRule bool   `json:"IsProjectRule"`
+	Note          string `json:"Note"`
 }
 
 func (c *Client) GetFirewallBypass(ctx context.Context, teamID, projectID string, request FirewallBypassRule) (a FirewallBypass, err error) {

@@ -84,6 +84,11 @@ Firewall Bypass Rules configure sets of domains and ip address to prevent bypass
 				Description:   "The source IP address to configure the bypass rule for.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
+			"note": schema.StringAttribute{
+				Optional:      true,
+				Description:   "A note to describe the bypass rule. Maximum length is 500 characters.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
 		},
 	}
 }
@@ -94,6 +99,7 @@ type FirewallBypassRule struct {
 	TeamID    types.String `tfsdk:"team_id"`
 	Domain    types.String `tfsdk:"domain"`
 	SourceIp  types.String `tfsdk:"source_ip"`
+	Note      types.String `tfsdk:"note"`
 }
 
 func responseToBypassRule(out client.FirewallBypass) FirewallBypassRule {
@@ -108,6 +114,7 @@ func responseToBypassRule(out client.FirewallBypass) FirewallBypassRule {
 		ProjectID: types.StringValue(split[0]),
 		Domain:    types.StringValue(domain),
 		SourceIp:  types.StringValue(out.Ip),
+		Note:      types.StringValue(out.Note),
 	}
 }
 
@@ -126,6 +133,7 @@ func (r *firewallBypassResource) Create(ctx context.Context, req resource.Create
 		client.FirewallBypassRule{
 			Domain:   plan.Domain.ValueString(),
 			SourceIp: plan.SourceIp.ValueString(),
+			Note:     plan.Note.ValueString(),
 		},
 	)
 	if err != nil {

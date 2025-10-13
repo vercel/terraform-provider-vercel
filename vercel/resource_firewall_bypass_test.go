@@ -22,6 +22,8 @@ func TestAcc_FirewallBypassResource(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_firewall_bypass.bypass_some", "domain", "*"),
 					resource.TestCheckResourceAttr("vercel_firewall_bypass.bypass_one", "source_ip", "1.2.3.4"),
 					resource.TestCheckResourceAttr("vercel_firewall_bypass.bypass_some", "source_ip", "2.3.4.0/24"),
+					resource.TestCheckResourceAttr("vercel_firewall_bypass.bypass_one", "note", "Test bypass rule for specific domain"),
+					resource.TestCheckResourceAttr("vercel_firewall_bypass.bypass_some", "note", "Test bypass rule for all domains"),
 					resource.TestCheckResourceAttrWith("vercel_firewall_bypass.bypass_one", "id", func(id string) error {
 						if !strings.HasSuffix(id, "#test-acc-domain-"+name+".vercel.app#1.2.3.4") {
 							return fmt.Errorf("expected id does not match got %s - expected %s", id, "test-acc-domain-"+name+".vercel.app#1.2.3.4")
@@ -62,6 +64,7 @@ func TestAcc_FirewallBypassResource(t *testing.T) {
 				Config: cfg(testAccFirewallBypassConfigResourceUpdated(name, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_firewall_bypass.bypass_one", "source_ip", "0.0.0.0/0"),
+					resource.TestCheckResourceAttr("vercel_firewall_bypass.bypass_one", "note", "Updated bypass rule"),
 					resource.TestCheckResourceAttrWith("vercel_firewall_bypass.bypass_one", "id", func(id string) error {
 						if !strings.HasSuffix(id, "#test-acc-domain-"+name+".vercel.app#0.0.0.0/0") {
 							return fmt.Errorf("expected id does not match got %s - expected %s", id, "test-acc-domain-"+name+".vercel.app#0.0.0.0/0")
@@ -93,6 +96,7 @@ resource "vercel_firewall_bypass" "bypass_one" {
   project_id = vercel_project.bypass_project.id
   domain    = vercel_project_domain.test.domain
   source_ip = "1.2.3.4"
+  note      = "Test bypass rule for specific domain"
 
   depends_on = [vercel_project_domain.test]
 }
@@ -101,6 +105,7 @@ resource "vercel_firewall_bypass" "bypass_some" {
   project_id = vercel_project.bypass_project.id
   domain    = "*"
   source_ip = "2.3.4.0/24"
+  note      = "Test bypass rule for all domains"
 
   depends_on = [vercel_project_domain.test]
 }
@@ -127,6 +132,7 @@ resource "vercel_firewall_bypass" "bypass_one" {
   project_id = vercel_project.bypass_project.id
   domain    = vercel_project_domain.test.domain
   source_ip = "0.0.0.0/0"
+  note      = "Updated bypass rule"
 
   depends_on = [vercel_project_domain.test]
 }
