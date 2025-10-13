@@ -26,6 +26,7 @@ resource "vercel_firewall_bypass" "bypass_targeted" {
   source_ip = "5.6.7.8"
   # Any project domain assigned to the project can be used
   domain = "my-production-domain.com"
+  note   = "Bypass rule for specific IP"
 }
 
 resource "vercel_firewall_bypass" "bypass_cidr" {
@@ -33,7 +34,8 @@ resource "vercel_firewall_bypass" "bypass_cidr" {
 
   # CIDR ranges can be used as the source in bypass rules
   source_ip = "52.33.44.0/24"
-  domain = "my-production-domain.com"
+  domain    = "my-production-domain.com"
+  note      = "Bypass rule for CIDR range"
 }
 
 resource "vercel_firewall_bypass" "bypass_all" {
@@ -57,6 +59,7 @@ resource "vercel_firewall_bypass" "bypass_all" {
 
 ### Optional
 
+- `note` (String) A note to describe the bypass rule. Maximum length is 500 characters.
 - `team_id` (String) The ID of the team the Project exists under. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
