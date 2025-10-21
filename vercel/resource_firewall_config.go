@@ -339,28 +339,28 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 																),
 															},
 														},
-														"op": schema.StringAttribute{
-															Description: "How to comparse type to value",
-															Required:    true,
-															Validators: []validator.String{
-																stringvalidator.OneOf(
-																	"re",
-																	"eq",
-																	"neq",
-																	"ex",
-																	"nex",
-																	"inc",
-																	"ninc",
-																	"pre",
-																	"suf",
-																	"sub",
-																	"gt",
-																	"gte",
-																	"lt",
-																	"lte",
-																),
-															},
+													"op": schema.StringAttribute{
+														Description: "Operator to use for comparison. Options: `re` (regex), `eq` (equals), `neq` (not equals), `ex` (exists), `nex` (not exists), `inc` (includes), `ninc` (not includes), `pre` (prefix), `suf` (suffix), `sub` (substring), `gt` (greater than), `gte` (greater than or equal), `lt` (less than), `lte` (less than or equal). Note: `ex` and `nex` don't require a `value` field, only `key`.",
+														Required:    true,
+														Validators: []validator.String{
+															stringvalidator.OneOf(
+																"re",
+																"eq",
+																"neq",
+																"ex",
+																"nex",
+																"inc",
+																"ninc",
+																"pre",
+																"suf",
+																"sub",
+																"gt",
+																"gte",
+																"lt",
+																"lte",
+															),
 														},
+													},
 														"neg": schema.BoolAttribute{
 															Description: "Negate the condition",
 															Optional:    true,
@@ -369,16 +369,16 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 															Description: "Key within type to match against",
 															Optional:    true,
 														},
-														"value": schema.StringAttribute{
-															Validators: []validator.String{
-																stringvalidator.ConflictsWith(
-																	path.MatchRelative().AtParent().AtName("values"),
-																	path.MatchRelative().AtParent().AtName("value"),
-																),
-															},
-															Description: "Value to match against",
-															Optional:    true,
+													"value": schema.StringAttribute{
+														Validators: []validator.String{
+															stringvalidator.ConflictsWith(
+																path.MatchRelative().AtParent().AtName("values"),
+																path.MatchRelative().AtParent().AtName("value"),
+															),
 														},
+														Description: "Value to match against. Not required for existence operators (`ex`, `nex`). Use `values` instead for `inc` and `ninc` operators.",
+														Optional:    true,
+													},
 														"values": schema.ListAttribute{
 															Validators: []validator.List{
 																listvalidator.ConflictsWith(
@@ -555,6 +555,10 @@ func isListOp(op string) bool {
 	return op == "inc" || op == "ninc"
 }
 
+func isExistenceOp(op string) bool {
+	return op == "ex" || op == "nex"
+}
+
 func (r *FirewallRule) Conditions() ([]client.ConditionGroup, error) {
 	var groups []client.ConditionGroup
 	for cgIndex, group := range r.ConditionGroup {
@@ -566,19 +570,27 @@ func (r *FirewallRule) Conditions() ([]client.ConditionGroup, error) {
 				Neg:  condition.Neg.ValueBool(),
 				Key:  condition.Key.ValueString(),
 			}
-			if isListOp(condition.Op.ValueString()) {
-				if condition.Values.IsNull() {
-					return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator requires list values", r.Name.ValueString(), cgIndex, condIndex)
-				}
-				vals := make([]string, len(condition.Values.Elements()))
-				condition.Values.ElementsAs(context.Background(), &vals, false)
-				cond.Value = vals
-			} else {
-				if !condition.Values.IsNull() {
-					return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator does not allow values", r.Name.ValueString(), cgIndex, condIndex)
-				}
-				cond.Value = condition.Value.ValueString()
+		if isListOp(condition.Op.ValueString()) {
+			if condition.Values.IsNull() {
+				return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator requires list values", r.Name.ValueString(), cgIndex, condIndex)
 			}
+			vals := make([]string, len(condition.Values.Elements()))
+			condition.Values.ElementsAs(context.Background(), &vals, false)
+			cond.Value = vals
+		} else if isExistenceOp(condition.Op.ValueString()) {
+			// Existence operators (ex, nex) don't require a value from the user
+			// But the API expects value to be a string (can be empty)
+			if !condition.Values.IsNull() {
+				return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, existence operator does not allow values", r.Name.ValueString(), cgIndex, condIndex)
+			}
+			// Send empty string for existence operators (API requirement)
+			cond.Value = ""
+		} else {
+			if !condition.Values.IsNull() {
+				return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator does not allow values", r.Name.ValueString(), cgIndex, condIndex)
+			}
+			cond.Value = condition.Value.ValueString()
+		}
 			conditions = append(conditions, cond)
 		}
 		groups = append(groups, client.ConditionGroup{
@@ -778,9 +790,19 @@ func fromCondition(condition client.Condition, ref Condition) (Condition, error)
 			return c, fmt.Errorf("condition value is not a list")
 
 		}
+	} else if isExistenceOp(condition.Op) {
+		// Existence operators (ex, nex) may return empty string or null from API
+		// We normalize it to null in the state since the user doesn't provide value
+		c.Value = types.StringNull()
 	} else {
-		val := condition.Value.(string)
-		c.Value = types.StringValue(val)
+		// For other operators, value should be a string
+		if condition.Value == nil {
+			c.Value = types.StringNull()
+		} else if val, ok := condition.Value.(string); ok {
+			c.Value = types.StringValue(val)
+		} else {
+			return c, fmt.Errorf("condition value is not a string")
+		}
 	}
 
 	// Neg and Key are optional
