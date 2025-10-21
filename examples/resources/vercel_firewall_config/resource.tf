@@ -59,14 +59,47 @@ resource "vercel_firewall_config" "example" {
           value = "/api"
           },
           {
+            # Use 'nex' (not exists) to check if cookie is missing
+            # Note: no 'value' field needed for existence operators (ex/nex)
             type = "cookie"
             key  = "_session"
-            neg  = true
-            op   = "ex"
+            op   = "nex"
         }]
       }]
       action = {
         action = "challenge"
+      }
+    }
+
+    rule {
+      name        = "Require Authorization header"
+      description = "Block requests without Authorization header"
+      condition_group = [{
+        conditions = [{
+          # 'nex' (not exists) checks if header is absent
+          type = "header"
+          key  = "Authorization"
+          op   = "nex"
+        }]
+      }]
+      action = {
+        action = "deny"
+      }
+    }
+
+    rule {
+      name        = "Log requests with custom header"
+      description = "Log requests that have X-Custom-Header present"
+      condition_group = [{
+        conditions = [{
+          # 'ex' (exists) checks if header is present
+          type = "header"
+          key  = "X-Custom-Header"
+          op   = "ex"
+        }]
+      }]
+      action = {
+        action = "log"
       }
     }
 
