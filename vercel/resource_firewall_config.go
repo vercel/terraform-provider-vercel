@@ -339,28 +339,28 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 																),
 															},
 														},
-													"op": schema.StringAttribute{
-														Description: "Operator to use for comparison. Options: `re` (regex), `eq` (equals), `neq` (not equals), `ex` (exists), `nex` (not exists), `inc` (includes), `ninc` (not includes), `pre` (prefix), `suf` (suffix), `sub` (substring), `gt` (greater than), `gte` (greater than or equal), `lt` (less than), `lte` (less than or equal). Note: `ex` and `nex` don't require a `value` field, only `key`.",
-														Required:    true,
-														Validators: []validator.String{
-															stringvalidator.OneOf(
-																"re",
-																"eq",
-																"neq",
-																"ex",
-																"nex",
-																"inc",
-																"ninc",
-																"pre",
-																"suf",
-																"sub",
-																"gt",
-																"gte",
-																"lt",
-																"lte",
-															),
+														"op": schema.StringAttribute{
+															Description: "Operator to use for comparison. Options: `re` (regex), `eq` (equals), `neq` (not equals), `ex` (exists), `nex` (not exists), `inc` (includes), `ninc` (not includes), `pre` (prefix), `suf` (suffix), `sub` (substring), `gt` (greater than), `gte` (greater than or equal), `lt` (less than), `lte` (less than or equal). Note: `ex` and `nex` don't require a `value` field, only `key`.",
+															Required:    true,
+															Validators: []validator.String{
+																stringvalidator.OneOf(
+																	"re",
+																	"eq",
+																	"neq",
+																	"ex",
+																	"nex",
+																	"inc",
+																	"ninc",
+																	"pre",
+																	"suf",
+																	"sub",
+																	"gt",
+																	"gte",
+																	"lt",
+																	"lte",
+																),
+															},
 														},
-													},
 														"neg": schema.BoolAttribute{
 															Description: "Negate the condition",
 															Optional:    true,
@@ -369,16 +369,16 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 															Description: "Key within type to match against",
 															Optional:    true,
 														},
-													"value": schema.StringAttribute{
-														Validators: []validator.String{
-															stringvalidator.ConflictsWith(
-																path.MatchRelative().AtParent().AtName("values"),
-																path.MatchRelative().AtParent().AtName("value"),
-															),
+														"value": schema.StringAttribute{
+															Validators: []validator.String{
+																stringvalidator.ConflictsWith(
+																	path.MatchRelative().AtParent().AtName("values"),
+																	path.MatchRelative().AtParent().AtName("value"),
+																),
+															},
+															Description: "Value to match against. Not required for existence operators (`ex`, `nex`). Use `values` instead for `inc` and `ninc` operators.",
+															Optional:    true,
 														},
-														Description: "Value to match against. Not required for existence operators (`ex`, `nex`). Use `values` instead for `inc` and `ninc` operators.",
-														Optional:    true,
-													},
 														"values": schema.ListAttribute{
 															Validators: []validator.List{
 																listvalidator.ConflictsWith(
@@ -570,27 +570,27 @@ func (r *FirewallRule) Conditions() ([]client.ConditionGroup, error) {
 				Neg:  condition.Neg.ValueBool(),
 				Key:  condition.Key.ValueString(),
 			}
-		if isListOp(condition.Op.ValueString()) {
-			if condition.Values.IsNull() {
-				return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator requires list values", r.Name.ValueString(), cgIndex, condIndex)
+			if isListOp(condition.Op.ValueString()) {
+				if condition.Values.IsNull() {
+					return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator requires list values", r.Name.ValueString(), cgIndex, condIndex)
+				}
+				vals := make([]string, len(condition.Values.Elements()))
+				condition.Values.ElementsAs(context.Background(), &vals, false)
+				cond.Value = vals
+			} else if isExistenceOp(condition.Op.ValueString()) {
+				// Existence operators (ex, nex) don't require a value from the user
+				// But the API expects value to be a string (can be empty)
+				if !condition.Values.IsNull() {
+					return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, existence operator does not allow values", r.Name.ValueString(), cgIndex, condIndex)
+				}
+				// Send empty string for existence operators (API requirement)
+				cond.Value = ""
+			} else {
+				if !condition.Values.IsNull() {
+					return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator does not allow values", r.Name.ValueString(), cgIndex, condIndex)
+				}
+				cond.Value = condition.Value.ValueString()
 			}
-			vals := make([]string, len(condition.Values.Elements()))
-			condition.Values.ElementsAs(context.Background(), &vals, false)
-			cond.Value = vals
-		} else if isExistenceOp(condition.Op.ValueString()) {
-			// Existence operators (ex, nex) don't require a value from the user
-			// But the API expects value to be a string (can be empty)
-			if !condition.Values.IsNull() {
-				return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, existence operator does not allow values", r.Name.ValueString(), cgIndex, condIndex)
-			}
-			// Send empty string for existence operators (API requirement)
-			cond.Value = ""
-		} else {
-			if !condition.Values.IsNull() {
-				return nil, fmt.Errorf("rule %s conditionGroup.%d.condition.%d, operator does not allow values", r.Name.ValueString(), cgIndex, condIndex)
-			}
-			cond.Value = condition.Value.ValueString()
-		}
 			conditions = append(conditions, cond)
 		}
 		groups = append(groups, client.ConditionGroup{
