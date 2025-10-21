@@ -353,15 +353,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:    true,
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
-					"enabled": schema.BoolAttribute{
-						DeprecationMessage: "This field is deprecated and will be removed in a future version.",
-						Description:        "When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.",
-						Optional:           true,
-						Computed:           true,
-						Validators: []validator.Bool{
-							onlyTrueValidator("This field is deprecated and can no longer be specified as 'false'"),
-						},
-					},
 					"issuer_mode": schema.StringAttribute{
 						Optional:      true,
 						Computed:      true,
@@ -375,11 +366,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 				Default: objectdefault.StaticValue(types.ObjectValueMust(
 					map[string]attr.Type{
-						"enabled":     types.BoolType,
 						"issuer_mode": types.StringType,
 					},
 					map[string]attr.Value{
-						"enabled":     types.BoolValue(true),
 						"issuer_mode": types.StringValue("team"),
 					},
 				)),
@@ -1150,7 +1139,6 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 }
 
 type OIDCTokenConfig struct {
-	Enabled    types.Bool   `tfsdk:"enabled"`
 	IssuerMode types.String `tfsdk:"issuer_mode"`
 }
 
@@ -1159,17 +1147,7 @@ func (o *OIDCTokenConfig) toCreateProjectRequest() *client.OIDCTokenConfig {
 		return nil
 	}
 
-	// If the block is present but `enabled` is unspecified, default to true
-	var enabled *bool
-	if o.Enabled.IsUnknown() || o.Enabled.IsNull() {
-		v := true
-		enabled = &v
-	} else {
-		enabled = o.Enabled.ValueBoolPointer()
-	}
-
 	return &client.OIDCTokenConfig{
-		Enabled:    enabled,
 		IssuerMode: o.IssuerMode.ValueString(),
 	}
 }
@@ -1180,17 +1158,7 @@ func (o *OIDCTokenConfig) toUpdateProjectRequest() *client.OIDCTokenConfig {
 		return nil
 	}
 
-	// If the block is present but `enabled` is unspecified, default to true
-	var enabled *bool
-	if o.Enabled.IsUnknown() || o.Enabled.IsNull() {
-		v := true
-		enabled = &v
-	} else {
-		enabled = o.Enabled.ValueBoolPointer()
-	}
-
 	return &client.OIDCTokenConfig{
-		Enabled:    enabled,
 		IssuerMode: o.IssuerMode.ValueString(),
 	}
 }
@@ -1243,7 +1211,6 @@ var trustedIpsAttrType = types.ObjectType{
 
 var oidcTokenConfigAttrType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
-		"enabled":     types.BoolType,
 		"issuer_mode": types.StringType,
 	},
 }
@@ -1552,16 +1519,10 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 
 	// OIDC token config
 	oidcObj := types.ObjectValueMust(oidcTokenConfigAttrType.AttrTypes, map[string]attr.Value{
-		"enabled":     types.BoolValue(true),
 		"issuer_mode": types.StringValue("team"),
 	})
 	if response.OIDCTokenConfig != nil {
-		enabled := types.BoolValue(true)
-		if response.OIDCTokenConfig.Enabled != nil {
-			enabled = types.BoolPointerValue(response.OIDCTokenConfig.Enabled)
-		}
 		oidcObj = types.ObjectValueMust(oidcTokenConfigAttrType.AttrTypes, map[string]attr.Value{
-			"enabled":     enabled,
 			"issuer_mode": types.StringValue(response.OIDCTokenConfig.IssuerMode),
 		})
 	}
