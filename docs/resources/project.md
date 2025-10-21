@@ -161,7 +161,6 @@ Read-Only:
 
 Optional:
 
-- `enabled` (Boolean, Deprecated) When true, Vercel issued OpenID Connect (OIDC) tokens will be available on the compute environments. See https://vercel.com/docs/security/secure-backend-access/oidc for more information.
 - `issuer_mode` (String) Configures the URL of the `iss` claim. `team` = `https://oidc.vercel.com/[team_slug]` `global` = `https://oidc.vercel.com`
 
 
