@@ -78,7 +78,8 @@ resource "vercel_firewall_config" "example" {
             # Note: no 'value' field needed for existence operators (ex/nex)
             type = "cookie"
             key  = "_session"
-            op   = "nex"
+            neg  = true
+            op   = "ex"
         }]
       }]
       action = {
