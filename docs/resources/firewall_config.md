@@ -74,6 +74,8 @@ resource "vercel_firewall_config" "example" {
           value = "/api"
           },
           {
+            # Use 'nex' (not exists) to check if cookie is missing
+            # Note: no 'value' field needed for existence operators (ex/nex)
             type = "cookie"
             key  = "_session"
             neg  = true
@@ -82,6 +84,38 @@ resource "vercel_firewall_config" "example" {
       }]
       action = {
         action = "challenge"
+      }
+    }
+
+    rule {
+      name        = "Require Authorization header"
+      description = "Block requests without Authorization header"
+      condition_group = [{
+        conditions = [{
+          # 'nex' (not exists) checks if header is absent
+          type = "header"
+          key  = "Authorization"
+          op   = "nex"
+        }]
+      }]
+      action = {
+        action = "deny"
+      }
+    }
+
+    rule {
+      name        = "Log requests with custom header"
+      description = "Log requests that have X-Custom-Header present"
+      condition_group = [{
+        conditions = [{
+          # 'ex' (exists) checks if header is present
+          type = "header"
+          key  = "X-Custom-Header"
+          op   = "ex"
+        }]
+      }]
+      action = {
+        action = "log"
       }
     }
 
@@ -482,14 +516,14 @@ Required:
 
 Required:
 
-- `op` (String) How to comparse type to value
+- `op` (String) Operator to use for comparison. Options: `re` (regex), `eq` (equals), `neq` (not equals), `ex` (exists), `nex` (not exists), `inc` (includes), `ninc` (not includes), `pre` (prefix), `suf` (suffix), `sub` (substring), `gt` (greater than), `gte` (greater than or equal), `lt` (less than), `lte` (less than or equal). Note: `ex` and `nex` don't require a `value` field, only `key`.
 - `type` (String) Request key type to match against
 
 Optional:
 
 - `key` (String) Key within type to match against
 - `neg` (Boolean) Negate the condition
-- `value` (String) Value to match against
+- `value` (String) Value to match against. Not required for existence operators (`ex`, `nex`). Use `values` instead for `inc` and `ninc` operators.
 - `values` (List of String) Values to match against if op is inc, ninc
 
 ## Import

@@ -185,6 +185,18 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.aibots",
 						"managed_rulesets.ai_bots.active",
 						"true"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.existence",
+						"rules.rule.0.name",
+						"test_existence"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.existence",
+						"rules.rule.0.condition_group.0.conditions.0.op",
+						"ex"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.existence",
+						"rules.rule.0.condition_group.0.conditions.0.key",
+						"Authorization"),
 				),
 			},
 			{
@@ -211,6 +223,11 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 				ImportState:       true,
 				ResourceName:      "vercel_firewall_config.aibots",
 				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.aibots"),
+			},
+			{
+				ImportState:       true,
+				ResourceName:      "vercel_firewall_config.existence",
+				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.existence"),
 			},
 			{
 				Config: cfg(testAccFirewallConfigResourceUpdated(name)),
@@ -371,6 +388,18 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.aibots",
 						"managed_rulesets.ai_bots.active",
 						"false"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.existence",
+						"rules.rule.0.name",
+						"test_existence"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.existence",
+						"rules.rule.0.condition_group.0.conditions.0.op",
+						"ex"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.existence",
+						"rules.rule.0.condition_group.0.conditions.0.key",
+						"Authorization"),
 				),
 			},
 		},
@@ -547,6 +576,30 @@ resource "vercel_firewall_config" "aibots" {
         ai_bots {
             action = "challenge"
             active = true
+        }
+    }
+}
+
+resource "vercel_project" "existence" {
+    name = "test-acc-%[1]s-existence"
+}
+
+resource "vercel_firewall_config" "existence" {
+    project_id = vercel_project.existence.id
+
+    rules {
+        rule {
+          name =  "test_existence"
+          action = {
+            action = "deny"
+          }
+          condition_group = [{
+            conditions = [{
+                type = "header"
+                op = "ex"
+                key = "Authorization"
+            }]
+          }]
         }
     }
 }
@@ -740,6 +793,30 @@ resource "vercel_firewall_config" "aibots" {
         ai_bots {
             action = "deny"
             active = false
+        }
+    }
+}
+
+resource "vercel_project" "existence" {
+    name = "test-acc-%[1]s-existence"
+}
+
+resource "vercel_firewall_config" "existence" {
+    project_id = vercel_project.existence.id
+
+    rules {
+        rule {
+          name =  "test_existence"
+          action = {
+            action = "deny"
+          }
+          condition_group = [{
+            conditions = [{
+                type = "header"
+                op = "ex"
+                key = "Authorization"
+            }]
+          }]
         }
     }
 }
