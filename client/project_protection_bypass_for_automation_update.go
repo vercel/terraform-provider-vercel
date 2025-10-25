@@ -11,7 +11,8 @@ type UpdateProtectionBypassForAutomationRequest struct {
 	TeamID    string
 	ProjectID string
 	NewValue  bool
-	Secret    string
+	NewSecret string
+	OldSecret string
 }
 
 type revokeBypassProtectionRequest struct {
@@ -23,28 +24,48 @@ type generateBypassProtectionRequest struct {
 	Secret string `json:"secret"`
 }
 
-func getUpdateBypassProtectionRequestBody(newValue bool, secret string) string {
-	if newValue {
-		if secret == "" {
-			return "{}"
-		}
-		return string(mustMarshal(struct {
-			Revoke generateBypassProtectionRequest `json:"generate"`
+func getUpdateBypassProtectionRequestBody(newValue bool, newSecret string, oldSecret string) string {
+	setSecretWithValue := newValue && newSecret != ""
+	revokeOldSecret := oldSecret != ""
+
+	if setSecretWithValue && revokeOldSecret {
+		return (string(mustMarshal(struct {
+			Generate generateBypassProtectionRequest `json:"generate"`
+			Revoke   revokeBypassProtectionRequest   `json:"revoke"`
 		}{
-			Revoke: generateBypassProtectionRequest{
-				Secret: secret,
+			Generate: generateBypassProtectionRequest{
+				Secret: newSecret,
 			},
-		}))
+			Revoke: revokeBypassProtectionRequest{
+				Regenerate: true,
+				Secret:     oldSecret,
+			},
+		})))
 	}
 
-	return string(mustMarshal(struct {
-		Revoke revokeBypassProtectionRequest `json:"revoke"`
-	}{
-		Revoke: revokeBypassProtectionRequest{
-			Regenerate: false,
-			Secret:     secret,
-		},
-	}))
+	if setSecretWithValue {
+		return (string(mustMarshal(struct {
+			Generate generateBypassProtectionRequest `json:"generate"`
+		}{
+			Generate: generateBypassProtectionRequest{
+				Secret: newSecret,
+			},
+		})))
+	}
+
+	if revokeOldSecret {
+		return (string(mustMarshal(struct {
+			Revoke revokeBypassProtectionRequest `json:"revoke"`
+		}{
+			Revoke: revokeBypassProtectionRequest{
+				Regenerate: false,
+				Secret:     oldSecret,
+			},
+		})))
+	}
+
+	// the default behaviour creates a new secret with a generated value
+	return "{}"
 }
 
 func (c *Client) UpdateProtectionBypassForAutomation(ctx context.Context, request UpdateProtectionBypassForAutomationRequest) (s string, err error) {
@@ -53,7 +74,7 @@ func (c *Client) UpdateProtectionBypassForAutomation(ctx context.Context, reques
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 
-	payload := getUpdateBypassProtectionRequestBody(request.NewValue, request.Secret)
+	payload := getUpdateBypassProtectionRequestBody(request.NewValue, request.NewSecret, request.OldSecret)
 	tflog.Info(ctx, "updating protection bypass", map[string]any{
 		"url":      url,
 		"payload":  payload,
