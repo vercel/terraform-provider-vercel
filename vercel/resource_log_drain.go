@@ -91,6 +91,11 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 					stringvalidator.OneOf("json", "ndjson"),
 				},
 			},
+			"name": schema.StringAttribute{
+				Description:   "A human-readable name for the log drain.",
+				Required:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
 			"environments": schema.SetAttribute{
 				Description:   "Logs from the selected environments will be forwarded to your webhook. At least one must be present.",
 				ElementType:   types.StringType,
@@ -136,12 +141,12 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				},
 			},
 			"sources": schema.SetAttribute{
-				Description:   "A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build`, `lambda` and `firewall`.",
+				Description:   "A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build`, `lambda`, `firewall`, and `redirect`.",
 				Required:      true,
 				ElementType:   types.StringType,
 				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()},
 				Validators: []validator.Set{
-					setvalidator.ValueStringsAre(stringvalidator.OneOf("static", "edge", "external", "build", "lambda", "firewall")),
+					setvalidator.ValueStringsAre(stringvalidator.OneOf("static", "edge", "external", "build", "lambda", "firewall", "redirect")),
 					setvalidator.SizeAtLeast(1),
 				},
 			},
@@ -157,6 +162,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 type LogDrain struct {
 	ID             types.String  `tfsdk:"id"`
 	TeamID         types.String  `tfsdk:"team_id"`
+	Name           types.String  `tfsdk:"name"`
 	DeliveryFormat types.String  `tfsdk:"delivery_format"`
 	Environments   types.Set     `tfsdk:"environments"`
 	Headers        types.Map     `tfsdk:"headers"`
@@ -195,6 +201,7 @@ func responseToLogDrain(ctx context.Context, out client.LogDrain, secret types.S
 	return LogDrain{
 		ID:             types.StringValue(out.ID),
 		TeamID:         toTeamID(out.TeamID),
+		Name:           types.StringValue(out.Name),
 		DeliveryFormat: types.StringValue(out.DeliveryFormat),
 		SamplingRate:   types.Float64PointerValue(out.SamplingRate),
 		Secret:         secret,
@@ -244,6 +251,7 @@ func (r *logDrainResource) Create(ctx context.Context, req resource.CreateReques
 
 	out, err := r.client.CreateLogDrain(ctx, client.CreateLogDrainRequest{
 		TeamID:         plan.TeamID.ValueString(),
+		Name:           plan.Name.ValueString(),
 		DeliveryFormat: plan.DeliveryFormat.ValueString(),
 		Environments:   environments,
 		Headers:        headers,
@@ -266,6 +274,11 @@ func (r *logDrainResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// Preserve null for optional attributes not set in plan to avoid drift
+	if plan.Headers.IsNull() || plan.Headers.IsUnknown() {
+		result.Headers = types.MapNull(types.StringType)
+	}
+
 	tflog.Info(ctx, "created Log Drain", map[string]any{
 		"team_id":      plan.TeamID.ValueString(),
 		"log_drain_id": result.ID.ValueString(),
@@ -308,6 +321,11 @@ func (r *logDrainResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// Preserve null for optional attributes that were unset in state
+	if state.Headers.IsNull() || state.Headers.IsUnknown() {
+		result.Headers = types.MapNull(types.StringType)
+	}
+
 	tflog.Info(ctx, "read log drain", map[string]any{
 		"team_id":      result.TeamID.ValueString(),
 		"log_drain_id": result.ID.ValueString(),

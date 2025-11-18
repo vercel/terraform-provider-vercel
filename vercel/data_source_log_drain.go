@@ -72,6 +72,10 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				Description: "The format log data should be delivered in. Can be `json` or `ndjson`.",
 				Computed:    true,
 			},
+			"name": schema.StringAttribute{
+				Description: "The human-readable name of the Log Drain.",
+				Computed:    true,
+			},
 			"environments": schema.SetAttribute{
 				Description: "Logs from the selected environments will be forwarded to your webhook. At least one must be present.",
 				ElementType: types.StringType,
@@ -92,7 +96,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				Computed:    true,
 			},
 			"sources": schema.SetAttribute{
-				Description: "A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build`, `lambda` and `firewall`.",
+				Description: "A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build`, `lambda`, `firewall`, and `redirect`.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
@@ -107,6 +111,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 type LogDrainWithoutSecret struct {
 	ID             types.String  `tfsdk:"id"`
 	TeamID         types.String  `tfsdk:"team_id"`
+	Name           types.String  `tfsdk:"name"`
 	DeliveryFormat types.String  `tfsdk:"delivery_format"`
 	Environments   types.Set     `tfsdk:"environments"`
 	Headers        types.Map     `tfsdk:"headers"`
@@ -140,6 +145,7 @@ func responseToLogDrainWithoutSecret(ctx context.Context, out client.LogDrain) (
 	return LogDrainWithoutSecret{
 		ID:             types.StringValue(out.ID),
 		TeamID:         toTeamID(out.TeamID),
+		Name:           types.StringValue(out.Name),
 		DeliveryFormat: types.StringValue(out.DeliveryFormat),
 		SamplingRate:   types.Float64PointerValue(out.SamplingRate),
 		Endpoint:       types.StringValue(out.Endpoint),
