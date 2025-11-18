@@ -41,6 +41,7 @@ data "vercel_log_drain" "example" {
 - `delivery_format` (String) The format log data should be delivered in. Can be `json` or `ndjson`.
 - `environments` (Set of String) Logs from the selected environments will be forwarded to your webhook. At least one must be present.
 - `headers` (Map of String) Custom headers to include in requests to the log drain endpoint.
+- `name` (String) The human-readable name of the Log Drain.
 - `project_ids` (Set of String) A list of project IDs that the log drain should be associated with. Logs from these projects will be sent log events to the specified endpoint. If omitted, logs will be sent for all projects.
 - `sampling_rate` (Number) A ratio of logs matching the sampling rate will be sent to your log drain. Should be a value between 0 and 1. If unspecified, all logs are sent.
-- `sources` (Set of String) A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build`, `lambda` and `firewall`.
+- `sources` (Set of String) A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build`, `lambda`, `firewall`, and `redirect`.

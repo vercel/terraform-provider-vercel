@@ -75,13 +75,14 @@ func TestAcc_LogDrainResource(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "environments.#", "2"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "environments.0", "preview"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "environments.1", "production"),
-					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "sources.#", "6"),
+					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "sources.#", "7"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "sources.0", "build"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "sources.1", "edge"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "sources.2", "external"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "sources.3", "firewall"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "sources.4", "lambda"),
-					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "sources.5", "static"),
+					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "sources.5", "redirect"),
+					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "sources.6", "static"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "secret", "a_very_long_and_very_well_specified_secret"),
 					resource.TestCheckResourceAttr("vercel_log_drain.maximal", "headers.%", "1"),
 					resource.TestCheckResourceAttrSet("vercel_log_drain.maximal", "endpoint"),
@@ -99,6 +100,7 @@ data "vercel_endpoint_verification" "test" {
 }
 
 resource "vercel_log_drain" "minimal" {
+    name                    = "minimal-%[1]s"
     delivery_format         = "json"
     environments            = ["production"]
     sources                 = ["static"]
@@ -110,6 +112,7 @@ resource "vercel_project" "test" {
 }
 
 resource "vercel_log_drain" "maximal" {
+    name                    = "maximal-%[1]s"
     delivery_format         = "json"
     environments            = ["production", "preview"]
     headers                 = {
@@ -118,7 +121,7 @@ resource "vercel_log_drain" "maximal" {
     project_ids             = [vercel_project.test.id]
     sampling_rate           = 0.8
     secret                  = "a_very_long_and_very_well_specified_secret"
-    sources                 = ["static", "edge", "external", "build", "lambda", "firewall"]
+    sources                 = ["static", "edge", "external", "build", "lambda", "firewall", "redirect"]
     endpoint = "https://verify-test-rouge.vercel.app/api?${data.vercel_endpoint_verification.test.verification_code}"
 }
 `, name)
