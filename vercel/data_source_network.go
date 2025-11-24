@@ -40,9 +40,8 @@ func (r *networkDataSource) Configure(_ context.Context, req datasource.Configur
 	r.client = client
 }
 
-// Metadata implements datasource.DataSourceWithConfigure.
-func (n *networkDataSource) Metadata(context.Context, datasource.MetadataRequest, *datasource.MetadataResponse) {
-	panic("unimplemented")
+func (n *networkDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_network"
 }
 
 // Read implements datasource.DataSourceWithConfigure.
