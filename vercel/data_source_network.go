@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
 )
 
@@ -20,6 +22,20 @@ func newHostedZoneAssociationDataSource() datasource.DataSource {
 
 type networkDataSource struct {
 	client *client.Client
+}
+
+type NetworkState struct {
+	AWSAccountID           types.String `tfsdk:"aws_account_id"`
+	AWSAvailabilityZoneIDs types.List   `tfsdk:"aws_availability_zone_ids"`
+	AWSRegion              types.String `tfsdk:"aws_region"`
+	CIDR                   types.String `tfsdk:"cidr"`
+	EgressIPAddresses      types.List   `tfsdk:"egress_ip_addresses"`
+	ID                     types.String `tfsdk:"id"`
+	Name                   types.String `tfsdk:"name"`
+	Region                 types.String `tfsdk:"region"`
+	Status                 types.String `tfsdk:"status"`
+	VPCID                  types.String `tfsdk:"vpc_id"`
+	TeamID                 types.String `tfsdk:"team_id"`
 }
 
 func (r *networkDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -40,13 +56,64 @@ func (r *networkDataSource) Configure(_ context.Context, req datasource.Configur
 	r.client = client
 }
 
-func (n *networkDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (r *networkDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_network"
 }
 
-// Read implements datasource.DataSourceWithConfigure.
-func (n *networkDataSource) Read(context.Context, datasource.ReadRequest, *datasource.ReadResponse) {
-	panic("unimplemented")
+func (r *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state NetworkState
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	out, err := r.client.ReadNetwork(ctx, client.ReadNetworkRequest{
+		NetworkID: state.ID.ValueString(),
+		TeamID:    state.TeamID.ValueString(),
+	})
+
+	if client.NotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading Network",
+			fmt.Sprintf("Could not read Network %s %s, unexpected error: %s",
+				state.TeamID.ValueString(),
+				state.ID.ValueString(),
+				err,
+			),
+		)
+		return
+	}
+
+	result := NetworkState{
+		// TODO: Handle nullable and list fields (AWSAvailabilityZoneIDs, EgressIPAddresses, VPCID)
+		AWSAccountID: types.StringValue(out.AWSAccountID),
+		AWSRegion:    types.StringValue(out.AWSRegion),
+		CIDR:         types.StringValue(out.CIDR),
+		ID:           types.StringValue(out.ID),
+		Name:         types.StringValue(out.Name),
+		Region:       types.StringValue(out.Region),
+		Status:       types.StringValue(out.Status),
+		TeamID:       toTeamID(out.TeamID),
+	}
+
+	tflog.Info(ctx, "Read Network", map[string]any{
+		"aws_account_id": result.AWSAccountID.ValueString(),
+		"aws_region":     result.AWSRegion.ValueString(),
+		"cidr":           result.CIDR.ValueString(),
+		"id":             result.ID.ValueString(),
+		"name":           result.Name.ValueString(),
+		"region":         result.Region.ValueString(),
+		"status":         result.Status.ValueString(),
+		"team_id":        result.TeamID.ValueString(),
+	})
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
 // Schema implements datasource.DataSourceWithConfigure.

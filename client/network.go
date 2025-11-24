@@ -9,21 +9,22 @@ import (
 
 type Network struct {
 	AWSAccountID           string    `json:"awsAccountId"`
-	AWSAvailabilityZoneIds *[]string `json:"awsAvailabilityZoneIds"`
+	AWSAvailabilityZoneIDs *[]string `json:"awsAvailabilityZoneIds"`
 	AWSRegion              string    `json:"awsRegion"`
-	Cidr                   string    `json:"cidr"`
+	CIDR                   string    `json:"cidr"`
 	CreatedAt              int       `json:"createdAt"`
 	EgressIPAddresses      *[]string `json:"egressIpAddresses"`
 	ID                     string    `json:"id"`
 	Name                   string    `json:"name"`
+	Region                 string    `json:"region"`
 	Status                 string    `json:"status"`
 	TeamID                 string    `json:"teamId"`
 	VPCID                  *string   `json:"vpcId"`
 }
 
 type CreateNetworkRequest struct {
-	AWSAvailabilityZoneIds *[]string `json:"awsAvailabilityZoneIds,omitempty"`
-	Cidr                   string    `json:"cidr"`
+	AWSAvailabilityZoneIDs *[]string `json:"awsAvailabilityZoneIds,omitempty"`
+	CIDR                   string    `json:"cidr"`
 	Name                   string    `json:"name"`
 	Region                 string    `json:"region"`
 	TeamID                 string    `json:"-"`
