@@ -75,6 +75,31 @@ func (c *Client) DeleteNetwork(ctx context.Context, req DeleteNetworkRequest) er
 	}, nil)
 }
 
+type ReadNetworkRequest struct {
+	NetworkID string
+	TeamID    string
+}
+
+type ReadNetworkResponse = Network
+
+func (c *Client) ReadNetwork(ctx context.Context, req ReadNetworkRequest) (r ReadNetworkResponse, err error) {
+	url := fmt.Sprintf("%s/v1/connect/networks/%s", c.baseURL, req.NetworkID)
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
+	}
+
+	tflog.Info(ctx, "Reading Network", map[string]any{"url": url})
+
+	err = c.doRequest(clientRequest{
+		body:   "",
+		ctx:    ctx,
+		method: "GET",
+		url:    url,
+	}, &r)
+
+	return r, err
+}
+
 type UpdateNetworkRequest struct {
 	NetworkID string `json:"-"`
 	Name      string `json:"name"`
