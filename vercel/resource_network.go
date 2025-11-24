@@ -3,7 +3,9 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -55,6 +57,16 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	timeout, diags := plan.Timeouts.Create(ctx, 15*time.Minute)
+
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	out, err := r.client.CreateNetwork(ctx, &client.CreateNetworkRequest{
 		// TODO: Add support for AWSAvailabilityZoneIDs
 		CIDR:   plan.CIDR.ValueString(),
@@ -71,6 +83,44 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 				plan.Name.ValueString(),
 				err,
 			),
+		)
+		return
+	}
+
+	interval := 10 * time.Second
+	attempts := max(1, int(timeout/interval))
+
+poll:
+	for attempt := range attempts {
+		select {
+		case <-ctx.Done():
+			break poll
+		default:
+		}
+
+		out, err = r.client.ReadNetwork(ctx, client.ReadNetworkRequest{
+			NetworkID: out.ID,
+			TeamID:    out.TeamID,
+		})
+
+		if err != nil || out.Status == "ready" {
+			break
+		}
+
+		tflog.Info(ctx, "Still creating...", map[string]any{
+			"id":      out.ID,
+			"team_id": out.TeamID,
+		})
+
+		if attempt < attempts-1 {
+			time.Sleep(interval)
+		}
+	}
+
+	if out.Status != "ready" {
+		resp.Diagnostics.AddError(
+			"Error waiting for Network to be ready",
+			fmt.Sprintf("Network status is %s after %d attempts", out.Status, attempts),
 		)
 		return
 	}
@@ -155,7 +205,7 @@ func (r *networkResource) ImportState(ctx context.Context, req resource.ImportSt
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading Hosted Zone Association",
-			fmt.Sprintf("Could not read Hosted Zone Association %s %s, unexpected error: %s",
+			fmt.Sprintf("Could not read Network %s %s, unexpected error: %s",
 				teamIDOrEmpty,
 				networkID,
 				err,
@@ -230,7 +280,7 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
-func (r *networkResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Provides a Network resource.",
 		Attributes: map[string]schema.Attribute{
@@ -283,6 +333,9 @@ func (r *networkResource) Schema(_ context.Context, req resource.SchemaRequest, 
 				Optional:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
 			},
+			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{
+				Create: true,
+			}),
 			"vpc_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The ID of the AWS VPC which hosts the network.",

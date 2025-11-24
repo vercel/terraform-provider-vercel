@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -26,17 +27,18 @@ type networkDataSource struct {
 }
 
 type NetworkState struct {
-	AWSAccountID           types.String `tfsdk:"aws_account_id"`
-	AWSAvailabilityZoneIDs types.List   `tfsdk:"aws_availability_zone_ids"`
-	AWSRegion              types.String `tfsdk:"aws_region"`
-	CIDR                   types.String `tfsdk:"cidr"`
-	EgressIPAddresses      types.List   `tfsdk:"egress_ip_addresses"`
-	ID                     types.String `tfsdk:"id"`
-	Name                   types.String `tfsdk:"name"`
-	Region                 types.String `tfsdk:"region"`
-	Status                 types.String `tfsdk:"status"`
-	VPCID                  types.String `tfsdk:"vpc_id"`
-	TeamID                 types.String `tfsdk:"team_id"`
+	AWSAccountID           types.String   `tfsdk:"aws_account_id"`
+	AWSAvailabilityZoneIDs types.List     `tfsdk:"aws_availability_zone_ids"`
+	AWSRegion              types.String   `tfsdk:"aws_region"`
+	CIDR                   types.String   `tfsdk:"cidr"`
+	EgressIPAddresses      types.List     `tfsdk:"egress_ip_addresses"`
+	ID                     types.String   `tfsdk:"id"`
+	Name                   types.String   `tfsdk:"name"`
+	Region                 types.String   `tfsdk:"region"`
+	Status                 types.String   `tfsdk:"status"`
+	VPCID                  types.String   `tfsdk:"vpc_id"`
+	TeamID                 types.String   `tfsdk:"team_id"`
+	Timeouts               timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (r *networkDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
