@@ -91,17 +91,7 @@ func (r *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	result := NetworkState{
-		// TODO: Handle nullable and list fields (AWSAvailabilityZoneIDs, EgressIPAddresses, VPCID)
-		AWSAccountID: types.StringValue(out.AWSAccountID),
-		AWSRegion:    types.StringValue(out.AWSRegion),
-		CIDR:         types.StringValue(out.CIDR),
-		ID:           types.StringValue(out.ID),
-		Name:         types.StringValue(out.Name),
-		Region:       types.StringValue(out.Region),
-		Status:       types.StringValue(out.Status),
-		TeamID:       toTeamID(out.TeamID),
-	}
+	result := toNetworkState(out)
 
 	tflog.Info(ctx, "Read Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
@@ -168,5 +158,19 @@ func (r *networkDataSource) Schema(_ context.Context, req datasource.SchemaReque
 				Description: "The ID of the AWS VPC which hosts the network.",
 			},
 		},
+	}
+}
+
+func toNetworkState(network client.Network) NetworkState {
+	return NetworkState{
+		// TODO: Handle nullable and list fields (AWSAvailabilityZoneIDs, EgressIPAddresses, VPCID)
+		AWSAccountID: types.StringValue(network.AWSAccountID),
+		AWSRegion:    types.StringValue(network.AWSRegion),
+		CIDR:         types.StringValue(network.CIDR),
+		ID:           types.StringValue(network.ID),
+		Name:         types.StringValue(network.Name),
+		Region:       types.StringValue(network.Region),
+		Status:       types.StringValue(network.Status),
+		TeamID:       toTeamID(network.TeamID),
 	}
 }
