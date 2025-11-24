@@ -74,3 +74,34 @@ func (c *Client) DeleteNetwork(ctx context.Context, req DeleteNetworkRequest) er
 		url:    url,
 	}, nil)
 }
+
+type UpdateNetworkRequest struct {
+	NetworkID string `json:"-"`
+	Name      string `json:"name"`
+	TeamID    string `json:"-"`
+}
+
+type UpdateNetworkResponse = Network
+
+func (c *Client) UpdateNetwork(ctx context.Context, req UpdateNetworkRequest) (r UpdateNetworkResponse, err error) {
+	url := fmt.Sprintf("%s/v1/connect/networks/%s", c.baseURL, req.NetworkID)
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
+	}
+
+	body := string(mustMarshal(req))
+
+	tflog.Info(ctx, "Updating Network", map[string]any{
+		"body": body,
+		"url":  url,
+	})
+
+	err = c.doRequest(clientRequest{
+		body:   body,
+		ctx:    ctx,
+		method: "PATCH",
+		url:    url,
+	}, &r)
+
+	return r, err
+}
