@@ -53,3 +53,24 @@ func (c *Client) CreateNetwork(ctx context.Context, req *CreateNetworkRequest) (
 
 	return r, err
 }
+
+type DeleteNetworkRequest struct {
+	NetworkID string
+	TeamID    string
+}
+
+func (c *Client) DeleteNetwork(ctx context.Context, req DeleteNetworkRequest) error {
+	url := fmt.Sprintf("%s/v1/connect/networks/%s", c.baseURL, req.NetworkID)
+	if c.TeamID(req.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(req.TeamID))
+	}
+
+	tflog.Info(ctx, "Deleting Network", map[string]any{"url": url})
+
+	return c.doRequest(clientRequest{
+		body:   "",
+		ctx:    ctx,
+		method: "DELETE",
+		url:    url,
+	}, nil)
+}
