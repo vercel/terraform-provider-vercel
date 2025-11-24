@@ -67,13 +67,26 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	out, err := r.client.CreateNetwork(ctx, &client.CreateNetworkRequest{
-		// TODO: Add support for AWSAvailabilityZoneIDs
-		CIDR:   plan.CIDR.ValueString(),
-		Name:   plan.Name.ValueString(),
-		Region: plan.Region.ValueString(),
-		TeamID: plan.TeamID.ValueString(),
-	})
+	request := &client.CreateNetworkRequest{
+		AWSAvailabilityZoneIDs: nil,
+		CIDR:                   plan.CIDR.ValueString(),
+		Name:                   plan.Name.ValueString(),
+		Region:                 plan.Region.ValueString(),
+		TeamID:                 plan.TeamID.ValueString(),
+	}
+
+	if !plan.AWSAvailabilityZoneIDs.IsNull() && !plan.AWSAvailabilityZoneIDs.IsUnknown() {
+		var zoneIDs []string
+
+		resp.Diagnostics.Append(plan.AWSAvailabilityZoneIDs.ElementsAs(ctx, &zoneIDs, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		request.AWSAvailabilityZoneIDs = &zoneIDs
+	}
+
+	out, err := r.client.CreateNetwork(ctx, request)
 
 	if err != nil {
 		resp.Diagnostics.AddError(
