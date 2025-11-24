@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
@@ -116,7 +117,56 @@ func (r *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
-// Schema implements datasource.DataSourceWithConfigure.
-func (n *networkDataSource) Schema(context.Context, datasource.SchemaRequest, *datasource.SchemaResponse) {
-	panic("unimplemented")
+func (r *networkDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: "Provides information about a Vercel Network.",
+		Attributes: map[string]schema.Attribute{
+			"aws_account_id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The ID of the AWS Account in which the network exists.",
+			},
+			"aws_availability_zone_ids": schema.ListAttribute{
+				Computed:    true,
+				Description: "The IDs of the AWS Availability Zones in which the network exists, if specified during creation.",
+				ElementType: types.StringType,
+			},
+			"aws_region": schema.StringAttribute{
+				Computed:    true,
+				Description: "The AWS Region in which the network exists.",
+			},
+			"cidr": schema.StringAttribute{
+				Computed:    true,
+				Description: "The CIDR range of the Network.",
+			},
+			"egress_ip_addresses": schema.ListAttribute{
+				Computed:    true,
+				Description: "The egress IP addresses of the Network.",
+				ElementType: types.StringType,
+			},
+			"id": schema.StringAttribute{
+				Description: "The unique identifier of the Network.",
+				Required:    true,
+			},
+			"name": schema.StringAttribute{
+				Computed:    true,
+				Description: "The name of the network.",
+			},
+			"region": schema.StringAttribute{
+				Computed:    true,
+				Description: "The Vercel region in which the Network exists.",
+			},
+			"status": schema.StringAttribute{
+				Computed:    true,
+				Description: "The status of the Network.",
+			},
+			"team_id": schema.StringAttribute{
+				Description: "The unique identifier of the Team that owns the Network. Required when configuring a team resource if a default team has not been set in the provider.",
+				Optional:    true,
+			},
+			"vpc_id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The ID of the AWS VPC which hosts the network.",
+			},
+		},
+	}
 }
