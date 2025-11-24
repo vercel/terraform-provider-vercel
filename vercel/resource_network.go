@@ -125,7 +125,12 @@ poll:
 		return
 	}
 
-	result := toNetworkState(out)
+	result, diags := toNetworkState(ctx, out)
+
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	tflog.Info(ctx, "Created Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
@@ -204,7 +209,7 @@ func (r *networkResource) ImportState(ctx context.Context, req resource.ImportSt
 
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error reading Hosted Zone Association",
+			"Error reading Network",
 			fmt.Sprintf("Could not read Network %s %s, unexpected error: %s",
 				teamIDOrEmpty,
 				networkID,
@@ -214,7 +219,12 @@ func (r *networkResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	result := toNetworkState(out)
+	result, diags := toNetworkState(ctx, out)
+
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	tflog.Info(ctx, "Read Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
@@ -264,7 +274,12 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	result := toNetworkState(out)
+	result, diags := toNetworkState(ctx, out)
+
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	tflog.Info(ctx, "Read Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
@@ -375,7 +390,12 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	result := toNetworkState(out)
+	result, diags := toNetworkState(ctx, out)
+
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	tflog.Info(ctx, "Updated Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),

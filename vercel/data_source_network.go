@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v3/client"
@@ -93,7 +94,11 @@ func (r *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	result := toNetworkState(out)
+	result, diags := toNetworkState(ctx, out)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	tflog.Info(ctx, "Read Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
@@ -163,16 +168,41 @@ func (r *networkDataSource) Schema(_ context.Context, req datasource.SchemaReque
 	}
 }
 
-func toNetworkState(network client.Network) NetworkState {
-	return NetworkState{
-		// TODO: Handle nullable and list fields (AWSAvailabilityZoneIDs, EgressIPAddresses, VPCID)
-		AWSAccountID: types.StringValue(network.AWSAccountID),
-		AWSRegion:    types.StringValue(network.AWSRegion),
-		CIDR:         types.StringValue(network.CIDR),
-		ID:           types.StringValue(network.ID),
-		Name:         types.StringValue(network.Name),
-		Region:       types.StringValue(network.Region),
-		Status:       types.StringValue(network.Status),
-		TeamID:       toTeamID(network.TeamID),
+func toNetworkState(ctx context.Context, network client.Network) (NetworkState, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	state := NetworkState{
+		AWSAccountID:           types.StringValue(network.AWSAccountID),
+		AWSAvailabilityZoneIDs: types.ListNull(types.StringType),
+		AWSRegion:              types.StringValue(network.AWSRegion),
+		CIDR:                   types.StringValue(network.CIDR),
+		EgressIPAddresses:      types.ListNull(types.StringType),
+		ID:                     types.StringValue(network.ID),
+		Name:                   types.StringValue(network.Name),
+		Region:                 types.StringValue(network.Region),
+		Status:                 types.StringValue(network.Status),
+		TeamID:                 toTeamID(network.TeamID),
+		VPCID:                  types.StringNull(),
 	}
+
+	if network.AWSAvailabilityZoneIDs != nil {
+		list, listDiags := types.ListValueFrom(ctx, types.StringType, *network.AWSAvailabilityZoneIDs)
+		diags.Append(listDiags...)
+		if !diags.HasError() {
+			state.AWSAvailabilityZoneIDs = list
+		}
+	}
+
+	if network.EgressIPAddresses != nil {
+		list, listDiags := types.ListValueFrom(ctx, types.StringType, *network.EgressIPAddresses)
+		diags.Append(listDiags...)
+		if !diags.HasError() {
+			state.EgressIPAddresses = list
+		}
+	}
+
+	if network.VPCID != nil {
+		state.VPCID = types.StringValue(*network.VPCID)
+	}
+
+	return state, diags
 }
