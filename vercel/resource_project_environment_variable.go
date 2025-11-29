@@ -122,7 +122,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			},
 			"value_wo": schema.StringAttribute{
 				Optional:    true,
-				Description: "(Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephermal` resource.",
+				Description: "(Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephemeral` resource.",
 				Sensitive:   true,
 				WriteOnly:   true,
 				Validators: []validator.String{
