@@ -109,7 +109,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			},
 			"value": schema.StringAttribute{
 				Optional:    true,
-				Description: "(Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable.",
+				Description: "(Optional, exactly one of `value` or `value_wo` is required) The value of the Environment Variable.",
 				Sensitive:   true,
 				Validators: []validator.String{
 					stringvalidator.AtLeastOneOf(
@@ -120,7 +120,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			},
 			"value_wo": schema.StringAttribute{
 				Optional:    true,
-				Description: "(Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable.",
+				Description: "(Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephermal` resource.",
 				Sensitive:   true,
 				WriteOnly:   true,
 				Validators: []validator.String{
