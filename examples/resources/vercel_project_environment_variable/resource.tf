@@ -40,7 +40,7 @@ resource "vercel_project_environment_variable" "example_sensitive" {
 }
 
 # An environment variable that will be created referencing
-# an ephemeral source whose value won't save to state.
+# an ephemeral source whose values won't save to state.
 ephemeral "vault_kv_secret_v2" "example" {
   mount = "kv"
   name  = "example"
