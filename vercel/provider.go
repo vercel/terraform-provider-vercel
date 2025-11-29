@@ -75,6 +75,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newProjectDomainResource,
 		newProjectEnvironmentVariableResource,
 		newProjectEnvironmentVariablesResource,
+		newProjectEnvironmentVariablesV2Resource,
 		newProjectMembersResource,
 		newProjectResource,
 		newSharedEnvironmentVariableProjectLinkResource,
