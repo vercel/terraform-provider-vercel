@@ -101,7 +101,7 @@ resource "vercel_project_environment_variable" "example_ephemeral" {
 - `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.
 - `team_id` (String) The ID of the Vercel team.Required when configuring a team resource if a default team has not been set in the provider.
 - `value` (String, Sensitive) (Optional, exactly one of `value` or `value_wo` is required) The value of the Environment Variable.
-- `value_wo` (String, Sensitive) (Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephermal` resource.
+- `value_wo` (String, Sensitive) (Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephemeral` resource.
 
 ### Read-Only
 
