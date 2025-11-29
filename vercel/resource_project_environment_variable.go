@@ -233,26 +233,22 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx cont
 	if diags.HasError() {
 		return req, diags
 	}
-
 	var customEnvironmentIDs []string
 	diags = e.CustomEnvironmentIDs.ElementsAs(ctx, &customEnvironmentIDs, true)
 	if diags.HasError() {
 		return req, diags
 	}
-
 	var envVariableType string
 	if e.Sensitive.ValueBool() {
 		envVariableType = "sensitive"
 	} else {
 		envVariableType = "encrypted"
 	}
-
 	var value string
 	value = e.Value.ValueString()
 	if value == "" {
 		value = e.ValueWO.ValueString()
 	}
-
 	return client.CreateEnvironmentVariableRequest{
 		EnvironmentVariable: client.EnvironmentVariableRequest{
 			Key:                  e.Key.ValueString(),
