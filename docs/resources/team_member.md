@@ -29,7 +29,7 @@ resource "vercel_team_member" "example" {
 
 ### Required
 
-- `role` (String) The role that the user should have in the project. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. Depending on your Team's plan, some of these roles may be unavailable.
+- `role` (String) The role that the user should have in the team. One of 'MEMBER', 'OWNER', 'VIEWER', 'VIEWER_FOR_PLUS', 'DEVELOPER', 'BILLING', 'SECURITY', or 'CONTRIBUTOR'. Depending on your Team's plan, some of these roles may be unavailable.
 - `team_id` (String) The ID of the existing Vercel Team.
 
 ### Optional
