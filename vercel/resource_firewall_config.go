@@ -443,7 +443,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 				Description:   "The ID of the team this project belongs to.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"enabled": schema.BoolAttribute{
 				Description: "Whether firewall is enabled or not.",

@@ -67,13 +67,13 @@ When an event happens, a webhook is sent to a third-party app, which can then ta
 			"id": schema.StringAttribute{
 				Description:   "The ID of the Webhook.",
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Webhook should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"events": schema.SetAttribute{
 				Description: "A list of the events the webhook will listen to. At least one must be present.",
@@ -107,7 +107,7 @@ When an event happens, a webhook is sent to a third-party app, which can then ta
 				Description:   "A secret value which will be provided in the `x-vercel-signature` header and can be used to verify the authenticity of the webhook. See https://vercel.com/docs/observability/webhooks-overview/webhooks-api#securing-webhooks for further details.",
 				Computed:      true,
 				Sensitive:     true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 		},
 	}

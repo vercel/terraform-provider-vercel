@@ -76,7 +76,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional: true,
 				Computed: true,
 				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.UseStateForUnknown(),
+					setplanmodifier.UseNonNullStateForUnknown(),
 				},
 				Description: "The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.",
 				ElementType: types.StringType,
@@ -93,7 +93,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Computed:      true,
 				ElementType:   types.StringType,
 				Description:   "The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.",
-				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace(), setplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace(), setplanmodifier.UseNonNullStateForUnknown()},
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
 					setvalidator.AtLeastOneOf(
@@ -125,11 +125,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the Vercel team.Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
 				Description:   "The ID of the Environment Variable.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseNonNullStateForUnknown()},
 				Computed:      true,
 			},
 			"sensitive": schema.BoolAttribute{

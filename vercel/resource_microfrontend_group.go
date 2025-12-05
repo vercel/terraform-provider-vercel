@@ -68,7 +68,7 @@ A Microfrontend Group is a definition of a microfrontend belonging to a Vercel T
 			"id": schema.StringAttribute{
 				Description:   "A unique identifier for the group of microfrontends. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"slug": schema.StringAttribute{
 				Description: "A slugified version of the name.",
@@ -78,7 +78,7 @@ A Microfrontend Group is a definition of a microfrontend belonging to a Vercel T
 				Description:   "The team ID to add the microfrontend group to. Required when configuring a team resource if a default team has not been set in the provider.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"default_app": schema.SingleNestedAttribute{
 				Description: "The default app for the project. Used as the entry point for the microfrontend.",

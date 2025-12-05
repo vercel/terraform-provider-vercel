@@ -70,12 +70,12 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "The ID of the team the project exists under. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
 			"id": schema.StringAttribute{
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"domain": schema.StringAttribute{
 				Description:   "The domain name to associate with the project.",

@@ -97,14 +97,14 @@ terraform to your Deployment.
 				Description:   "Arbitrary key/value metadata to attach to the deployment (equivalent to the Vercel CLI --meta flags).",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplaceIfConfigured(), mapplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplaceIfConfigured(), mapplanmodifier.UseNonNullStateForUnknown()},
 				ElementType:   types.StringType,
 			},
 			"team_id": schema.StringAttribute{
 				Description:   "The team ID to add the deployment to. Required when configuring a team resource if a default team has not been set in the provider.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
 				Description:   "The project ID to add the deployment to.",
@@ -113,7 +113,7 @@ terraform to your Deployment.
 			},
 			"id": schema.StringAttribute{
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"path_prefix": schema.StringAttribute{
 				Description:   "If specified then the `path_prefix` will be stripped from the start of file paths as they are uploaded to Vercel. If this is omitted, then any leading `../`s will be stripped.",
@@ -123,7 +123,7 @@ terraform to your Deployment.
 			"url": schema.StringAttribute{
 				Description:   "A unique URL that is automatically generated for a deployment.",
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"production": schema.BoolAttribute{
 				Description:   "true if the deployment is a production deployment, meaning production aliases will be assigned.",

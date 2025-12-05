@@ -65,14 +65,14 @@ This, however, means config drift will not be detected for members that are adde
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
 			"project_id": schema.StringAttribute{
 				Description: "The ID of the existing Vercel Project.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.UseNonNullStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -86,7 +86,7 @@ This, however, means config drift will not be detected for members that are adde
 							Optional:    true,
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
+								stringplanmodifier.UseNonNullStateForUnknown(),
 							},
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
@@ -101,7 +101,7 @@ This, however, means config drift will not be detected for members that are adde
 							Optional:    true,
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
+								stringplanmodifier.UseNonNullStateForUnknown(),
 							},
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
@@ -116,7 +116,7 @@ This, however, means config drift will not be detected for members that are adde
 							Optional:    true,
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
+								stringplanmodifier.UseNonNullStateForUnknown(),
 							},
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(

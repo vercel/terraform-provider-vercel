@@ -63,7 +63,7 @@ func getMicrofrontendGroupMembershipSchema(isDefaultApp bool) map[string]schema.
 		Description:   "The default route for the project. Used for the screenshot of deployments.",
 		Optional:      true,
 		Computed:      true,
-		PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+		PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 	}
 
 	if !isDefaultApp {
@@ -76,14 +76,14 @@ func getMicrofrontendGroupMembershipSchema(isDefaultApp bool) map[string]schema.
 			Description:   "The team ID to add the microfrontend group to. Required when configuring a team resource if a default team has not been set in the provider.",
 			Optional:      true,
 			Computed:      true,
-			PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+			PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 		}
 		res["route_observability_to_this_project"] = schema.BoolAttribute{
 			Description:   "Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.",
 			Optional:      true,
 			Computed:      true,
 			Default:       booldefault.StaticBool(true),
-			PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 		}
 	}
 
