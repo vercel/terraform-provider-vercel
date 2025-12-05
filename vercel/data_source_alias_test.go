@@ -16,7 +16,7 @@ func TestAcc_AliasDataSource(t *testing.T) {
 			{
 				Config: cfg(testAccAliasDataSourceConfig(name, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
+					resource.TestCheckResourceAttr("data.vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s-alias.vercel.app", name)),
 					resource.TestCheckResourceAttr("data.vercel_alias.test", "team_id", testTeam(t)),
 					resource.TestCheckResourceAttrSet("data.vercel_alias.test", "id"),
 					resource.TestCheckResourceAttrSet("data.vercel_alias.test", "deployment_id"),
@@ -42,7 +42,7 @@ resource "vercel_deployment" "test" {
 }
 
 resource "vercel_alias" "test" {
-    alias         = "test-acc-%[1]s.vercel.app"
+    alias         = "test-acc-%[1]s-alias.vercel.app"
     deployment_id = vercel_deployment.test.id
 }
 
