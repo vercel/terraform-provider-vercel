@@ -75,13 +75,13 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 			"id": schema.StringAttribute{
 				Description:   "The ID of the Log Drain.",
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Log Drain should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"delivery_format": schema.StringAttribute{
 				Description:   "The format log data should be delivered in. Can be `json` or `ndjson`.",
@@ -135,7 +135,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				Optional:      true,
 				Computed:      true,
 				Sensitive:     true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(32),
 				},

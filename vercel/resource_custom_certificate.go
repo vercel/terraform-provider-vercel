@@ -62,13 +62,13 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"id": schema.StringAttribute{
 				Description:   "The ID of the Custom Certificate.",
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Custom Certificate should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"private_key": schema.StringAttribute{
 				Description:   "The private key of the Certificate. Should be in PEM format.",

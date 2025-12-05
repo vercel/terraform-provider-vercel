@@ -140,11 +140,11 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the Vercel team. Shared environment variables require a team.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
 				Description:   "The ID of the Environment Variable.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseNonNullStateForUnknown()},
 				Computed:      true,
 			},
 			"sensitive": schema.BoolAttribute{

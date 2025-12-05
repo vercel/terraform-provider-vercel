@@ -81,7 +81,7 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				Description: "The ID of the existing Vercel Team.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.UseNonNullStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -91,7 +91,7 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				Optional:           true,
 				Computed:           true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.UseNonNullStateForUnknown(),
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
@@ -106,7 +106,7 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.UseNonNullStateForUnknown(),
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{

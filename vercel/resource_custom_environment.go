@@ -71,12 +71,12 @@ Custom environments are designed as pre-production environments intended for lon
 			"id": schema.StringAttribute{
 				Computed:      true,
 				Description:   "The ID of the environment.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
 			"project_id": schema.StringAttribute{
@@ -100,13 +100,13 @@ Custom environments are designed as pre-production environments intended for lon
 				Optional:      true,
 				Computed:      true,
 				Default:       stringdefault.StaticString(""),
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"branch_tracking": schema.SingleNestedAttribute{
 				Description:   "The branch tracking configuration for the environment. When enabled, each qualifying merge will generate a deployment.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"pattern": schema.StringAttribute{
 						Description: "The pattern of the branch name to track.",

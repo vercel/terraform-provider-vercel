@@ -75,12 +75,12 @@ An Edge Config is a global data store that enables experimentation with feature 
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Edge Config should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
 				Description:   "The ID of the Edge Config.",
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 		},
 	}

@@ -69,7 +69,7 @@ An Alias allows a ` + "`vercel_deployment` to be accessed through a different UR
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Alias and Deployment exist under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
 				Computed: true,

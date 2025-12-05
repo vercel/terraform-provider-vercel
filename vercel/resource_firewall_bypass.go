@@ -61,7 +61,7 @@ Firewall Bypass Rules configure sets of domains and ip address to prevent bypass
 			"id": schema.StringAttribute{
 				Description:   "The identifier for the firewall bypass rule.",
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
 				Description:   "The ID of the Project to assign the bypass rule to ",
@@ -72,7 +72,7 @@ Firewall Bypass Rules configure sets of domains and ip address to prevent bypass
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Project exists under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"domain": schema.StringAttribute{
 				Required:      true,

@@ -71,7 +71,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the access group project should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
 				Required:      true,
