@@ -145,7 +145,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Description:   "Whether the Environment Variable is sensitive or not.",
 							Optional:      true,
 							Computed:      true,
-							PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+							PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 						},
 						"comment": schema.StringAttribute{
 							Description: "A comment explaining what the environment variable is for.",
