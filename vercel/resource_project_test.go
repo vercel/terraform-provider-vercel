@@ -101,7 +101,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployments_disabled", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "on_demand_concurrent_builds", "false"),
-					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", ""),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "enhanced"),
 				),
 			},
 			// Test mutual exclusivity validation
