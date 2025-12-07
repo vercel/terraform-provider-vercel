@@ -19,7 +19,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &networkDataSource{}
 )
 
-func newHostedZoneAssociationDataSource() datasource.DataSource {
+func newNetworkDataSource() datasource.DataSource {
 	return &networkDataSource{}
 }
 
