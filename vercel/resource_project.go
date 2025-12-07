@@ -85,7 +85,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
 			"name": schema.StringAttribute{
@@ -127,7 +127,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"node_version": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.OneOf(
 						"18.x",
@@ -156,7 +156,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Optional: true,
 							Computed: true,
 							PlanModifiers: []planmodifier.Set{
-								setplanmodifier.UseStateForUnknown(),
+								setplanmodifier.UseNonNullStateForUnknown(),
 							},
 						},
 						"custom_environment_ids": schema.SetAttribute{
@@ -172,7 +172,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Optional: true,
 							Computed: true,
 							PlanModifiers: []planmodifier.Set{
-								setplanmodifier.UseStateForUnknown(),
+								setplanmodifier.UseNonNullStateForUnknown(),
 							},
 						},
 						"git_branch": schema.StringAttribute{
@@ -218,7 +218,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"git_repository": schema.SingleNestedAttribute{
 				Description:   "The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed.",
 				Optional:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
 						Description: "The git provider of the repository. Must be either `github`, `gitlab`, or `bitbucket`.",
@@ -235,7 +235,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Description:   "By default, every commit pushed to the main branch will trigger a Production Deployment instead of the usual Preview Deployment. You can switch to a different branch here.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 					},
 					"deploy_hooks": schema.SetNestedAttribute{
 						Description: "Deploy hooks are unique URLs that allow you to trigger a deployment of a given branch. See https://vercel.com/docs/deployments/deploy-hooks for full information.",
@@ -268,13 +268,13 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"deployment_type": schema.StringAttribute{
 						Description:   "The deployment environment to protect. The default value is `standard_protection_new` (Standard Protection). Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_preview_deployments`, or `none`.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Validators: []validator.String{
 							stringvalidator.OneOf("standard_protection_new", "standard_protection", "all_deployments", "only_preview_deployments", "none"),
 						},
@@ -296,7 +296,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					"deployment_type": schema.StringAttribute{
 						Required:      true,
 						Description:   "The deployment environment to protect. Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, or `only_preview_deployments`.",
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Validators: []validator.String{
 							stringvalidator.OneOf("standard_protection_new", "standard_protection", "all_deployments", "only_preview_deployments"),
 						},
@@ -310,7 +310,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					"addresses": schema.SetNestedAttribute{
 						Description:   "The allowed IP addressses and CIDR ranges with optional descriptions.",
 						Required:      true,
-						PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.Set{setplanmodifier.UseNonNullStateForUnknown()},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"value": schema.StringAttribute{
@@ -331,7 +331,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					"deployment_type": schema.StringAttribute{
 						Required:      true,
 						Description:   "The deployment environment to protect. Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_production_deployments`, or `only_preview_deployments`.",
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Validators: []validator.String{
 							stringvalidator.OneOf("standard_protection_new", "standard_protection", "all_deployments", "only_production_deployments", "only_preview_deployments"),
 						},
@@ -341,7 +341,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Computed:      true,
 						Default:       stringdefault.StaticString("trusted_ip_required"),
 						Description:   "Whether or not Trusted IPs is optional to access a deployment. Must be either `trusted_ip_required` or `trusted_ip_optional`. `trusted_ip_optional` is only available with Standalone Trusted IPs.",
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Validators: []validator.String{
 							stringvalidator.OneOf("trusted_ip_required", "trusted_ip_optional"),
 						},
@@ -358,7 +358,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Computed:      true,
 						Default:       stringdefault.StaticString("team"),
 						Description:   "Configures the URL of the `iss` claim. `team` = `https://oidc.vercel.com/[team_slug]` `global` = `https://oidc.vercel.com`",
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Validators: []validator.String{
 							stringvalidator.OneOf("team", "global"),
 						},
@@ -380,7 +380,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					"paths": schema.SetNestedAttribute{
 						Description:   "The allowed paths for the OPTIONS Allowlist. Incoming requests will bypass Deployment Protection if they have the method `OPTIONS` and **start with** one of the path values.",
 						Required:      true,
-						PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.Set{setplanmodifier.UseNonNullStateForUnknown()},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"value": schema.StringAttribute{
@@ -397,7 +397,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			},
 			"id": schema.StringAttribute{
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"install_command": schema.StringAttribute{
 				Optional:    true,
@@ -435,13 +435,13 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
 			},
 			"enable_affected_projects_deployments": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.",
 			},
 			"git_comments": schema.SingleNestedAttribute{
@@ -481,13 +481,13 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "Enables the Vercel Toolbar on your production deployments: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"preview_deployments_disabled": schema.BoolAttribute{
 				Description:   "Disable creation of Preview Deployments for this project.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"auto_assign_custom_domains": schema.BoolAttribute{
 				Optional:    true,
@@ -498,19 +498,19 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"git_lfs": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "Enables Git LFS support. Git LFS replaces large files such as audio samples, videos, datasets, and graphics with text pointers inside Git, while storing the file contents on a remote server like GitHub.com or GitHub Enterprise.",
 			},
 			"function_failover": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "Automatically failover Serverless Functions to the nearest region. You can customize regions through vercel.json. A new Deployment is required for your changes to take effect.",
 			},
 			"customer_success_code_visibility": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.",
 			},
 			"git_fork_protection": schema.BoolAttribute{
@@ -522,13 +522,13 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"prioritise_production_builds": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "If enabled, builds for the Production environment will be prioritized over Preview environments.",
 			},
 			"directory_listing": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "If no index file is present within a directory, the directory contents will be displayed.",
 			},
 			"skew_protection": schema.StringAttribute{
@@ -551,7 +551,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Validators: []validator.String{
 							stringvalidator.OneOf("standard_legacy", "standard", "performance"),
 						},
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 					},
 					"function_default_timeout": schema.Int64Attribute{
 						Description: "The default timeout for Serverless Functions.",
@@ -561,7 +561,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							int64validator.AtLeast(1),
 							int64validator.AtMost(900),
 						},
-						PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.Int64{int64planmodifier.UseNonNullStateForUnknown()},
 					},
 					"function_default_regions": schema.SetAttribute{
 						Description: "The default regions for Serverless Functions. Must be an array of valid region identifiers.",
@@ -582,7 +582,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Description:   "Enable fluid compute for your Vercel Functions to automatically manage concurrency and optimize performance. Vercel will handle the defaults to ensure the best experience for your workload.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 					},
 				},
 			},
@@ -590,7 +590,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "Instantly scale build capacity to skip the queue, even if all build slots are in use. You can also choose a larger build machine; charges apply per minute if it exceeds your team's default.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"build_machine_type": schema.StringAttribute{
 				Description: "The build machine type to use for this project. Must be one of \"enhanced\" or \"turbo\".",

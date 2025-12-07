@@ -50,8 +50,8 @@ func TestAcc_AliasResource(t *testing.T) {
 			{
 				Config: cfg(testAccAliasResourceConfig(name, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAliasExists(testClient(t), testTeam(t), fmt.Sprintf("test-acc-%s.vercel.app", name)),
-					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
+					testCheckAliasExists(testClient(t), testTeam(t), fmt.Sprintf("test-acc-%s-alias.vercel.app", name)),
+					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s-alias.vercel.app", name)),
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "deployment_id"),
 				),
@@ -59,8 +59,8 @@ func TestAcc_AliasResource(t *testing.T) {
 			{
 				Config: cfg(testAccAliasResourceConfigUpdated(name, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAliasExists(testClient(t), testTeam(t), fmt.Sprintf("test-acc-%s.vercel.app", name)),
-					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s.vercel.app", name)),
+					testCheckAliasExists(testClient(t), testTeam(t), fmt.Sprintf("test-acc-%s-alias.vercel.app", name)),
+					resource.TestCheckResourceAttr("vercel_alias.test", "alias", fmt.Sprintf("test-acc-%s-alias.vercel.app", name)),
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_alias.test", "deployment_id"),
 				),
@@ -85,7 +85,7 @@ resource "vercel_deployment" "test" {
 }
 
 resource "vercel_alias" "test" {
-    alias         = "test-acc-%[1]s.vercel.app"
+    alias         = "test-acc-%[1]s-alias.vercel.app"
     deployment_id = vercel_deployment.test.id
 }
 `, name, githubRepo)
@@ -107,7 +107,7 @@ resource "vercel_deployment" "test_two" {
 }
 
 resource "vercel_alias" "test" {
-    alias         = "test-acc-%[1]s.vercel.app"
+    alias         = "test-acc-%[1]s-alias.vercel.app"
     deployment_id = vercel_deployment.test_two.id
 }
 `, name, githubRepo)

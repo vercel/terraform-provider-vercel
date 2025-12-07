@@ -74,7 +74,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description: "The ID of the existing Vercel Team.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.UseNonNullStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -82,13 +82,13 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "The name of the team.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"slug": schema.StringAttribute{
 				Description:   "The slug of the team. Will be used in the URL of the team's dashboard.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"avatar": schema.MapAttribute{
 				Description:   "The `avatar` should be a the 'file' attribute from a vercel_file data source.",
@@ -103,14 +103,14 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 			"description": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "A description of the team.",
 			},
 			"sensitive_environment_variable_policy": schema.StringAttribute{
 				Description:   "Ensures that all environment variables created by members of this team will be created as Sensitive Environment Variables which can only be decrypted by Vercel's deployment system.: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.OneOf("on", "off"),
 				},
@@ -118,26 +118,26 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 			"email_domain": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "Hostname that'll be matched with emails on sign-up to automatically join the Team.",
 			},
 			"saml": schema.SingleNestedAttribute{
 				Description:   "Configuration for SAML authentication.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"enforced": schema.BoolAttribute{
 						Description:   "Indicates if SAML is enforced for the team.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 					},
 					"roles": schema.MapNestedAttribute{
 						Description:   "Directory groups to role or access group mappings. For each directory group, specify either a role or access group id.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.Map{mapplanmodifier.UseNonNullStateForUnknown()},
 						Validators:    []validator.Map{validateSamlRoles()},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
@@ -145,7 +145,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 									Description:   "The team level role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.",
 									Optional:      true,
 									Computed:      true,
-									PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+									PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 									Validators: []validator.String{
 										stringvalidator.OneOf("MEMBER", "OWNER", "VIEWER", "DEVELOPER", "BILLING", "CONTRIBUTOR"),
 									},
@@ -154,7 +154,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 									Description:   "The access group id to assign to the user.",
 									Optional:      true,
 									Computed:      true,
-									PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+									PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 								},
 							},
 						},
@@ -163,12 +163,12 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 			},
 			"invite_code": schema.StringAttribute{
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "A code that can be used to join this team. Only visible to Team owners.",
 			},
 			"preview_deployment_suffix": schema.StringAttribute{
 				Optional:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 				Computed:      true,
 				Description:   "The hostname that is used as the preview deployment suffix.",
 			},
@@ -176,13 +176,13 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "Configuration for Remote Caching.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
 						Description:   "Indicates if Remote Caching is enabled.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 					},
 				},
 			},
@@ -190,7 +190,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "Enables the Vercel Toolbar on your preview deployments: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.OneOf("default", "on", "off"),
 				},
@@ -199,7 +199,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "Enables the Vercel Toolbar on your production deployments: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.OneOf("default", "on", "off"),
 				},
@@ -207,13 +207,13 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 			"hide_ip_addresses": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "Indicates if ip addresses should be accessible in o11y tooling.",
 			},
 			"hide_ip_addresses_in_log_drains": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "Indicates if ip addresses should be accessible in log drains.",
 			},
 		},
@@ -634,7 +634,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 						Description: "The ID of the existing Vercel Team.",
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
+							stringplanmodifier.UseNonNullStateForUnknown(),
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
@@ -642,13 +642,13 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 						Description:   "The name of the team.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 					},
 					"slug": schema.StringAttribute{
 						Description:   "The slug of the team. Will be used in the URL of the team's dashboard.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 					},
 					"avatar": schema.MapAttribute{
 						Description:   "The `avatar` should be a the 'file' attribute from a vercel_file data source.",
@@ -663,14 +663,14 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 					"description": schema.StringAttribute{
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Description:   "A description of the team.",
 					},
 					"sensitive_environment_variable_policy": schema.StringAttribute{
 						Description:   "Ensures that all environment variables created by members of this team will be created as Sensitive Environment Variables which can only be decrypted by Vercel's deployment system.: one of on, off or default.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Validators: []validator.String{
 							stringvalidator.OneOf("on", "off"),
 						},
@@ -678,7 +678,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 					"email_domain": schema.StringAttribute{
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Description:   "Hostname that'll be matched with emails on sign-up to automatically join the Team.",
 					},
 					"saml": schema.SingleNestedAttribute{
@@ -692,7 +692,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
-								// PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
+								// PlanModifiers: []planmodifier.Map{mapplanmodifier.UseNonNullStateForUnknown()},
 								Validators: []validator.Map{
 									// Validate only this attribute or roles is configured.
 									mapvalidator.ExactlyOneOf(
@@ -717,17 +717,17 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 						},
 						Optional: true,
 						Computed: true,
-						// PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+						// PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 						Description: "Configuration for SAML authentication.",
 					},
 					"invite_code": schema.StringAttribute{
 						Computed:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Description:   "A code that can be used to join this team. Only visible to Team owners.",
 					},
 					"preview_deployment_suffix": schema.StringAttribute{
 						Optional:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Computed:      true,
 						Description:   "The hostname that is used as the preview deployment suffix.",
 					},
@@ -735,13 +735,13 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 						Description:   "Configuration for Remote Caching.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description:   "Indicates if Remote Caching is enabled.",
 								Optional:      true,
 								Computed:      true,
-								PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+								PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 							},
 						},
 					},
@@ -749,7 +749,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 						Description:   "Enables the Vercel Toolbar on your preview deployments: one of on, off or default.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Validators: []validator.String{
 							stringvalidator.OneOf("default", "on", "off"),
 						},
@@ -758,7 +758,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 						Description:   "Enables the Vercel Toolbar on your production deployments: one of on, off or default.",
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Validators: []validator.String{
 							stringvalidator.OneOf("default", "on", "off"),
 						},
@@ -766,13 +766,13 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 					"hide_ip_addresses": schema.BoolAttribute{
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 						Description:   "Indicates if ip addresses should be accessible in o11y tooling.",
 					},
 					"hide_ip_addresses_in_log_drains": schema.BoolAttribute{
 						Optional:      true,
 						Computed:      true,
-						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 						Description:   "Indicates if ip addresses should be accessible in log drains.",
 					},
 				},

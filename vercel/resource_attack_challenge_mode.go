@@ -60,7 +60,7 @@ Attack Challenge Mode prevent malicious traffic by showing a verification challe
 			"id": schema.StringAttribute{
 				Description:   "The resource identifier.",
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
 				Description:   "The ID of the Project to toggle Attack Challenge Mode on.",
@@ -71,7 +71,7 @@ Attack Challenge Mode prevent malicious traffic by showing a verification challe
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Project exists under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"enabled": schema.BoolAttribute{
 				Required:    true,

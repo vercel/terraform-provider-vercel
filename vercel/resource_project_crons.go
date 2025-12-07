@@ -61,7 +61,7 @@ func (r *projectCronsResource) Schema(_ context.Context, _ resource.SchemaReques
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the team the Project exists under. Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"enabled": schema.BoolAttribute{
 				Required:    true,

@@ -81,7 +81,7 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				Description: "The ID of the existing Vercel Team.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.UseNonNullStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -91,7 +91,7 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				Optional:           true,
 				Computed:           true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.UseNonNullStateForUnknown(),
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
@@ -106,7 +106,7 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.UseNonNullStateForUnknown(),
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
@@ -117,10 +117,10 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				},
 			},
 			"role": schema.StringAttribute{
-				Description: "The role that the user should have in the project. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'. Depending on your Team's plan, some of these roles may be unavailable.",
+				Description: "The role that the user should have in the team. One of 'MEMBER', 'OWNER', 'VIEWER', 'VIEWER_FOR_PLUS', 'DEVELOPER', 'BILLING', 'SECURITY', or 'CONTRIBUTOR'. Depending on your Team's plan, some of these roles may be unavailable.",
 				Required:    true,
 				Validators: []validator.String{
-					stringvalidator.OneOf("MEMBER", "OWNER", "VIEWER", "DEVELOPER", "BILLING", "CONTRIBUTOR"),
+					stringvalidator.OneOf("MEMBER", "OWNER", "VIEWER", "VIEWER_FOR_PLUS", "DEVELOPER", "BILLING", "SECURITY", "CONTRIBUTOR"),
 				},
 			},
 			"projects": schema.SetNestedAttribute{

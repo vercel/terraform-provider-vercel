@@ -110,7 +110,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the Vercel team.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 		},
 	}

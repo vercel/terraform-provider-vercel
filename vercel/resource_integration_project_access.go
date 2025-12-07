@@ -68,7 +68,7 @@ func (r *integrationProjectAccessResource) Schema(_ context.Context, req resourc
 				Optional:      true,
 				Computed:      true,
 				Description:   "The ID of the Vercel team.Required when configuring a team resource if a default team has not been set in the provider.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 		},
 	}

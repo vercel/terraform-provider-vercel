@@ -51,6 +51,15 @@ func TestAcc_TeamMemberResource(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_team_member.test", "role", "VIEWER"),
 				),
 			},
+			// Update to SECURITY role
+			{
+				Config: cfg(testAccTeamMemberResourceConfig("SECURITY", testAdditionalUserEmail(t), testTeam(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vercel_team_member.test", "team_id"),
+					resource.TestCheckResourceAttrSet("vercel_team_member.test", "user_id"),
+					resource.TestCheckResourceAttr("vercel_team_member.test", "role", "SECURITY"),
+				),
+			},
 			// Test with projects
 			{
 				Config: cfg(testAccTeamMemberResourceConfigWithProjects(randomSuffix, testAdditionalUserEmail(t), testTeam(t))),
