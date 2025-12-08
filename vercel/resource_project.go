@@ -407,6 +407,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:    true,
 				Description: "The output directory of the project. If omitted, this value will be automatically detected.",
 			},
+			"preview_deployment_suffix": schema.StringAttribute{
+				Optional:    true,
+				Description: "The preview deployment suffix to apply to preview deployment URLs for this project. If not set, Vercel's default suffix will be used.",
+			},
 			"public_source": schema.BoolAttribute{
 				Optional:    true,
 				Description: "By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.",
@@ -623,6 +627,7 @@ type Project struct {
 	Name                                types.String `tfsdk:"name"`
 	NodeVersion                         types.String `tfsdk:"node_version"`
 	OutputDirectory                     types.String `tfsdk:"output_directory"`
+	PreviewDeploymentSuffix             types.String `tfsdk:"preview_deployment_suffix"`
 	PublicSource                        types.Bool   `tfsdk:"public_source"`
 	RootDirectory                       types.String `tfsdk:"root_directory"`
 	ServerlessFunctionRegion            types.String `tfsdk:"serverless_function_region"`
@@ -844,6 +849,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		Name:                              p.Name.ValueString(),
 		OIDCTokenConfig:                   oidc.toCreateProjectRequest(),
 		OutputDirectory:                   p.OutputDirectory.ValueStringPointer(),
+		PreviewDeploymentSuffix:           p.PreviewDeploymentSuffix.ValueStringPointer(),
 		PublicSource:                      p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
 		ResourceConfig:                    resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
@@ -923,6 +929,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		InstallCommand:                       p.InstallCommand.ValueStringPointer(),
 		Name:                                 name,
 		OutputDirectory:                      p.OutputDirectory.ValueStringPointer(),
+		PreviewDeploymentSuffix:              p.PreviewDeploymentSuffix.ValueStringPointer(),
 		PublicSource:                         p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                        p.RootDirectory.ValueStringPointer(),
 		PasswordProtection:                   pp.toUpdateProjectRequest(),
@@ -1662,6 +1669,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		InstallCommand:                      uncoerceString(fields.InstallCommand, types.StringPointerValue(response.InstallCommand)),
 		Name:                                types.StringValue(response.Name),
 		OutputDirectory:                     uncoerceString(fields.OutputDirectory, types.StringPointerValue(response.OutputDirectory)),
+		PreviewDeploymentSuffix:             types.StringPointerValue(response.PreviewDeploymentSuffix),
 		PublicSource:                        uncoerceBool(fields.PublicSource, types.BoolPointerValue(response.PublicSource)),
 		RootDirectory:                       types.StringPointerValue(response.RootDirectory),
 		ServerlessFunctionRegion:            types.StringPointerValue(response.ServerlessFunctionRegion),

@@ -1204,3 +1204,56 @@ resource "vercel_project" "test" {
 }
 `, projectSuffix)
 }
+
+func TestAcc_ProjectPreviewDeploymentSuffix(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	domain := testDomain(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				// Create project with preview_deployment_suffix (must be a valid domain owned by the team)
+				Config: cfg(testAccProjectConfigWithPreviewDeploymentSuffix(projectSuffix, domain)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployment_suffix", domain),
+				),
+			},
+			{
+				// Remove preview_deployment_suffix (set to null)
+				Config: cfg(testAccProjectConfigWithoutPreviewDeploymentSuffix(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckNoResourceAttr("vercel_project.test", "preview_deployment_suffix"),
+				),
+			},
+			{
+				// Re-add preview_deployment_suffix
+				Config: cfg(testAccProjectConfigWithPreviewDeploymentSuffix(projectSuffix, domain)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployment_suffix", domain),
+				),
+			},
+		},
+	})
+}
+
+func testAccProjectConfigWithPreviewDeploymentSuffix(projectSuffix, suffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name                       = "test-acc-suffix-%s"
+  preview_deployment_suffix  = "%s"
+}
+`, projectSuffix, suffix)
+}
+
+func testAccProjectConfigWithoutPreviewDeploymentSuffix(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-suffix-%s"
+}
+`, projectSuffix)
+}

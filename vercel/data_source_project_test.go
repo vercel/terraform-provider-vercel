@@ -155,3 +155,33 @@ data "vercel_project" "test" {
 }
 `, name, githubRepo)
 }
+
+func TestAcc_ProjectDataSourcePreviewDeploymentSuffix(t *testing.T) {
+	name := acctest.RandString(16)
+	domain := testDomain(t)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectDataSourceConfigWithPreviewDeploymentSuffix(name, domain)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.vercel_project.test", "name", "test-acc-suffix-ds-"+name),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "preview_deployment_suffix", domain),
+				),
+			},
+		},
+	})
+}
+
+func testAccProjectDataSourceConfigWithPreviewDeploymentSuffix(name, domain string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name                       = "test-acc-suffix-ds-%s"
+  preview_deployment_suffix  = "%s"
+}
+
+data "vercel_project" "test" {
+    name = vercel_project.test.name
+}
+`, name, domain)
+}
