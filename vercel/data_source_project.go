@@ -274,6 +274,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Description: "The output directory of the project. When null is used this value will be automatically detected.",
 			},
+			"preview_deployment_suffix": schema.StringAttribute{
+				Computed:    true,
+				Description: "The preview deployment suffix to apply to preview deployment URLs for this project.",
+			},
 			"public_source": schema.BoolAttribute{
 				Computed:    true,
 				Description: "Specifies whether the source code and logs of the deployments for this project should be public or not.",
@@ -419,6 +423,7 @@ type ProjectDataSource struct {
 	InstallCommand                      types.String `tfsdk:"install_command"`
 	Name                                types.String `tfsdk:"name"`
 	OutputDirectory                     types.String `tfsdk:"output_directory"`
+	PreviewDeploymentSuffix             types.String `tfsdk:"preview_deployment_suffix"`
 	PublicSource                        types.Bool   `tfsdk:"public_source"`
 	RootDirectory                       types.String `tfsdk:"root_directory"`
 	ServerlessFunctionRegion            types.String `tfsdk:"serverless_function_region"`
@@ -489,6 +494,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		InstallCommand:                      project.InstallCommand,
 		Name:                                project.Name,
 		OutputDirectory:                     project.OutputDirectory,
+		PreviewDeploymentSuffix:             project.PreviewDeploymentSuffix,
 		PublicSource:                        project.PublicSource,
 		RootDirectory:                       project.RootDirectory,
 		ServerlessFunctionRegion:            project.ServerlessFunctionRegion,

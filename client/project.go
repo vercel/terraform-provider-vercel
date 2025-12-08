@@ -54,6 +54,7 @@ type CreateProjectRequest struct {
 	Name                              string                `json:"name"`
 	OIDCTokenConfig                   *OIDCTokenConfig      `json:"oidcTokenConfig,omitempty"`
 	OutputDirectory                   *string               `json:"outputDirectory"`
+	PreviewDeploymentSuffix           *string               `json:"previewDeploymentSuffix"`
 	PublicSource                      *bool                 `json:"publicSource"`
 	RootDirectory                     *string               `json:"rootDirectory"`
 	ServerlessFunctionRegion          string                `json:"serverlessFunctionRegion,omitempty"`
@@ -184,6 +185,7 @@ type ProjectResponse struct {
 	} `json:"link"`
 	Name                                 string                      `json:"name"`
 	OutputDirectory                      *string                     `json:"outputDirectory"`
+	PreviewDeploymentSuffix              *string                     `json:"previewDeploymentSuffix"`
 	PublicSource                         *bool                       `json:"publicSource"`
 	RootDirectory                        *string                     `json:"rootDirectory"`
 	ServerlessFunctionRegion             *string                     `json:"serverlessFunctionRegion"`
@@ -308,6 +310,7 @@ type UpdateProjectRequest struct {
 	InstallCommand                       *string                         `json:"installCommand"`
 	Name                                 *string                         `json:"name,omitempty"`
 	OutputDirectory                      *string                         `json:"outputDirectory"`
+	PreviewDeploymentSuffix              *string                         `json:"previewDeploymentSuffix"`
 	PublicSource                         *bool                           `json:"publicSource"`
 	RootDirectory                        *string                         `json:"rootDirectory"`
 	ServerlessFunctionRegion             string                          `json:"serverlessFunctionRegion,omitempty"`
