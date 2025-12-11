@@ -1250,6 +1250,67 @@ resource "vercel_project" "test" {
 `, projectSuffix, suffix)
 }
 
+func TestAcc_ProjectGitProviderOptions(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				// Create project with git_provider_options
+				Config: cfg(testAccProjectConfigWithGitProviderOptions(projectSuffix, testGithubRepo(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.create_deployments", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.repository_dispatch_events", "false"),
+				),
+			},
+			{
+				// Update git_provider_options
+				Config: cfg(testAccProjectConfigWithGitProviderOptionsUpdated(projectSuffix, testGithubRepo(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.create_deployments", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.repository_dispatch_events", "true"),
+				),
+			},
+		},
+	})
+}
+
+func testAccProjectConfigWithGitProviderOptions(projectSuffix, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-git-provider-opts-%s"
+  git_repository = {
+    type = "github"
+    repo = "%s"
+  }
+  git_provider_options = {
+    create_deployments = true
+    repository_dispatch_events = false
+  }
+}
+`, projectSuffix, githubRepo)
+}
+
+func testAccProjectConfigWithGitProviderOptionsUpdated(projectSuffix, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-git-provider-opts-%s"
+  git_repository = {
+    type = "github"
+    repo = "%s"
+  }
+  git_provider_options = {
+    create_deployments = false
+    repository_dispatch_events = true
+  }
+}
+`, projectSuffix, githubRepo)
+}
+
 func testAccProjectConfigWithoutPreviewDeploymentSuffix(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {

@@ -324,6 +324,24 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					},
 				},
 			},
+			"git_provider_options": schema.SingleNestedAttribute{
+				MarkdownDescription: "Git provider options.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"require_verified_commits": schema.BoolAttribute{
+						MarkdownDescription: "Whether to require verified commits.",
+						Computed:            true,
+					},
+					"create_deployments": schema.BoolAttribute{
+						MarkdownDescription: "Whether to create deployments.",
+						Computed:            true,
+					},
+					"repository_dispatch_events": schema.BoolAttribute{
+						MarkdownDescription: "Whether repository dispatch events are enabled.",
+						Computed:            true,
+					},
+				},
+			},
 			"preview_comments": schema.BoolAttribute{
 				Computed:           true,
 				DeprecationMessage: "Use `enable_preview_feedback` instead. This attribute will be removed in a future version.",
@@ -437,6 +455,7 @@ type ProjectDataSource struct {
 	ProtectionBypassForAutomationSecret types.String `tfsdk:"protection_bypass_for_automation_secret"`
 	AutoExposeSystemEnvVars             types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
 	GitComments                         types.Object `tfsdk:"git_comments"`
+	GitProviderOptions                  types.Object `tfsdk:"git_provider_options"`
 	PreviewComments                     types.Bool   `tfsdk:"preview_comments"`
 	EnablePreviewFeedback               types.Bool   `tfsdk:"enable_preview_feedback"`
 	EnableProductionFeedback            types.Bool   `tfsdk:"enable_production_feedback"`
@@ -457,7 +476,7 @@ type ProjectDataSource struct {
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
-	/* Force reading of environment and git comments. These are ignored usually if the planned value is null,
+	/* Force reading of environment, git comments, and git provider options. These are ignored usually if the planned value is null,
 	   otherwise it causes issues with terraform thinking there are changes when there aren't. However,
 	   for the data source we always want to read the value */
 	plan.Environment = types.SetValueMust(envVariableElemType, []attr.Value{})
@@ -466,6 +485,22 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		plan.GitComments = types.ObjectValueMust(gitCommentsAttrTypes, map[string]attr.Value{
 			"on_pull_request": types.BoolValue(response.GitComments.OnPullRequest),
 			"on_commit":       types.BoolValue(response.GitComments.OnCommit),
+		})
+	}
+	plan.GitProviderOptions = types.ObjectNull(gitProviderOptionsAttrType.AttrTypes)
+	if response.GitProviderOptions != nil {
+		createDeployments := types.BoolNull()
+		if response.GitProviderOptions.CreateDeployments != nil {
+			createDeployments = types.BoolValue(*response.GitProviderOptions.CreateDeployments == "enabled")
+		}
+		repositoryDispatchEvents := types.BoolNull()
+		if response.GitProviderOptions.DisableRepositoryDispatchEvents != nil {
+			repositoryDispatchEvents = types.BoolValue(!*response.GitProviderOptions.DisableRepositoryDispatchEvents)
+		}
+		plan.GitProviderOptions = types.ObjectValueMust(gitProviderOptionsAttrType.AttrTypes, map[string]attr.Value{
+			"require_verified_commits":   types.BoolPointerValue(response.GitProviderOptions.RequireVerifiedCommits),
+			"create_deployments":         createDeployments,
+			"repository_dispatch_events": repositoryDispatchEvents,
 		})
 	}
 
@@ -508,6 +543,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		ProtectionBypassForAutomation:       project.ProtectionBypassForAutomation,
 		ProtectionBypassForAutomationSecret: project.ProtectionBypassForAutomationSecret,
 		GitComments:                         project.GitComments,
+		GitProviderOptions:                  project.GitProviderOptions,
 		PreviewComments:                     project.PreviewComments,
 		EnablePreviewFeedback:               project.EnablePreviewFeedback,
 		EnableProductionFeedback:            project.EnableProductionFeedback,
