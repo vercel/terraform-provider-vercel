@@ -185,3 +185,40 @@ data "vercel_project" "test" {
 }
 `, name, domain)
 }
+
+func TestAcc_ProjectDataSourceGitProviderOptions(t *testing.T) {
+	name := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectDataSourceConfigWithGitProviderOptions(name, testGithubRepo(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.vercel_project.test", "name", "test-acc-gpo-ds-"+name),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "git_provider_options.create_deployments", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "git_provider_options.repository_dispatch_events", "false"),
+				),
+			},
+		},
+	})
+}
+
+func testAccProjectDataSourceConfigWithGitProviderOptions(name, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-gpo-ds-%s"
+  git_repository = {
+    type = "github"
+    repo = "%s"
+  }
+  git_provider_options = {
+    create_deployments = true
+    repository_dispatch_events = false
+  }
+}
+
+data "vercel_project" "test" {
+    name = vercel_project.test.name
+}
+`, name, githubRepo)
+}

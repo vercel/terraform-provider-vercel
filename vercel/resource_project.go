@@ -462,6 +462,28 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
+			"git_provider_options": schema.SingleNestedAttribute{
+				MarkdownDescription: "Git provider options",
+				Optional:            true,
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"require_verified_commits": schema.BoolAttribute{
+						MarkdownDescription: "Whether to require verified commits",
+						Optional:            true,
+						Computed:            true,
+					},
+					"create_deployments": schema.BoolAttribute{
+						MarkdownDescription: "Whether to create deployments",
+						Optional:            true,
+						Computed:            true,
+					},
+					"repository_dispatch_events": schema.BoolAttribute{
+						MarkdownDescription: "Whether to enable repository dispatch events",
+						Optional:            true,
+						Computed:            true,
+					},
+				},
+			},
 			"preview_comments": schema.BoolAttribute{
 				Description:        "Enables the Vercel Toolbar on your preview deployments.",
 				DeprecationMessage: "Use `enable_preview_feedback` instead. This attribute will be removed in a future version.",
@@ -641,6 +663,7 @@ type Project struct {
 	ProtectionBypassForAutomationSecret types.String `tfsdk:"protection_bypass_for_automation_secret"`
 	AutoExposeSystemEnvVars             types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
 	GitComments                         types.Object `tfsdk:"git_comments"`
+	GitProviderOptions                  types.Object `tfsdk:"git_provider_options"`
 	PreviewComments                     types.Bool   `tfsdk:"preview_comments"`
 	EnablePreviewFeedback               types.Bool   `tfsdk:"enable_preview_feedback"`
 	EnableProductionFeedback            types.Bool   `tfsdk:"enable_production_feedback"`
@@ -812,6 +835,42 @@ func (p *Project) optionsAllowlistObj(ctx context.Context) (*OptionsAllowlist, d
 	return &o, nil
 }
 
+func (p *Project) gitProviderOptionsObj(ctx context.Context) (*GitProviderOptions, diag.Diagnostics) {
+	if p.GitProviderOptions.IsNull() || p.GitProviderOptions.IsUnknown() {
+		return nil, nil
+	}
+	var gpo GitProviderOptions
+	diags := p.GitProviderOptions.As(ctx, &gpo, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return &gpo, nil
+}
+
+func (g *GitProviderOptions) toUpdateProjectRequest() *client.GitProviderOptions {
+	if g == nil {
+		return nil
+	}
+	var createDeployments *string
+	if !g.CreateDeployments.IsNull() && !g.CreateDeployments.IsUnknown() {
+		val := "disabled"
+		if g.CreateDeployments.ValueBool() {
+			val = "enabled"
+		}
+		createDeployments = &val
+	}
+	var disableRepositoryDispatchEvents *bool
+	if !g.RepositoryDispatchEvents.IsNull() && !g.RepositoryDispatchEvents.IsUnknown() {
+		val := !g.RepositoryDispatchEvents.ValueBool()
+		disableRepositoryDispatchEvents = &val
+	}
+	return &client.GitProviderOptions{
+		RequireVerifiedCommits:          g.RequireVerifiedCommits.ValueBoolPointer(),
+		CreateDeployments:               createDeployments,
+		DisableRepositoryDispatchEvents: disableRepositoryDispatchEvents,
+	}
+}
+
 func (p *Project) toCreateProjectRequest(ctx context.Context, envs []EnvironmentItem) (req client.CreateProjectRequest, diags diag.Diagnostics) {
 	clientEnvs, diags := parseEnvironment(ctx, envs)
 	if diags.HasError() {
@@ -918,6 +977,8 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	diags.Append(d3...)
 	oal, d4 := p.optionsAllowlistObj(ctx)
 	diags.Append(d4...)
+	gpo, d5 := p.gitProviderOptionsObj(ctx)
+	diags.Append(d5...)
 	if diags.HasError() {
 		return req, diags
 	}
@@ -951,6 +1012,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		DirectoryListing:                     p.DirectoryListing.ValueBool(),
 		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
 		GitComments:                          gc.toUpdateProjectRequest(),
+		GitProviderOptions:                   gpo.toUpdateProjectRequest(),
 		ResourceConfig:                       resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		NodeVersion:                          p.NodeVersion.ValueString(),
 	}, nil
@@ -1232,6 +1294,20 @@ var optionsAllowlistAttrType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
 		"paths": types.SetType{ElemType: optionsAllowlistPathAttrType},
 	},
+}
+
+var gitProviderOptionsAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"require_verified_commits":   types.BoolType,
+		"create_deployments":         types.BoolType,
+		"repository_dispatch_events": types.BoolType,
+	},
+}
+
+type GitProviderOptions struct {
+	RequireVerifiedCommits   types.Bool `tfsdk:"require_verified_commits"`
+	CreateDeployments        types.Bool `tfsdk:"create_deployments"`
+	RepositoryDispatchEvents types.Bool `tfsdk:"repository_dispatch_events"`
 }
 
 type ResourceConfig struct {
@@ -1658,6 +1734,23 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 	}
 
+	gitProviderOptions := types.ObjectNull(gitProviderOptionsAttrType.AttrTypes)
+	if response.GitProviderOptions != nil && !plan.GitProviderOptions.IsNull() && !plan.GitProviderOptions.IsUnknown() {
+		createDeployments := types.BoolNull()
+		if response.GitProviderOptions.CreateDeployments != nil {
+			createDeployments = types.BoolValue(*response.GitProviderOptions.CreateDeployments == "enabled")
+		}
+		repositoryDispatchEvents := types.BoolNull()
+		if response.GitProviderOptions.DisableRepositoryDispatchEvents != nil {
+			repositoryDispatchEvents = types.BoolValue(!*response.GitProviderOptions.DisableRepositoryDispatchEvents)
+		}
+		gitProviderOptions = types.ObjectValueMust(gitProviderOptionsAttrType.AttrTypes, map[string]attr.Value{
+			"require_verified_commits":   types.BoolPointerValue(response.GitProviderOptions.RequireVerifiedCommits),
+			"create_deployments":         createDeployments,
+			"repository_dispatch_events": repositoryDispatchEvents,
+		})
+	}
+
 	return Project{
 		BuildCommand:                        uncoerceString(fields.BuildCommand, types.StringPointerValue(response.BuildCommand)),
 		DevCommand:                          uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
@@ -1696,6 +1789,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		DirectoryListing:                    types.BoolValue(response.DirectoryListing),
 		SkewProtection:                      fromSkewProtectionMaxAge(response.SkewProtectionMaxAge),
 		GitComments:                         gitComments,
+		GitProviderOptions:                  gitProviderOptions,
 		ResourceConfig:                      resourceConfig,
 		NodeVersion:                         types.StringValue(response.NodeVersion),
 		OnDemandConcurrentBuilds:            types.BoolValue(response.ResourceConfig.ElasticConcurrencyEnabled),

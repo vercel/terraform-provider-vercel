@@ -71,6 +71,7 @@ resource "vercel_project" "example" {
 - `git_comments` (Attributes) Configuration for Git Comments. (see [below for nested schema](#nestedatt--git_comments))
 - `git_fork_protection` (Boolean) Ensures that pull requests targeting your Git repository must be authorized by a member of your Team before deploying if your Project has Environment Variables or if the pull request includes a change to vercel.json. Defaults to `true`.
 - `git_lfs` (Boolean) Enables Git LFS support. Git LFS replaces large files such as audio samples, videos, datasets, and graphics with text pointers inside Git, while storing the file contents on a remote server like GitHub.com or GitHub Enterprise.
+- `git_provider_options` (Attributes) Git provider options (see [below for nested schema](#nestedatt--git_provider_options))
 - `git_repository` (Attributes) The Git Repository that will be connected to the project. When this is defined, any pushes to the specified connected Git Repository will be automatically deployed. This requires the corresponding Vercel for [Github](https://vercel.com/docs/concepts/git/vercel-for-github), [Gitlab](https://vercel.com/docs/concepts/git/vercel-for-gitlab) or [Bitbucket](https://vercel.com/docs/concepts/git/vercel-for-bitbucket) plugins to be installed. (see [below for nested schema](#nestedatt--git_repository))
 - `ignore_command` (String) When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.
 - `install_command` (String) The install command for this project. If omitted, this value will be automatically detected.
@@ -127,6 +128,16 @@ Required:
 
 - `on_commit` (Boolean) Whether Commit comments are enabled
 - `on_pull_request` (Boolean) Whether Pull Request comments are enabled
+
+
+<a id="nestedatt--git_provider_options"></a>
+### Nested Schema for `git_provider_options`
+
+Optional:
+
+- `create_deployments` (Boolean) Whether to create deployments
+- `repository_dispatch_events` (Boolean) Whether to enable repository dispatch events
+- `require_verified_commits` (Boolean) Whether to require verified commits
 
 
 <a id="nestedatt--git_repository"></a>

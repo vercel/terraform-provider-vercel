@@ -209,6 +209,7 @@ type ProjectResponse struct {
 	DirectoryListing                     bool                        `json:"directoryListing"`
 	SkewProtectionMaxAge                 int                         `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                `json:"gitComments"`
+	GitProviderOptions                   *GitProviderOptionsResponse `json:"gitProviderOptions"`
 	Security                             *Security                   `json:"security"`
 	DeploymentExpiration                 *DeploymentExpiration       `json:"deploymentExpiration"`
 	ResourceConfig                       *ResourceConfigResponse     `json:"resourceConfig"`
@@ -224,6 +225,18 @@ type ProjectCronsResponse struct {
 type GitComments struct {
 	OnCommit      bool `json:"onCommit"`
 	OnPullRequest bool `json:"onPullRequest"`
+}
+
+type GitProviderOptions struct {
+	RequireVerifiedCommits          *bool   `json:"requireVerifiedCommits,omitempty"`
+	CreateDeployments               *string `json:"createDeployments,omitempty"`
+	DisableRepositoryDispatchEvents *bool   `json:"disableRepositoryDispatchEvents,omitempty"`
+}
+
+type GitProviderOptionsResponse struct {
+	RequireVerifiedCommits          *bool   `json:"requireVerifiedCommits"`
+	CreateDeployments               *string `json:"createDeployments"`
+	DisableRepositoryDispatchEvents *bool   `json:"disableRepositoryDispatchEvents"`
 }
 
 type Security struct {
@@ -333,6 +346,7 @@ type UpdateProjectRequest struct {
 	DirectoryListing                     bool                            `json:"directoryListing"`
 	SkewProtectionMaxAge                 int                             `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                    `json:"gitComments"`
+	GitProviderOptions                   *GitProviderOptions             `json:"gitProviderOptions,omitempty"`
 	ResourceConfig                       *ResourceConfig                 `json:"resourceConfig,omitempty"`
 	NodeVersion                          string                          `json:"nodeVersion,omitempty"`
 }
