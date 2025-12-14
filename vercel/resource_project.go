@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -1476,7 +1477,7 @@ func isSameStringSet(a []string, b []string) bool {
 		return false
 	}
 	for _, v := range a {
-		if !contains(b, v) {
+		if !slices.Contains(b, v) {
 			return false
 		}
 	}
