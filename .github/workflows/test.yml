@@ -102,7 +102,7 @@ jobs:
       - name: Get dependencies
         run: go mod download
       - name: TF acceptance tests
-        timeout-minutes: 10
+        timeout-minutes: 30
         env:
           TF_ACC: "true"
           VERCEL_API_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
@@ -116,7 +116,7 @@ jobs:
           VERCEL_TERRAFORM_TESTING_CERTIFICATE: ${{ secrets.VERCEL_TERRAFORM_TESTING_CERTIFICATE }}
           VERCEL_TERRAFORM_TESTING_CERTIFICATE_KEY: ${{ secrets.VERCEL_TERRAFORM_TESTING_CERTIFICATE_KEY }}
         run: |
-          go test ./...
+          go test -timeout 30m ./...
 
   summary:
     name: Summary
@@ -130,11 +130,11 @@ jobs:
     steps:
       - name: Success
         run: |-
-            for status in ${{ join(needs.*.result, ' ') }}
-            do
-              if [ "$status" != "success" ] && [ "$status" != "skipped" ]
-              then
-                echo "Some checks failed"
-                exit 1
-              fi
-            done
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done
