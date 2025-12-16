@@ -327,8 +327,9 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 		Description: "Provides a Network resource.",
 		Attributes: map[string]schema.Attribute{
 			"aws_account_id": schema.StringAttribute{
-				Computed:    true,
-				Description: "The ID of the AWS Account in which the network exists.",
+				Computed:      true,
+				Description:   "The ID of the AWS Account in which the network exists.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"aws_availability_zone_ids": schema.ListAttribute{
 				Computed:      true,
@@ -338,8 +339,9 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 				PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplace()},
 			},
 			"aws_region": schema.StringAttribute{
-				Computed:    true,
-				Description: "The AWS Region in which the network exists.",
+				Computed:      true,
+				Description:   "The AWS Region in which the network exists.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"cidr": schema.StringAttribute{
 				Description:   "The CIDR range of the Network.",
@@ -347,9 +349,10 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Required:      true,
 			},
 			"egress_ip_addresses": schema.ListAttribute{
-				Computed:    true,
-				Description: "The egress IP addresses of the Network.",
-				ElementType: types.StringType,
+				Computed:      true,
+				Description:   "The egress IP addresses of the Network.",
+				ElementType:   types.StringType,
+				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -366,8 +369,9 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Required:      true,
 			},
 			"status": schema.StringAttribute{
-				Computed:    true,
-				Description: "The status of the Network.",
+				Computed:      true,
+				Description:   "The status of the Network.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"team_id": schema.StringAttribute{
 				Computed:      true,
@@ -379,8 +383,9 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Create: true,
 			}),
 			"vpc_id": schema.StringAttribute{
-				Computed:    true,
-				Description: "The ID of the AWS VPC which hosts the network.",
+				Computed:      true,
+				Description:   "The ID of the AWS VPC which hosts the network.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 		},
 	}
