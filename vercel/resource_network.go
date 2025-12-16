@@ -341,7 +341,7 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"aws_region": schema.StringAttribute{
 				Computed:      true,
 				Description:   "The AWS Region in which the network exists.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"cidr": schema.StringAttribute{
 				Description:   "The CIDR range of the Network.",
@@ -352,12 +352,12 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Computed:      true,
 				Description:   "The egress IP addresses of the Network.",
 				ElementType:   types.StringType,
-				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.List{listplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"id": schema.StringAttribute{
 				Computed:      true,
 				Description:   "The unique identifier of the Network.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
 				Description: "The name of the network.",
