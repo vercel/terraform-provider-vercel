@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -145,6 +146,8 @@ poll:
 		return
 	}
 
+	result.Timeouts = plan.Timeouts
+
 	tflog.Info(ctx, "Created Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
 		"aws_region":     result.AWSRegion.ValueString(),
@@ -239,6 +242,15 @@ func (r *networkResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
+	var timeouts timeouts.Value
+
+	resp.Diagnostics.Append(resp.State.GetAttribute(ctx, path.Root("timeouts"), &timeouts)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	result.Timeouts = timeouts
+
 	tflog.Info(ctx, "Read Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
 		"aws_region":     result.AWSRegion.ValueString(),
@@ -293,6 +305,8 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	result.Timeouts = state.Timeouts
 
 	tflog.Info(ctx, "Read Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
@@ -409,6 +423,8 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	result.Timeouts = plan.Timeouts
 
 	tflog.Info(ctx, "Updated Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),

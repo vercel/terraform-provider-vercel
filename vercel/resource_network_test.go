@@ -78,10 +78,11 @@ func TestAcc_NetworkResource(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "vercel_network.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateIdFunc: getNetworkImportID("vercel_network.test"),
+				ResourceName:            "vercel_network.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"timeouts"},
+				ImportStateIdFunc:       getNetworkImportID("vercel_network.test"),
 			},
 			{
 				Config: cfg(testAccResourceNetworkUpdated(name)),
