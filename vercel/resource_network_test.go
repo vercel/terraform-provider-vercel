@@ -108,7 +108,7 @@ resource "vercel_network" "test" {
 func testAccResourceNetworkUpdated(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_network" "test" {
-    name   = "%[1]s-updated"
+    name   = "%[1]s-name-updated"
     cidr   = "10.0.0.0/16"
     region = "iad1"
 }
@@ -118,7 +118,7 @@ resource "vercel_network" "test" {
 func testAccResourceNetworkChangedCIDR(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_network" "test" {
-    name   = "%[1]s-updated"
+    name   = "%[1]s-cidr-updated"
     cidr   = "10.1.0.0/16"
     region = "iad1"
 }
