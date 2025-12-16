@@ -58,23 +58,27 @@ func testCheckNetworkDeleted(testClient *client.Client, n, teamID string) resour
 
 func TestAcc_NetworkResource(t *testing.T) {
 	name := acctest.RandString(16)
+	var initialID, afterUpdateID, afterCIDRChangeID string
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckNetworkDeleted(testClient(t), "vercel_network.test", testTeam(t)),
 		Steps: []resource.TestStep{
+			// Create the network and assert the resulting attributes
 			{
 				Config: cfg(testAccResourceNetwork(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckNetworkExists(testClient(t), testTeam(t), "vercel_network.test"),
-					resource.TestCheckResourceAttr("vercel_network.test", "name", name),
 					resource.TestCheckResourceAttr("vercel_network.test", "cidr", "10.0.0.0/16"),
+					resource.TestCheckResourceAttr("vercel_network.test", "name", name),
 					resource.TestCheckResourceAttr("vercel_network.test", "region", "iad1"),
-					resource.TestCheckResourceAttrSet("vercel_network.test", "id"),
-					resource.TestCheckResourceAttrSet("vercel_network.test", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_network.test", "aws_account_id"),
 					resource.TestCheckResourceAttrSet("vercel_network.test", "aws_region"),
+					resource.TestCheckResourceAttrSet("vercel_network.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_network.test", "status"),
+					resource.TestCheckResourceAttrSet("vercel_network.test", "team_id"),
 					resource.TestCheckResourceAttrSet("vercel_network.test", "vpc_id"),
+					testSaveNetworkID("vercel_network.test", &initialID),
 				),
 			},
 			{
@@ -84,26 +88,43 @@ func TestAcc_NetworkResource(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"timeouts"},
 				ImportStateIdFunc:       getNetworkImportID("vercel_network.test"),
 			},
+			// Update the `name` attribute and assert the modification was done in-place
 			{
 				Config: cfg(testAccResourceNetworkUpdated(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckNetworkExists(testClient(t), testTeam(t), "vercel_network.test"),
-					resource.TestCheckResourceAttr("vercel_network.test", "name", fmt.Sprintf("%s-updated", name)),
 					resource.TestCheckResourceAttr("vercel_network.test", "cidr", "10.0.0.0/16"),
+					resource.TestCheckResourceAttr("vercel_network.test", "name", fmt.Sprintf("%s-updated", name)),
 					resource.TestCheckResourceAttr("vercel_network.test", "region", "iad1"),
 					resource.TestCheckResourceAttrSet("vercel_network.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_network.test", "team_id"),
+					testSaveNetworkID("vercel_network.test", &afterUpdateID),
+					testCheckNetworkIDUnchanged(&initialID, &afterUpdateID),
+				),
+			},
+			// Update the `cidr` attribute and assert the modification caused a replacement
+			{
+				Config: cfg(testAccResourceNetworkChangedCIDR(name)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckNetworkExists(testClient(t), testTeam(t), "vercel_network.test"),
+					resource.TestCheckResourceAttr("vercel_network.test", "cidr", "10.1.0.0/16"),
+					resource.TestCheckResourceAttr("vercel_network.test", "name", fmt.Sprintf("%s-updated", name)),
+					resource.TestCheckResourceAttr("vercel_network.test", "region", "iad1"),
+					resource.TestCheckResourceAttrSet("vercel_network.test", "id"),
+					resource.TestCheckResourceAttrSet("vercel_network.test", "team_id"),
+					testSaveNetworkID("vercel_network.test", &afterCIDRChangeID),
+					testCheckNetworkIDChanged(&afterUpdateID, &afterCIDRChangeID),
 				),
 			},
 		},
 	})
 }
 
-func getNetworkImportID(n string) resource.ImportStateIdFunc {
+func getNetworkImportID(resourceID string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
-		rs, ok := s.RootModule().Resources[n]
+		rs, ok := s.RootModule().Resources[resourceID]
 		if !ok {
-			return "", fmt.Errorf("not found: %s", n)
+			return "", fmt.Errorf("not found: %s", resourceID)
 		}
 
 		if rs.Primary.ID == "" {
@@ -137,4 +158,58 @@ resource "vercel_network" "test" {
     region = "iad1"
 }
 `, name)
+}
+
+func testAccResourceNetworkChangedCIDR(name string) string {
+	return fmt.Sprintf(`
+resource "vercel_network" "test" {
+    name   = "%[1]s-updated"
+    cidr   = "10.1.0.0/16"
+    region = "iad1"
+}
+`, name)
+}
+
+func testCheckNetworkIDUnchanged(previous *string, next *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if *previous == "" {
+			return fmt.Errorf("old ID is empty")
+		}
+		if *next == "" {
+			return fmt.Errorf("new ID is empty")
+		}
+		if *previous != *next {
+			return fmt.Errorf("expected ID to remain unchanged during in-place update, but it changed from %s to %s", *previous, *next)
+		}
+		return nil
+	}
+}
+
+func testCheckNetworkIDChanged(previous *string, next *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if *previous == "" {
+			return fmt.Errorf("old ID is empty")
+		}
+		if *next == "" {
+			return fmt.Errorf("new ID is empty")
+		}
+		if *previous == *next {
+			return fmt.Errorf("expected ID to change during replacement, but it remained %s", *previous)
+		}
+		return nil
+	}
+}
+
+func testSaveNetworkID(resourceID string, networkID *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceID]
+		if !ok {
+			return fmt.Errorf("not found: %s", resourceID)
+		}
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("no ID is set")
+		}
+		*networkID = rs.Primary.ID
+		return nil
+	}
 }
