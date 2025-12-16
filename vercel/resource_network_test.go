@@ -11,51 +11,6 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v3/client"
 )
 
-func testCheckNetworkExists(testClient *client.Client, teamID, n string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("not found: %s", n)
-		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("no ID is set")
-		}
-
-		_, err := testClient.ReadNetwork(context.TODO(), client.ReadNetworkRequest{
-			NetworkID: rs.Primary.ID,
-			TeamID:    teamID,
-		})
-		return err
-	}
-}
-
-func testCheckNetworkDeleted(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("not found: %s", n)
-		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("no ID is set")
-		}
-
-		_, err := testClient.ReadNetwork(context.TODO(), client.ReadNetworkRequest{
-			NetworkID: rs.Primary.ID,
-			TeamID:    teamID,
-		})
-		if err == nil {
-			return fmt.Errorf("expected not_found error, but got no error")
-		}
-		if !client.NotFound(err) {
-			return fmt.Errorf("Unexpected error checking for deleted network: %s", err)
-		}
-
-		return nil
-	}
-}
-
 func TestAcc_NetworkResource(t *testing.T) {
 	name := acctest.RandString(16)
 	var initialID, afterUpdateID, afterCIDRChangeID string
@@ -170,18 +125,48 @@ resource "vercel_network" "test" {
 `, name)
 }
 
-func testCheckNetworkIDUnchanged(previous *string, next *string) resource.TestCheckFunc {
+func testCheckNetworkDeleted(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		if *previous == "" {
-			return fmt.Errorf("old ID is empty")
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("not found: %s", n)
 		}
-		if *next == "" {
-			return fmt.Errorf("new ID is empty")
+
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("no ID is set")
 		}
-		if *previous != *next {
-			return fmt.Errorf("expected ID to remain unchanged during in-place update, but it changed from %s to %s", *previous, *next)
+
+		_, err := testClient.ReadNetwork(context.TODO(), client.ReadNetworkRequest{
+			NetworkID: rs.Primary.ID,
+			TeamID:    teamID,
+		})
+		if err == nil {
+			return fmt.Errorf("expected not_found error, but got no error")
 		}
+		if !client.NotFound(err) {
+			return fmt.Errorf("Unexpected error checking for deleted network: %s", err)
+		}
+
 		return nil
+	}
+}
+
+func testCheckNetworkExists(testClient *client.Client, teamID, n string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("not found: %s", n)
+		}
+
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("no ID is set")
+		}
+
+		_, err := testClient.ReadNetwork(context.TODO(), client.ReadNetworkRequest{
+			NetworkID: rs.Primary.ID,
+			TeamID:    teamID,
+		})
+		return err
 	}
 }
 
@@ -195,6 +180,21 @@ func testCheckNetworkIDChanged(previous *string, next *string) resource.TestChec
 		}
 		if *previous == *next {
 			return fmt.Errorf("expected ID to change during replacement, but it remained %s", *previous)
+		}
+		return nil
+	}
+}
+
+func testCheckNetworkIDUnchanged(previous *string, next *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if *previous == "" {
+			return fmt.Errorf("old ID is empty")
+		}
+		if *next == "" {
+			return fmt.Errorf("new ID is empty")
+		}
+		if *previous != *next {
+			return fmt.Errorf("expected ID to remain unchanged during in-place update, but it changed from %s to %s", *previous, *next)
 		}
 		return nil
 	}
