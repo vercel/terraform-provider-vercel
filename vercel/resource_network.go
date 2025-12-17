@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -32,6 +33,11 @@ type networkResource struct {
 	client *client.Client
 }
 
+type NetworkResource struct {
+	NetworkDataSource
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
+}
+
 func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -51,7 +57,7 @@ func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureR
 }
 
 func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan NetworkState
+	var plan NetworkResource
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -59,7 +65,6 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	timeout, diags := plan.Timeouts.Create(ctx, 15*time.Minute)
-
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -139,14 +144,11 @@ poll:
 		return
 	}
 
-	result, diags := toNetworkState(ctx, out)
-
+	result, diags := toNetworkResource(ctx, out, plan.Timeouts)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	result.Timeouts = plan.Timeouts
 
 	tflog.Info(ctx, "Created Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
@@ -163,7 +165,7 @@ poll:
 }
 
 func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state NetworkState
+	var state NetworkResource
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -235,21 +237,17 @@ func (r *networkResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	result, diags := toNetworkState(ctx, out)
-
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	var timeouts timeouts.Value
-
 	resp.Diagnostics.Append(resp.State.GetAttribute(ctx, path.Root("timeouts"), &timeouts)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result.Timeouts = timeouts
+	result, diags := toNetworkResource(ctx, out, timeouts)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	tflog.Info(ctx, "Read Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
@@ -270,7 +268,7 @@ func (r *networkResource) Metadata(ctx context.Context, req resource.MetadataReq
 }
 
 func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state NetworkState
+	var state NetworkResource
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -299,14 +297,12 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	result, diags := toNetworkState(ctx, out)
+	result, diags := toNetworkResource(ctx, out, state.Timeouts)
 
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	result.Timeouts = state.Timeouts
 
 	tflog.Info(ctx, "Read Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
@@ -392,7 +388,7 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 }
 
 func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan NetworkState
+	var plan NetworkResource
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -422,14 +418,12 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	result, diags := toNetworkState(ctx, out)
+	result, diags := toNetworkResource(ctx, out, plan.Timeouts)
 
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	result.Timeouts = plan.Timeouts
 
 	tflog.Info(ctx, "Updated Network", map[string]any{
 		"aws_account_id": result.AWSAccountID.ValueString(),
@@ -443,4 +437,12 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
+}
+
+func toNetworkResource(ctx context.Context, network client.Network, timeouts timeouts.Value) (NetworkResource, diag.Diagnostics) {
+	dataSource, diags := ToNetworkDataSource(ctx, network)
+	return NetworkResource{
+		NetworkDataSource: dataSource,
+		Timeouts:          timeouts,
+	}, diags
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -27,19 +26,18 @@ type networkDataSource struct {
 	client *client.Client
 }
 
-type NetworkState struct {
-	AWSAccountID           types.String   `tfsdk:"aws_account_id"`
-	AWSAvailabilityZoneIDs types.List     `tfsdk:"aws_availability_zone_ids"`
-	AWSRegion              types.String   `tfsdk:"aws_region"`
-	CIDR                   types.String   `tfsdk:"cidr"`
-	EgressIPAddresses      types.List     `tfsdk:"egress_ip_addresses"`
-	ID                     types.String   `tfsdk:"id"`
-	Name                   types.String   `tfsdk:"name"`
-	Region                 types.String   `tfsdk:"region"`
-	Status                 types.String   `tfsdk:"status"`
-	VPCID                  types.String   `tfsdk:"vpc_id"`
-	TeamID                 types.String   `tfsdk:"team_id"`
-	Timeouts               timeouts.Value `tfsdk:"timeouts"`
+type NetworkDataSource struct {
+	AWSAccountID           types.String `tfsdk:"aws_account_id"`
+	AWSAvailabilityZoneIDs types.List   `tfsdk:"aws_availability_zone_ids"`
+	AWSRegion              types.String `tfsdk:"aws_region"`
+	CIDR                   types.String `tfsdk:"cidr"`
+	EgressIPAddresses      types.List   `tfsdk:"egress_ip_addresses"`
+	ID                     types.String `tfsdk:"id"`
+	Name                   types.String `tfsdk:"name"`
+	Region                 types.String `tfsdk:"region"`
+	Status                 types.String `tfsdk:"status"`
+	VPCID                  types.String `tfsdk:"vpc_id"`
+	TeamID                 types.String `tfsdk:"team_id"`
 }
 
 func (r *networkDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -65,7 +63,7 @@ func (r *networkDataSource) Metadata(_ context.Context, req datasource.MetadataR
 }
 
 func (r *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state NetworkState
+	var state NetworkDataSource
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -94,7 +92,7 @@ func (r *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	result, diags := toNetworkState(ctx, out)
+	result, diags := ToNetworkDataSource(ctx, out)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -168,9 +166,10 @@ func (r *networkDataSource) Schema(_ context.Context, req datasource.SchemaReque
 	}
 }
 
-func toNetworkState(ctx context.Context, network client.Network) (NetworkState, diag.Diagnostics) {
+func ToNetworkDataSource(ctx context.Context, network client.Network) (NetworkDataSource, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	state := NetworkState{
+
+	state := NetworkDataSource{
 		AWSAccountID:           types.StringValue(network.AWSAccountID),
 		AWSAvailabilityZoneIDs: types.ListNull(types.StringType),
 		AWSRegion:              types.StringValue(network.AWSRegion),
