@@ -329,14 +329,14 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"aws_account_id": schema.StringAttribute{
 				Computed:      true,
 				Description:   "The ID of the AWS Account in which the network exists.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"aws_availability_zone_ids": schema.ListAttribute{
 				Computed:      true,
 				Description:   "The IDs of the AWS Availability Zones in which the network exists, if specified during creation.",
 				ElementType:   types.StringType,
 				Optional:      true,
-				PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplace()},
+				PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplace(), listplanmodifier.UseStateForUnknown()},
 			},
 			"aws_region": schema.StringAttribute{
 				Computed:      true,
@@ -371,13 +371,13 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"status": schema.StringAttribute{
 				Computed:      true,
 				Description:   "The status of the Network.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"team_id": schema.StringAttribute{
 				Computed:      true,
 				Description:   "The unique identifier of the Team that owns the Network. Required when configuring a team resource if a default team has not been set in the provider.",
 				Optional:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{
 				Create: true,
@@ -385,7 +385,7 @@ func (r *networkResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"vpc_id": schema.StringAttribute{
 				Computed:      true,
 				Description:   "The ID of the AWS VPC which hosts the network.",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 		},
 	}
