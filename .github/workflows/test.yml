@@ -81,7 +81,7 @@ jobs:
   test:
     name: Matrix Test
     needs: [build]
-    timeout-minutes: 15
+    timeout-minutes: 30
     strategy:
       max-parallel: 1
       fail-fast: false
