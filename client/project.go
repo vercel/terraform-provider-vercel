@@ -323,7 +323,7 @@ type UpdateProjectRequest struct {
 	InstallCommand                       *string                         `json:"installCommand"`
 	Name                                 *string                         `json:"name,omitempty"`
 	OutputDirectory                      *string                         `json:"outputDirectory"`
-	PreviewDeploymentSuffix              *string                         `json:"previewDeploymentSuffix"`
+	PreviewDeploymentSuffix              *string                         `json:"previewDeploymentSuffix,omitempty"`
 	PublicSource                         *bool                           `json:"publicSource"`
 	RootDirectory                        *string                         `json:"rootDirectory"`
 	ServerlessFunctionRegion             string                          `json:"serverlessFunctionRegion,omitempty"`
