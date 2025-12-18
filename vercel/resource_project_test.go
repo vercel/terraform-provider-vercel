@@ -1222,6 +1222,25 @@ func TestAcc_ProjectPreviewDeploymentSuffix(t *testing.T) {
 				),
 			},
 			{
+				// Update another field (build_command) while preview_deployment_suffix is set
+				// This verifies that preview_deployment_suffix persists and is not cleared
+				Config: cfg(testAccProjectConfigWithPreviewDeploymentSuffixAndBuildCommand(projectSuffix, domain, "echo test")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployment_suffix", domain),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "echo test"),
+				),
+			},
+			{
+				// Update build_command again to verify preview_deployment_suffix still persists
+				Config: cfg(testAccProjectConfigWithPreviewDeploymentSuffixAndBuildCommand(projectSuffix, domain, "echo updated")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployment_suffix", domain),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "echo updated"),
+				),
+			},
+			{
 				// Remove preview_deployment_suffix (set to null)
 				Config: cfg(testAccProjectConfigWithoutPreviewDeploymentSuffix(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -1317,4 +1336,14 @@ resource "vercel_project" "test" {
   name = "test-acc-suffix-%s"
 }
 `, projectSuffix)
+}
+
+func testAccProjectConfigWithPreviewDeploymentSuffixAndBuildCommand(projectSuffix, suffix, buildCommand string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name                       = "test-acc-suffix-%s"
+  preview_deployment_suffix  = "%s"
+  build_command              = "%s"
+}
+`, projectSuffix, suffix, buildCommand)
 }
