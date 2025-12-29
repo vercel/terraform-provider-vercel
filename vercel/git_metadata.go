@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/vercel/terraform-provider-vercel/v3/client"
+	"github.com/vercel/terraform-provider-vercel/v4/client"
 )
 
 // findRepoRoot traverses upward from startDir until it finds either

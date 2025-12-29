@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/vercel/terraform-provider-vercel/v3/client"
-	"github.com/vercel/terraform-provider-vercel/v3/file"
+	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v4/file"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
