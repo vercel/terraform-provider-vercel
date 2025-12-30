@@ -45,6 +45,10 @@ resource "vercel_project_rolling_release" "example" {
 
 - `team_id` (String) The ID of the Vercel team.
 
+### Read-Only
+
+- `id` (String) The unique identifier for this resource.
+
 <a id="nestedatt--stages"></a>
 ### Nested Schema for `stages`
 

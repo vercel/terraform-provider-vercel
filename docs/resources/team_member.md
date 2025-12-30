@@ -42,6 +42,7 @@ resource "vercel_team_member" "example" {
 ### Read-Only
 
 - `confirmed` (Boolean) Whether the user has confirmed their invitation.
+- `id` (String) The unique identifier for this resource. Format: team_id/email.
 
 <a id="nestedatt--projects"></a>
 ### Nested Schema for `projects`

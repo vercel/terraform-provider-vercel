@@ -44,6 +44,10 @@ resource "vercel_project_crons" "example" {
 
 - `team_id` (String) The ID of the team the Project exists under. Required when configuring a team resource if a default team has not been set in the provider.
 
+### Read-Only
+
+- `id` (String) The unique identifier for this resource.
+
 ## Import
 
 Import is supported using the following syntax:

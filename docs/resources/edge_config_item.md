@@ -47,6 +47,10 @@ resource "vercel_edge_config_item" "example" {
 - `value` (String) The value you want to assign to the key when using a string.
 - `value_json` (Dynamic) Structured JSON value to assign to the key (object/array/number/bool/null).
 
+### Read-Only
+
+- `id` (String) The unique identifier for this resource. Format: edge_config_id/key.
+
 ## Import
 
 Import is supported using the following syntax:

@@ -49,6 +49,10 @@ resource "vercel_project_members" "example" {
 
 - `team_id` (String) The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.
 
+### Read-Only
+
+- `id` (String) The unique identifier for this resource.
+
 <a id="nestedatt--members"></a>
 ### Nested Schema for `members`
 
