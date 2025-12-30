@@ -62,6 +62,10 @@ are explicitly configured here. This is deliberately done to allow granular addi
 This, however, means config drift will not be detected for members that are added or removed outside of terraform.
 `,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The unique identifier for this resource.",
+			},
 			"team_id": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
@@ -141,6 +145,7 @@ This, however, means config drift will not be detected for members that are adde
 }
 
 type ProjectMembersModel struct {
+	ID        types.String `tfsdk:"id"`
 	TeamID    types.String `tfsdk:"team_id"`
 	ProjectID types.String `tfsdk:"project_id"`
 	Members   types.Set    `tfsdk:"members"`
@@ -239,6 +244,7 @@ func (r *projectMembersResource) Create(ctx context.Context, req resource.Create
 
 	plan.Members = types.SetValueMust(memberAttrType, memberItems)
 	plan.TeamID = types.StringValue(r.client.TeamID(plan.TeamID.ValueString()))
+	plan.ID = types.StringValue(plan.ProjectID.ValueString())
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 }
@@ -335,6 +341,7 @@ func (r *projectMembersResource) Read(ctx context.Context, req resource.ReadRequ
 
 	state.Members = types.SetValueMust(memberAttrType, memberItems)
 	state.TeamID = types.StringValue(r.client.TeamID(state.TeamID.ValueString()))
+	state.ID = types.StringValue(state.ProjectID.ValueString())
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }
@@ -492,6 +499,7 @@ func (r *projectMembersResource) Update(ctx context.Context, req resource.Update
 
 	state.Members = types.SetValueMust(memberAttrType, memberItems)
 	state.TeamID = types.StringValue(r.client.TeamID(state.TeamID.ValueString()))
+	state.ID = types.StringValue(state.ProjectID.ValueString())
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }

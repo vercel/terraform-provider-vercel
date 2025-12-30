@@ -80,6 +80,10 @@ An Edge Config is a global data store that enables experimentation with feature 
 An Edge Config Item is a value within an Edge Config.
 `,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: "The unique identifier for this resource. Format: edge_config_id/key.",
+				Computed:    true,
+			},
 			"edge_config_id": schema.StringAttribute{
 				Description:   "The ID of the Edge Config store.",
 				Required:      true,
@@ -121,6 +125,7 @@ An Edge Config Item is a value within an Edge Config.
 }
 
 type EdgeConfigItem struct {
+	ID           types.String  `tfsdk:"id"`
 	EdgeConfigID types.String  `tfsdk:"edge_config_id"`
 	TeamID       types.String  `tfsdk:"team_id"`
 	Key          types.String  `tfsdk:"key"`
@@ -345,6 +350,7 @@ func interfaceToAttrValue(ctx context.Context, v any) (attr.Value, error) {
 // parseRawToState sets either Value (for strings) or ValueJSON (for structured) from API output
 func parseRawToState(ctx context.Context, out client.EdgeConfigItem) (EdgeConfigItem, error) {
 	res := EdgeConfigItem{
+		ID:           types.StringValue(out.EdgeConfigID + "/" + out.Key),
 		EdgeConfigID: types.StringValue(out.EdgeConfigID),
 		TeamID:       types.StringValue(out.TeamID),
 		Key:          types.StringValue(out.Key),

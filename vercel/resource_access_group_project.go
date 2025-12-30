@@ -62,6 +62,10 @@ An Access Group Project resource defines the relationship between a ` + "`vercel
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/accounts/team-members-and-roles/access-groups).
 `,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The unique identifier for this resource. Format: access_group_id/project_id.",
+			},
 			"access_group_id": schema.StringAttribute{
 				Description:   "The ID of the Access Group.",
 				Required:      true,
@@ -90,6 +94,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 }
 
 type AccessGroupProject struct {
+	ID            types.String `tfsdk:"id"`
 	AccessGroupID types.String `tfsdk:"access_group_id"`
 	TeamID        types.String `tfsdk:"team_id"`
 	ProjectID     types.String `tfsdk:"project_id"`
@@ -125,6 +130,7 @@ func (r *accessGroupProjectResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	result := AccessGroupProject{
+		ID:            types.StringValue(out.AccessGroupID + "/" + out.ProjectID),
 		TeamID:        types.StringValue(out.TeamID),
 		AccessGroupID: types.StringValue(out.AccessGroupID),
 		ProjectID:     types.StringValue(out.ProjectID),
@@ -176,6 +182,7 @@ func (r *accessGroupProjectResource) Read(ctx context.Context, req resource.Read
 	}
 
 	result := AccessGroupProject{
+		ID:            types.StringValue(out.AccessGroupID + "/" + out.ProjectID),
 		TeamID:        types.StringValue(out.TeamID),
 		AccessGroupID: types.StringValue(out.AccessGroupID),
 		ProjectID:     types.StringValue(out.ProjectID),
@@ -224,6 +231,7 @@ func (r *accessGroupProjectResource) Update(ctx context.Context, req resource.Up
 	}
 
 	result := AccessGroupProject{
+		ID:            types.StringValue(out.AccessGroupID + "/" + out.ProjectID),
 		TeamID:        types.StringValue(out.TeamID),
 		AccessGroupID: types.StringValue(out.AccessGroupID),
 		ProjectID:     types.StringValue(out.ProjectID),
@@ -318,6 +326,7 @@ func (r *accessGroupProjectResource) ImportState(ctx context.Context, req resour
 	}
 
 	result := AccessGroupProject{
+		ID:            types.StringValue(out.AccessGroupID + "/" + out.ProjectID),
 		TeamID:        types.StringValue(out.TeamID),
 		AccessGroupID: types.StringValue(out.AccessGroupID),
 		ProjectID:     types.StringValue(out.ProjectID),
