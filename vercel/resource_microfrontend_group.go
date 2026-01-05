@@ -105,6 +105,7 @@ A Microfrontend Group is a definition of a microfrontend belonging to a Vercel T
 }
 
 type MicrofrontendGroupDefaultApp struct {
+	ID           types.String `tfsdk:"id"`
 	ProjectID    types.String `tfsdk:"project_id"`
 	DefaultRoute types.String `tfsdk:"default_route"`
 }
@@ -119,6 +120,7 @@ type MicrofrontendGroup struct {
 
 var microfrontendDefaultAppAttrType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
+		"id":            types.StringType,
 		"project_id":    types.StringType,
 		"default_route": types.StringType,
 	},
@@ -131,6 +133,7 @@ func convertResponseToMicrofrontendGroup(group client.MicrofrontendGroup) Microf
 		Slug:   types.StringValue(group.Slug),
 		TeamID: types.StringValue(group.TeamID),
 		DefaultApp: types.ObjectValueMust(microfrontendDefaultAppAttrType.AttrTypes, map[string]attr.Value{
+			"id":            types.StringValue(group.TeamID + "/" + group.ID),
 			"project_id":    types.StringValue(group.DefaultApp.ProjectID),
 			"default_route": types.StringValue(group.DefaultApp.DefaultRoute),
 		}),
@@ -174,7 +177,7 @@ func (r *microfrontendGroupResource) Create(ctx context.Context, req resource.Cr
 	default_app, err := r.client.AddOrUpdateMicrofrontendGroupMembership(ctx, client.MicrofrontendGroupMembership{
 		ProjectID:            da.ProjectID.ValueString(),
 		MicrofrontendGroupID: out.ID,
-		TeamID:               plan.TeamID.ValueString(),
+		TeamID:               out.TeamID,
 		DefaultRoute:         da.DefaultRoute.ValueString(),
 		IsDefaultApp:         true,
 	})

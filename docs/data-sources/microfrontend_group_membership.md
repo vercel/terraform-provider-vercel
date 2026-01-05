@@ -37,4 +37,5 @@ data "vercel_microfrontend_group_membership" "example" {
 ### Read-Only
 
 - `default_route` (String) The default route for the project. Used for the screenshot of deployments.
+- `id` (String) The unique identifier for this resource. Format: team_id/microfrontend_group_id.
 - `route_observability_to_this_project` (Boolean) Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.

@@ -44,4 +44,5 @@ data "vercel_microfrontend_group" "example" {
 Read-Only:
 
 - `default_route` (String) The default route for the project. Used for the screenshot of deployments.
+- `id` (String) The unique identifier for this resource. Format: team_id/microfrontend_group_id.
 - `project_id` (String) The ID of the project.
