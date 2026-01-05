@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/vercel/terraform-provider-vercel/v3/client"
+	"github.com/vercel/terraform-provider-vercel/v4/client"
 )
 
 func main() {

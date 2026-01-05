@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/vercel/terraform-provider-vercel/v3/vercel"
+	"github.com/vercel/terraform-provider-vercel/v4/vercel"
 )
 
 func main() {

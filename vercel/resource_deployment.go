@@ -23,8 +23,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/vercel/terraform-provider-vercel/v3/client"
-	"github.com/vercel/terraform-provider-vercel/v3/file"
+	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v4/file"
 )
 
 var (
