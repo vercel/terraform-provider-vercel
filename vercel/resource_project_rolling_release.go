@@ -168,6 +168,10 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Resource for a Vercel project rolling release configuration.",
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The unique identifier for this resource.",
+			},
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project.",
 				Required:            true,
@@ -220,6 +224,7 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 
 // ProjectRollingRelease reflects the state terraform stores internally for a project rolling release.
 type RollingReleaseInfo struct {
+	ID              types.String `tfsdk:"id"`
 	AdvancementType types.String `tfsdk:"advancement_type"`
 	Stages          types.List   `tfsdk:"stages"`
 	ProjectID       types.String `tfsdk:"project_id"`
@@ -317,6 +322,7 @@ func ConvertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 	var diags diag.Diagnostics
 
 	result := RollingReleaseInfo{
+		ID:        types.StringValue(response.ProjectID),
 		ProjectID: types.StringValue(response.ProjectID),
 		TeamID:    types.StringValue(response.TeamID),
 	}

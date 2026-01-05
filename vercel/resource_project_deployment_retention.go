@@ -65,6 +65,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 ~> Note that deleting a Deployment Retention will not update the settings in the project, it will only prevent it from being managed via Terraform.
 `,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The unique identifier for this resource. Format: team_id/project_id.",
+			},
 			"expiration_preview": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -118,6 +122,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 // ProjectDeploymentRetention reflects the state terraform stores internally for a project deployment retention.
 type ProjectDeploymentRetention struct {
+	ID                   types.String `tfsdk:"id"`
 	ExpirationPreview    types.String `tfsdk:"expiration_preview"`
 	ExpirationProduction types.String `tfsdk:"expiration_production"`
 	ExpirationCanceled   types.String `tfsdk:"expiration_canceled"`
@@ -144,6 +149,7 @@ func (e *ProjectDeploymentRetention) toUpdateDeploymentRetentionRequest() client
 // values from plan are used.
 func convertResponseToProjectDeploymentRetention(response client.DeploymentExpirationResponse, projectID types.String) ProjectDeploymentRetention {
 	return ProjectDeploymentRetention{
+		ID:                   types.StringValue(response.TeamID + "/" + projectID.ValueString()),
 		ExpirationPreview:    types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationPreview]),
 		ExpirationProduction: types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationProduction]),
 		ExpirationCanceled:   types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationCanceled]),

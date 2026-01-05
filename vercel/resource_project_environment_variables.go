@@ -81,6 +81,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 `,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The unique identifier for this resource.",
+			},
 			"project_id": schema.StringAttribute{
 				Required:      true,
 				Description:   "The ID of the Vercel project.",
@@ -164,6 +168,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 
 // ProjectEnvironmentVariables reflects the state terraform stores internally for project environment variables.
 type ProjectEnvironmentVariables struct {
+	ID        types.String `tfsdk:"id"`
 	TeamID    types.String `tfsdk:"team_id"`
 	ProjectID types.String `tfsdk:"project_id"`
 	Variables types.Set    `tfsdk:"variables"`
@@ -373,6 +378,7 @@ func convertResponseToProjectEnvironmentVariables(
 	}
 
 	return ProjectEnvironmentVariables{
+		ID:        plan.ProjectID,
 		TeamID:    toTeamID(plan.TeamID.ValueString()),
 		ProjectID: plan.ProjectID,
 		Variables: types.SetValueMust(envVariableElemType, env),

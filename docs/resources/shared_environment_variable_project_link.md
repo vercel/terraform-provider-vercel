@@ -42,3 +42,7 @@ resource "vercel_shared_environment_variable_project_link" "example" {
 ### Optional
 
 - `team_id` (String) The ID of the Vercel team. Required when configuring a team resource if a default team has not been set in the provider.
+
+### Read-Only
+
+- `id` (String) The unique identifier for this resource. Format: team_id/shared_environment_variable_id.

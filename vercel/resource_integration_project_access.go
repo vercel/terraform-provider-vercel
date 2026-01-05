@@ -54,6 +54,10 @@ func (r *integrationProjectAccessResource) Schema(_ context.Context, req resourc
 		Description: `Provides Project access to an existing Integration. This requires the integration already exists and is already configured for Specific Project access.
 `,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The unique identifier for this resource. Format: team_id/integration_id.",
+			},
 			"integration_id": schema.StringAttribute{
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
@@ -75,6 +79,7 @@ func (r *integrationProjectAccessResource) Schema(_ context.Context, req resourc
 }
 
 type IntegrationProjectAccess struct {
+	ID            types.String `tfsdk:"id"`
 	TeamID        types.String `tfsdk:"team_id"`
 	ProjectID     types.String `tfsdk:"project_id"`
 	IntegrationID types.String `tfsdk:"integration_id"`
@@ -98,6 +103,7 @@ func (r *integrationProjectAccessResource) Create(ctx context.Context, req resou
 	}
 
 	result := IntegrationProjectAccess{
+		ID:            types.StringValue(ipa.TeamID + "/" + plan.IntegrationID.ValueString()),
 		TeamID:        types.StringValue(ipa.TeamID),
 		IntegrationID: plan.IntegrationID,
 		ProjectID:     plan.ProjectID,
@@ -134,6 +140,7 @@ func (r *integrationProjectAccessResource) Read(ctx context.Context, req resourc
 	}
 
 	result := IntegrationProjectAccess{
+		ID:            types.StringValue(ipa.TeamID + "/" + state.IntegrationID.ValueString()),
 		TeamID:        types.StringValue(ipa.TeamID),
 		IntegrationID: state.IntegrationID,
 		ProjectID:     state.ProjectID,
@@ -178,6 +185,7 @@ func (r *integrationProjectAccessResource) Delete(ctx context.Context, req resou
 	}
 
 	result := IntegrationProjectAccess{
+		ID:            types.StringValue(ipa.TeamID + "/" + plan.IntegrationID.ValueString()),
 		TeamID:        types.StringValue(ipa.TeamID),
 		IntegrationID: plan.IntegrationID,
 		ProjectID:     plan.ProjectID,

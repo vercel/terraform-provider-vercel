@@ -434,6 +434,10 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 			},
 		},
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: "The unique identifier for this resource. Format: team_id/project_id.",
+				Computed:    true,
+			},
 			"project_id": schema.StringAttribute{
 				Description:   "The ID of the project this configuration belongs to.",
 				Required:      true,
@@ -474,6 +478,7 @@ func (r *firewallConfigResource) Configure(ctx context.Context, req resource.Con
 }
 
 type FirewallConfig struct {
+	ID              types.String             `tfsdk:"id"`
 	ProjectID       types.String             `tfsdk:"project_id"`
 	TeamID          types.String             `tfsdk:"team_id"`
 	Enabled         types.Bool               `tfsdk:"enabled"`
@@ -872,6 +877,7 @@ func fromCoreRuleset(crsRule client.CoreRuleSet, ref *CRSRuleConfig) *CRSRuleCon
 func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfig, error) {
 	var err error
 	cfg := FirewallConfig{
+		ID:        types.StringValue(conf.TeamID + "/" + conf.ProjectID),
 		ProjectID: state.ProjectID,
 		// Take the teamID from the response/provider if it wasn't provided in resource
 		TeamID:  types.StringValue(conf.TeamID),

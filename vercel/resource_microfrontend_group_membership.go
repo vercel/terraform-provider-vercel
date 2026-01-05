@@ -54,6 +54,10 @@ func (r *microfrontendGroupMembershipResource) Configure(ctx context.Context, re
 func getMicrofrontendGroupMembershipSchema(isDefaultApp bool) map[string]schema.Attribute {
 	res := map[string]schema.Attribute{}
 
+	res["id"] = schema.StringAttribute{
+		Description: "The unique identifier for this resource. Format: team_id/microfrontend_group_id.",
+		Computed:    true,
+	}
 	res["project_id"] = schema.StringAttribute{
 		Description:   "The ID of the project.",
 		Required:      true,
@@ -103,6 +107,7 @@ A Microfrontend Group Membership is a definition of a Vercel Project being a par
 }
 
 type MicrofrontendGroupMembership struct {
+	ID                              types.String `tfsdk:"id"`
 	ProjectID                       types.String `tfsdk:"project_id"`
 	MicrofrontendGroupID            types.String `tfsdk:"microfrontend_group_id"`
 	TeamID                          types.String `tfsdk:"team_id"`
@@ -112,6 +117,7 @@ type MicrofrontendGroupMembership struct {
 
 func convertResponseToMicrofrontendGroupMembership(membership client.MicrofrontendGroupMembership) MicrofrontendGroupMembership {
 	return MicrofrontendGroupMembership{
+		ID:                              types.StringValue(membership.TeamID + "/" + membership.MicrofrontendGroupID),
 		ProjectID:                       types.StringValue(membership.ProjectID),
 		MicrofrontendGroupID:            types.StringValue(membership.MicrofrontendGroupID),
 		TeamID:                          types.StringValue(membership.TeamID),

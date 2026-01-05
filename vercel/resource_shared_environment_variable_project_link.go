@@ -56,6 +56,10 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Schema(_ context.Context,
 
 ~> This resource is intended to be used alongside a vercel_shared_environment_variable Data Source, not the Resource. The Resource also defines which projects to link to the shared environment variable, and using both vercel_shared_environment_variable and vercel_shared_environment_variable_project_link together results in undefined behavior.`,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The unique identifier for this resource. Format: team_id/shared_environment_variable_id.",
+			},
 			"shared_environment_variable_id": schema.StringAttribute{
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
@@ -77,6 +81,7 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Schema(_ context.Context,
 }
 
 type SharedEnvironmentVariableProjectLink struct {
+	ID                          types.String `tfsdk:"id"`
 	SharedEnvironmentVariableID types.String `tfsdk:"shared_environment_variable_id"`
 	ProjectID                   types.String `tfsdk:"project_id"`
 	TeamID                      types.String `tfsdk:"team_id"`
@@ -121,6 +126,7 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Create(ctx context.Contex
 	}
 
 	result := SharedEnvironmentVariableProjectLink{
+		ID:                          types.StringValue(response.TeamID + "/" + response.ID),
 		TeamID:                      types.StringValue(response.TeamID),
 		SharedEnvironmentVariableID: types.StringValue(response.ID),
 		ProjectID:                   plan.ProjectID,
@@ -169,6 +175,7 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Read(ctx context.Context,
 	}
 
 	result := SharedEnvironmentVariableProjectLink{
+		ID:                          types.StringValue(response.TeamID + "/" + response.ID),
 		TeamID:                      types.StringValue(response.TeamID),
 		SharedEnvironmentVariableID: types.StringValue(response.ID),
 		ProjectID:                   state.ProjectID,

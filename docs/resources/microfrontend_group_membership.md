@@ -51,6 +51,10 @@ resource "vercel_microfrontend_group_membership" "child_mfe_project_mfe_membersh
 - `route_observability_to_this_project` (Boolean) Whether the project is route observability for this project. If dalse, the project will be route observability for all projects to the default project.
 - `team_id` (String) The team ID to add the microfrontend group to. Required when configuring a team resource if a default team has not been set in the provider.
 
+### Read-Only
+
+- `id` (String) The unique identifier for this resource. Format: team_id/microfrontend_group_id.
+
 ## Import
 
 Import is supported using the following syntax:

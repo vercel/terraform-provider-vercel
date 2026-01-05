@@ -65,6 +65,10 @@ Optional:
 
 - `default_route` (String) The default route for the project. Used for the screenshot of deployments.
 
+Read-Only:
+
+- `id` (String) The unique identifier for this resource. Format: team_id/microfrontend_group_id.
+
 ## Import
 
 Import is supported using the following syntax:

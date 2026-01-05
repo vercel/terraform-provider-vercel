@@ -157,6 +157,10 @@ func (r *teamMemberResource) Schema(_ context.Context, req resource.SchemaReques
 				Description: "Whether the user has confirmed their invitation.",
 				Computed:    true,
 			},
+			"id": schema.StringAttribute{
+				Description: "The unique identifier for this resource. Format: team_id/email.",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -169,6 +173,7 @@ type TeamMember struct {
 	Projects     types.Set    `tfsdk:"projects"`
 	AccessGroups types.Set    `tfsdk:"access_groups"`
 	Confirmed    types.Bool   `tfsdk:"confirmed"`
+	ID           types.String `tfsdk:"id"`
 }
 
 func (t TeamMember) projects(ctx context.Context) ([]TeamMemberProject, diag.Diagnostics) {
@@ -337,6 +342,7 @@ func convertResponseToTeamMember(response client.TeamMember, plan TeamMember) Te
 		Projects:     projects,
 		AccessGroups: accessGroups,
 		Confirmed:    types.BoolValue(response.Confirmed),
+		ID:           types.StringValue(plan.TeamID.ValueString() + "/" + response.Email),
 	}
 
 	if !response.Confirmed {

@@ -23,3 +23,7 @@ Provides Project access to an existing Integration. This requires the integratio
 ### Optional
 
 - `team_id` (String) The ID of the Vercel team.Required when configuring a team resource if a default team has not been set in the provider.
+
+### Read-Only
+
+- `id` (String) The unique identifier for this resource. Format: team_id/integration_id.

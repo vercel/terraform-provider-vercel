@@ -243,6 +243,10 @@ resource "vercel_firewall_config" "ip-blocking" {
 - `rules` (Block, Optional) Custom rules to apply to the project (see [below for nested schema](#nestedblock--rules))
 - `team_id` (String) The ID of the team this project belongs to.
 
+### Read-Only
+
+- `id` (String) The unique identifier for this resource. Format: team_id/project_id.
+
 <a id="nestedblock--ip_rules"></a>
 ### Nested Schema for `ip_rules`
 

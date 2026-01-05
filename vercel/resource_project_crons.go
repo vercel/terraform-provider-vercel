@@ -52,6 +52,10 @@ func (r *projectCronsResource) Schema(_ context.Context, _ resource.SchemaReques
 	resp.Schema = schema.Schema{
 		Description: "\nProvides a Project Crons resource.\n\nThe resource toggles whether crons are enabled for a Vercel project.\n",
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The unique identifier for this resource.",
+			},
 			"project_id": schema.StringAttribute{
 				Description:   "The ID of the Project to toggle crons for.",
 				Required:      true,
@@ -73,6 +77,7 @@ func (r *projectCronsResource) Schema(_ context.Context, _ resource.SchemaReques
 
 // ProjectCrons mirrors the Terraform state for the resource.
 type ProjectCrons struct {
+	ID        types.String `tfsdk:"id"`
 	ProjectID types.String `tfsdk:"project_id"`
 	TeamID    types.String `tfsdk:"team_id"`
 	Enabled   types.Bool   `tfsdk:"enabled"`
@@ -81,6 +86,7 @@ type ProjectCrons struct {
 // mapResponseToProjectCrons converts the API response into the internal ProjectCrons model.
 func mapResponseToProjectCrons(out client.ProjectCrons) ProjectCrons {
 	return ProjectCrons{
+		ID:        types.StringValue(out.ProjectID),
 		ProjectID: types.StringValue(out.ProjectID),
 		TeamID:    toTeamID(out.TeamID),
 		Enabled:   types.BoolValue(out.Enabled),
