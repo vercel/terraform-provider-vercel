@@ -229,7 +229,6 @@ type SamlDirectory struct {
 	State types.String `tfsdk:"state"`
 }
 
-// only one of these is non-nil
 type SamlRoles struct {
 	Role          types.String `tfsdk:"role"`
 	AccessGroupID types.String `tfsdk:"access_group_id"`
@@ -310,9 +309,20 @@ func (r *Saml) toUpdateTeamRequest() *client.UpdateSamlConfig {
 	}
 	roles := map[string]client.UpdateSamlConfigRole{}
 	for k, v := range r.Roles {
+		var role *string
+		if !v.Role.IsNull() && !v.Role.IsUnknown() {
+			role = v.Role.ValueStringPointer()
+		}
+		var accessGroupID *string
+		if !v.AccessGroupID.IsNull() && !v.AccessGroupID.IsUnknown() {
+			accessGroupID = v.AccessGroupID.ValueStringPointer()
+		}
+		if role == nil && accessGroupID == nil {
+			continue
+		}
 		roles[k] = client.UpdateSamlConfigRole{
-			Role:          v.Role.ValueStringPointer(),
-			AccessGroupID: v.AccessGroupID.ValueStringPointer(),
+			Role:          role,
+			AccessGroupID: accessGroupID,
 		}
 	}
 	return &client.UpdateSamlConfig{
@@ -389,18 +399,13 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 	if response.Saml != nil {
 		roles := map[string]SamlRoles{}
 		for k, v := range response.Saml.Roles {
-			role := SamlRoles{}
-			if v.Role != nil {
-				role = SamlRoles{
-					Role: types.StringPointerValue(v.Role),
-				}
+			if v.Role == nil && v.AccessGroupID == nil {
+				continue
 			}
-			if v.AccessGroupID != nil {
-				role = SamlRoles{
-					AccessGroupID: types.StringPointerValue(v.AccessGroupID),
-				}
+			roles[k] = SamlRoles{
+				Role:          types.StringPointerValue(v.Role),
+				AccessGroupID: types.StringPointerValue(v.AccessGroupID),
 			}
-			roles[k] = role
 		}
 
 		var diags diag.Diagnostics
