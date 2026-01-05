@@ -40,4 +40,5 @@ data "vercel_access_group_project" "example" {
 
 ### Read-Only
 
+- `id` (String) The unique identifier for this resource. Format: access_group_id/project_id.
 - `role` (String) The Access Group Project Role.

@@ -55,6 +55,10 @@ Provides information about an existing Access Group Project Assignment.
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/accounts/team-members-and-roles/access-groups).
 `,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The unique identifier for this resource. Format: access_group_id/project_id.",
+			},
 			"team_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -104,6 +108,7 @@ func (d *accessGroupProjectDataSource) Read(ctx context.Context, req datasource.
 	}
 
 	result := AccessGroupProject{
+		ID:            types.StringValue(out.AccessGroupID + "/" + out.ProjectID),
 		TeamID:        types.StringValue(out.TeamID),
 		AccessGroupID: types.StringValue(out.AccessGroupID),
 		ProjectID:     types.StringValue(out.ProjectID),
