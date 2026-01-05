@@ -76,6 +76,10 @@ A Microfrontend Group is a definition of a microfrontend belonging to a Vercel T
 				Description: "The default app for the project. Used as the entry point for the microfrontend.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						Description: "The unique identifier for this resource. Format: team_id/microfrontend_group_id.",
+						Computed:    true,
+					},
 					"project_id": schema.StringAttribute{
 						Description: "The ID of the project.",
 						Computed:    true,

@@ -55,6 +55,10 @@ Provides information about an existing Microfrontend Group Membership.
 A Microfrontend Group Membership is a definition of a Vercel Project being a part of a Microfrontend Group.
 `,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: "The unique identifier for this resource. Format: team_id/microfrontend_group_id.",
+				Computed:    true,
+			},
 			"project_id": schema.StringAttribute{
 				Description: "The ID of the project.",
 				Required:    true,

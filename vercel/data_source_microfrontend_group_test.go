@@ -42,7 +42,7 @@ func TestAcc_MicrofrontendGroupDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_microfrontend_group.test_group", "name", "test-acc-microfrontend-group-"+name),
 					resource.TestCheckResourceAttrSet("data.vercel_microfrontend_group.test_group", "default_app.project_id"),
-					resource.TestCheckResourceAttr("data.vercel_microfrontend_group_membership.test_child", "%", "5"),
+					resource.TestCheckResourceAttr("data.vercel_microfrontend_group_membership.test_child", "%", "6"),
 				),
 			},
 		},
