@@ -48,8 +48,15 @@ func (v *samlRolesValidator) ValidateMap(ctx context.Context, req validator.MapR
 		role := obj.Attributes()["role"]
 		accessGroupID := obj.Attributes()["access_group_id"]
 
+		if role.IsUnknown() || accessGroupID.IsUnknown() {
+			continue
+		}
+
+		roleSet := !role.IsNull()
+		accessGroupIDSet := !accessGroupID.IsNull()
+
 		// Check if both are set
-		if !role.IsNull() && !role.IsUnknown() && !accessGroupID.IsNull() && !accessGroupID.IsUnknown() {
+		if roleSet && accessGroupIDSet {
 			resp.Diagnostics.AddAttributeError(
 				req.Path.AtMapKey(key),
 				"Invalid SAML Role Configuration: "+key,
@@ -59,7 +66,7 @@ func (v *samlRolesValidator) ValidateMap(ctx context.Context, req validator.MapR
 		}
 
 		// Check if neither is set
-		if (role.IsNull() || role.IsUnknown()) && (accessGroupID.IsNull() || accessGroupID.IsUnknown()) {
+		if !roleSet && !accessGroupIDSet {
 			resp.Diagnostics.AddAttributeError(
 				req.Path.AtMapKey(key),
 				"Invalid SAML Role Configuration: "+key,
