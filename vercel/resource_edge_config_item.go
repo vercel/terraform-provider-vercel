@@ -100,10 +100,7 @@ An Edge Config Item is a value within an Edge Config.
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured()},
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
-						// Alphanumeric, underscore, dash; 1-256 chars
-						// Matches Vercel API constraints for item keys
-						// ^[A-Za-z0-9_-]{1,256}$
-						regexpMustCompile("^[A-Za-z0-9_-]{1,256}$"),
+						edgeConfigItemKeyRegex,
 						"Key must be 1-256 chars: letters, numbers, '_' or '-'",
 					),
 				},
@@ -133,17 +130,9 @@ type EdgeConfigItem struct {
 	ValueJSON    types.Dynamic `tfsdk:"value_json"`
 }
 
-// helper: compile regex once
-var reCache = map[string]*regexp.Regexp{}
-
-func regexpMustCompile(expr string) *regexp.Regexp {
-	if re, ok := reCache[expr]; ok {
-		return re
-	}
-	re := regexp.MustCompile(expr)
-	reCache[expr] = re
-	return re
-}
+// edgeConfigItemKeyRegex validates Edge Config item keys.
+// Alphanumeric, underscore, dash; 1-256 chars per Vercel API constraints.
+var edgeConfigItemKeyRegex = regexp.MustCompile("^[A-Za-z0-9_-]{1,256}$")
 
 // buildJSONRaw constructs json.RawMessage from either a string or Dynamic value
 func buildJSONRaw(ctx context.Context, val types.String, dyn types.Dynamic) (json.RawMessage, error) {
