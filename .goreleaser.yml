@@ -10,7 +10,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - "-s -w -X github.com/vercel/terraform-provider-vercel/v3/client.version={{.Version}}"
+      - "-s -w -X github.com/vercel/terraform-provider-vercel/v4/client.version={{.Version}}"
     goos:
       - freebsd
       - windows
