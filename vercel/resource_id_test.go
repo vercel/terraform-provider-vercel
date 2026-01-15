@@ -59,5 +59,6 @@ func hasIDAttribute(s schema.Schema) bool {
 	}
 
 	stringAttr, ok := idAttr.(schema.StringAttribute)
-	return ok && (stringAttr.Computed || stringAttr.Required)
+	// Must be Computed (not Required) - we need a computed output identifier, not a required input
+	return ok && stringAttr.Computed
 }

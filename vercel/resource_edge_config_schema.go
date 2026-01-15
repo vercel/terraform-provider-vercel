@@ -60,7 +60,7 @@ An Edge Config Schema provides an existing Edge Config with a JSON schema. Use s
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description:   "The ID of the Edge Config that the schema should apply to.",
-				Required:      true,
+				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"definition": schema.StringAttribute{
