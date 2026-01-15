@@ -59,6 +59,7 @@ func hasIDAttribute(s schema.Schema) bool {
 	}
 
 	stringAttr, ok := idAttr.(schema.StringAttribute)
-	// Must be Computed (not Required) - we need a computed output identifier, not a required input
+	// Must be Computed (with optional input allowed) - we need a computed output identifier for Pulumi
+	// Some resources like team_config and edge_config_schema need Optional+Computed to accept user input
 	return ok && stringAttr.Computed
 }

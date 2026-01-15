@@ -46,6 +46,7 @@ resource "vercel_team_config" "example" {
 - `enable_production_feedback` (String) Enables the Vercel Toolbar on your production deployments: one of on, off or default.
 - `hide_ip_addresses` (Boolean) Indicates if ip addresses should be accessible in o11y tooling.
 - `hide_ip_addresses_in_log_drains` (Boolean) Indicates if ip addresses should be accessible in log drains.
+- `id` (String) The ID of the existing Vercel Team.
 - `name` (String) The name of the team.
 - `preview_deployment_suffix` (String) The hostname that is used as the preview deployment suffix.
 - `remote_caching` (Attributes) Configuration for Remote Caching. (see [below for nested schema](#nestedatt--remote_caching))
@@ -55,7 +56,6 @@ resource "vercel_team_config" "example" {
 
 ### Read-Only
 
-- `id` (String) The ID of the existing Vercel Team.
 - `invite_code` (String) A code that can be used to join this team. Only visible to Team owners.
 
 <a id="nestedatt--remote_caching"></a>
