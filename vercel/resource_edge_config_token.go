@@ -89,10 +89,12 @@ An Edge Config token is used to authenticate against an Edge Config's endpoint.
 			"token": schema.StringAttribute{
 				Description: "A read access token used for authenticating against the Edge Config's endpoint for high volume, low-latency requests.",
 				Computed:    true,
+				Sensitive:   true,
 			},
 			"connection_string": schema.StringAttribute{
 				Description: "A connection string is a URL that connects a project to an Edge Config. The variable can be called anything, but our Edge Config client SDK will search for process.env.EDGE_CONFIG by default.",
 				Computed:    true,
+				Sensitive:   true,
 			},
 		},
 	}

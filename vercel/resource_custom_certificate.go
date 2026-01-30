@@ -73,6 +73,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"private_key": schema.StringAttribute{
 				Description:   "The private key of the Certificate. Should be in PEM format.",
 				Required:      true,
+				Sensitive:     true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"certificate": schema.StringAttribute{

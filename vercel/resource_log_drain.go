@@ -111,6 +111,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				ElementType:   types.StringType,
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 				Optional:      true,
+				Sensitive:     true,
 				Validators: []validator.Map{
 					mapvalidator.SizeAtMost(5),
 				},

@@ -85,6 +85,7 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				Description: "Custom headers to include in requests to the log drain endpoint.",
 				ElementType: types.StringType,
 				Computed:    true,
+				Sensitive:   true,
 			},
 			"project_ids": schema.SetAttribute{
 				Description: "A list of project IDs that the log drain should be associated with. Logs from these projects will be sent log events to the specified endpoint. If omitted, logs will be sent for all projects.",
