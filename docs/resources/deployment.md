@@ -106,7 +106,7 @@ resource "vercel_deployment" "prebuilt_example" {
 
 - `custom_environment_id` (String) The ID of the Custom Environment to deploy to. If not specified, the deployment will use the standard environments (production/preview).
 - `delete_on_destroy` (Boolean) Set to true to hard delete the Vercel deployment when destroying the Terraform resource. If unspecified, deployments are retained indefinitely. Note that deleted deployments are not recoverable.
-- `environment` (Map of String) A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.
+- `environment` (Map of String, Sensitive) A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.
 - `files` (Map of String) A map of files to be uploaded for the deployment. This should be provided by a `vercel_project_directory` or `vercel_file` data source. Required if `git_source` is not set.
 - `meta` (Map of String) Arbitrary key/value metadata to attach to the deployment (equivalent to the Vercel CLI --meta flags).
 - `path_prefix` (String) If specified then the `path_prefix` will be stripped from the start of file paths as they are uploaded to Vercel. If this is omitted, then any leading `../`s will be stripped.

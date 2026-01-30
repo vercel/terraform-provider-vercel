@@ -90,6 +90,7 @@ terraform to your Deployment.
 			"environment": schema.MapAttribute{
 				Description:   "A map of environment variable names to values. These are specific to a Deployment, and can also be configured on the `vercel_project` resource.",
 				Optional:      true,
+				Sensitive:     true,
 				PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 				ElementType:   types.StringType,
 			},

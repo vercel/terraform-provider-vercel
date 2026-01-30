@@ -33,7 +33,7 @@ resource "vercel_custom_certificate" "example" {
 
 - `certificate` (String) The certificate itself. Should be in PEM format.
 - `certificate_authority_certificate` (String) The Certificate Authority root certificate such as one of Let's Encrypt's ISRG root certificates. This will be provided by your certificate issuer and is different to the core certificate. This may be included in their download process or available for download on their website. Should be in PEM format.
-- `private_key` (String) The private key of the Certificate. Should be in PEM format.
+- `private_key` (String, Sensitive) The private key of the Certificate. Should be in PEM format.
 
 ### Optional
 

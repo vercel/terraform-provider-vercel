@@ -61,7 +61,7 @@ resource "vercel_project" "example" {
 
 ### Optional
 
-- `headers` (Map of String) Custom headers to include in requests to the log drain endpoint.
+- `headers` (Map of String, Sensitive) Custom headers to include in requests to the log drain endpoint.
 - `project_ids` (Set of String) A list of project IDs that the log drain should be associated with. Logs from these projects will be sent log events to the specified endpoint. If omitted, logs will be sent for all projects.
 - `sampling_rate` (Number) A ratio of logs matching the sampling rate will be sent to your log drain. Should be a value between 0 and 1. If unspecified, all logs are sent.
 - `secret` (String, Sensitive) A custom secret to be used for signing log events. You can use this secret to verify that log events are coming from Vercel and are not tampered with. See https://vercel.com/docs/observability/log-drains/log-drains-reference#secure-log-drains for full info.

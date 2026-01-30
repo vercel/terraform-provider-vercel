@@ -26,4 +26,4 @@ data "vercel_endpoint_verification" "example" {}
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `verification_code` (String) A verification code that should be set in the `x-vercel-verify` response header for your API. This is used to verify that the endpoint belongs to you.
+- `verification_code` (String, Sensitive) A verification code that should be set in the `x-vercel-verify` response header for your API. This is used to verify that the endpoint belongs to you.

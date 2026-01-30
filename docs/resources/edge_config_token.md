@@ -54,9 +54,9 @@ resource "vercel_project_environment_variable" "example" {
 
 ### Read-Only
 
-- `connection_string` (String) A connection string is a URL that connects a project to an Edge Config. The variable can be called anything, but our Edge Config client SDK will search for process.env.EDGE_CONFIG by default.
+- `connection_string` (String, Sensitive) A connection string is a URL that connects a project to an Edge Config. The variable can be called anything, but our Edge Config client SDK will search for process.env.EDGE_CONFIG by default.
 - `id` (String) The ID of this resource.
-- `token` (String) A read access token used for authenticating against the Edge Config's endpoint for high volume, low-latency requests.
+- `token` (String, Sensitive) A read access token used for authenticating against the Edge Config's endpoint for high volume, low-latency requests.
 
 ## Import
 
