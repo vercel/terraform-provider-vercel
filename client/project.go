@@ -240,7 +240,8 @@ type GitProviderOptionsResponse struct {
 }
 
 type Security struct {
-	AttackModeEnabled bool `json:"attackModeEnabled"`
+	AttackModeEnabled     bool   `json:"attackModeEnabled"`
+	AttackModeActiveUntil *int64 `json:"attackModeActiveUntil"`
 }
 
 type ResourceConfigResponse struct {

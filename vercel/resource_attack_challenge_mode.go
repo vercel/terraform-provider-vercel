@@ -3,11 +3,14 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v4/client"
@@ -55,7 +58,9 @@ func (r *attackChallengeModeResource) Schema(_ context.Context, req resource.Sch
 		Description: `
 Provides an Attack Challenge Mode resource.
 
-Attack Challenge Mode prevent malicious traffic by showing a verification challenge for every visitor.`,
+Attack Challenge Mode prevent malicious traffic by showing a verification challenge for every visitor.
+
+Note: When attack_mode_active_until is reached, Vercel automatically disables Attack Challenge Mode. This will cause enabled to drift to false.`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description:   "The resource identifier.",
@@ -77,23 +82,32 @@ Attack Challenge Mode prevent malicious traffic by showing a verification challe
 				Required:    true,
 				Description: "Whether Attack Challenge Mode is enabled or not.",
 			},
+			"attack_mode_active_until": schema.Int64Attribute{
+				Required:    true,
+				Description: "Unix timestamp in milliseconds (like Date.now()) until which Attack Challenge Mode stays active.",
+				Validators: []validator.Int64{
+					int64validator.AtLeast(0),
+				},
+			},
 		},
 	}
 }
 
 type AttackChallengeMode struct {
-	ID        types.String `tfsdk:"id"`
-	ProjectID types.String `tfsdk:"project_id"`
-	TeamID    types.String `tfsdk:"team_id"`
-	Enabled   types.Bool   `tfsdk:"enabled"`
+	ID                    types.String `tfsdk:"id"`
+	ProjectID             types.String `tfsdk:"project_id"`
+	TeamID                types.String `tfsdk:"team_id"`
+	Enabled               types.Bool   `tfsdk:"enabled"`
+	AttackModeActiveUntil types.Int64  `tfsdk:"attack_mode_active_until"`
 }
 
 func responseToAttackChallengeMode(out client.AttackChallengeMode) AttackChallengeMode {
 	return AttackChallengeMode{
-		ID:        types.StringValue(out.ProjectID),
-		ProjectID: types.StringValue(out.ProjectID),
-		TeamID:    toTeamID(out.TeamID),
-		Enabled:   types.BoolValue(out.Enabled),
+		ID:                    types.StringValue(out.ProjectID),
+		ProjectID:             types.StringValue(out.ProjectID),
+		TeamID:                toTeamID(out.TeamID),
+		Enabled:               types.BoolValue(out.Enabled),
+		AttackModeActiveUntil: types.Int64PointerValue(out.AttackModeActiveUntil),
 	}
 }
 
@@ -114,9 +128,10 @@ func (r *attackChallengeModeResource) Create(ctx context.Context, req resource.C
 		return
 	}
 	out, err := r.client.UpdateAttackChallengeMode(ctx, client.AttackChallengeMode{
-		TeamID:    plan.TeamID.ValueString(),
-		ProjectID: plan.ProjectID.ValueString(),
-		Enabled:   plan.Enabled.ValueBool(),
+		TeamID:                plan.TeamID.ValueString(),
+		ProjectID:             plan.ProjectID.ValueString(),
+		Enabled:               plan.Enabled.ValueBool(),
+		AttackModeActiveUntil: attackModeActiveUntilPointer(plan.AttackModeActiveUntil),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -127,6 +142,7 @@ func (r *attackChallengeModeResource) Create(ctx context.Context, req resource.C
 	}
 
 	result := responseToAttackChallengeMode(out)
+	result.AttackModeActiveUntil = plan.AttackModeActiveUntil
 	tflog.Info(ctx, "created attack challenge mode", map[string]any{
 		"team_id":    plan.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
@@ -165,6 +181,9 @@ func (r *attackChallengeModeResource) Read(ctx context.Context, req resource.Rea
 	}
 
 	result := responseToAttackChallengeMode(out)
+	if result.AttackModeActiveUntil.IsNull() {
+		result.AttackModeActiveUntil = state.AttackModeActiveUntil
+	}
 	tflog.Info(ctx, "read attack challenge mode", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
@@ -187,9 +206,10 @@ func (r *attackChallengeModeResource) Update(ctx context.Context, req resource.U
 	}
 
 	out, err := r.client.UpdateAttackChallengeMode(ctx, client.AttackChallengeMode{
-		TeamID:    plan.TeamID.ValueString(),
-		ProjectID: plan.ProjectID.ValueString(),
-		Enabled:   plan.Enabled.ValueBool(),
+		TeamID:                plan.TeamID.ValueString(),
+		ProjectID:             plan.ProjectID.ValueString(),
+		Enabled:               plan.Enabled.ValueBool(),
+		AttackModeActiveUntil: attackModeActiveUntilPointer(plan.AttackModeActiveUntil),
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
@@ -208,6 +228,7 @@ func (r *attackChallengeModeResource) Update(ctx context.Context, req resource.U
 	}
 
 	result := responseToAttackChallengeMode(out)
+	result.AttackModeActiveUntil = plan.AttackModeActiveUntil
 	tflog.Trace(ctx, "update attack challenge mode", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
@@ -230,9 +251,10 @@ func (r *attackChallengeModeResource) Delete(ctx context.Context, req resource.D
 
 	// Disable on deletion
 	_, err := r.client.UpdateAttackChallengeMode(ctx, client.AttackChallengeMode{
-		TeamID:    state.TeamID.ValueString(),
-		ProjectID: state.ProjectID.ValueString(),
-		Enabled:   false,
+		TeamID:                state.TeamID.ValueString(),
+		ProjectID:             state.ProjectID.ValueString(),
+		Enabled:               false,
+		AttackModeActiveUntil: attackModeActiveUntilValue(time.Now().UnixMilli()),
 	})
 	if client.NotFound(err) {
 		return
@@ -293,4 +315,15 @@ func (r *attackChallengeModeResource) ImportState(ctx context.Context, req resou
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+func attackModeActiveUntilPointer(value types.Int64) *int64 {
+	if value.IsUnknown() {
+		return nil
+	}
+	return value.ValueInt64Pointer()
+}
+
+func attackModeActiveUntilValue(value int64) *int64 {
+	return &value
 }

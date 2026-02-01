@@ -34,5 +34,6 @@ data "vercel_attack_challenge_mode" "example" {
 
 ### Read-Only
 
+- `attack_mode_active_until` (Number) Unix timestamp in milliseconds (like Date.now()) until which Attack Challenge Mode stays active.
 - `enabled` (Boolean) Whether Attack Challenge Mode is enabled or not.
 - `id` (String) The resource identifier.

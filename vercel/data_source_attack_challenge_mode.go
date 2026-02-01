@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v4/client"
 )
@@ -22,6 +23,14 @@ func newAttackChallengeModeDataSource() datasource.DataSource {
 
 type attackChallengeModeDataSource struct {
 	client *client.Client
+}
+
+type AttackChallengeModeDataSource struct {
+	ID                    types.String `tfsdk:"id"`
+	ProjectID             types.String `tfsdk:"project_id"`
+	TeamID                types.String `tfsdk:"team_id"`
+	Enabled               types.Bool   `tfsdk:"enabled"`
+	AttackModeActiveUntil types.Int64  `tfsdk:"attack_mode_active_until"`
 }
 
 func (d *attackChallengeModeDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -46,7 +55,7 @@ func (d *attackChallengeModeDataSource) Configure(ctx context.Context, req datas
 	d.client = client
 }
 
-func (r *attackChallengeModeDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *attackChallengeModeDataSource) Schema(_ context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: `
 Provides an Attack Challenge Mode resource.
@@ -70,12 +79,16 @@ Attack Challenge Mode prevent malicious traffic by showing a verification challe
 				Computed:    true,
 				Description: "Whether Attack Challenge Mode is enabled or not.",
 			},
+			"attack_mode_active_until": schema.Int64Attribute{
+				Computed:    true,
+				Description: "Unix timestamp in milliseconds (like Date.now()) until which Attack Challenge Mode stays active.",
+			},
 		},
 	}
 }
 
 func (d *attackChallengeModeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config AttackChallengeMode
+	var config AttackChallengeModeDataSource
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -99,7 +112,7 @@ func (d *attackChallengeModeDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
-	result := responseToAttackChallengeMode(out)
+	result := responseToAttackChallengeModeDataSource(out)
 	tflog.Info(ctx, "read attack challenge mode", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
@@ -109,5 +122,15 @@ func (d *attackChallengeModeDataSource) Read(ctx context.Context, req datasource
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+}
+
+func responseToAttackChallengeModeDataSource(out client.AttackChallengeMode) AttackChallengeModeDataSource {
+	return AttackChallengeModeDataSource{
+		ID:                    types.StringValue(out.ProjectID),
+		ProjectID:             types.StringValue(out.ProjectID),
+		TeamID:                toTeamID(out.TeamID),
+		Enabled:               types.BoolValue(out.Enabled),
+		AttackModeActiveUntil: types.Int64PointerValue(out.AttackModeActiveUntil),
 	}
 }
