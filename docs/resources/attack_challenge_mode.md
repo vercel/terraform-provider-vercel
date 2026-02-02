@@ -5,6 +5,7 @@ subcategory: ""
 description: |-
   Provides an Attack Challenge Mode resource.
   Attack Challenge Mode prevent malicious traffic by showing a verification challenge for every visitor.
+  Note: When attack_mode_active_until is reached, Vercel automatically disables Attack Challenge Mode. This will cause enabled to drift to false.
 ---
 
 # vercel_attack_challenge_mode (Resource)
@@ -12,6 +13,8 @@ description: |-
 Provides an Attack Challenge Mode resource.
 
 Attack Challenge Mode prevent malicious traffic by showing a verification challenge for every visitor.
+
+Note: When attack_mode_active_until is reached, Vercel automatically disables Attack Challenge Mode. This will cause enabled to drift to false.
 
 ## Example Usage
 
@@ -23,6 +26,7 @@ resource "vercel_project" "example" {
 resource "vercel_attack_challenge_mode" "example" {
   project_id = vercel_project.example.id
   enabled    = true
+  attack_mode_active_until = var.attack_mode_active_until
 }
 ```
 
@@ -31,6 +35,7 @@ resource "vercel_attack_challenge_mode" "example" {
 
 ### Required
 
+- `attack_mode_active_until` (Number) Unix timestamp in milliseconds (like Date.now()) until which Attack Challenge Mode stays active.
 - `enabled` (Boolean) Whether Attack Challenge Mode is enabled or not.
 - `project_id` (String) The ID of the Project to toggle Attack Challenge Mode on.
 

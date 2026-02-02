@@ -5,4 +5,5 @@ resource "vercel_project" "example" {
 resource "vercel_attack_challenge_mode" "example" {
   project_id = vercel_project.example.id
   enabled    = true
+  attack_mode_active_until = var.attack_mode_active_until
 }

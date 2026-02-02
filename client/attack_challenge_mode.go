@@ -6,9 +6,10 @@ import (
 )
 
 type AttackChallengeMode struct {
-	ProjectID string `json:"projectId"`
-	TeamID    string `json:"-"`
-	Enabled   bool   `json:"attackModeEnabled"`
+	ProjectID             string `json:"projectId"`
+	TeamID                string `json:"-"`
+	Enabled               bool   `json:"attackModeEnabled"`
+	AttackModeActiveUntil *int64 `json:"attackModeActiveUntil"`
 }
 
 func (c *Client) GetAttackChallengeMode(ctx context.Context, projectID, teamID string) (a AttackChallengeMode, err error) {
@@ -17,13 +18,16 @@ func (c *Client) GetAttackChallengeMode(ctx context.Context, projectID, teamID s
 		return a, err
 	}
 	var enabled bool
+	var activeUntil *int64
 	if project.Security != nil {
 		enabled = project.Security.AttackModeEnabled
+		activeUntil = project.Security.AttackModeActiveUntil
 	}
 	return AttackChallengeMode{
-		ProjectID: projectID,
-		TeamID:    teamID,
-		Enabled:   enabled,
+		ProjectID:             projectID,
+		TeamID:                teamID,
+		Enabled:               enabled,
+		AttackModeActiveUntil: activeUntil,
 	}, err
 }
 
