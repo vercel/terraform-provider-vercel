@@ -73,6 +73,18 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 									},
 								},
 							},
+							"sf": schema.SingleNestedAttribute{
+								Optional:    true,
+								Description: "Session Fixation Attack",
+								Attributes: map[string]schema.Attribute{
+									"active": schema.BoolAttribute{
+										Optional: true,
+									},
+									"action": schema.StringAttribute{
+										Required: true,
+									},
+								},
+							},
 							"lfi": schema.SingleNestedAttribute{
 								Optional:    true,
 								Description: "Local File Inclusion Rules",
@@ -498,6 +510,7 @@ type FirewallManagedRulesets struct {
 type CRSRule struct {
 	XSS  *CRSRuleConfig `tfsdk:"xss"`
 	SQLI *CRSRuleConfig `tfsdk:"sqli"`
+	SF   *CRSRuleConfig `tfsdk:"sf"`
 	LFI  *CRSRuleConfig `tfsdk:"lfi"`
 	RFI  *CRSRuleConfig `tfsdk:"rfi"`
 	RCE  *CRSRuleConfig `tfsdk:"rce"`
@@ -512,6 +525,7 @@ func (r *CRSRule) ToMap() map[string]*CRSRuleConfig {
 	return map[string]*CRSRuleConfig{
 		"xss":  r.XSS,
 		"sqli": r.SQLI,
+		"sf":   r.SF,
 		"lfi":  r.LFI,
 		"rfi":  r.RFI,
 		"rce":  r.RCE,
@@ -848,6 +862,7 @@ func fromCRS(conf map[string]client.CoreRuleSet, refMr *FirewallManagedRulesets)
 	return &CRSRule{
 		XSS:  fromCoreRuleset(conf["xss"], ref.XSS),
 		SQLI: fromCoreRuleset(conf["sqli"], ref.SQLI),
+		SF:   fromCoreRuleset(conf["sf"], ref.SF),
 		LFI:  fromCoreRuleset(conf["lfi"], ref.LFI),
 		RFI:  fromCoreRuleset(conf["rfi"], ref.RFI),
 		RCE:  fromCoreRuleset(conf["rce"], ref.RCE),
