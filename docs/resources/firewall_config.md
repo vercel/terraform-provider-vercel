@@ -323,6 +323,7 @@ Optional:
 - `rce` (Attributes) Remote Code Execution Rules (see [below for nested schema](#nestedatt--managed_rulesets--owasp--rce))
 - `rfi` (Attributes) Remote File Inclusion Rules (see [below for nested schema](#nestedatt--managed_rulesets--owasp--rfi))
 - `sd` (Attributes) Scanner Detection Rules (see [below for nested schema](#nestedatt--managed_rulesets--owasp--sd))
+- `sf` (Attributes) Session Fixation Attack (see [below for nested schema](#nestedatt--managed_rulesets--owasp--sf))
 - `sqli` (Attributes) SQL Injection Rules (see [below for nested schema](#nestedatt--managed_rulesets--owasp--sqli))
 - `xss` (Attributes) Cross Site Scripting Rules (see [below for nested schema](#nestedatt--managed_rulesets--owasp--xss))
 
@@ -412,6 +413,18 @@ Optional:
 
 <a id="nestedatt--managed_rulesets--owasp--sd"></a>
 ### Nested Schema for `managed_rulesets.owasp.sd`
+
+Required:
+
+- `action` (String)
+
+Optional:
+
+- `active` (Boolean)
+
+
+<a id="nestedatt--managed_rulesets--owasp--sf"></a>
+### Nested Schema for `managed_rulesets.owasp.sf`
 
 Required:
 

@@ -44,6 +44,13 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.managed",
 						"managed_rulesets.owasp.sqli.action",
 						"log"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.managed",
+						"managed_rulesets.owasp.sf.action",
+						"deny"),
+					resource.TestCheckNoResourceAttr(
+						"vercel_firewall_config.managed",
+						"managed_rulesets.owasp.sf.active"),
 					resource.TestCheckNoResourceAttr(
 						"vercel_firewall_config.managed",
 						"managed_rulesets.owasp.sqli.active"),
@@ -240,6 +247,14 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.managed",
 						"managed_rulesets.owasp.sqli.action",
 						"deny"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.managed",
+						"managed_rulesets.owasp.sf.action",
+						"deny"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.managed",
+						"managed_rulesets.owasp.sf.active",
+						"false"),
 					resource.TestCheckNoResourceAttr(
 						"vercel_firewall_config.managed",
 						"managed_rulesets.owasp.sqli.active"),
@@ -415,14 +430,15 @@ resource "vercel_project" "managed" {
 resource "vercel_firewall_config" "managed" {
     project_id = vercel_project.managed.id
 
-    managed_rulesets {
-        owasp {
-            xss = { action = "deny" }
-            sqli = { action = "log" }
+	    managed_rulesets {
+	        owasp {
+	            xss = { action = "deny" }
+	            sqli = { action = "log" }
+	            sf = { action = "deny" }
 
-            rce = { action = "deny", active = false }
-        }
-    }
+	            rce = { action = "deny", active = false }
+	        }
+	    }
 }
 
 resource "vercel_project" "custom" {
@@ -616,14 +632,15 @@ resource "vercel_project" "managed" {
 resource "vercel_firewall_config" "managed" {
     project_id = vercel_project.managed.id
 
-    managed_rulesets {
-        owasp {
-            xss = { action = "deny", active = false }
-            sqli = { action = "deny" }
+	    managed_rulesets {
+	        owasp {
+	            xss = { action = "deny", active = false }
+	            sqli = { action = "deny" }
+	            sf = { action = "deny", active = false }
 
-            rce = { action = "deny", active = false }
-            php = { action = "log" }
-        }
+	            rce = { action = "deny", active = false }
+	            php = { action = "log" }
+	        }
     }
 }
 
