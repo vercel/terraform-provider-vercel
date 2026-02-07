@@ -2006,7 +2006,8 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	if plan.ProtectionBypassForAutomation.ValueBool() {
-		protectionBypassSecret, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
+		plannedSecret := plan.ProtectionBypassForAutomationSecret.ValueString()
+		_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
 			ProjectID: result.ID.ValueString(),
 			TeamID:    result.TeamID.ValueString(),
 			NewValue:  true,
@@ -2019,7 +2020,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			)
 			return
 		}
-		result.ProtectionBypassForAutomationSecret = types.StringValue(protectionBypassSecret)
+		result.ProtectionBypassForAutomationSecret = types.StringValue(plannedSecret)
 		result.ProtectionBypassForAutomation = types.BoolValue(true)
 		diags = resp.State.Set(ctx, result)
 		resp.Diagnostics.Append(diags...)
@@ -2300,22 +2301,62 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		})
 	}
 
+	currentSecret := state.ProtectionBypassForAutomationSecret.ValueString()
+	plannedSecret := plan.ProtectionBypassForAutomationSecret.ValueString()
 	if state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation {
-		secret := state.ProtectionBypassForAutomationSecret.ValueString()
-		if plan.ProtectionBypassForAutomationSecret.ValueString() != "" {
-			secret = plan.ProtectionBypassForAutomationSecret.ValueString()
+		if plan.ProtectionBypassForAutomation.ValueBool() {
+			// protection bypass was previously not set, and now is
+			_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
+				ProjectID: plan.ID.ValueString(),
+				TeamID:    plan.TeamID.ValueString(),
+				NewValue:  true,
+				Secret:    plannedSecret,
+			})
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error setting protection bypass for automation",
+					fmt.Sprintf(
+						"Could not update project %s %s, unexpected error setting Protection Bypass For Automation: %s",
+						state.TeamID.ValueString(),
+						state.ID.ValueString(),
+						err,
+					),
+				)
+				return
+			}
+		} else {
+			// protection bypass was previously set, and now is not
+			_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
+				ProjectID: plan.ID.ValueString(),
+				TeamID:    plan.TeamID.ValueString(),
+				NewValue:  false,
+			})
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error removing protection bypass for automation",
+					fmt.Sprintf(
+						"Could not update project %s %s, unexpected error removing Protection Bypass For Automation: %s",
+						state.TeamID.ValueString(),
+						state.ID.ValueString(),
+						err,
+					),
+				)
+				return
+			}
 		}
+	} else if plan.ProtectionBypassForAutomation.ValueBool() && currentSecret != plannedSecret {
+		// protection bypass is already configured and the secret is different
 		_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
 			ProjectID: plan.ID.ValueString(),
 			TeamID:    plan.TeamID.ValueString(),
-			NewValue:  plan.ProtectionBypassForAutomation.ValueBool(),
-			Secret:    secret,
+			NewValue:  true,
+			Secret:    plannedSecret,
 		})
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Error updating project",
+				"Error updating protection bypass for automation",
 				fmt.Sprintf(
-					"Could not update project %s %s, unexpected error setting Protection Bypass For Automation: %s",
+					"Could not update project %s %s, unexpected error updating Protection Bypass For Automation: %s",
 					state.TeamID.ValueString(),
 					state.ID.ValueString(),
 					err,
