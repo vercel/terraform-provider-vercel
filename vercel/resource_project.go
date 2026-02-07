@@ -1026,6 +1026,7 @@ type EnvironmentItem struct {
 	GitBranch            types.String `tfsdk:"git_branch"`
 	Key                  types.String `tfsdk:"key"`
 	Value                types.String `tfsdk:"value"`
+	ValueWO              types.String `tfsdk:"value_wo"`
 	ID                   types.String `tfsdk:"id"`
 	Sensitive            types.Bool   `tfsdk:"sensitive"`
 	Comment              types.String `tfsdk:"comment"`
@@ -1034,6 +1035,7 @@ type EnvironmentItem struct {
 func (e *EnvironmentItem) equal(other *EnvironmentItem) bool {
 	return e.Key.ValueString() == other.Key.ValueString() &&
 		e.Value.ValueString() == other.Value.ValueString() &&
+		e.ValueWO.ValueString() == other.ValueWO.ValueString() &&
 		e.Target.Equal(other.Target) &&
 		e.CustomEnvironmentIDs.Equal(other.CustomEnvironmentIDs) &&
 		e.GitBranch.ValueString() == other.GitBranch.ValueString() &&
@@ -1046,6 +1048,7 @@ func (e *EnvironmentItem) toAttrValue() attr.Value {
 		"id":                     e.ID,
 		"key":                    e.Key,
 		"value":                  e.Value,
+		"value_wo":               e.ValueWO,
 		"target":                 e.Target,
 		"custom_environment_ids": e.CustomEnvironmentIDs,
 		"git_branch":             e.GitBranch,

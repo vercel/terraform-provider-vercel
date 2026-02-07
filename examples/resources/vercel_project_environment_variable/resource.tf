@@ -39,3 +39,17 @@ resource "vercel_project_environment_variable" "example_sensitive" {
   comment    = "a sensitive production secret"
 }
 
+# An environment variable that will be created referencing
+# an ephemeral source whose values won't save to state.
+ephemeral "vault_kv_secret_v2" "example" {
+  mount = "kv"
+  name  = "example"
+}
+resource "vercel_project_environment_variable" "example_ephemeral" {
+  project_id = vercel_project.example.id
+  key        = "foo"
+  value_wo   = ephemeral.vault_kv_secret_v2.example.data["example"]
+  target     = ["production"]
+  sensitive  = true
+  comment    = "an ephemeral secret"
+}

@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -241,6 +242,144 @@ resource "vercel_project" "example" {
         type = "github"
         repo = "%[2]s"
     }
+}
+`, projectName, githubRepo)
+}
+
+func TestAcc_ProjectEnvironmentVariable_ValueWO(t *testing.T) {
+	nameSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
+		),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectEnvironmentVariableConfigValueWO(nameSuffix, testGithubRepo(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_value_wo", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "key", "foo_wo"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo", "bar-wo"),
+					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value"),
+					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_value_wo", "target.*", "production"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectEnvironmentVariableConfigValueWOUpdated(nameSuffix, testGithubRepo(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_value_wo", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "key", "foo_wo"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo", "bar-wo-updated"),
+					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value"),
+					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_value_wo", "target.*", "production"),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_ProjectEnvironmentVariable_BothValueAndValueWO(t *testing.T) {
+	nameSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      cfg(testAccProjectEnvironmentVariableConfigBothValues(nameSuffix, testGithubRepo(t))),
+				ExpectError: regexp.MustCompile(".*exactly one of.*"),
+			},
+		},
+	})
+}
+
+func TestAcc_ProjectEnvironmentVariable_NeitherValueNorValueWO(t *testing.T) {
+	nameSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      cfg(testAccProjectEnvironmentVariableConfigNoValues(nameSuffix, testGithubRepo(t))),
+				ExpectError: regexp.MustCompile(".*exactly one of.*"),
+			},
+		},
+	})
+}
+
+func testAccProjectEnvironmentVariableConfigValueWO(projectName string, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+
+	git_repository = {
+		type = "github"
+		repo = "%[2]s"
+	}
+}
+
+resource "vercel_project_environment_variable" "example_value_wo" {
+	project_id = vercel_project.example.id
+	key        = "foo_wo"
+	value_wo   = "bar-wo"
+	target     = ["production"]
+}
+`, projectName, githubRepo)
+}
+
+func testAccProjectEnvironmentVariableConfigValueWOUpdated(projectName string, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+
+	git_repository = {
+		type = "github"
+		repo = "%[2]s"
+	}
+}
+
+resource "vercel_project_environment_variable" "example_value_wo" {
+	project_id = vercel_project.example.id
+	key        = "foo_wo"
+	value_wo   = "bar-wo-updated"
+	target     = ["production"]
+}
+`, projectName, githubRepo)
+}
+
+func testAccProjectEnvironmentVariableConfigBothValues(projectName string, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+
+	git_repository = {
+		type = "github"
+		repo = "%[2]s"
+	}
+}
+
+resource "vercel_project_environment_variable" "example_both" {
+	project_id = vercel_project.example.id
+	key        = "foo_both"
+	value      = "bar"
+	value_wo   = "bar-wo"
+	target     = ["production"]
+}
+`, projectName, githubRepo)
+}
+
+func testAccProjectEnvironmentVariableConfigNoValues(projectName string, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+
+	git_repository = {
+		type = "github"
+		repo = "%[2]s"
+	}
+}
+
+resource "vercel_project_environment_variable" "example_none" {
+	project_id = vercel_project.example.id
+	key        = "foo_none"
+	target     = ["production"]
 }
 `, projectName, githubRepo)
 }
