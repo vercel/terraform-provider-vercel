@@ -72,10 +72,11 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The ID of the existing Vercel Team.",
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseNonNullStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -496,6 +497,14 @@ func (r *teamConfigResource) Create(ctx context.Context, req resource.CreateRequ
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.ID.IsNull() || plan.ID.IsUnknown() || plan.ID.ValueString() == "" {
+		resp.Diagnostics.AddError(
+			"Missing required field",
+			"The 'id' field is required and must be set to the Team ID.",
+		)
 		return
 	}
 

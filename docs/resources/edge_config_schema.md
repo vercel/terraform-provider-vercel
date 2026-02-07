@@ -40,10 +40,10 @@ EOF
 ### Required
 
 - `definition` (String) A JSON schema that will be used to validate data in the Edge Config.
-- `id` (String) The ID of the Edge Config that the schema should apply to.
 
 ### Optional
 
+- `id` (String) The ID of the Edge Config that the schema should apply to.
 - `team_id` (String) The ID of the team the Edge Config should exist under. Required when configuring a team resource if a default team has not been set in the provider.
 
 ## Import
