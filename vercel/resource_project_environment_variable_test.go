@@ -259,7 +259,7 @@ func TestAcc_ProjectEnvironmentVariable_ValueWO(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_value_wo", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "key", "foo_wo"),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo", "bar-wo"),
+					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo"),
 					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_value_wo", "target.*", "production"),
 				),
@@ -269,7 +269,7 @@ func TestAcc_ProjectEnvironmentVariable_ValueWO(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_value_wo", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "key", "foo_wo"),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo", "bar-wo-updated"),
+					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo"),
 					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_value_wo", "target.*", "production"),
 				),
@@ -285,7 +285,7 @@ func TestAcc_ProjectEnvironmentVariable_BothValueAndValueWO(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      cfg(testAccProjectEnvironmentVariableConfigBothValues(nameSuffix, testGithubRepo(t))),
-				ExpectError: regexp.MustCompile(".*exactly one of.*"),
+				ExpectError: regexp.MustCompile(`(?s).*\[value,value_wo\].*`),
 			},
 		},
 	})
@@ -298,7 +298,7 @@ func TestAcc_ProjectEnvironmentVariable_NeitherValueNorValueWO(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      cfg(testAccProjectEnvironmentVariableConfigNoValues(nameSuffix, testGithubRepo(t))),
-				ExpectError: regexp.MustCompile(".*exactly one of.*"),
+				ExpectError: regexp.MustCompile(`(?s).*\[value,value_wo\].*`),
 			},
 		},
 	})
