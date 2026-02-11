@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -28,12 +29,24 @@ type sharedEnvironmentVariableDataSource struct {
 	client *client.Client
 }
 
+type SharedEnvironmentVariableDataSource struct {
+	TeamID                       types.String `tfsdk:"team_id"`
+	ID                           types.String `tfsdk:"id"`
+	Target                       types.Set    `tfsdk:"target"`
+	Key                          types.String `tfsdk:"key"`
+	Value                        types.String `tfsdk:"value"`
+	ProjectIDs                   types.Set    `tfsdk:"project_ids"`
+	Sensitive                    types.Bool   `tfsdk:"sensitive"`
+	Comment                      types.String `tfsdk:"comment"`
+	ApplyToAllCustomEnvironments types.Bool   `tfsdk:"apply_to_all_custom_environments"`
+}
+
 func (d *sharedEnvironmentVariableDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_shared_environment_variable"
 }
 
 func (d *sharedEnvironmentVariableDataSource) ValidateConfig(ctx context.Context, req datasource.ValidateConfigRequest, resp *datasource.ValidateConfigResponse) {
-	var config SharedEnvironmentVariable
+	var config SharedEnvironmentVariableDataSource
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -163,7 +176,7 @@ func isSameTarget(a []string, b []types.String) bool {
 // with this information.
 // It is called by the provider whenever data source values should be read to update state.
 func (d *sharedEnvironmentVariableDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config SharedEnvironmentVariable
+	var config SharedEnvironmentVariableDataSource
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -236,7 +249,7 @@ func (d *sharedEnvironmentVariableDataSource) Read(ctx context.Context, req data
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(out, types.StringNull())
+	result := convertResponseToSharedEnvironmentVariableDataSource(out)
 	tflog.Info(ctx, "read shared environment variable", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
@@ -246,5 +259,34 @@ func (d *sharedEnvironmentVariableDataSource) Read(ctx context.Context, req data
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+}
+
+func convertResponseToSharedEnvironmentVariableDataSource(response client.SharedEnvironmentVariableResponse) SharedEnvironmentVariableDataSource {
+	target := make([]attr.Value, 0, len(response.Target))
+	for _, t := range response.Target {
+		target = append(target, types.StringValue(t))
+	}
+
+	projectIDs := make([]attr.Value, 0, len(response.ProjectIDs))
+	for _, p := range response.ProjectIDs {
+		projectIDs = append(projectIDs, types.StringValue(p))
+	}
+
+	value := types.StringNull()
+	if response.Type != "sensitive" {
+		value = types.StringValue(response.Value)
+	}
+
+	return SharedEnvironmentVariableDataSource{
+		TeamID:                       toTeamID(response.TeamID),
+		ID:                           types.StringValue(response.ID),
+		Target:                       types.SetValueMust(types.StringType, target),
+		Key:                          types.StringValue(response.Key),
+		Value:                        value,
+		ProjectIDs:                   types.SetValueMust(types.StringType, projectIDs),
+		Sensitive:                    types.BoolValue(response.Type == "sensitive"),
+		Comment:                      types.StringValue(response.Comment),
+		ApplyToAllCustomEnvironments: types.BoolValue(response.ApplyToAllCustomEnvironments),
 	}
 }
