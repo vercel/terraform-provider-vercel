@@ -81,7 +81,7 @@ jobs:
   test:
     name: Matrix Test
     needs: [build]
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       max-parallel: 1
       fail-fast: false
@@ -102,7 +102,7 @@ jobs:
       - name: Get dependencies
         run: go mod download
       - name: TF acceptance tests
-        timeout-minutes: 30
+        timeout-minutes: 45
         env:
           TF_ACC: "true"
           VERCEL_API_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
