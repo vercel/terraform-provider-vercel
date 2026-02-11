@@ -70,6 +70,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 ~> Terraform currently provides this Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and a Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+
+-> **Note:** Write-Only argument ` + "`value_wo`" + ` is available to use in place of ` + "`value`" + `. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).
 `,
 		Attributes: map[string]schema.Attribute{
 			"target": schema.SetAttribute{
@@ -108,9 +110,27 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "The name of the Environment Variable.",
 			},
 			"value": schema.StringAttribute{
-				Required:    true,
-				Description: "The value of the Environment Variable.",
+				Optional:    true,
+				Description: "(Optional, exactly one of `value` or `value_wo` is required) The value of the Environment Variable.",
 				Sensitive:   true,
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(
+						path.MatchRoot("value"),
+						path.MatchRoot("value_wo"),
+					),
+				},
+			},
+			"value_wo": schema.StringAttribute{
+				Optional:    true,
+				Description: "(Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephemeral` resource.",
+				Sensitive:   true,
+				WriteOnly:   true,
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(
+						path.MatchRoot("value"),
+						path.MatchRoot("value_wo"),
+					),
+				},
 			},
 			"git_branch": schema.StringAttribute{
 				Optional:    true,
@@ -158,6 +178,7 @@ type ProjectEnvironmentVariable struct {
 	GitBranch            types.String `tfsdk:"git_branch"`
 	Key                  types.String `tfsdk:"key"`
 	Value                types.String `tfsdk:"value"`
+	ValueWO              types.String `tfsdk:"value_wo"`
 	TeamID               types.String `tfsdk:"team_id"`
 	ProjectID            types.String `tfsdk:"project_id"`
 	ID                   types.String `tfsdk:"id"`
@@ -225,11 +246,15 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx cont
 	} else {
 		envVariableType = "encrypted"
 	}
-
+	var value string
+	value = e.Value.ValueString()
+	if value == "" {
+		value = e.ValueWO.ValueString()
+	}
 	return client.CreateEnvironmentVariableRequest{
 		EnvironmentVariable: client.EnvironmentVariableRequest{
 			Key:                  e.Key.ValueString(),
-			Value:                e.Value.ValueString(),
+			Value:                value,
 			Target:               target,
 			CustomEnvironmentIDs: customEnvironmentIDs,
 			GitBranch:            e.GitBranch.ValueStringPointer(),
@@ -252,16 +277,19 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest(ctx cont
 	if diags.HasError() {
 		return r, diags
 	}
-
 	var envVariableType string
 	if e.Sensitive.ValueBool() {
 		envVariableType = "sensitive"
 	} else {
 		envVariableType = "encrypted"
 	}
-
+	var value string
+	value = e.Value.ValueString()
+	if value == "" {
+		value = e.ValueWO.ValueString()
+	}
 	return client.UpdateEnvironmentVariableRequest{
-		Value:                e.Value.ValueString(),
+		Value:                value,
 		Target:               target,
 		CustomEnvironmentIDs: customEnvironmentIDs,
 		GitBranch:            e.GitBranch.ValueStringPointer(),
@@ -282,9 +310,13 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 		target = append(target, types.StringValue(t))
 	}
 
-	value := types.StringValue(response.Value)
-	if response.Type == "sensitive" {
-		value = v
+	value := types.StringNull()
+	if !v.IsNull() {
+		if response.Type == "sensitive" {
+			value = v
+		} else {
+			value = types.StringValue(response.Value)
+		}
 	}
 
 	var customEnvironmentIDs []attr.Value
@@ -298,6 +330,7 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 		GitBranch:            types.StringPointerValue(response.GitBranch),
 		Key:                  types.StringValue(response.Key),
 		Value:                value,
+		ValueWO:              types.StringNull(),
 		TeamID:               toTeamID(response.TeamID),
 		ProjectID:            projectID,
 		ID:                   types.StringValue(response.ID),
@@ -491,7 +524,12 @@ func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, re
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID), types.StringNull())
+	value := types.StringNull()
+	if out.Type != "sensitive" {
+		value = types.StringValue(out.Value)
+	}
+
+	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID), value)
 	tflog.Info(ctx, "imported project environment variable", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),
