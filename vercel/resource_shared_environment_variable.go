@@ -110,6 +110,8 @@ Provides a Shared Environment Variable resource.
 A Shared Environment Variable resource defines an Environment Variable that can be shared between multiple Vercel Projects.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables/shared-environment-variables).
+
+-> **Note:** Write-Only argument ` + "`value_wo`" + ` is available to use in place of ` + "`value`" + `. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).
 `,
 		Attributes: map[string]schema.Attribute{
 			"target": schema.SetAttribute{
@@ -127,9 +129,27 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description:   "The name of the Environment Variable.",
 			},
 			"value": schema.StringAttribute{
-				Required:    true,
-				Description: "The value of the Environment Variable.",
+				Optional:    true,
+				Description: "(Optional, exactly one of `value` or `value_wo` is required) The value of the Environment Variable.",
 				Sensitive:   true,
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(
+						path.MatchRoot("value"),
+						path.MatchRoot("value_wo"),
+					),
+				},
+			},
+			"value_wo": schema.StringAttribute{
+				Optional:    true,
+				Description: "(Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephemeral` resource.",
+				Sensitive:   true,
+				WriteOnly:   true,
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(
+						path.MatchRoot("value"),
+						path.MatchRoot("value_wo"),
+					),
+				},
 			},
 			"project_ids": schema.SetAttribute{
 				Required:    true,
@@ -249,6 +269,7 @@ type SharedEnvironmentVariable struct {
 	Target                       types.Set    `tfsdk:"target"`
 	Key                          types.String `tfsdk:"key"`
 	Value                        types.String `tfsdk:"value"`
+	ValueWO                      types.String `tfsdk:"value_wo"`
 	TeamID                       types.String `tfsdk:"team_id"`
 	ProjectIDs                   types.Set    `tfsdk:"project_ids"`
 	ID                           types.String `tfsdk:"id"`
@@ -283,6 +304,10 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx
 	} else {
 		envVariableType = "encrypted"
 	}
+	value := e.Value.ValueString()
+	if value == "" {
+		value = e.ValueWO.ValueString()
+	}
 
 	return client.CreateSharedEnvironmentVariableRequest{
 		EnvironmentVariable: client.SharedEnvironmentVariableRequest{
@@ -293,7 +318,7 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx
 			EnvironmentVariables: []client.SharedEnvVarRequest{
 				{
 					Key:     e.Key.ValueString(),
-					Value:   e.Value.ValueString(),
+					Value:   value,
 					Comment: e.Comment.ValueString(),
 				},
 			},
@@ -327,9 +352,13 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx
 	} else {
 		envVariableType = "encrypted"
 	}
+	value := e.Value.ValueString()
+	if value == "" {
+		value = e.ValueWO.ValueString()
+	}
 	return client.UpdateSharedEnvironmentVariableRequest{
 		ApplyToAllCustomEnvironments: e.ApplyToAllCustomEnvironments.ValueBool(),
-		Value:                        e.Value.ValueString(),
+		Value:                        value,
 		Target:                       target,
 		Type:                         envVariableType,
 		TeamID:                       e.TeamID.ValueString(),
@@ -353,9 +382,13 @@ func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmen
 		projectIDs = append(projectIDs, types.StringValue(t))
 	}
 
-	value := types.StringValue(response.Value)
-	if response.Type == "sensitive" {
-		value = v
+	value := types.StringNull()
+	if !v.IsNull() {
+		if response.Type == "sensitive" {
+			value = v
+		} else {
+			value = types.StringValue(response.Value)
+		}
 	}
 
 	return SharedEnvironmentVariable{
@@ -363,6 +396,7 @@ func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmen
 		Target:                       types.SetValueMust(types.StringType, target),
 		Key:                          types.StringValue(response.Key),
 		Value:                        value,
+		ValueWO:                      types.StringNull(),
 		ProjectIDs:                   types.SetValueMust(types.StringType, projectIDs),
 		TeamID:                       toTeamID(response.TeamID),
 		ID:                           types.StringValue(response.ID),
@@ -538,7 +572,12 @@ func (r *sharedEnvironmentVariableResource) ImportState(ctx context.Context, req
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(out, types.StringNull())
+	value := types.StringNull()
+	if out.Type != "sensitive" {
+		value = types.StringValue(out.Value)
+	}
+
+	result := convertResponseToSharedEnvironmentVariable(out, value)
 	tflog.Info(ctx, "imported shared environment variable", map[string]any{
 		"team_id": result.TeamID.ValueString(),
 		"env_id":  result.ID.ValueString(),
