@@ -45,11 +45,11 @@ jobs:
           script: |
             return {
               m: context.eventName === 'push' ? [
-                { os: "ubuntu-latest", terraform: "1.10.*" },
+                { os: "ubuntu-latest", terraform: "1.14.*" },
                 { os: "ubuntu-latest", terraform: "1.4.*" },
-                { os: "windows-latest", terraform: "1.10.*" }
+                { os: "windows-latest", terraform: "1.14.*" }
               ] : [
-                { os: "ubuntu-latest", terraform: "1.10.*" }
+                { os: "ubuntu-latest", terraform: "1.14.*" }
               ]
             };
           result-encoding: json
