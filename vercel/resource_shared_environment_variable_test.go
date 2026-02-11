@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -184,6 +185,132 @@ resource "vercel_project" "example2" {
 	name = "test-acc-example-project-2-%[1]s"
 }
     `, projectName)
+}
+
+func TestAcc_SharedEnvironmentVariables_ValueWO(t *testing.T) {
+	nameSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
+		),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccSharedEnvironmentVariablesConfigValueWO(nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.example_value_wo", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example_value_wo", "key", fmt.Sprintf("test_acc_foo_wo_%s", nameSuffix)),
+					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value_wo"),
+					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value"),
+					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example_value_wo", "target.*", "production"),
+				),
+			},
+			{
+				Config: cfg(testAccSharedEnvironmentVariablesConfigValueWOUpdated(nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.example_value_wo", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example_value_wo", "key", fmt.Sprintf("test_acc_foo_wo_%s", nameSuffix)),
+					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value_wo"),
+					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value"),
+					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example_value_wo", "target.*", "production"),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_SharedEnvironmentVariables_BothValueAndValueWO(t *testing.T) {
+	nameSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      cfg(testAccSharedEnvironmentVariablesConfigBothValues(nameSuffix)),
+				ExpectError: regexp.MustCompile(`(?s).*\[value,value_wo\].*`),
+			},
+		},
+	})
+}
+
+func TestAcc_SharedEnvironmentVariables_NeitherValueNorValueWO(t *testing.T) {
+	nameSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      cfg(testAccSharedEnvironmentVariablesConfigNoValues(nameSuffix)),
+				ExpectError: regexp.MustCompile(`(?s).*\[value,value_wo\].*`),
+			},
+		},
+	})
+}
+
+func testAccSharedEnvironmentVariablesConfigValueWO(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+}
+
+resource "vercel_shared_environment_variable" "example_value_wo" {
+	key         = "test_acc_foo_wo_%[1]s"
+	value_wo    = "bar-wo"
+	target      = ["production"]
+	project_ids = [
+		vercel_project.example.id
+	]
+}
+`, projectName)
+}
+
+func testAccSharedEnvironmentVariablesConfigValueWOUpdated(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+}
+
+resource "vercel_shared_environment_variable" "example_value_wo" {
+	key         = "test_acc_foo_wo_%[1]s"
+	value_wo    = "bar-wo-updated"
+	target      = ["production"]
+	project_ids = [
+		vercel_project.example.id
+	]
+}
+`, projectName)
+}
+
+func testAccSharedEnvironmentVariablesConfigBothValues(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+}
+
+resource "vercel_shared_environment_variable" "example_both" {
+	key         = "test_acc_foo_both_%[1]s"
+	value       = "bar"
+	value_wo    = "bar-wo"
+	target      = ["production"]
+	project_ids = [
+		vercel_project.example.id
+	]
+}
+`, projectName)
+}
+
+func testAccSharedEnvironmentVariablesConfigNoValues(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+}
+
+resource "vercel_shared_environment_variable" "example_none" {
+	key         = "test_acc_foo_none_%[1]s"
+	target      = ["production"]
+	project_ids = [
+		vercel_project.example.id
+	]
+}
+`, projectName)
 }
 
 func TestAcc_SharedEnvironmentVariables_CustomOnly_OmitTarget(t *testing.T) {
