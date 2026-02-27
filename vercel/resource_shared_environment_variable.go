@@ -278,7 +278,7 @@ type SharedEnvironmentVariable struct {
 	ApplyToAllCustomEnvironments types.Bool   `tfsdk:"apply_to_all_custom_environments"`
 }
 
-func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics) (req client.CreateSharedEnvironmentVariableRequest, ok bool) {
+func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics, valueWO types.String) (req client.CreateSharedEnvironmentVariableRequest, ok bool) {
 	var target []string
 	if e.Target.IsNull() || e.Target.IsUnknown() {
 		target = []string{}
@@ -306,7 +306,7 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx
 	}
 	value := e.Value.ValueString()
 	if value == "" {
-		value = e.ValueWO.ValueString()
+		value = valueWO.ValueString()
 	}
 
 	return client.CreateSharedEnvironmentVariableRequest{
@@ -327,7 +327,7 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx
 	}, true
 }
 
-func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics) (req client.UpdateSharedEnvironmentVariableRequest, ok bool) {
+func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics, valueWO types.String) (req client.UpdateSharedEnvironmentVariableRequest, ok bool) {
 	var target []string
 	if e.Target.IsNull() || e.Target.IsUnknown() {
 		target = []string{}
@@ -354,7 +354,7 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx
 	}
 	value := e.Value.ValueString()
 	if value == "" {
-		value = e.ValueWO.ValueString()
+		value = valueWO.ValueString()
 	}
 	return client.UpdateSharedEnvironmentVariableRequest{
 		ApplyToAllCustomEnvironments: e.ApplyToAllCustomEnvironments.ValueBool(),
@@ -414,8 +414,14 @@ func (r *sharedEnvironmentVariableResource) Create(ctx context.Context, req reso
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	var config SharedEnvironmentVariable
+	diags = req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	request, ok := plan.toCreateSharedEnvironmentVariableRequest(ctx, resp.Diagnostics)
+	request, ok := plan.toCreateSharedEnvironmentVariableRequest(ctx, resp.Diagnostics, config.ValueWO)
 	if !ok {
 		return
 	}
@@ -490,7 +496,14 @@ func (r *sharedEnvironmentVariableResource) Update(ctx context.Context, req reso
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	request, ok := plan.toUpdateSharedEnvironmentVariableRequest(ctx, resp.Diagnostics)
+	var config SharedEnvironmentVariable
+	diags = req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	request, ok := plan.toUpdateSharedEnvironmentVariableRequest(ctx, resp.Diagnostics, config.ValueWO)
 	if !ok {
 		return
 	}

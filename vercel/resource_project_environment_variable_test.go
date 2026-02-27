@@ -28,6 +28,29 @@ func testAccProjectEnvironmentVariableExists(testClient *client.Client, n, teamI
 	}
 }
 
+func testAccProjectEnvironmentVariableHasValue(testClient *client.Client, n, teamID, expectedValue string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("not found: %s", n)
+		}
+
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("no ID is set")
+		}
+
+		env, err := testClient.GetEnvironmentVariable(context.TODO(), rs.Primary.Attributes["project_id"], teamID, rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+		if env.Value != expectedValue {
+			return fmt.Errorf("unexpected environment variable value: got %q, want %q", env.Value, expectedValue)
+		}
+
+		return nil
+	}
+}
+
 func testAccProjectEnvironmentVariableDoNotExist(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -258,7 +281,9 @@ func TestAcc_ProjectEnvironmentVariable_ValueWO(t *testing.T) {
 				Config: cfg(testAccProjectEnvironmentVariableConfigValueWO(nameSuffix, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_value_wo", testTeam(t)),
+					testAccProjectEnvironmentVariableHasValue(testClient(t), "vercel_project_environment_variable.example_value_wo", testTeam(t), "bar-wo"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "key", "foo_wo"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "comment", "value_wo-initial"),
 					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo"),
 					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_value_wo", "target.*", "production"),
@@ -268,7 +293,9 @@ func TestAcc_ProjectEnvironmentVariable_ValueWO(t *testing.T) {
 				Config: cfg(testAccProjectEnvironmentVariableConfigValueWOUpdated(nameSuffix, testGithubRepo(t))),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_value_wo", testTeam(t)),
+					testAccProjectEnvironmentVariableHasValue(testClient(t), "vercel_project_environment_variable.example_value_wo", testTeam(t), "bar-wo-updated"),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "key", "foo_wo"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "comment", "value_wo-updated"),
 					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo"),
 					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_value_wo", "target.*", "production"),
@@ -320,6 +347,7 @@ resource "vercel_project_environment_variable" "example_value_wo" {
 	key        = "foo_wo"
 	value_wo   = "bar-wo"
 	target     = ["production"]
+	comment    = "value_wo-initial"
 }
 `, projectName, githubRepo)
 }
@@ -340,6 +368,7 @@ resource "vercel_project_environment_variable" "example_value_wo" {
 	key        = "foo_wo"
 	value_wo   = "bar-wo-updated"
 	target     = ["production"]
+	comment    = "value_wo-updated"
 }
 `, projectName, githubRepo)
 }
