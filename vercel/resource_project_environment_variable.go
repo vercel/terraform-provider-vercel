@@ -229,7 +229,7 @@ func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req
 	)
 }
 
-func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx context.Context) (req client.CreateEnvironmentVariableRequest, diags diag.Diagnostics) {
+func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx context.Context, valueWO types.String) (req client.CreateEnvironmentVariableRequest, diags diag.Diagnostics) {
 	var target []string
 	diags = e.Target.ElementsAs(ctx, &target, true)
 	if diags.HasError() {
@@ -249,7 +249,7 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx cont
 	var value string
 	value = e.Value.ValueString()
 	if value == "" {
-		value = e.ValueWO.ValueString()
+		value = valueWO.ValueString()
 	}
 	return client.CreateEnvironmentVariableRequest{
 		EnvironmentVariable: client.EnvironmentVariableRequest{
@@ -266,7 +266,7 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx cont
 	}, nil
 }
 
-func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest(ctx context.Context) (r client.UpdateEnvironmentVariableRequest, diags diag.Diagnostics) {
+func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest(ctx context.Context, valueWO types.String) (r client.UpdateEnvironmentVariableRequest, diags diag.Diagnostics) {
 	var target []string
 	diags = e.Target.ElementsAs(ctx, &target, true)
 	if diags.HasError() {
@@ -286,7 +286,7 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest(ctx cont
 	var value string
 	value = e.Value.ValueString()
 	if value == "" {
-		value = e.ValueWO.ValueString()
+		value = valueWO.ValueString()
 	}
 	return client.UpdateEnvironmentVariableRequest{
 		Value:                value,
@@ -348,6 +348,12 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	var config ProjectEnvironmentVariable
+	diags = req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	_, err := r.client.GetProject(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString())
 	if client.NotFound(err) {
@@ -358,7 +364,7 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 		return
 	}
 
-	request, diags := plan.toCreateEnvironmentVariableRequest(ctx)
+	request, diags := plan.toCreateEnvironmentVariableRequest(ctx, config.ValueWO)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -437,8 +443,14 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	var config ProjectEnvironmentVariable
+	diags = req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	request, diags := plan.toUpdateEnvironmentVariableRequest(ctx)
+	request, diags := plan.toUpdateEnvironmentVariableRequest(ctx, config.ValueWO)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
