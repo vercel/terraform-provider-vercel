@@ -41,7 +41,7 @@ tasks:
     deps:
       - install-tfplugindocs
     cmds:
-      - tfplugindocs
+      - tfplugindocs generate --provider-name terraform-provider-vercel
       - sed -i.bak 's/vercel Provider/Vercel Provider/g' docs/index.md
       - rm docs/index.md.bak
     sources:

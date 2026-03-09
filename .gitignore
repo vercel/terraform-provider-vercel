@@ -9,4 +9,3 @@ terraform-provider-vercel
 Dist/
 dist/
 .DS_Store
-*.md
