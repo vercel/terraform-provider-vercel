@@ -5,6 +5,7 @@ subcategory: ""
 description: |-
   Provides a User Token resource.
   A User Token is an authentication token that can be used to access the Vercel API.
+  Creating user tokens requires a Vercel API token with full account access. Limited tokens cannot create additional user tokens.
   The bearer_token value is only returned during creation and cannot be retrieved again later. Imported resources will not populate bearer_token.
 ---
 
@@ -13,6 +14,8 @@ description: |-
 Provides a User Token resource.
 
 A User Token is an authentication token that can be used to access the Vercel API.
+
+Creating user tokens requires a Vercel API token with full account access. Limited tokens cannot create additional user tokens.
 
 The `bearer_token` value is only returned during creation and cannot be retrieved again later. Imported resources will not populate `bearer_token`.
 

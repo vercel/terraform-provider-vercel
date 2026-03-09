@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -55,6 +56,10 @@ func testCheckUserTokenDeleted(testClient *client.Client, n string) resource.Tes
 }
 
 func TestAcc_UserTokenResource(t *testing.T) {
+	if os.Getenv("CI") != "" {
+		t.Skip("skipping in CI: creating user tokens requires a VERCEL_API_TOKEN with full account access")
+	}
+
 	name := "test-token-" + acctest.RandString(16)
 
 	resource.Test(t, resource.TestCase{
