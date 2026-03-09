@@ -13,13 +13,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+env:
+  ACCEPTANCE_GENERAL_SHARDS: "4"
+
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.result }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,20 +40,6 @@ jobs:
         run: task build
       - name: Format
         run: task lint
-      - uses: actions/github-script@v7
-        id: set-matrix
-        with:
-          script: |
-            return {
-              m: context.eventName === 'push' ? [
-                { os: "ubuntu-latest", terraform: "1.14.*" },
-                { os: "ubuntu-latest", terraform: "1.4.*" },
-                { os: "windows-latest", terraform: "1.14.*" }
-              ] : [
-                { os: "ubuntu-latest", terraform: "1.14.*" }
-              ]
-            };
-          result-encoding: json
 
   docs:
     name: Docs Test
@@ -78,15 +65,56 @@ jobs:
           BADDOCS=$(git status --porcelain)
           test -z "$BADDOCS" || (echo -e "documentation needs regenerating using task docs: $BADDOCS"; exit 1)
 
-  test:
-    name: Matrix Test
-    needs: [build]
+  unit:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+        id: go
+      - name: Get dependencies
+        run: go mod download
+      - name: Go tests without acceptance mode
+        run: go test ./... -skip '^TestAcc_'
+
+  acceptance-plan:
+    name: Acceptance Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+        id: go
+      - name: Get dependencies
+        run: go mod download
+      - name: Generate shard matrix
+        id: plan
+        run: |
+          matrix=$(go run ./tools/ci-acceptance-shards -general-shards "${ACCEPTANCE_GENERAL_SHARDS}" -format matrix)
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+      - name: Show shard plan
+        run: go run ./tools/ci-acceptance-shards -general-shards "${ACCEPTANCE_GENERAL_SHARDS}" -format summary
+
+  acceptance:
+    name: Acceptance (${{ matrix.name }})
+    needs: [build, acceptance-plan]
     timeout-minutes: 45
     strategy:
-      max-parallel: 1
+      max-parallel: 3
       fail-fast: false
-      matrix: ${{ fromJson(needs.build.outputs.matrix) }}
-    runs-on: ${{ matrix.m.os }}
+      matrix: ${{ fromJson(needs.acceptance-plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -97,11 +125,61 @@ jobs:
         id: go
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ matrix.m.terraform }}
+          terraform_version: "1.14.*"
           terraform_wrapper: false
       - name: Get dependencies
         run: go mod download
-      - name: TF acceptance tests
+      - name: TF acceptance shard
+        timeout-minutes: 45
+        env:
+          TF_ACC: "true"
+          TEST_PACKAGE: ${{ matrix.package }}
+          TEST_PATTERN: ${{ matrix.pattern }}
+          VERCEL_API_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
+          VERCEL_TERRAFORM_TESTING_TEAM: "team_GwBFaTRF7juuJfO2jZzzKRgc"
+          VERCEL_TERRAFORM_TESTING_GITHUB_REPO: "dglsparsons/test"
+          VERCEL_TERRAFORM_TESTING_GITLAB_REPO: "dglsparsons/test"
+          VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO: "dglsparsons-test/test"
+          VERCEL_TERRAFORM_TESTING_DOMAIN: "vercel-terraform.com"
+          VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER_EMAIL: ${{ secrets.VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER_EMAIL }}
+          VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION: ${{ secrets.VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION }}
+          VERCEL_TERRAFORM_TESTING_CERTIFICATE: ${{ secrets.VERCEL_TERRAFORM_TESTING_CERTIFICATE }}
+          VERCEL_TERRAFORM_TESTING_CERTIFICATE_KEY: ${{ secrets.VERCEL_TERRAFORM_TESTING_CERTIFICATE_KEY }}
+        run: |
+          go test -count=1 -timeout 30m "${TEST_PACKAGE}" -run "${TEST_PATTERN}"
+
+  acceptance-compat:
+    name: Acceptance Compat (${{ matrix.name }})
+    if: ${{ github.event_name == 'push' }}
+    needs: [build]
+    timeout-minutes: 45
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        include:
+          - name: ubuntu-tf-1.4
+            os: ubuntu-latest
+            terraform: "1.4.*"
+          - name: windows-tf-1.14
+            os: windows-latest
+            terraform: "1.14.*"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+        id: go
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ matrix.terraform }}
+          terraform_wrapper: false
+      - name: Get dependencies
+        run: go mod download
+      - name: Full TF acceptance suite
         timeout-minutes: 45
         env:
           TF_ACC: "true"
@@ -116,15 +194,18 @@ jobs:
           VERCEL_TERRAFORM_TESTING_CERTIFICATE: ${{ secrets.VERCEL_TERRAFORM_TESTING_CERTIFICATE }}
           VERCEL_TERRAFORM_TESTING_CERTIFICATE_KEY: ${{ secrets.VERCEL_TERRAFORM_TESTING_CERTIFICATE_KEY }}
         run: |
-          go test -timeout 30m ./...
+          go test -count=1 -timeout 30m ./...
 
   summary:
     name: Summary
     runs-on: ubuntu-latest
     needs:
-      - test
+      - acceptance
+      - acceptance-compat
+      - acceptance-plan
       - docs
       - build
+      - unit
     timeout-minutes: 5
     if: ${{ always() }}
     steps:
