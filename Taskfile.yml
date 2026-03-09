@@ -1,6 +1,9 @@
 # https://taskfile.dev
 version: "3"
 
+vars:
+  GORELEASER_VERSION: v2.14
+
 tasks:
   build:
     desc: "Build the provider binary"
@@ -32,9 +35,9 @@ tasks:
   install-goreleaser:
     desc: "Install goreleaser"
     cmds:
-      - go install github.com/goreleaser/goreleaser/v2@latest
+      - go install github.com/goreleaser/goreleaser/v2@{{.GORELEASER_VERSION}}
     status:
-      - which goreleaser
+      - command -v goreleaser >/dev/null && goreleaser --version | grep -Eq 'GitVersion:.*v2\.14(\.|$)'
 
   docs:
     desc: "Update the docs generated from description fields"
