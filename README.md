@@ -6,7 +6,7 @@
 ## Requirements
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) 1.1 or higher
-- [Go](https://golang.org/doc/install) 1.24 (to build the provider plugin)
+- [Go](https://golang.org/doc/install) 1.26 (to build the provider plugin)
 - [GoReleaser](https://goreleaser.com/install)
 - [Task](https://taskfile.dev/installation) v3 (to run Taskfile commands)
 
@@ -20,7 +20,7 @@ task build
 
 ## Developing the Provider
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.19+ is _required_).
+If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.26+ is _required_).
 
 To compile the provider, run `task build`. This will build the provider and put the provider binary in the repository root.
 
