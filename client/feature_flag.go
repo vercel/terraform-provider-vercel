@@ -397,22 +397,17 @@ func (r CreateFeatureFlagRequest) MarshalJSON() ([]byte, error) {
 		Slug         string                            `json:"slug"`
 		Kind         string                            `json:"kind"`
 		Variants     []FeatureFlagVariant              `json:"variants,omitempty"`
-		Environments map[string]FeatureFlagEnvironment `json:"environments"`
+		Environments map[string]FeatureFlagEnvironment `json:"environments,omitempty"`
 		Description  string                            `json:"description"`
 		State        string                            `json:"state,omitempty"`
 		Seed         *int64                            `json:"seed,omitempty"`
-	}
-
-	environments := r.Environments
-	if environments == nil {
-		environments = map[string]FeatureFlagEnvironment{}
 	}
 
 	return json.Marshal(requestBody{
 		Slug:         featureFlagIdentifier(r.Slug, r.Key),
 		Kind:         r.Kind,
 		Variants:     r.Variants,
-		Environments: environments,
+		Environments: r.Environments,
 		Description:  r.Description,
 		State:        r.State,
 		Seed:         r.Seed,

@@ -13,46 +13,6 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v4/client"
 )
 
-func TestAcc_FeatureFlagResource(t *testing.T) {
-	projectSuffix := strings.ToLower(acctest.RandString(10))
-	key := fmt.Sprintf("checkout-%s", projectSuffix)
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckFeatureFlagDeleted(testClient(t), "vercel_feature_flag.test"),
-		Steps: []resource.TestStep{
-			{
-				Config: cfg(testAccFeatureFlagResourceConfig(projectSuffix, key, "Controls the checkout experience", "treatment", false)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckFeatureFlagExists(testClient(t), "vercel_feature_flag.test"),
-					resource.TestCheckResourceAttrSet("vercel_feature_flag.test", "id"),
-					resource.TestCheckResourceAttr("vercel_feature_flag.test", "key", key),
-					resource.TestCheckResourceAttr("vercel_feature_flag.test", "kind", "string"),
-					resource.TestCheckResourceAttr("vercel_feature_flag.test", "description", "Controls the checkout experience"),
-					resource.TestCheckResourceAttr("vercel_feature_flag.test", "variant.#", "2"),
-					resource.TestCheckResourceAttr("vercel_feature_flag.test", "preview.default_variant_id", "treatment"),
-					resource.TestCheckResourceAttr("vercel_feature_flag.test", "development.enabled", "false"),
-				),
-			},
-			{
-				Config: cfg(testAccFeatureFlagResourceConfig(projectSuffix, key, "Controls the checkout experience (updated)", "control", true)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckFeatureFlagExists(testClient(t), "vercel_feature_flag.test"),
-					resource.TestCheckResourceAttr("vercel_feature_flag.test", "description", "Controls the checkout experience (updated)"),
-					resource.TestCheckResourceAttr("vercel_feature_flag.test", "preview.default_variant_id", "control"),
-					resource.TestCheckResourceAttr("vercel_feature_flag.test", "development.enabled", "true"),
-				),
-			},
-			{
-				ResourceName:      "vercel_feature_flag.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateIdFunc: getFeatureFlagImportID("vercel_feature_flag.test"),
-			},
-		},
-	})
-}
-
 func TestAcc_FeatureFlagSegmentResource(t *testing.T) {
 	projectSuffix := strings.ToLower(acctest.RandString(10))
 	slug := fmt.Sprintf("internal-users-%s", projectSuffix)
@@ -330,51 +290,6 @@ func testCheckFeatureFlagSDKKeyDeleted(testClient *client.Client, n string) reso
 	}
 }
 
-func testAccFeatureFlagResourceConfig(projectSuffix, key, description, previewDefault string, developmentEnabled bool) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "test-acc-feature-flag-%[1]s"
-}
-
-resource "vercel_feature_flag" "test" {
-  project_id   = vercel_project.test.id
-  key          = "%[2]s"
-  description  = "%[3]s"
-  kind         = "string"
-  variant = [
-    {
-      id           = "control"
-      label        = "Control"
-      value_string = "control"
-    },
-    {
-      id           = "treatment"
-      label        = "Treatment"
-      value_string = "treatment"
-    },
-  ]
-
-  production = {
-    enabled             = true
-    default_variant_id  = "control"
-    disabled_variant_id = "control"
-  }
-
-  preview = {
-    enabled             = true
-    default_variant_id  = "%[4]s"
-    disabled_variant_id = "control"
-  }
-
-  development = {
-    enabled             = %[5]t
-    default_variant_id  = "treatment"
-    disabled_variant_id = "control"
-  }
-}
-`, projectSuffix, key, description, previewDefault, developmentEnabled)
-}
-
 func testAccFeatureFlagSegmentResourceConfig(projectSuffix, slug string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
@@ -435,7 +350,7 @@ resource "vercel_project" "test" {
   name = "test-acc-feature-flag-sdk-key-%[1]s"
 }
 
-resource "vercel_feature_flag" "bootstrap" {
+resource "vercel_feature_flag_definition" "bootstrap" {
   project_id = vercel_project.test.id
   key        = "bootstrap-%[1]s"
   kind       = "boolean"
@@ -449,24 +364,6 @@ resource "vercel_feature_flag" "bootstrap" {
       value_bool = true
     },
   ]
-
-  production = {
-    enabled             = true
-    default_variant_id  = "off"
-    disabled_variant_id = "off"
-  }
-
-  preview = {
-    enabled             = true
-    default_variant_id  = "off"
-    disabled_variant_id = "off"
-  }
-
-  development = {
-    enabled             = false
-    default_variant_id  = "off"
-    disabled_variant_id = "off"
-  }
 }
 
 resource "vercel_feature_flag_sdk_key" "test" {
@@ -475,7 +372,7 @@ resource "vercel_feature_flag_sdk_key" "test" {
   type        = "server"
   label       = "backend-sdk"
 
-  depends_on = [vercel_feature_flag.bootstrap]
+  depends_on = [vercel_feature_flag_definition.bootstrap]
 }
 `, projectSuffix)
 }
