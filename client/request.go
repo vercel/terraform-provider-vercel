@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -39,21 +40,39 @@ type clientRequest struct {
 	method           string
 	url              string
 	body             string
+	bodyBytes        []byte
+	contentType      string
 	errorOnNoContent bool
+	headers          map[string]string
 }
 
 func (cr *clientRequest) toHTTPRequest() (*http.Request, error) {
+	var body io.Reader
+	switch {
+	case cr.body != "":
+		body = strings.NewReader(cr.body)
+	case cr.bodyBytes != nil:
+		body = bytes.NewReader(cr.bodyBytes)
+	}
+
 	r, err := http.NewRequestWithContext(
 		cr.ctx,
 		cr.method,
 		cr.url,
-		strings.NewReader(cr.body),
+		body,
 	)
 	if err != nil {
 		return nil, err
 	}
 	r.Header.Set("User-Agent", fmt.Sprintf("terraform-provider-vercel/%s", version))
-	if cr.body != "" {
+
+	for key, value := range cr.headers {
+		r.Header.Set(key, value)
+	}
+
+	if cr.contentType != "" {
+		r.Header.Set("Content-Type", cr.contentType)
+	} else if cr.body != "" {
 		r.Header.Set("Content-Type", "application/json")
 	}
 	return r, nil
@@ -103,7 +122,9 @@ func (c *Client) doRequest(req clientRequest, v any) error {
 }
 
 func (c *Client) _doRequest(req *http.Request, v any, errorOnNoContent bool) error {
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.token))
+	if req.Header.Get("Authorization") == "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
+	}
 	resp, err := c.http().Do(req)
 	if err != nil {
 		return fmt.Errorf("error doing http request: %w", err)
