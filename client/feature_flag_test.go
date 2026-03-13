@@ -85,6 +85,59 @@ func TestCreateFeatureFlag(t *testing.T) {
 	}
 }
 
+func TestCreateFeatureFlagOmitsEnvironmentsWhenUnset(t *testing.T) {
+	t.Parallel()
+
+	request := CreateFeatureFlagRequest{
+		ProjectID:   "prj_123",
+		TeamID:      "team_123",
+		Slug:        "checkout-banner",
+		Kind:        "string",
+		Description: "Controls the checkout banner copy",
+		State:       "active",
+		Variants: []FeatureFlagVariant{
+			{ID: "control", Value: "control"},
+			{ID: "variant-a", Value: "variant-a"},
+		},
+	}
+
+	client := newFeatureFlagTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		assertRequest(t, r, "PUT", "/v1/projects/prj_123/feature-flags/flags", "team_123", map[string]any{
+			"slug":        "checkout-banner",
+			"kind":        "string",
+			"description": "Controls the checkout banner copy",
+			"state":       "active",
+			"variants": []map[string]any{
+				{"id": "control", "value": "control"},
+				{"id": "variant-a", "value": "variant-a"},
+			},
+		})
+		_, _ = w.Write([]byte(`{
+			"id":"flag_123",
+			"slug":"checkout-banner",
+			"kind":"string",
+			"description":"Controls the checkout banner copy",
+			"state":"active",
+			"projectId":"prj_123",
+			"ownerId":"team_123",
+			"typeName":"flag",
+			"createdBy":"user_123",
+			"seed":42,
+			"revision":1,
+			"variants":[
+				{"id":"control","value":"control"},
+				{"id":"variant-a","value":"variant-a"}
+			],
+			"environments":{}
+		}`))
+	})
+
+	_, err := client.CreateFeatureFlag(context.Background(), request)
+	if err != nil {
+		t.Fatalf("CreateFeatureFlag returned error: %v", err)
+	}
+}
+
 func TestGetFeatureFlagUsesConfiguredTeam(t *testing.T) {
 	t.Parallel()
 

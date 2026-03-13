@@ -19,7 +19,7 @@ func TestAcc_FeatureFlagDataSource(t *testing.T) {
 			{
 				Config: cfg(testAccFeatureFlagDataSourceConfig(projectSuffix, key)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrPair("data.vercel_feature_flag.test", "id", "vercel_feature_flag.test", "id"),
+					resource.TestCheckResourceAttrPair("data.vercel_feature_flag.test", "id", "vercel_feature_flag_definition.test", "id"),
 					resource.TestCheckResourceAttr("data.vercel_feature_flag.test", "key", key),
 					resource.TestCheckResourceAttr("data.vercel_feature_flag.test", "kind", "boolean"),
 					resource.TestCheckResourceAttr("data.vercel_feature_flag.test", "archived", "false"),
@@ -75,7 +75,7 @@ resource "vercel_project" "test" {
   name = "test-acc-feature-flag-ds-%[1]s"
 }
 
-resource "vercel_feature_flag" "test" {
+resource "vercel_feature_flag_definition" "test" {
   project_id = vercel_project.test.id
   key        = "%[2]s"
   kind       = "boolean"
@@ -89,6 +89,11 @@ resource "vercel_feature_flag" "test" {
       value_bool = true
     },
   ]
+}
+
+resource "vercel_feature_flag_config" "test" {
+  project_id = vercel_project.test.id
+  flag_id    = vercel_feature_flag_definition.test.id
 
   production = {
     enabled             = true
@@ -111,7 +116,9 @@ resource "vercel_feature_flag" "test" {
 
 data "vercel_feature_flag" "test" {
   project_id = vercel_project.test.id
-  key        = vercel_feature_flag.test.key
+  key        = vercel_feature_flag_definition.test.key
+
+  depends_on = [vercel_feature_flag_config.test]
 }
 `, projectSuffix, key)
 }
@@ -148,7 +155,7 @@ resource "vercel_project" "test" {
   name = "test-acc-feature-flag-sdk-key-ds-%[1]s"
 }
 
-resource "vercel_feature_flag" "bootstrap" {
+resource "vercel_feature_flag_definition" "bootstrap" {
   project_id = vercel_project.test.id
   key        = "bootstrap-ds-%[1]s"
   kind       = "boolean"
@@ -162,24 +169,6 @@ resource "vercel_feature_flag" "bootstrap" {
       value_bool = true
     },
   ]
-
-  production = {
-    enabled             = true
-    default_variant_id  = "off"
-    disabled_variant_id = "off"
-  }
-
-  preview = {
-    enabled             = true
-    default_variant_id  = "off"
-    disabled_variant_id = "off"
-  }
-
-  development = {
-    enabled             = false
-    default_variant_id  = "off"
-    disabled_variant_id = "off"
-  }
 }
 
 resource "vercel_feature_flag_sdk_key" "test" {
@@ -188,7 +177,7 @@ resource "vercel_feature_flag_sdk_key" "test" {
   type        = "client"
   label       = "web-sdk"
 
-  depends_on = [vercel_feature_flag.bootstrap]
+  depends_on = [vercel_feature_flag_definition.bootstrap]
 }
 
 data "vercel_feature_flag_sdk_key" "test" {

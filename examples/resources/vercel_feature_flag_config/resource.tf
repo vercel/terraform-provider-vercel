@@ -2,7 +2,7 @@ resource "vercel_project" "example" {
   name = "feature-flag-example"
 }
 
-resource "vercel_feature_flag" "example" {
+resource "vercel_feature_flag_definition" "example" {
   project_id  = vercel_project.example.id
   key         = "checkout-redesign"
   description = "Controls the checkout experience"
@@ -19,6 +19,11 @@ resource "vercel_feature_flag" "example" {
       value_string = "treatment"
     },
   ]
+}
+
+resource "vercel_feature_flag_config" "example" {
+  project_id = vercel_project.example.id
+  flag_id    = vercel_feature_flag_definition.example.id
 
   production = {
     enabled             = true
