@@ -436,7 +436,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					),
 					validateAutomationBypassSecret(),
 				},
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
 				Optional:      true,
