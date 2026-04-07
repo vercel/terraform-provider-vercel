@@ -544,6 +544,9 @@ func TestAcc_ProjectWithAutomationBypass(t *testing.T) {
 					testAccProjectExists(testClient(t), "vercel_project.enabled_custom_secret_to_disabled", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_disabled", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_disabled", "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
+					testAccProjectExists(testClient(t), "vercel_project.enabled_custom_secret_to_different_custom_secret", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_different_custom_secret", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_different_custom_secret", "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
 				),
 			},
 			{
@@ -557,6 +560,8 @@ func TestAcc_ProjectWithAutomationBypass(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.enabled_generated_secret_to_enabled_custom_secret", "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_generated_secret_to_disabled", "protection_bypass_for_automation", "false"),
 					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_disabled", "protection_bypass_for_automation", "false"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_different_custom_secret", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttr("vercel_project.enabled_custom_secret_to_different_custom_secret", "protection_bypass_for_automation_secret", "abcdefghijklmnopqrstuvwxyz123456"),
 				),
 			},
 		},
@@ -939,6 +944,12 @@ resource "vercel_project" "enabled_custom_secret_to_disabled" {
   protection_bypass_for_automation = true
   protection_bypass_for_automation_secret = "12345678912345678912345678912345"
 }
+
+resource "vercel_project" "enabled_custom_secret_to_different_custom_secret" {
+  name = "test-acc-automation-bypass-six-%[1]s"
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secret = "12345678912345678912345678912345"
+}
     `, projectSuffix)
 }
 
@@ -969,6 +980,12 @@ resource "vercel_project" "enabled_generated_secret_to_disabled" {
 resource "vercel_project" "enabled_custom_secret_to_disabled" {
   name = "test-acc-automation-bypass-five-%[1]s"
   protection_bypass_for_automation = false
+}
+
+resource "vercel_project" "enabled_custom_secret_to_different_custom_secret" {
+  name = "test-acc-automation-bypass-six-%[1]s"
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secret = "abcdefghijklmnopqrstuvwxyz123456"
 }
     `, projectSuffix)
 }
