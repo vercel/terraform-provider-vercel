@@ -421,10 +421,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.",
 			},
 			"protection_bypass_for_automation": schema.BoolAttribute{
-				Optional:      true,
-				Computed:      true,
-				Description:   "Allow automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `protection_bypass_for_automation_secret` field.",
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
+				Optional:    true,
+				Description: "Allow automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `protection_bypass_for_automation_secret` field.",
 			},
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
 				Computed:    true,
@@ -2008,7 +2006,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	if plan.ProtectionBypassForAutomation.ValueBool() {
 		plannedSecret := plan.ProtectionBypassForAutomationSecret.ValueString()
 		currentSecret := result.ProtectionBypassForAutomationSecret.ValueString()
-		_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
+		returnedSecret, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
 			ProjectID: result.ID.ValueString(),
 			TeamID:    result.TeamID.ValueString(),
 			NewValue:  true,
@@ -2022,7 +2020,11 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			)
 			return
 		}
-		result.ProtectionBypassForAutomationSecret = types.StringValue(plannedSecret)
+		secretForState := plannedSecret
+		if secretForState == "" {
+			secretForState = returnedSecret
+		}
+		result.ProtectionBypassForAutomationSecret = types.StringValue(secretForState)
 		result.ProtectionBypassForAutomation = types.BoolValue(true)
 		diags = resp.State.Set(ctx, result)
 		resp.Diagnostics.Append(diags...)
