@@ -1714,9 +1714,6 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	if !plan.ProtectionBypassForAutomation.IsNull() && !plan.ProtectionBypassForAutomation.ValueBool() {
 		protectionBypass = types.BoolValue(false)
 	}
-	if plan.ProtectionBypassForAutomationSecret.ValueString() != "" {
-		protectionBypassSecret = types.StringValue(plan.ProtectionBypassForAutomationSecret.ValueString())
-	}
 
 	environmentEntry := types.SetValueMust(envVariableElemType, env)
 	if plan.Environment.IsNull() {
@@ -2300,7 +2297,8 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		})
 	}
 
-	if state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation {
+	if state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation ||
+		state.ProtectionBypassForAutomationSecret != plan.ProtectionBypassForAutomationSecret {
 		secret := state.ProtectionBypassForAutomationSecret.ValueString()
 		if plan.ProtectionBypassForAutomationSecret.ValueString() != "" {
 			secret = plan.ProtectionBypassForAutomationSecret.ValueString()
