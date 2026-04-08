@@ -173,3 +173,194 @@ func defaultCRSMap() map[string]client.CoreRuleSet {
 		},
 	}
 }
+
+func TestMatchFirewallRulesPreservesStableRuleIDs(t *testing.T) {
+	current := []client.FirewallRule{
+		testClientFirewallRule("rule_a", "alpha", "/alpha", "deny"),
+		testClientFirewallRule("rule_b", "beta", "/beta", "deny"),
+		testClientFirewallRule("rule_c", "charlie", "/charlie", "deny"),
+	}
+	desired := []client.FirewallRule{
+		testClientFirewallRule("", "beta", "/beta", "deny"),
+		testClientFirewallRule("", "alpha-renamed", "/alpha", "deny"),
+		testClientFirewallRule("", "delta", "/delta", "deny"),
+	}
+
+	matches, removals, inserts, err := matchFirewallRules(current, desired)
+	if err != nil {
+		t.Fatalf("unexpected match error: %v", err)
+	}
+
+	if len(matches) != 2 {
+		t.Fatalf("expected 2 matches, got %d", len(matches))
+	}
+	if len(removals) != 1 || removals[0] != 2 {
+		t.Fatalf("expected rule_c removal, got %v", removals)
+	}
+	if len(inserts) != 1 || inserts[0] != 2 {
+		t.Fatalf("expected delta insert, got %v", inserts)
+	}
+
+	gotMatches := map[int]int{}
+	for _, match := range matches {
+		gotMatches[match.currentIndex] = match.desiredIndex
+	}
+
+	if gotMatches[0] != 1 {
+		t.Fatalf("expected rule_a to match renamed alpha rule, got %+v", matches)
+	}
+	if gotMatches[1] != 0 {
+		t.Fatalf("expected rule_b to match beta rule, got %+v", matches)
+	}
+}
+
+func TestMatchFirewallRulesMatchesByNameWhenRuleBodyChanges(t *testing.T) {
+	current := []client.FirewallRule{
+		testClientFirewallRule("rule_a", "alpha", "/alpha", "deny"),
+	}
+	desired := []client.FirewallRule{
+		testClientFirewallRule("", "alpha", "/renamed", "challenge"),
+	}
+
+	matches, removals, inserts, err := matchFirewallRules(current, desired)
+	if err != nil {
+		t.Fatalf("unexpected match error: %v", err)
+	}
+
+	if len(matches) != 1 {
+		t.Fatalf("expected one match, got %d", len(matches))
+	}
+	if matches[0].currentIndex != 0 || matches[0].desiredIndex != 0 {
+		t.Fatalf("unexpected match mapping: %+v", matches)
+	}
+	if len(removals) != 0 {
+		t.Fatalf("expected no removals, got %v", removals)
+	}
+	if len(inserts) != 0 {
+		t.Fatalf("expected no inserts, got %v", inserts)
+	}
+}
+
+func TestOnlyFirewallRulesChangedIgnoresIPRuleIDs(t *testing.T) {
+	state := FirewallConfig{
+		ProjectID: types.StringValue("prj_123"),
+		TeamID:    types.StringValue("team_123"),
+		Enabled:   types.BoolValue(true),
+		IPRules: &IPRules{
+			Rules: []IPRule{
+				{
+					ID:       types.StringValue("ip_123"),
+					Hostname: types.StringValue("example.com"),
+					IP:       types.StringValue("1.2.3.4"),
+					Action:   types.StringValue("deny"),
+					Notes:    types.StringNull(),
+				},
+			},
+		},
+		Rules: &FirewallRules{
+			Rules: []FirewallRule{
+				testResourceFirewallRule("rule_123", "alpha", "/alpha", "deny"),
+			},
+		},
+	}
+	plan := FirewallConfig{
+		ProjectID: types.StringValue("prj_123"),
+		TeamID:    types.StringValue("team_123"),
+		Enabled:   types.BoolValue(true),
+		IPRules: &IPRules{
+			Rules: []IPRule{
+				{
+					ID:       types.StringNull(),
+					Hostname: types.StringValue("example.com"),
+					IP:       types.StringValue("1.2.3.4"),
+					Action:   types.StringValue("deny"),
+					Notes:    types.StringNull(),
+				},
+			},
+		},
+		Rules: &FirewallRules{
+			Rules: []FirewallRule{
+				testResourceFirewallRule("", "alpha-renamed", "/alpha", "deny"),
+			},
+		},
+	}
+
+	onlyRulesChanged, err := onlyFirewallRulesChanged(state, plan)
+	if err != nil {
+		t.Fatalf("unexpected compare error: %v", err)
+	}
+	if !onlyRulesChanged {
+		t.Fatalf("expected onlyFirewallRulesChanged to ignore IP rule IDs")
+	}
+}
+
+func TestMoveFirewallRuleID(t *testing.T) {
+	ids := []string{"rule_a", "rule_b", "rule_c"}
+	ids = moveFirewallRuleID(ids, 1, 0)
+
+	if ids[0] != "rule_b" || ids[1] != "rule_a" || ids[2] != "rule_c" {
+		t.Fatalf("unexpected rule order after move: %v", ids)
+	}
+}
+
+func testClientFirewallRule(id, name, path, action string) client.FirewallRule {
+	return client.FirewallRule{
+		ID:          id,
+		Name:        name,
+		Description: "",
+		Active:      true,
+		ConditionGroup: []client.ConditionGroup{
+			{
+				Conditions: []client.Condition{
+					{
+						Type:  "path",
+						Op:    "eq",
+						Neg:   false,
+						Key:   "",
+						Value: path,
+					},
+				},
+			},
+		},
+		Action: client.Action{
+			Mitigate: client.Mitigate{
+				Action:         action,
+				ActionDuration: "",
+			},
+		},
+	}
+}
+
+func testResourceFirewallRule(id, name, path, action string) FirewallRule {
+	ruleID := types.StringNull()
+	if id != "" {
+		ruleID = types.StringValue(id)
+	}
+
+	return FirewallRule{
+		ID:          ruleID,
+		Name:        types.StringValue(name),
+		Description: types.StringNull(),
+		Active:      types.BoolValue(true),
+		ConditionGroup: []ConditionGroup{
+			{
+				Conditions: []Condition{
+					{
+						Type:   types.StringValue("path"),
+						Op:     types.StringValue("eq"),
+						Neg:    types.BoolValue(false),
+						Key:    types.StringNull(),
+						Value:  types.StringValue(path),
+						Values: types.ListNull(types.StringType),
+					},
+				},
+			},
+		},
+		Action: Mitigate{
+			Action:         types.StringValue(action),
+			RateLimit:      types.ObjectNull(ratelimitType.AttrTypes),
+			Redirect:       types.ObjectNull(redirectType.AttrTypes),
+			ActionDuration: types.StringNull(),
+		},
+	}
+}

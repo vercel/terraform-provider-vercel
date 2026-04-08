@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -1062,6 +1063,470 @@ func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 	return conf, nil
 }
 
+type firewallRuleMatch struct {
+	currentIndex int
+	desiredIndex int
+}
+
+func firewallRulesToClient(rules *FirewallRules) ([]client.FirewallRule, error) {
+	if rules == nil || len(rules.Rules) == 0 {
+		return nil, nil
+	}
+
+	out := make([]client.FirewallRule, len(rules.Rules))
+	for i, rule := range rules.Rules {
+		mit, err := rule.Mitigate()
+		if err != nil {
+			return nil, err
+		}
+		condGroup, err := rule.Conditions()
+		if err != nil {
+			return nil, err
+		}
+
+		out[i] = client.FirewallRule{
+			ID:             rule.ID.ValueString(),
+			Name:           rule.Name.ValueString(),
+			Description:    rule.Description.ValueString(),
+			Active:         rule.Active.IsNull() || rule.Active.ValueBool(),
+			ConditionGroup: condGroup,
+			Action: client.Action{
+				Mitigate: mit,
+			},
+		}
+	}
+
+	return out, nil
+}
+
+func firewallRuleFingerprint(rule client.FirewallRule) (string, error) {
+	rule.ID = ""
+
+	payload, err := json.Marshal(rule)
+	if err != nil {
+		return "", err
+	}
+
+	return string(payload), nil
+}
+
+func firewallRuleStructureFingerprint(rule client.FirewallRule) (string, error) {
+	return firewallValueFingerprint(struct {
+		ConditionGroup []client.ConditionGroup `json:"conditionGroup"`
+		Action         client.Action           `json:"action"`
+	}{
+		ConditionGroup: rule.ConditionGroup,
+		Action:         rule.Action,
+	})
+}
+
+func firewallValueFingerprint(value any) (string, error) {
+	payload, err := json.Marshal(value)
+	if err != nil {
+		return "", err
+	}
+
+	return string(payload), nil
+}
+
+func normalizeFirewallIPRules(rules []client.IPRule) []client.IPRule {
+	if len(rules) == 0 {
+		return nil
+	}
+
+	out := make([]client.IPRule, len(rules))
+	for i, rule := range rules {
+		rule.ID = ""
+		out[i] = rule
+	}
+
+	return out
+}
+
+func matchFirewallRules(current, desired []client.FirewallRule) ([]firewallRuleMatch, []int, []int, error) {
+	matches := make([]firewallRuleMatch, 0, min(len(current), len(desired)))
+	currentMatched := make([]bool, len(current))
+	desiredMatched := make([]bool, len(desired))
+
+	currentByID := make(map[string]int, len(current))
+	for i, rule := range current {
+		if rule.ID != "" {
+			currentByID[rule.ID] = i
+		}
+	}
+
+	for desiredIndex, rule := range desired {
+		if rule.ID == "" {
+			continue
+		}
+		currentIndex, ok := currentByID[rule.ID]
+		if !ok || currentMatched[currentIndex] {
+			continue
+		}
+
+		currentMatched[currentIndex] = true
+		desiredMatched[desiredIndex] = true
+		matches = append(matches, firewallRuleMatch{
+			currentIndex: currentIndex,
+			desiredIndex: desiredIndex,
+		})
+	}
+
+	currentByFingerprint := make(map[string]int, len(current))
+	duplicateCurrentFingerprints := make(map[string]struct{})
+	for i, rule := range current {
+		if currentMatched[i] {
+			continue
+		}
+
+		fingerprint, err := firewallRuleFingerprint(rule)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		if _, exists := currentByFingerprint[fingerprint]; exists {
+			duplicateCurrentFingerprints[fingerprint] = struct{}{}
+			continue
+		}
+
+		currentByFingerprint[fingerprint] = i
+	}
+
+	for desiredIndex, rule := range desired {
+		if desiredMatched[desiredIndex] {
+			continue
+		}
+
+		fingerprint, err := firewallRuleFingerprint(rule)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		if _, duplicated := duplicateCurrentFingerprints[fingerprint]; duplicated {
+			continue
+		}
+
+		currentIndex, ok := currentByFingerprint[fingerprint]
+		if !ok || currentMatched[currentIndex] {
+			continue
+		}
+
+		currentMatched[currentIndex] = true
+		desiredMatched[desiredIndex] = true
+		matches = append(matches, firewallRuleMatch{
+			currentIndex: currentIndex,
+			desiredIndex: desiredIndex,
+		})
+	}
+
+	currentByName := make(map[string]int, len(current))
+	duplicateCurrentNames := make(map[string]struct{})
+	for i := range current {
+		if currentMatched[i] || current[i].Name == "" {
+			continue
+		}
+
+		if _, exists := currentByName[current[i].Name]; exists {
+			duplicateCurrentNames[current[i].Name] = struct{}{}
+			continue
+		}
+
+		currentByName[current[i].Name] = i
+	}
+
+	for desiredIndex, rule := range desired {
+		if desiredMatched[desiredIndex] || rule.Name == "" {
+			continue
+		}
+
+		if _, duplicated := duplicateCurrentNames[rule.Name]; duplicated {
+			continue
+		}
+
+		currentIndex, ok := currentByName[rule.Name]
+		if !ok || currentMatched[currentIndex] {
+			continue
+		}
+
+		currentMatched[currentIndex] = true
+		desiredMatched[desiredIndex] = true
+		matches = append(matches, firewallRuleMatch{
+			currentIndex: currentIndex,
+			desiredIndex: desiredIndex,
+		})
+	}
+
+	currentByStructure := make(map[string]int, len(current))
+	duplicateCurrentStructures := make(map[string]struct{})
+	for i, rule := range current {
+		if currentMatched[i] {
+			continue
+		}
+
+		fingerprint, err := firewallRuleStructureFingerprint(rule)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		if _, exists := currentByStructure[fingerprint]; exists {
+			duplicateCurrentStructures[fingerprint] = struct{}{}
+			continue
+		}
+
+		currentByStructure[fingerprint] = i
+	}
+
+	for desiredIndex, rule := range desired {
+		if desiredMatched[desiredIndex] {
+			continue
+		}
+
+		fingerprint, err := firewallRuleStructureFingerprint(rule)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		if _, duplicated := duplicateCurrentStructures[fingerprint]; duplicated {
+			continue
+		}
+
+		currentIndex, ok := currentByStructure[fingerprint]
+		if !ok || currentMatched[currentIndex] {
+			continue
+		}
+
+		currentMatched[currentIndex] = true
+		desiredMatched[desiredIndex] = true
+		matches = append(matches, firewallRuleMatch{
+			currentIndex: currentIndex,
+			desiredIndex: desiredIndex,
+		})
+	}
+
+	removals := make([]int, 0, len(current))
+	for i := range current {
+		if !currentMatched[i] {
+			removals = append(removals, i)
+		}
+	}
+
+	inserts := make([]int, 0, len(desired))
+	for i := range desired {
+		if !desiredMatched[i] {
+			inserts = append(inserts, i)
+		}
+	}
+
+	return matches, removals, inserts, nil
+}
+
+func onlyFirewallRulesChanged(state, plan FirewallConfig) (bool, error) {
+	stateConfig, err := state.toClient()
+	if err != nil {
+		return false, err
+	}
+
+	planConfig, err := plan.toClient()
+	if err != nil {
+		return false, err
+	}
+
+	if stateConfig.Enabled != planConfig.Enabled {
+		return false, nil
+	}
+
+	stateManagedRulesets, err := firewallValueFingerprint(stateConfig.ManagedRulesets)
+	if err != nil {
+		return false, err
+	}
+	planManagedRulesets, err := firewallValueFingerprint(planConfig.ManagedRulesets)
+	if err != nil {
+		return false, err
+	}
+	if stateManagedRulesets != planManagedRulesets {
+		return false, nil
+	}
+
+	stateCRS, err := firewallValueFingerprint(stateConfig.CRS)
+	if err != nil {
+		return false, err
+	}
+	planCRS, err := firewallValueFingerprint(planConfig.CRS)
+	if err != nil {
+		return false, err
+	}
+	if stateCRS != planCRS {
+		return false, nil
+	}
+
+	stateIPRules, err := firewallValueFingerprint(normalizeFirewallIPRules(stateConfig.IPRules))
+	if err != nil {
+		return false, err
+	}
+	planIPRules, err := firewallValueFingerprint(normalizeFirewallIPRules(planConfig.IPRules))
+	if err != nil {
+		return false, err
+	}
+
+	return stateIPRules == planIPRules, nil
+}
+
+func indexOfFirewallRuleID(ids []string, id string) int {
+	for i, existingID := range ids {
+		if existingID == id {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func moveFirewallRuleID(ids []string, from, to int) []string {
+	if from == to {
+		return ids
+	}
+
+	id := ids[from]
+	if from < to {
+		copy(ids[from:to], ids[from+1:to+1])
+	} else {
+		copy(ids[to+1:from+1], ids[to:from])
+	}
+	ids[to] = id
+
+	return ids
+}
+
+func (r *firewallConfigResource) updateFirewallRules(ctx context.Context, state, plan FirewallConfig) (client.FirewallConfig, error) {
+	currentRules, err := firewallRulesToClient(state.Rules)
+	if err != nil {
+		return client.FirewallConfig{}, err
+	}
+
+	desiredRules, err := firewallRulesToClient(plan.Rules)
+	if err != nil {
+		return client.FirewallConfig{}, err
+	}
+
+	matches, removals, inserts, err := matchFirewallRules(currentRules, desiredRules)
+	if err != nil {
+		return client.FirewallConfig{}, err
+	}
+
+	for _, currentIndex := range removals {
+		if err := r.client.UpdateFirewallConfig(ctx, client.UpdateFirewallConfigRequest{
+			ProjectID: state.ProjectID.ValueString(),
+			TeamID:    state.TeamID.ValueString(),
+			Action:    "rules.remove",
+			ID:        currentRules[currentIndex].ID,
+			Value:     nil,
+		}); err != nil {
+			return client.FirewallConfig{}, err
+		}
+	}
+
+	for _, match := range matches {
+		currentFingerprint, err := firewallRuleFingerprint(currentRules[match.currentIndex])
+		if err != nil {
+			return client.FirewallConfig{}, err
+		}
+		desiredFingerprint, err := firewallRuleFingerprint(desiredRules[match.desiredIndex])
+		if err != nil {
+			return client.FirewallConfig{}, err
+		}
+		if currentFingerprint == desiredFingerprint {
+			continue
+		}
+
+		desiredRule := desiredRules[match.desiredIndex]
+		desiredRule.ID = ""
+
+		if err := r.client.UpdateFirewallConfig(ctx, client.UpdateFirewallConfigRequest{
+			ProjectID: state.ProjectID.ValueString(),
+			TeamID:    state.TeamID.ValueString(),
+			Action:    "rules.update",
+			ID:        currentRules[match.currentIndex].ID,
+			Value:     desiredRule,
+		}); err != nil {
+			return client.FirewallConfig{}, err
+		}
+	}
+
+	for _, desiredIndex := range inserts {
+		desiredRule := desiredRules[desiredIndex]
+		desiredRule.ID = ""
+
+		if err := r.client.UpdateFirewallConfig(ctx, client.UpdateFirewallConfigRequest{
+			ProjectID: state.ProjectID.ValueString(),
+			TeamID:    state.TeamID.ValueString(),
+			Action:    "rules.insert",
+			ID:        nil,
+			Value:     desiredRule,
+		}); err != nil {
+			return client.FirewallConfig{}, err
+		}
+	}
+
+	currentConfig, err := r.client.GetFirewallConfig(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
+	if err != nil {
+		return client.FirewallConfig{}, err
+	}
+
+	desiredRulesWithIDs := make([]client.FirewallRule, len(desiredRules))
+	copy(desiredRulesWithIDs, desiredRules)
+	for _, match := range matches {
+		desiredRulesWithIDs[match.desiredIndex].ID = currentRules[match.currentIndex].ID
+	}
+
+	orderMatches, remainingCurrent, remainingDesired, err := matchFirewallRules(currentConfig.Rules, desiredRulesWithIDs)
+	if err != nil {
+		return client.FirewallConfig{}, err
+	}
+	if len(remainingCurrent) > 0 || len(remainingDesired) > 0 {
+		return client.FirewallConfig{}, fmt.Errorf("failed to map firewall rules to their updated IDs")
+	}
+
+	desiredRuleIDs := make([]string, len(desiredRulesWithIDs))
+	for _, match := range orderMatches {
+		desiredRuleIDs[match.desiredIndex] = currentConfig.Rules[match.currentIndex].ID
+	}
+
+	currentRuleIDs := make([]string, len(currentConfig.Rules))
+	for i, rule := range currentConfig.Rules {
+		currentRuleIDs[i] = rule.ID
+	}
+
+	priorityChanged := false
+	for desiredIndex, id := range desiredRuleIDs {
+		currentIndex := indexOfFirewallRuleID(currentRuleIDs, id)
+		if currentIndex == -1 {
+			return client.FirewallConfig{}, fmt.Errorf("failed to find firewall rule %q after update", id)
+		}
+		if currentIndex == desiredIndex {
+			continue
+		}
+
+		if err := r.client.UpdateFirewallConfig(ctx, client.UpdateFirewallConfigRequest{
+			ProjectID: state.ProjectID.ValueString(),
+			TeamID:    state.TeamID.ValueString(),
+			Action:    "rules.priority",
+			ID:        id,
+			Value:     desiredIndex,
+		}); err != nil {
+			return client.FirewallConfig{}, err
+		}
+
+		currentRuleIDs = moveFirewallRuleID(currentRuleIDs, currentIndex, desiredIndex)
+		priorityChanged = true
+	}
+
+	if !priorityChanged {
+		return currentConfig, nil
+	}
+
+	return r.client.GetFirewallConfig(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
+}
+
 func (r *firewallConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan FirewallConfig
 	diags := req.Plan.Get(ctx, &plan)
@@ -1127,6 +1592,44 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
+	var state FirewallConfig
+	diags.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	canPatchRules, err := onlyFirewallRulesChanged(state, plan)
+	if err != nil {
+		diags.AddError("failed to compare firewall config updates", err.Error())
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
+	var out client.FirewallConfig
+	if canPatchRules {
+		out, err = r.updateFirewallRules(ctx, state, plan)
+		if err != nil {
+			diags.AddError("failed to update firewall config", err.Error())
+		}
+
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		cfg, err := fromClient(out, plan)
+		if err != nil {
+			diags.AddError("failed to read updated firewall config", err.Error())
+			resp.Diagnostics.Append(diags...)
+			return
+		}
+
+		diags = resp.State.Set(ctx, cfg)
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
 	conf, err := plan.toClient()
 	if err != nil {
 		diags.AddError("failed to convert plan to client", err.Error())
@@ -1134,7 +1637,7 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	out, err := r.client.PutFirewallConfig(ctx, conf)
+	out, err = r.client.PutFirewallConfig(ctx, conf)
 	if err != nil {
 		diags.AddError("failed to update firewall config", err.Error())
 	}

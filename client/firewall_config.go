@@ -77,6 +77,14 @@ type CoreRuleSet struct {
 	Action string `json:"action"`
 }
 
+type UpdateFirewallConfigRequest struct {
+	ProjectID string `json:"-"`
+	TeamID    string `json:"-"`
+	Action    string `json:"action"`
+	ID        any    `json:"id"`
+	Value     any    `json:"value"`
+}
+
 func (c *Client) GetFirewallConfig(ctx context.Context, projectId string, teamId string) (FirewallConfig, error) {
 	teamId = c.TeamID(teamId)
 	url := fmt.Sprintf(
@@ -118,4 +126,23 @@ func (c *Client) PutFirewallConfig(ctx context.Context, cfg FirewallConfig) (Fir
 	}, &res)
 	res.Active.TeamID = teamId
 	return res.Active, err
+}
+
+func (c *Client) UpdateFirewallConfig(ctx context.Context, request UpdateFirewallConfigRequest) error {
+	teamID := c.TeamID(request.TeamID)
+	url := fmt.Sprintf(
+		"%s/v1/security/firewall/config?projectId=%s&teamId=%s",
+		c.baseURL,
+		request.ProjectID,
+		teamID,
+	)
+
+	payload := mustMarshal(request)
+
+	return c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PATCH",
+		url:    url,
+		body:   string(payload),
+	}, nil)
 }
