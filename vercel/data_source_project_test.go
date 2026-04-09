@@ -35,6 +35,12 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.protection_mode", "trusted_ip_required"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "options_allowlist.paths.#", "1"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "options_allowlist.paths.0.value", "/api"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
+					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "protection_bypass_for_automation_secrets.*", map[string]string{
+						"secret":     "12345678912345678912345678912345",
+						"is_env_var": "true",
+					}),
 
 					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "environment.*", map[string]string{
 						"key":   "foo",
@@ -104,6 +110,8 @@ resource "vercel_project" "test" {
       }
     ]
   }
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secret = "12345678912345678912345678912345"
   environment = [
     {
       key    = "foo"

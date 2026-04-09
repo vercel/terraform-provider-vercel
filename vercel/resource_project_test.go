@@ -568,6 +568,151 @@ func TestAcc_ProjectWithAutomationBypass(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectWithAutomationBypassMultipleSecretsValidation(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "vercel_project" "test" {
+  name = "test-acc-automation-bypass-invalid-one"
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secret = "12345678912345678912345678912345"
+  protection_bypass_for_automation_secrets = [
+    {
+      secret = "abcdefghijklmnopqrstuvwxyz123456"
+      is_env_var = true
+    }
+  ]
+}
+`,
+				ExpectError: regexp.MustCompile(strings.ReplaceAll(
+					"protection_bypass_for_automation_secrets cannot be used together with protection_bypass_for_automation_secret",
+					" ",
+					`\s*`,
+				)),
+			},
+			{
+				Config: `
+resource "vercel_project" "test" {
+  name = "test-acc-automation-bypass-invalid-two"
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secrets = [
+    {
+      secret = "12345678912345678912345678912345"
+      is_env_var = false
+    },
+    {
+      secret = "abcdefghijklmnopqrstuvwxyz123456"
+      is_env_var = false
+    }
+  ]
+}
+`,
+				ExpectError: regexp.MustCompile(strings.ReplaceAll(
+					"Exactly one protection_bypass_for_automation_secrets entry must set is_env_var to true",
+					" ",
+					`\s*`,
+				)),
+			},
+		},
+	})
+}
+
+func TestAcc_ProjectWithAutomationBypassMultipleSecrets(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resourceName := "vercel_project.test"
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), resourceName, testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectConfigAutomationBypassMultipleSecrets(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), resourceName, testTeam(t)),
+					resource.TestCheckResourceAttr(resourceName, "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttr(resourceName, "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
+					resource.TestCheckResourceAttr(resourceName, "protection_bypass_for_automation_secrets.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "protection_bypass_for_automation_secrets.*", map[string]string{
+						"secret":     "12345678912345678912345678912345",
+						"note":       "GitHub Actions",
+						"is_env_var": "true",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "protection_bypass_for_automation_secrets.*", map[string]string{
+						"secret":     "abcdefghijklmnopqrstuvwxyz123456",
+						"note":       "Smoke tests",
+						"is_env_var": "false",
+					}),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigAutomationBypassMultipleSecretsUpdated(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttr(resourceName, "protection_bypass_for_automation_secret", "abcdefghijklmnopqrstuvwxyz123456"),
+					resource.TestCheckResourceAttr(resourceName, "protection_bypass_for_automation_secrets.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "protection_bypass_for_automation_secrets.*", map[string]string{
+						"secret":     "abcdefghijklmnopqrstuvwxyz123456",
+						"note":       "Smoke tests",
+						"is_env_var": "true",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "protection_bypass_for_automation_secrets.*", map[string]string{
+						"secret":     "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+						"note":       "Manual verification",
+						"is_env_var": "false",
+					}),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigAutomationBypassMultipleSecretsDisabled(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "protection_bypass_for_automation", "false"),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_ProjectWithAutomationBypassManualExtraSecret(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	projectName := fmt.Sprintf("test-acc-automation-bypass-manual-%s", projectSuffix)
+	resourceName := "vercel_project.test"
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), resourceName, testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				ExpectNonEmptyPlan: true,
+				Config:             cfg(testAccProjectConfigAutomationBypassSingleSecret(projectName, "12345678912345678912345678912345")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), resourceName, testTeam(t)),
+					resource.TestCheckResourceAttr(resourceName, "protection_bypass_for_automation_secret", "12345678912345678912345678912345"),
+				),
+			},
+			{
+				ExpectNonEmptyPlan: true,
+				PreConfig: func() {
+					seedManualAutomationBypassSecret(t, projectName, testTeam(t), "manualmanualmanualmanualmanual12", "Manual extra secret")
+				},
+				Config: cfg(testAccProjectConfigAutomationBypassSingleSecret(projectName, "abcdefghijklmnopqrstuvwxyz123456")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "protection_bypass_for_automation_secret", "abcdefghijklmnopqrstuvwxyz123456"),
+					resource.TestCheckResourceAttr(resourceName, "protection_bypass_for_automation_secrets.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "protection_bypass_for_automation_secrets.*", map[string]string{
+						"secret":     "manualmanualmanualmanualmanual12",
+						"note":       "Manual extra secret",
+						"is_env_var": "false",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "protection_bypass_for_automation_secrets.*", map[string]string{
+						"secret":     "abcdefghijklmnopqrstuvwxyz123456",
+						"is_env_var": "true",
+					}),
+				),
+			},
+		},
+	})
+}
+
 func getProjectImportID(n string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[n]
@@ -675,6 +820,22 @@ func testAccProjectDestroy(testClient *client.Client, n, teamID string) resource
 		}
 
 		return nil
+	}
+}
+
+func seedManualAutomationBypassSecret(t *testing.T, projectName, teamID, secret, note string) {
+	t.Helper()
+
+	_, err := testClient(t).PatchProtectionBypassForAutomation(context.TODO(), client.PatchProtectionBypassForAutomationRequest{
+		ProjectID: projectName,
+		TeamID:    teamID,
+		Generate: &client.GenerateProtectionBypassRequest{
+			Secret: secret,
+			Note:   &note,
+		},
+	})
+	if err != nil {
+		t.Fatalf("error seeding manual automation bypass secret: %v", err)
 	}
 }
 
@@ -988,6 +1149,67 @@ resource "vercel_project" "enabled_custom_secret_to_different_custom_secret" {
   protection_bypass_for_automation_secret = "abcdefghijklmnopqrstuvwxyz123456"
 }
     `, projectSuffix)
+}
+
+func testAccProjectConfigAutomationBypassMultipleSecrets(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-automation-bypass-multi-%[1]s"
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secrets = [
+    {
+      secret = "12345678912345678912345678912345"
+      note = "GitHub Actions"
+      is_env_var = true
+    },
+    {
+      secret = "abcdefghijklmnopqrstuvwxyz123456"
+      note = "Smoke tests"
+      is_env_var = false
+    }
+  ]
+}
+`, projectSuffix)
+}
+
+func testAccProjectConfigAutomationBypassMultipleSecretsUpdated(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-automation-bypass-multi-%[1]s"
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secrets = [
+    {
+      secret = "abcdefghijklmnopqrstuvwxyz123456"
+      note = "Smoke tests"
+      is_env_var = true
+    },
+    {
+      secret = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+      note = "Manual verification"
+      is_env_var = false
+    }
+  ]
+}
+`, projectSuffix)
+}
+
+func testAccProjectConfigAutomationBypassMultipleSecretsDisabled(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-automation-bypass-multi-%[1]s"
+  protection_bypass_for_automation = false
+}
+`, projectSuffix)
+}
+
+func testAccProjectConfigAutomationBypassSingleSecret(projectName, secret string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "%[1]s"
+  protection_bypass_for_automation = true
+  protection_bypass_for_automation_secret = "%[2]s"
+}
+`, projectName, secret)
 }
 
 func testAccProjectConfigWithGitRepo(projectSuffix, githubRepo string) string {

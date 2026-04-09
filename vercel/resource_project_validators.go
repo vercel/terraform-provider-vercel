@@ -3,10 +3,12 @@ package vercel
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 )
 
 var _ resource.ConfigValidator = &fluidComputeBasicCPUValidator{}
+var _ resource.ConfigValidator = &automationBypassSecretsValidator{}
 
 type fluidComputeBasicCPUValidator struct{}
 
@@ -58,5 +60,67 @@ func (v *fluidComputeBasicCPUValidator) ValidateResource(ctx context.Context, re
 	resp.Diagnostics.AddError(
 		"Error validating project fluid compute configuration",
 		"Fluid compute is only supported with the standard or performance CPU types.",
+	)
+}
+
+type automationBypassSecretsValidator struct{}
+
+func (v *automationBypassSecretsValidator) Description(ctx context.Context) string {
+	return "Validates multi-secret protection bypass configuration."
+}
+
+func (v *automationBypassSecretsValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v *automationBypassSecretsValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var project Project
+	diags := req.Config.Get(ctx, &project)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !project.hasConfiguredProtectionBypassForAutomationSecrets() {
+		return
+	}
+
+	if !project.ProtectionBypassForAutomation.ValueBool() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("protection_bypass_for_automation_secrets"),
+			"Invalid Configuration",
+			"protection_bypass_for_automation_secrets is only allowed when protection_bypass_for_automation is true.",
+		)
+	}
+
+	if !project.ProtectionBypassForAutomationSecret.IsNull() && !project.ProtectionBypassForAutomationSecret.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("protection_bypass_for_automation_secrets"),
+			"Invalid Configuration",
+			"protection_bypass_for_automation_secrets cannot be used together with protection_bypass_for_automation_secret.",
+		)
+	}
+
+	secrets, diags := project.protectionBypassForAutomationSecrets(ctx)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	envVarCount := 0
+	for _, secret := range secrets {
+		if secret.IsEnvVar.ValueBool() {
+			envVarCount++
+		}
+	}
+
+	if envVarCount == 1 {
+		return
+	}
+
+	resp.Diagnostics.AddAttributeError(
+		path.Root("protection_bypass_for_automation_secrets"),
+		"Invalid Configuration",
+		"Exactly one protection_bypass_for_automation_secrets entry must set is_env_var to true.",
 	)
 }

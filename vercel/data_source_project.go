@@ -297,13 +297,34 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
 				Sensitive:   true,
 				Computed:    true,
-				Description: "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
+				Description: "The automation bypass secret currently exposed as `VERCEL_AUTOMATION_BYPASS_SECRET` on deployments.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),
 						"Specify `generate` to have the value generated automatically, or specify a 32 character secret.",
 					),
 					validateAutomationBypassSecret(),
+				},
+			},
+			"protection_bypass_for_automation_secrets": schema.SetNestedAttribute{
+				Computed:    true,
+				Description: "The full set of automation bypass secrets configured for this project.",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"secret": schema.StringAttribute{
+							Computed:    true,
+							Sensitive:   true,
+							Description: "The 32 character automation bypass secret.",
+						},
+						"note": schema.StringAttribute{
+							Computed:    true,
+							Description: "An optional note displayed alongside this bypass in the Vercel UI.",
+						},
+						"is_env_var": schema.BoolAttribute{
+							Computed:    true,
+							Description: "Whether this secret is exposed as `VERCEL_AUTOMATION_BYPASS_SECRET` on deployments.",
+						},
+					},
 				},
 			},
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
@@ -431,48 +452,49 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 // Project reflects the state terraform stores internally for a project.
 type ProjectDataSource struct {
-	BuildCommand                        types.String `tfsdk:"build_command"`
-	DevCommand                          types.String `tfsdk:"dev_command"`
-	Environment                         types.Set    `tfsdk:"environment"`
-	Framework                           types.String `tfsdk:"framework"`
-	GitRepository                       types.Object `tfsdk:"git_repository"`
-	ID                                  types.String `tfsdk:"id"`
-	IgnoreCommand                       types.String `tfsdk:"ignore_command"`
-	InstallCommand                      types.String `tfsdk:"install_command"`
-	Name                                types.String `tfsdk:"name"`
-	OutputDirectory                     types.String `tfsdk:"output_directory"`
-	PreviewDeploymentSuffix             types.String `tfsdk:"preview_deployment_suffix"`
-	PublicSource                        types.Bool   `tfsdk:"public_source"`
-	RootDirectory                       types.String `tfsdk:"root_directory"`
-	ServerlessFunctionRegion            types.String `tfsdk:"serverless_function_region"`
-	TeamID                              types.String `tfsdk:"team_id"`
-	VercelAuthentication                types.Object `tfsdk:"vercel_authentication"`
-	PasswordProtection                  types.Object `tfsdk:"password_protection"`
-	TrustedIps                          types.Object `tfsdk:"trusted_ips"`
-	OIDCTokenConfig                     types.Object `tfsdk:"oidc_token_config"`
-	OptionsAllowlist                    types.Object `tfsdk:"options_allowlist"`
-	ProtectionBypassForAutomation       types.Bool   `tfsdk:"protection_bypass_for_automation"`
-	ProtectionBypassForAutomationSecret types.String `tfsdk:"protection_bypass_for_automation_secret"`
-	AutoExposeSystemEnvVars             types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
-	GitComments                         types.Object `tfsdk:"git_comments"`
-	GitProviderOptions                  types.Object `tfsdk:"git_provider_options"`
-	PreviewComments                     types.Bool   `tfsdk:"preview_comments"`
-	EnablePreviewFeedback               types.Bool   `tfsdk:"enable_preview_feedback"`
-	EnableProductionFeedback            types.Bool   `tfsdk:"enable_production_feedback"`
-	PreviewDeploymentsDisabled          types.Bool   `tfsdk:"preview_deployments_disabled"`
-	AutoAssignCustomDomains             types.Bool   `tfsdk:"auto_assign_custom_domains"`
-	GitLFS                              types.Bool   `tfsdk:"git_lfs"`
-	FunctionFailover                    types.Bool   `tfsdk:"function_failover"`
-	CustomerSuccessCodeVisibility       types.Bool   `tfsdk:"customer_success_code_visibility"`
-	GitForkProtection                   types.Bool   `tfsdk:"git_fork_protection"`
-	PrioritiseProductionBuilds          types.Bool   `tfsdk:"prioritise_production_builds"`
-	DirectoryListing                    types.Bool   `tfsdk:"directory_listing"`
-	EnableAffectedProjectsDeployments   types.Bool   `tfsdk:"enable_affected_projects_deployments"`
-	SkewProtection                      types.String `tfsdk:"skew_protection"`
-	ResourceConfig                      types.Object `tfsdk:"resource_config"`
-	NodeVersion                         types.String `tfsdk:"node_version"`
-	OnDemandConcurrentBuilds            types.Bool   `tfsdk:"on_demand_concurrent_builds"`
-	BuildMachineTYpe                    types.String `tfsdk:"build_machine_type"`
+	BuildCommand                         types.String `tfsdk:"build_command"`
+	DevCommand                           types.String `tfsdk:"dev_command"`
+	Environment                          types.Set    `tfsdk:"environment"`
+	Framework                            types.String `tfsdk:"framework"`
+	GitRepository                        types.Object `tfsdk:"git_repository"`
+	ID                                   types.String `tfsdk:"id"`
+	IgnoreCommand                        types.String `tfsdk:"ignore_command"`
+	InstallCommand                       types.String `tfsdk:"install_command"`
+	Name                                 types.String `tfsdk:"name"`
+	OutputDirectory                      types.String `tfsdk:"output_directory"`
+	PreviewDeploymentSuffix              types.String `tfsdk:"preview_deployment_suffix"`
+	PublicSource                         types.Bool   `tfsdk:"public_source"`
+	RootDirectory                        types.String `tfsdk:"root_directory"`
+	ServerlessFunctionRegion             types.String `tfsdk:"serverless_function_region"`
+	TeamID                               types.String `tfsdk:"team_id"`
+	VercelAuthentication                 types.Object `tfsdk:"vercel_authentication"`
+	PasswordProtection                   types.Object `tfsdk:"password_protection"`
+	TrustedIps                           types.Object `tfsdk:"trusted_ips"`
+	OIDCTokenConfig                      types.Object `tfsdk:"oidc_token_config"`
+	OptionsAllowlist                     types.Object `tfsdk:"options_allowlist"`
+	ProtectionBypassForAutomation        types.Bool   `tfsdk:"protection_bypass_for_automation"`
+	ProtectionBypassForAutomationSecret  types.String `tfsdk:"protection_bypass_for_automation_secret"`
+	ProtectionBypassForAutomationSecrets types.Set    `tfsdk:"protection_bypass_for_automation_secrets"`
+	AutoExposeSystemEnvVars              types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
+	GitComments                          types.Object `tfsdk:"git_comments"`
+	GitProviderOptions                   types.Object `tfsdk:"git_provider_options"`
+	PreviewComments                      types.Bool   `tfsdk:"preview_comments"`
+	EnablePreviewFeedback                types.Bool   `tfsdk:"enable_preview_feedback"`
+	EnableProductionFeedback             types.Bool   `tfsdk:"enable_production_feedback"`
+	PreviewDeploymentsDisabled           types.Bool   `tfsdk:"preview_deployments_disabled"`
+	AutoAssignCustomDomains              types.Bool   `tfsdk:"auto_assign_custom_domains"`
+	GitLFS                               types.Bool   `tfsdk:"git_lfs"`
+	FunctionFailover                     types.Bool   `tfsdk:"function_failover"`
+	CustomerSuccessCodeVisibility        types.Bool   `tfsdk:"customer_success_code_visibility"`
+	GitForkProtection                    types.Bool   `tfsdk:"git_fork_protection"`
+	PrioritiseProductionBuilds           types.Bool   `tfsdk:"prioritise_production_builds"`
+	DirectoryListing                     types.Bool   `tfsdk:"directory_listing"`
+	EnableAffectedProjectsDeployments    types.Bool   `tfsdk:"enable_affected_projects_deployments"`
+	SkewProtection                       types.String `tfsdk:"skew_protection"`
+	ResourceConfig                       types.Object `tfsdk:"resource_config"`
+	NodeVersion                          types.String `tfsdk:"node_version"`
+	OnDemandConcurrentBuilds             types.Bool   `tfsdk:"on_demand_concurrent_builds"`
+	BuildMachineTYpe                     types.String `tfsdk:"build_machine_type"`
 }
 
 func convertResponseToProjectDataSource(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (ProjectDataSource, error) {
@@ -519,48 +541,49 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 	}
 
 	return ProjectDataSource{
-		BuildCommand:                        project.BuildCommand,
-		DevCommand:                          project.DevCommand,
-		Environment:                         project.Environment,
-		Framework:                           project.Framework,
-		GitRepository:                       project.GitRepository,
-		ID:                                  project.ID,
-		IgnoreCommand:                       project.IgnoreCommand,
-		InstallCommand:                      project.InstallCommand,
-		Name:                                project.Name,
-		OutputDirectory:                     project.OutputDirectory,
-		PreviewDeploymentSuffix:             project.PreviewDeploymentSuffix,
-		PublicSource:                        project.PublicSource,
-		RootDirectory:                       project.RootDirectory,
-		ServerlessFunctionRegion:            project.ServerlessFunctionRegion,
-		TeamID:                              project.TeamID,
-		VercelAuthentication:                project.VercelAuthentication,
-		PasswordProtection:                  ppObj,
-		TrustedIps:                          project.TrustedIps,
-		OIDCTokenConfig:                     project.OIDCTokenConfig,
-		OptionsAllowlist:                    project.OptionsAllowlist,
-		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
-		ProtectionBypassForAutomation:       project.ProtectionBypassForAutomation,
-		ProtectionBypassForAutomationSecret: project.ProtectionBypassForAutomationSecret,
-		GitComments:                         project.GitComments,
-		GitProviderOptions:                  project.GitProviderOptions,
-		PreviewComments:                     project.PreviewComments,
-		EnablePreviewFeedback:               project.EnablePreviewFeedback,
-		EnableProductionFeedback:            project.EnableProductionFeedback,
-		PreviewDeploymentsDisabled:          project.PreviewDeploymentsDisabled,
-		AutoAssignCustomDomains:             project.AutoAssignCustomDomains,
-		GitLFS:                              project.GitLFS,
-		FunctionFailover:                    project.FunctionFailover,
-		CustomerSuccessCodeVisibility:       project.CustomerSuccessCodeVisibility,
-		GitForkProtection:                   project.GitForkProtection,
-		PrioritiseProductionBuilds:          project.PrioritiseProductionBuilds,
-		DirectoryListing:                    project.DirectoryListing,
-		EnableAffectedProjectsDeployments:   project.EnableAffectedProjectsDeployments,
-		SkewProtection:                      project.SkewProtection,
-		ResourceConfig:                      project.ResourceConfig,
-		NodeVersion:                         project.NodeVersion,
-		OnDemandConcurrentBuilds:            project.OnDemandConcurrentBuilds,
-		BuildMachineTYpe:                    project.BuildMachineType,
+		BuildCommand:                         project.BuildCommand,
+		DevCommand:                           project.DevCommand,
+		Environment:                          project.Environment,
+		Framework:                            project.Framework,
+		GitRepository:                        project.GitRepository,
+		ID:                                   project.ID,
+		IgnoreCommand:                        project.IgnoreCommand,
+		InstallCommand:                       project.InstallCommand,
+		Name:                                 project.Name,
+		OutputDirectory:                      project.OutputDirectory,
+		PreviewDeploymentSuffix:              project.PreviewDeploymentSuffix,
+		PublicSource:                         project.PublicSource,
+		RootDirectory:                        project.RootDirectory,
+		ServerlessFunctionRegion:             project.ServerlessFunctionRegion,
+		TeamID:                               project.TeamID,
+		VercelAuthentication:                 project.VercelAuthentication,
+		PasswordProtection:                   ppObj,
+		TrustedIps:                           project.TrustedIps,
+		OIDCTokenConfig:                      project.OIDCTokenConfig,
+		OptionsAllowlist:                     project.OptionsAllowlist,
+		AutoExposeSystemEnvVars:              types.BoolPointerValue(response.AutoExposeSystemEnvVars),
+		ProtectionBypassForAutomation:        project.ProtectionBypassForAutomation,
+		ProtectionBypassForAutomationSecret:  project.ProtectionBypassForAutomationSecret,
+		ProtectionBypassForAutomationSecrets: project.ProtectionBypassForAutomationSecrets,
+		GitComments:                          project.GitComments,
+		GitProviderOptions:                   project.GitProviderOptions,
+		PreviewComments:                      project.PreviewComments,
+		EnablePreviewFeedback:                project.EnablePreviewFeedback,
+		EnableProductionFeedback:             project.EnableProductionFeedback,
+		PreviewDeploymentsDisabled:           project.PreviewDeploymentsDisabled,
+		AutoAssignCustomDomains:              project.AutoAssignCustomDomains,
+		GitLFS:                               project.GitLFS,
+		FunctionFailover:                     project.FunctionFailover,
+		CustomerSuccessCodeVisibility:        project.CustomerSuccessCodeVisibility,
+		GitForkProtection:                    project.GitForkProtection,
+		PrioritiseProductionBuilds:           project.PrioritiseProductionBuilds,
+		DirectoryListing:                     project.DirectoryListing,
+		EnableAffectedProjectsDeployments:    project.EnableAffectedProjectsDeployments,
+		SkewProtection:                       project.SkewProtection,
+		ResourceConfig:                       project.ResourceConfig,
+		NodeVersion:                          project.NodeVersion,
+		OnDemandConcurrentBuilds:             project.OnDemandConcurrentBuilds,
+		BuildMachineTYpe:                     project.BuildMachineType,
 	}, nil
 }
 

@@ -69,7 +69,8 @@ data "vercel_project" "example" {
 - `preview_deployments_disabled` (Boolean) Whether Preview Deployments are disabled for this project.
 - `prioritise_production_builds` (Boolean) If enabled, builds for the Production environment will be prioritized over Preview environments.
 - `protection_bypass_for_automation` (Boolean) Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with the value from `protection_bypass_for_automation_secret`.
-- `protection_bypass_for_automation_secret` (String, Sensitive) If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.
+- `protection_bypass_for_automation_secret` (String, Sensitive) The automation bypass secret currently exposed as `VERCEL_AUTOMATION_BYPASS_SECRET` on deployments.
+- `protection_bypass_for_automation_secrets` (Attributes Set) The full set of automation bypass secrets configured for this project. (see [below for nested schema](#nestedatt--protection_bypass_for_automation_secrets))
 - `public_source` (Boolean) Specifies whether the source code and logs of the deployments for this project should be public or not.
 - `resource_config` (Attributes) Resource Configuration for the project. (see [below for nested schema](#nestedatt--resource_config))
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.
@@ -164,6 +165,16 @@ Read-Only:
 Read-Only:
 
 - `deployment_type` (String) The deployment environment that will be protected.
+
+
+<a id="nestedatt--protection_bypass_for_automation_secrets"></a>
+### Nested Schema for `protection_bypass_for_automation_secrets`
+
+Read-Only:
+
+- `is_env_var` (Boolean) Whether this secret is exposed as `VERCEL_AUTOMATION_BYPASS_SECRET` on deployments.
+- `note` (String) An optional note displayed alongside this bypass in the Vercel UI.
+- `secret` (String, Sensitive) The 32 character automation bypass secret.
 
 
 <a id="nestedatt--resource_config"></a>

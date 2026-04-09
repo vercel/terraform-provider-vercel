@@ -428,13 +428,45 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Computed:    true,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
+				Description: "If `protection_bypass_for_automation` is enabled, optionally set this value to specify the automation bypass secret that should be exposed as `VERCEL_AUTOMATION_BYPASS_SECRET` on deployments. If omitted, a secret will be generated.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),
 						"Specify `generate` to have the value generated automatically, or specify a 32 character secret.",
 					),
 					validateAutomationBypassSecret(),
+				},
+			},
+			"protection_bypass_for_automation_secrets": schema.SetNestedAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Authoritatively manages the set of automation bypass secrets for this project. This conflicts with `protection_bypass_for_automation_secret` and requires exactly one entry with `is_env_var = true`.",
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"secret": schema.StringAttribute{
+							Required:    true,
+							Sensitive:   true,
+							Description: "The 32 character automation bypass secret.",
+							Validators: []validator.String{
+								stringvalidator.RegexMatches(
+									regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),
+									"Specify a 32 character secret.",
+								),
+							},
+						},
+						"note": schema.StringAttribute{
+							Optional:    true,
+							Computed:    true,
+							Description: "An optional note to display alongside this bypass in the Vercel UI.",
+						},
+						"is_env_var": schema.BoolAttribute{
+							Required:    true,
+							Description: "Whether this secret should be exposed as `VERCEL_AUTOMATION_BYPASS_SECRET` on deployments.",
+						},
+					},
 				},
 			},
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
@@ -634,53 +666,55 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 func (r *projectResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		&fluidComputeBasicCPUValidator{},
+		&automationBypassSecretsValidator{},
 	}
 }
 
 // Project reflects the state terraform stores internally for a project.
 type Project struct {
-	BuildCommand                        types.String `tfsdk:"build_command"`
-	DevCommand                          types.String `tfsdk:"dev_command"`
-	Environment                         types.Set    `tfsdk:"environment"`
-	Framework                           types.String `tfsdk:"framework"`
-	GitRepository                       types.Object `tfsdk:"git_repository"`
-	ID                                  types.String `tfsdk:"id"`
-	IgnoreCommand                       types.String `tfsdk:"ignore_command"`
-	InstallCommand                      types.String `tfsdk:"install_command"`
-	Name                                types.String `tfsdk:"name"`
-	NodeVersion                         types.String `tfsdk:"node_version"`
-	OutputDirectory                     types.String `tfsdk:"output_directory"`
-	PreviewDeploymentSuffix             types.String `tfsdk:"preview_deployment_suffix"`
-	PublicSource                        types.Bool   `tfsdk:"public_source"`
-	RootDirectory                       types.String `tfsdk:"root_directory"`
-	ServerlessFunctionRegion            types.String `tfsdk:"serverless_function_region"`
-	TeamID                              types.String `tfsdk:"team_id"`
-	VercelAuthentication                types.Object `tfsdk:"vercel_authentication"`
-	PasswordProtection                  types.Object `tfsdk:"password_protection"`
-	TrustedIps                          types.Object `tfsdk:"trusted_ips"`
-	OIDCTokenConfig                     types.Object `tfsdk:"oidc_token_config"`
-	OptionsAllowlist                    types.Object `tfsdk:"options_allowlist"`
-	ProtectionBypassForAutomation       types.Bool   `tfsdk:"protection_bypass_for_automation"`
-	ProtectionBypassForAutomationSecret types.String `tfsdk:"protection_bypass_for_automation_secret"`
-	AutoExposeSystemEnvVars             types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
-	GitComments                         types.Object `tfsdk:"git_comments"`
-	GitProviderOptions                  types.Object `tfsdk:"git_provider_options"`
-	PreviewComments                     types.Bool   `tfsdk:"preview_comments"`
-	EnablePreviewFeedback               types.Bool   `tfsdk:"enable_preview_feedback"`
-	EnableProductionFeedback            types.Bool   `tfsdk:"enable_production_feedback"`
-	PreviewDeploymentsDisabled          types.Bool   `tfsdk:"preview_deployments_disabled"`
-	AutoAssignCustomDomains             types.Bool   `tfsdk:"auto_assign_custom_domains"`
-	GitLFS                              types.Bool   `tfsdk:"git_lfs"`
-	FunctionFailover                    types.Bool   `tfsdk:"function_failover"`
-	CustomerSuccessCodeVisibility       types.Bool   `tfsdk:"customer_success_code_visibility"`
-	GitForkProtection                   types.Bool   `tfsdk:"git_fork_protection"`
-	PrioritiseProductionBuilds          types.Bool   `tfsdk:"prioritise_production_builds"`
-	DirectoryListing                    types.Bool   `tfsdk:"directory_listing"`
-	EnableAffectedProjectsDeployments   types.Bool   `tfsdk:"enable_affected_projects_deployments"`
-	SkewProtection                      types.String `tfsdk:"skew_protection"`
-	ResourceConfig                      types.Object `tfsdk:"resource_config"`
-	OnDemandConcurrentBuilds            types.Bool   `tfsdk:"on_demand_concurrent_builds"`
-	BuildMachineType                    types.String `tfsdk:"build_machine_type"`
+	BuildCommand                         types.String `tfsdk:"build_command"`
+	DevCommand                           types.String `tfsdk:"dev_command"`
+	Environment                          types.Set    `tfsdk:"environment"`
+	Framework                            types.String `tfsdk:"framework"`
+	GitRepository                        types.Object `tfsdk:"git_repository"`
+	ID                                   types.String `tfsdk:"id"`
+	IgnoreCommand                        types.String `tfsdk:"ignore_command"`
+	InstallCommand                       types.String `tfsdk:"install_command"`
+	Name                                 types.String `tfsdk:"name"`
+	NodeVersion                          types.String `tfsdk:"node_version"`
+	OutputDirectory                      types.String `tfsdk:"output_directory"`
+	PreviewDeploymentSuffix              types.String `tfsdk:"preview_deployment_suffix"`
+	PublicSource                         types.Bool   `tfsdk:"public_source"`
+	RootDirectory                        types.String `tfsdk:"root_directory"`
+	ServerlessFunctionRegion             types.String `tfsdk:"serverless_function_region"`
+	TeamID                               types.String `tfsdk:"team_id"`
+	VercelAuthentication                 types.Object `tfsdk:"vercel_authentication"`
+	PasswordProtection                   types.Object `tfsdk:"password_protection"`
+	TrustedIps                           types.Object `tfsdk:"trusted_ips"`
+	OIDCTokenConfig                      types.Object `tfsdk:"oidc_token_config"`
+	OptionsAllowlist                     types.Object `tfsdk:"options_allowlist"`
+	ProtectionBypassForAutomation        types.Bool   `tfsdk:"protection_bypass_for_automation"`
+	ProtectionBypassForAutomationSecret  types.String `tfsdk:"protection_bypass_for_automation_secret"`
+	ProtectionBypassForAutomationSecrets types.Set    `tfsdk:"protection_bypass_for_automation_secrets"`
+	AutoExposeSystemEnvVars              types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
+	GitComments                          types.Object `tfsdk:"git_comments"`
+	GitProviderOptions                   types.Object `tfsdk:"git_provider_options"`
+	PreviewComments                      types.Bool   `tfsdk:"preview_comments"`
+	EnablePreviewFeedback                types.Bool   `tfsdk:"enable_preview_feedback"`
+	EnableProductionFeedback             types.Bool   `tfsdk:"enable_production_feedback"`
+	PreviewDeploymentsDisabled           types.Bool   `tfsdk:"preview_deployments_disabled"`
+	AutoAssignCustomDomains              types.Bool   `tfsdk:"auto_assign_custom_domains"`
+	GitLFS                               types.Bool   `tfsdk:"git_lfs"`
+	FunctionFailover                     types.Bool   `tfsdk:"function_failover"`
+	CustomerSuccessCodeVisibility        types.Bool   `tfsdk:"customer_success_code_visibility"`
+	GitForkProtection                    types.Bool   `tfsdk:"git_fork_protection"`
+	PrioritiseProductionBuilds           types.Bool   `tfsdk:"prioritise_production_builds"`
+	DirectoryListing                     types.Bool   `tfsdk:"directory_listing"`
+	EnableAffectedProjectsDeployments    types.Bool   `tfsdk:"enable_affected_projects_deployments"`
+	SkewProtection                       types.String `tfsdk:"skew_protection"`
+	ResourceConfig                       types.Object `tfsdk:"resource_config"`
+	OnDemandConcurrentBuilds             types.Bool   `tfsdk:"on_demand_concurrent_builds"`
+	BuildMachineType                     types.String `tfsdk:"build_machine_type"`
 }
 
 type GitComments struct {
@@ -718,12 +752,13 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 
 var nullProject = Project{
 	/* As this is read only, none of these fields are specified - so treat them all as Null */
-	BuildCommand:    types.StringNull(),
-	DevCommand:      types.StringNull(),
-	InstallCommand:  types.StringNull(),
-	OutputDirectory: types.StringNull(),
-	PublicSource:    types.BoolNull(),
-	Environment:     types.SetNull(envVariableElemType),
+	BuildCommand:                         types.StringNull(),
+	DevCommand:                           types.StringNull(),
+	InstallCommand:                       types.StringNull(),
+	OutputDirectory:                      types.StringNull(),
+	PublicSource:                         types.BoolNull(),
+	Environment:                          types.SetNull(envVariableElemType),
+	ProtectionBypassForAutomationSecrets: types.SetNull(protectionBypassForAutomationSecretAttrType),
 }
 
 func (p *Project) environment(ctx context.Context) ([]EnvironmentItem, error) {
@@ -1702,13 +1737,22 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}))
 	}
 
+	automationBypassSecrets := automationBypassProtectionEntries(response.ProtectionBypass)
 	protectionBypassSecret := types.StringNull()
+	protectionBypassSecrets := protectionBypassForAutomationSecretsSet(automationBypassSecrets)
 	protectionBypass := types.BoolNull()
-	for k, v := range response.ProtectionBypass {
-		if v.Scope == "automation-bypass" {
-			protectionBypass = types.BoolValue(true)
-			protectionBypassSecret = types.StringValue(k)
-			break
+	if selectedSecret := automationBypassEnvVarSecret(automationBypassSecrets); selectedSecret != "" {
+		protectionBypass = types.BoolValue(true)
+		protectionBypassSecret = types.StringValue(selectedSecret)
+	} else if len(automationBypassSecrets) > 0 {
+		protectionBypass = types.BoolValue(true)
+	}
+	if !plan.hasConfiguredProtectionBypassForAutomationSecrets() &&
+		!plan.ProtectionBypassForAutomationSecret.IsNull() &&
+		!plan.ProtectionBypassForAutomationSecret.IsUnknown() {
+		configuredSecret := plan.ProtectionBypassForAutomationSecret.ValueString()
+		if _, ok := automationBypassSecrets[configuredSecret]; ok {
+			protectionBypassSecret = plan.ProtectionBypassForAutomationSecret
 		}
 	}
 	if !plan.ProtectionBypassForAutomation.IsNull() && !plan.ProtectionBypassForAutomation.ValueBool() {
@@ -1750,48 +1794,49 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	return Project{
-		BuildCommand:                        uncoerceString(fields.BuildCommand, types.StringPointerValue(response.BuildCommand)),
-		DevCommand:                          uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
-		Environment:                         environmentEntry,
-		Framework:                           types.StringPointerValue(response.Framework),
-		GitRepository:                       gitRepoObj,
-		ID:                                  types.StringValue(response.ID),
-		IgnoreCommand:                       types.StringPointerValue(response.CommandForIgnoringBuildStep),
-		InstallCommand:                      uncoerceString(fields.InstallCommand, types.StringPointerValue(response.InstallCommand)),
-		Name:                                types.StringValue(response.Name),
-		OutputDirectory:                     uncoerceString(fields.OutputDirectory, types.StringPointerValue(response.OutputDirectory)),
-		PreviewDeploymentSuffix:             types.StringPointerValue(response.PreviewDeploymentSuffix),
-		PublicSource:                        uncoerceBool(fields.PublicSource, types.BoolPointerValue(response.PublicSource)),
-		RootDirectory:                       types.StringPointerValue(response.RootDirectory),
-		ServerlessFunctionRegion:            types.StringPointerValue(response.ServerlessFunctionRegion),
-		TeamID:                              toTeamID(response.TeamID),
-		PasswordProtection:                  passwordObj,
-		VercelAuthentication:                va,
-		TrustedIps:                          trustedIpsObj,
-		OIDCTokenConfig:                     oidcObj,
-		OptionsAllowlist:                    oalObj,
-		ProtectionBypassForAutomation:       protectionBypass,
-		ProtectionBypassForAutomationSecret: protectionBypassSecret,
-		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
-		PreviewComments:                     types.BoolPointerValue(response.EnablePreviewFeedback),
-		EnablePreviewFeedback:               types.BoolPointerValue(response.EnablePreviewFeedback),
-		EnableProductionFeedback:            types.BoolPointerValue(response.EnableProductionFeedback),
-		EnableAffectedProjectsDeployments:   uncoerceBool(fields.EnableAffectedProjectsDeployments, types.BoolPointerValue(response.EnableAffectedProjectsDeployments)),
-		PreviewDeploymentsDisabled:          types.BoolValue(response.PreviewDeploymentsDisabled),
-		AutoAssignCustomDomains:             types.BoolValue(response.AutoAssignCustomDomains),
-		GitLFS:                              types.BoolValue(response.GitLFS),
-		FunctionFailover:                    types.BoolValue(response.ServerlessFunctionZeroConfigFailover),
-		CustomerSuccessCodeVisibility:       types.BoolValue(response.CustomerSupportCodeVisibility),
-		GitForkProtection:                   types.BoolValue(response.GitForkProtection),
-		PrioritiseProductionBuilds:          types.BoolValue(response.ProductionDeploymentsFastLane),
-		DirectoryListing:                    types.BoolValue(response.DirectoryListing),
-		SkewProtection:                      fromSkewProtectionMaxAge(response.SkewProtectionMaxAge),
-		GitComments:                         gitComments,
-		GitProviderOptions:                  gitProviderOptions,
-		ResourceConfig:                      resourceConfig,
-		NodeVersion:                         types.StringValue(response.NodeVersion),
-		OnDemandConcurrentBuilds:            types.BoolValue(response.ResourceConfig.ElasticConcurrencyEnabled),
-		BuildMachineType:                    types.StringValue(response.ResourceConfig.BuildMachineType),
+		BuildCommand:                         uncoerceString(fields.BuildCommand, types.StringPointerValue(response.BuildCommand)),
+		DevCommand:                           uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
+		Environment:                          environmentEntry,
+		Framework:                            types.StringPointerValue(response.Framework),
+		GitRepository:                        gitRepoObj,
+		ID:                                   types.StringValue(response.ID),
+		IgnoreCommand:                        types.StringPointerValue(response.CommandForIgnoringBuildStep),
+		InstallCommand:                       uncoerceString(fields.InstallCommand, types.StringPointerValue(response.InstallCommand)),
+		Name:                                 types.StringValue(response.Name),
+		OutputDirectory:                      uncoerceString(fields.OutputDirectory, types.StringPointerValue(response.OutputDirectory)),
+		PreviewDeploymentSuffix:              types.StringPointerValue(response.PreviewDeploymentSuffix),
+		PublicSource:                         uncoerceBool(fields.PublicSource, types.BoolPointerValue(response.PublicSource)),
+		RootDirectory:                        types.StringPointerValue(response.RootDirectory),
+		ServerlessFunctionRegion:             types.StringPointerValue(response.ServerlessFunctionRegion),
+		TeamID:                               toTeamID(response.TeamID),
+		PasswordProtection:                   passwordObj,
+		VercelAuthentication:                 va,
+		TrustedIps:                           trustedIpsObj,
+		OIDCTokenConfig:                      oidcObj,
+		OptionsAllowlist:                     oalObj,
+		ProtectionBypassForAutomation:        protectionBypass,
+		ProtectionBypassForAutomationSecret:  protectionBypassSecret,
+		ProtectionBypassForAutomationSecrets: protectionBypassSecrets,
+		AutoExposeSystemEnvVars:              types.BoolPointerValue(response.AutoExposeSystemEnvVars),
+		PreviewComments:                      types.BoolPointerValue(response.EnablePreviewFeedback),
+		EnablePreviewFeedback:                types.BoolPointerValue(response.EnablePreviewFeedback),
+		EnableProductionFeedback:             types.BoolPointerValue(response.EnableProductionFeedback),
+		EnableAffectedProjectsDeployments:    uncoerceBool(fields.EnableAffectedProjectsDeployments, types.BoolPointerValue(response.EnableAffectedProjectsDeployments)),
+		PreviewDeploymentsDisabled:           types.BoolValue(response.PreviewDeploymentsDisabled),
+		AutoAssignCustomDomains:              types.BoolValue(response.AutoAssignCustomDomains),
+		GitLFS:                               types.BoolValue(response.GitLFS),
+		FunctionFailover:                     types.BoolValue(response.ServerlessFunctionZeroConfigFailover),
+		CustomerSuccessCodeVisibility:        types.BoolValue(response.CustomerSupportCodeVisibility),
+		GitForkProtection:                    types.BoolValue(response.GitForkProtection),
+		PrioritiseProductionBuilds:           types.BoolValue(response.ProductionDeploymentsFastLane),
+		DirectoryListing:                     types.BoolValue(response.DirectoryListing),
+		SkewProtection:                       fromSkewProtectionMaxAge(response.SkewProtectionMaxAge),
+		GitComments:                          gitComments,
+		GitProviderOptions:                   gitProviderOptions,
+		ResourceConfig:                       resourceConfig,
+		NodeVersion:                          types.StringValue(response.NodeVersion),
+		OnDemandConcurrentBuilds:             types.BoolValue(response.ResourceConfig.ElasticConcurrencyEnabled),
+		BuildMachineType:                     types.StringValue(response.ResourceConfig.BuildMachineType),
 	}, nil
 }
 
@@ -1870,6 +1915,15 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	var config Project
+	diags = req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	configuredProtectionBypassSecrets := config.hasConfiguredProtectionBypassForAutomationSecrets()
 
 	environment, err := plan.environment(ctx)
 	if err != nil {
@@ -2002,16 +2056,31 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		}
 	}
 
-	if plan.ProtectionBypassForAutomation.ValueBool() {
-		plannedSecret := plan.ProtectionBypassForAutomationSecret.ValueString()
-		currentSecret := result.ProtectionBypassForAutomationSecret.ValueString()
-		returnedSecret, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
-			ProjectID: result.ID.ValueString(),
-			TeamID:    result.TeamID.ValueString(),
-			NewValue:  true,
-			NewSecret: plannedSecret,
-			OldSecret: currentSecret,
-		})
+	if plan.ProtectionBypassForAutomation.ValueBool() || configuredProtectionBypassSecrets {
+		currentProtectionBypass := automationBypassProtectionEntries(out.ProtectionBypass)
+		if configuredProtectionBypassSecrets {
+			plannedSecrets, diags := plan.protectionBypassForAutomationSecrets(ctx)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			currentProtectionBypass, err = r.reconcileManagedProtectionBypassForAutomation(
+				ctx,
+				result.ID.ValueString(),
+				result.TeamID.ValueString(),
+				currentProtectionBypass,
+				plannedSecrets,
+			)
+		} else {
+			currentProtectionBypass, err = r.reconcileLegacyProtectionBypassForAutomation(
+				ctx,
+				result.ID.ValueString(),
+				result.TeamID.ValueString(),
+				currentProtectionBypass,
+				plan.ProtectionBypassForAutomationSecret.ValueString(),
+			)
+		}
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error adding protection bypass for automation",
@@ -2019,12 +2088,26 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			)
 			return
 		}
-		secretForState := plannedSecret
-		if secretForState == "" {
-			secretForState = returnedSecret
+
+		refreshedProject, err := r.client.GetProject(ctx, result.ID.ValueString(), result.TeamID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error reading project",
+				"Could not create project, unexpected error reading Protection Bypass For Automation state: "+err.Error(),
+			)
+			return
 		}
-		result.ProtectionBypassForAutomationSecret = types.StringValue(secretForState)
-		result.ProtectionBypassForAutomation = types.BoolValue(true)
+
+		currentProtectionBypass = automationBypassProtectionEntries(refreshedProject.ProtectionBypass)
+		out.ProtectionBypass = currentProtectionBypass
+		result, err = convertResponseToProject(ctx, out, plan, environmentVariables)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error converting project response to model",
+				"Could not create project, unexpected error: "+err.Error(),
+			)
+			return
+		}
 		diags = resp.State.Set(ctx, result)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -2224,6 +2307,15 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
+	var config Project
+	diags = req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	configuredProtectionBypassSecrets := config.hasConfiguredProtectionBypassForAutomationSecrets()
+
 	/* Update the environment variables first */
 	planEnvs, err := plan.environment(ctx)
 	if err != nil {
@@ -2304,22 +2396,66 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		})
 	}
 
+	currentProject, err := r.client.GetProject(ctx, state.ID.ValueString(), state.TeamID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project",
+			fmt.Sprintf(
+				"Could not read project %s %s while updating protection bypass for automation, unexpected error: %s",
+				state.TeamID.ValueString(),
+				state.ID.ValueString(),
+				err,
+			),
+		)
+		return
+	}
+
+	currentProtectionBypass := automationBypassProtectionEntries(currentProject.ProtectionBypass)
 	currentSecret := state.ProtectionBypassForAutomationSecret.ValueString()
 	plannedSecret := plan.ProtectionBypassForAutomationSecret.ValueString()
-	if state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation {
+	protectionBypassChanged := state.ProtectionBypassForAutomation != plan.ProtectionBypassForAutomation
+	protectionBypassSecretChanged := plan.ProtectionBypassForAutomation.ValueBool() && currentSecret != plannedSecret
+
+	if configuredProtectionBypassSecrets {
+		plannedSecrets, diags := plan.protectionBypassForAutomationSecrets(ctx)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		currentProtectionBypass, err = r.reconcileManagedProtectionBypassForAutomation(
+			ctx,
+			plan.ID.ValueString(),
+			plan.TeamID.ValueString(),
+			currentProtectionBypass,
+			plannedSecrets,
+		)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating protection bypass for automation",
+				fmt.Sprintf(
+					"Could not update project %s %s, unexpected error updating Protection Bypass For Automation: %s",
+					state.TeamID.ValueString(),
+					state.ID.ValueString(),
+					err,
+				),
+			)
+			return
+		}
+	} else if protectionBypassChanged || protectionBypassSecretChanged {
 		if plan.ProtectionBypassForAutomation.ValueBool() {
-			_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
-				ProjectID: plan.ID.ValueString(),
-				TeamID:    plan.TeamID.ValueString(),
-				NewValue:  true,
-				NewSecret: plannedSecret,
-				OldSecret: currentSecret,
-			})
+			currentProtectionBypass, err = r.reconcileLegacyProtectionBypassForAutomation(
+				ctx,
+				plan.ID.ValueString(),
+				plan.TeamID.ValueString(),
+				currentProtectionBypass,
+				plannedSecret,
+			)
 			if err != nil {
 				resp.Diagnostics.AddError(
-					"Error setting protection bypass for automation",
+					"Error updating protection bypass for automation",
 					fmt.Sprintf(
-						"Could not update project %s %s, unexpected error setting Protection Bypass For Automation: %s",
+						"Could not update project %s %s, unexpected error updating Protection Bypass For Automation: %s",
 						state.TeamID.ValueString(),
 						state.ID.ValueString(),
 						err,
@@ -2328,12 +2464,12 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 				return
 			}
 		} else {
-			_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
-				ProjectID: plan.ID.ValueString(),
-				TeamID:    plan.TeamID.ValueString(),
-				NewValue:  false,
-				OldSecret: currentSecret,
-			})
+			currentProtectionBypass, err = r.revokeAllProtectionBypassForAutomation(
+				ctx,
+				plan.ID.ValueString(),
+				plan.TeamID.ValueString(),
+				currentProtectionBypass,
+			)
 			if err != nil {
 				resp.Diagnostics.AddError(
 					"Error removing protection bypass for automation",
@@ -2347,19 +2483,15 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 				return
 			}
 		}
-	} else if plan.ProtectionBypassForAutomation.ValueBool() && currentSecret != plannedSecret {
-		_, err := r.client.UpdateProtectionBypassForAutomation(ctx, client.UpdateProtectionBypassForAutomationRequest{
-			ProjectID: plan.ID.ValueString(),
-			TeamID:    plan.TeamID.ValueString(),
-			NewValue:  true,
-			NewSecret: plannedSecret,
-			OldSecret: currentSecret,
-		})
+	}
+
+	if configuredProtectionBypassSecrets || protectionBypassChanged || protectionBypassSecretChanged {
+		refreshedProject, err := r.client.GetProject(ctx, state.ID.ValueString(), state.TeamID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Error updating protection bypass for automation",
+				"Error reading project",
 				fmt.Sprintf(
-					"Could not update project %s %s, unexpected error updating Protection Bypass For Automation: %s",
+					"Could not read project %s %s while updating protection bypass for automation state, unexpected error: %s",
 					state.TeamID.ValueString(),
 					state.ID.ValueString(),
 					err,
@@ -2367,6 +2499,8 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			)
 			return
 		}
+
+		currentProtectionBypass = automationBypassProtectionEntries(refreshedProject.ProtectionBypass)
 	}
 
 	updateRequest, diags := plan.toUpdateProjectRequest(ctx, state.Name.ValueString())
@@ -2386,6 +2520,10 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			),
 		)
 		return
+	}
+
+	if configuredProtectionBypassSecrets || protectionBypassChanged || protectionBypassSecretChanged {
+		out.ProtectionBypass = currentProtectionBypass
 	}
 
 	planGit, dpg := plan.gitRepository(ctx)
