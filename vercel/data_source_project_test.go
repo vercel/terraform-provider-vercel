@@ -222,3 +222,48 @@ data "vercel_project" "test" {
 }
 `, name, githubRepo)
 }
+
+func TestAcc_ProjectDataSourceConnectConfigurations(t *testing.T) {
+	name := acctest.RandString(16)
+	connectConfigurationID := testConnectConfigurationID(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectDataSourceConfigWithConnectConfigurations(name, connectConfigurationID)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.vercel_project.test", "name", "test-acc-connect-config-ds-"+name),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "connect_configurations.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "connect_configurations.*", map[string]string{
+						"env_id":                   "production",
+						"connect_configuration_id": connectConfigurationID,
+						"passive":                  "false",
+						"builds_enabled":           "true",
+					}),
+				),
+			},
+		},
+	})
+}
+
+func testAccProjectDataSourceConfigWithConnectConfigurations(name, connectConfigurationID string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-connect-config-ds-%s"
+
+  connect_configurations = [
+    {
+      env_id = "production"
+      connect_configuration_id = "%s"
+      passive = false
+      builds_enabled = true
+    }
+  ]
+}
+
+data "vercel_project" "test" {
+    name = vercel_project.test.name
+}
+`, name, connectConfigurationID)
+}

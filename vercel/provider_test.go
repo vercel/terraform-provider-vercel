@@ -96,3 +96,11 @@ func testExistingIntegration(t *testing.T) string {
 	}
 	return value
 }
+
+func testConnectConfigurationID(t *testing.T) string {
+	value := os.Getenv("VERCEL_TERRAFORM_TESTING_CONNECT_CONFIGURATION_ID")
+	if value == "" {
+		t.Skip("Skipping test: missing VERCEL_TERRAFORM_TESTING_CONNECT_CONFIGURATION_ID")
+	}
+	return value
+}
