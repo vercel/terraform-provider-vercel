@@ -397,7 +397,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"connect_configurations": schema.SetNestedAttribute{
-				Description: "The list of connections from project environment to Secure Compute network.",
+				Description: "The list of connections from project environment to Secure Compute network. If omitted, Terraform does not manage existing connections. Set to an empty list to remove all connections.",
 				Optional:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -1712,7 +1712,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	connectConfigurations := types.SetNull(connectConfigurationAttrType)
-	if response.ConnectConfigurations != nil {
+	if !plan.ConnectConfigurations.IsNull() && !plan.ConnectConfigurations.IsUnknown() {
 		connectConfigurationValues := make([]attr.Value, 0, len(response.ConnectConfigurations))
 		for _, connectConfiguration := range response.ConnectConfigurations {
 			connectConfigurationValues = append(connectConfigurationValues, types.ObjectValueMust(connectConfigurationAttrType.AttrTypes, map[string]attr.Value{

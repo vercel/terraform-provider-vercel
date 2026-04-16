@@ -1406,3 +1406,48 @@ resource "vercel_project" "test" {
 }
 `, projectSuffix)
 }
+
+func TestAcc_ProjectConnectConfigurationsStopManagingWhenOmitted(t *testing.T) {
+	connectConfigurationID := testConnectConfigurationID(t)
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectConfigWithConnectConfigurations(projectSuffix, connectConfigurationID, false, true)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "connect_configurations.#", "1"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigOmittingConnectConfigurationsWithDataSource(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckNoResourceAttr("vercel_project.test", "connect_configurations.#"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "connect_configurations.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "connect_configurations.*", map[string]string{
+						"env_id":                   "production",
+						"connect_configuration_id": connectConfigurationID,
+						"passive":                  "false",
+						"builds_enabled":           "true",
+					}),
+				),
+			},
+		},
+	})
+}
+
+func testAccProjectConfigOmittingConnectConfigurationsWithDataSource(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-connect-config-%s"
+}
+
+data "vercel_project" "test" {
+  name = vercel_project.test.name
+}
+`, projectSuffix)
+}

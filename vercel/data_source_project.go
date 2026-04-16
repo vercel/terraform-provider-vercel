@@ -506,6 +506,10 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 	   for the data source we always want to read the value */
 	plan.Environment = types.SetValueMust(envVariableElemType, []attr.Value{})
 	plan.GitComments = types.ObjectNull(gitCommentsAttrTypes)
+	plan.ConnectConfigurations = types.SetNull(connectConfigurationAttrType)
+	if response.ConnectConfigurations != nil {
+		plan.ConnectConfigurations = types.SetValueMust(connectConfigurationAttrType, []attr.Value{})
+	}
 	if response.GitComments != nil {
 		plan.GitComments = types.ObjectValueMust(gitCommentsAttrTypes, map[string]attr.Value{
 			"on_pull_request": types.BoolValue(response.GitComments.OnPullRequest),
