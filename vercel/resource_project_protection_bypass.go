@@ -247,8 +247,12 @@ func (r *projectProtectionBypassResource) Update(ctx context.Context, req resour
 		note := plan.Note.ValueString()
 		updateReq.Note = &note
 	}
-	if !plan.IsEnvVar.Equal(state.IsEnvVar) && !plan.IsEnvVar.IsNull() && !plan.IsEnvVar.IsUnknown() {
-		isEnvVar := plan.IsEnvVar.ValueBool()
+	// Only send IsEnvVar when promoting to true. Demotion to false is handled
+	// atomically by the API when some other bypass is promoted — sending an
+	// explicit false here would fail the "one default must exist" invariant
+	// when two sibling resources are updated in the same plan.
+	if !plan.IsEnvVar.Equal(state.IsEnvVar) && !plan.IsEnvVar.IsNull() && !plan.IsEnvVar.IsUnknown() && plan.IsEnvVar.ValueBool() {
+		isEnvVar := true
 		updateReq.IsEnvVar = &isEnvVar
 	}
 
@@ -262,6 +266,13 @@ func (r *projectProtectionBypassResource) Update(ctx context.Context, req resour
 	}
 
 	result := convertBypass(plan.ProjectID.ValueString(), plan.TeamID.ValueString(), state.Secret.ValueString(), bypass)
+	// When the plan demotes is_env_var to false we skip the API call (a sibling
+	// bypass is being promoted in the same apply and will trigger the atomic swap).
+	// Mirror that in state so Terraform sees a consistent result — the actual
+	// demotion has either already happened or is about to in this apply.
+	if !plan.IsEnvVar.IsNull() && !plan.IsEnvVar.IsUnknown() && !plan.IsEnvVar.ValueBool() {
+		result.IsEnvVar = types.BoolValue(false)
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
@@ -270,6 +281,45 @@ func (r *projectProtectionBypassResource) Delete(ctx context.Context, req resour
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// If this bypass is the env-var default, promote another automation-bypass on the
+	// project before revoking — the API requires exactly one env-var default at all
+	// times, so attempting to revoke the sole or active default would fail.
+	if state.IsEnvVar.ValueBool() {
+		project, err := r.client.GetProject(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
+		if err != nil && !client.NotFound(err) {
+			resp.Diagnostics.AddError(
+				"Error deleting project protection bypass",
+				fmt.Sprintf("Could not read project %s to locate a replacement default bypass: %s", state.ProjectID.ValueString(), err),
+			)
+			return
+		}
+		if err == nil {
+			for secret, b := range project.ProtectionBypass {
+				if secret == state.Secret.ValueString() {
+					continue
+				}
+				if b.Scope != "automation-bypass" {
+					continue
+				}
+				isEnvVar := true
+				_, err := r.client.UpdateProtectionBypass(ctx, client.UpdateProtectionBypassRequest{
+					TeamID:    state.TeamID.ValueString(),
+					ProjectID: state.ProjectID.ValueString(),
+					Secret:    secret,
+					IsEnvVar:  &isEnvVar,
+				})
+				if err != nil {
+					resp.Diagnostics.AddError(
+						"Error deleting project protection bypass",
+						fmt.Sprintf("Could not promote a replacement default bypass on project %s: %s", state.ProjectID.ValueString(), err),
+					)
+					return
+				}
+				break
+			}
+		}
 	}
 
 	err := r.client.DeleteProtectionBypass(ctx, client.DeleteProtectionBypassRequest{
