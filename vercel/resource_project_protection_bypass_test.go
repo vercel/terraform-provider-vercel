@@ -14,6 +14,7 @@ import (
 func TestAcc_ProjectProtectionBypass(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	customSecret := acctest.RandString(32)
+	replacementSecret := acctest.RandString(32)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -76,15 +77,38 @@ func TestAcc_ProjectProtectionBypass(t *testing.T) {
 					return fmt.Sprintf("%s/%s/%s", teamID, projectID, secret), nil
 				},
 			},
+			// Changing the secret triggers replacement: the old bypass is revoked
+			// and a fresh one is created with the new secret. is_env_var persists.
+			{
+				Config: cfg(testAccProjectProtectionBypassDouble(projectSuffix, replacementSecret, "renamed bypass", true, false)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.second", "secret", replacementSecret),
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.second", "is_env_var", "true"),
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.first", "is_env_var", "false"),
+					testAccProjectProtectionBypassRevoked(testClient(t), "vercel_project.test", customSecret),
+				),
+			},
 			// Remove the second bypass — verify it's revoked while the first remains.
 			{
 				Config: cfg(testAccProjectProtectionBypassSingle(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectProtectionBypassRevoked(testClient(t), "vercel_project.test", customSecret),
+					testAccProjectProtectionBypassRevoked(testClient(t), "vercel_project.test", replacementSecret),
 				),
+			},
+			// Remove the last bypass on the project — verify it's revoked cleanly.
+			{
+				Config: cfg(testAccProjectProtectionBypassEmpty(projectSuffix)),
 			},
 		},
 	})
+}
+
+func testAccProjectProtectionBypassEmpty(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-bypass-%[1]s"
+}
+`, projectSuffix)
 }
 
 func testAccProjectProtectionBypassExists(testClient *client.Client, projectResource, bypassResource string) resource.TestCheckFunc {
