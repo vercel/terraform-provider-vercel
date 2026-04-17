@@ -1736,15 +1736,20 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 
 	protectionBypassSecret := types.StringNull()
 	protectionBypass := types.BoolNull()
-	for k, v := range response.ProtectionBypass {
-		if v.Scope == "automation-bypass" {
-			protectionBypass = types.BoolValue(true)
-			protectionBypassSecret = types.StringValue(k)
-			break
+	// Only hydrate the deprecated protection_bypass_for_automation* attributes if the
+	// plan actually uses them. Bypasses created via the vercel_project_protection_bypass
+	// resource live in the same API map but must not leak into this project's state.
+	if !plan.ProtectionBypassForAutomation.IsNull() || !plan.ProtectionBypassForAutomationSecret.IsNull() {
+		for k, v := range response.ProtectionBypass {
+			if v.Scope == "automation-bypass" {
+				protectionBypass = types.BoolValue(true)
+				protectionBypassSecret = types.StringValue(k)
+				break
+			}
 		}
-	}
-	if !plan.ProtectionBypassForAutomation.IsNull() && !plan.ProtectionBypassForAutomation.ValueBool() {
-		protectionBypass = types.BoolValue(false)
+		if !plan.ProtectionBypassForAutomation.IsNull() && !plan.ProtectionBypassForAutomation.ValueBool() {
+			protectionBypass = types.BoolValue(false)
+		}
 	}
 
 	environmentEntry := types.SetValueMust(envVariableElemType, env)
