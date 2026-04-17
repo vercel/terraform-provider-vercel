@@ -51,7 +51,7 @@ func testAccProjectDelegatedProtectionExists(testClient *client.Client, n, teamI
 }
 
 func TestAcc_ProjectDelegatedProtection(t *testing.T) {
-	nameSuffix := acctest.RandString(16)
+	nameSuffix := acctest.RandString(8)
 	resourceName := "vercel_project_delegated_protection.example"
 
 	resource.Test(t, resource.TestCase{
