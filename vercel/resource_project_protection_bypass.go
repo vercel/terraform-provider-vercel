@@ -283,49 +283,11 @@ func (r *projectProtectionBypassResource) Delete(ctx context.Context, req resour
 		return
 	}
 
-	// If this bypass is the env-var default, promote another automation-bypass on the
-	// project before revoking — the API requires exactly one env-var default at all
-	// times, so attempting to revoke the sole or active default would fail.
-	if state.IsEnvVar.ValueBool() {
-		project, err := r.client.GetProject(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
-		if err != nil && !client.NotFound(err) {
-			resp.Diagnostics.AddError(
-				"Error deleting project protection bypass",
-				fmt.Sprintf("Could not read project %s to locate a replacement default bypass: %s", state.ProjectID.ValueString(), err),
-			)
-			return
-		}
-		if err == nil {
-			for secret, b := range project.ProtectionBypass {
-				if secret == state.Secret.ValueString() {
-					continue
-				}
-				if b.Scope != "automation-bypass" {
-					continue
-				}
-				isEnvVar := true
-				_, err := r.client.UpdateProtectionBypass(ctx, client.UpdateProtectionBypassRequest{
-					TeamID:    state.TeamID.ValueString(),
-					ProjectID: state.ProjectID.ValueString(),
-					Secret:    secret,
-					IsEnvVar:  &isEnvVar,
-				})
-				if err != nil {
-					resp.Diagnostics.AddError(
-						"Error deleting project protection bypass",
-						fmt.Sprintf("Could not promote a replacement default bypass on project %s: %s", state.ProjectID.ValueString(), err),
-					)
-					return
-				}
-				break
-			}
-		}
-	}
-
 	err := r.client.DeleteProtectionBypass(ctx, client.DeleteProtectionBypassRequest{
-		TeamID:    state.TeamID.ValueString(),
-		ProjectID: state.ProjectID.ValueString(),
-		Secret:    state.Secret.ValueString(),
+		TeamID:                      state.TeamID.ValueString(),
+		ProjectID:                   state.ProjectID.ValueString(),
+		Secret:                      state.Secret.ValueString(),
+		PromoteReplacementIfDefault: state.IsEnvVar.ValueBool(),
 	})
 	if client.NotFound(err) {
 		return
