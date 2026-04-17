@@ -291,13 +291,15 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.",
 			},
 			"protection_bypass_for_automation": schema.BoolAttribute{
-				Computed:    true,
-				Description: "Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with the value from `protection_bypass_for_automation_secret`.",
+				Computed:           true,
+				DeprecationMessage: "Use the `vercel_project_protection_bypass` resource instead. This attribute will be removed in a future major release.",
+				Description:        "Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with the value from `protection_bypass_for_automation_secret`.",
 			},
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
-				Sensitive:   true,
-				Computed:    true,
-				Description: "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
+				Sensitive:          true,
+				Computed:           true,
+				DeprecationMessage: "Use the `vercel_project_protection_bypass` resource instead. This attribute will be removed in a future major release.",
+				Description:        "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),

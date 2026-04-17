@@ -422,15 +422,17 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.",
 			},
 			"protection_bypass_for_automation": schema.BoolAttribute{
-				Optional:    true,
-				Description: "Allow automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `protection_bypass_for_automation_secret` field.",
+				Optional:           true,
+				DeprecationMessage: "Use the `vercel_project_protection_bypass` resource instead. This attribute will be removed in a future major release.",
+				Description:        "Allow automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value of the `protection_bypass_for_automation_secret` field.",
 			},
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
-				Computed:      true,
-				Optional:      true,
-				Sensitive:     true,
-				Description:   "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
-				PlanModifiers: []planmodifier.String{useStateForAutomationBypassSecret()},
+				Computed:           true,
+				Optional:           true,
+				Sensitive:          true,
+				DeprecationMessage: "Use the `vercel_project_protection_bypass` resource instead. This attribute will be removed in a future major release.",
+				Description:        "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
+				PlanModifiers:      []planmodifier.String{useStateForAutomationBypassSecret()},
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),

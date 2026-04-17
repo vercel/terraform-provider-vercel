@@ -24,7 +24,13 @@ type TrustedIps struct {
 }
 
 type ProtectionBypass struct {
-	Scope string `json:"scope"`
+	Scope           string  `json:"scope"`
+	IsEnvVar        *bool   `json:"isEnvVar,omitempty"`
+	Note            *string `json:"note,omitempty"`
+	CreatedAt       int64   `json:"createdAt,omitempty"`
+	CreatedBy       string  `json:"createdBy,omitempty"`
+	IntegrationID   string  `json:"integrationId,omitempty"`
+	ConfigurationID string  `json:"configurationId,omitempty"`
 }
 
 type OptionsAllowlist struct {

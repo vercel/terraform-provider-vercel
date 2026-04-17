@@ -84,6 +84,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newProjectEnvironmentVariableResource,
 		newProjectEnvironmentVariablesResource,
 		newProjectMembersResource,
+		newProjectProtectionBypassResource,
 		newProjectRouteResource,
 		newProjectResource,
 		newSharedEnvironmentVariableProjectLinkResource,
