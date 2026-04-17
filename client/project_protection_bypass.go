@@ -20,8 +20,8 @@ type generateBypassBody struct {
 }
 
 type updateBypassBody struct {
-	Secret   string `json:"secret"`
-	IsEnvVar *bool  `json:"isEnvVar,omitempty"`
+	Secret   string  `json:"secret"`
+	IsEnvVar *bool   `json:"isEnvVar,omitempty"`
 	Note     *string `json:"note,omitempty"`
 }
 

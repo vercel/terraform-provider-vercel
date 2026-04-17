@@ -4,17 +4,21 @@ page_title: "vercel_project_protection_bypass Resource - terraform-provider-verc
 subcategory: ""
 description: |-
   Provides a Project Protection Bypass resource.
-  A Project Protection Bypass is an automation bypass token that allows automation services to bypass Deployment Protection on a vercel_project using the x-vercel-protection-bypass HTTP header.
-  Multiple bypasses can be created per project. Exactly one bypass per project may have is_env_var = true; that bypass is exposed as the VERCEL_AUTOMATION_BYPASS_SECRET environment variable on deployments.
+  A Project Protection Bypass is an automation bypass token that allows automation services
+  to bypass Deployment Protection on a vercel_project using the x-vercel-protection-bypass HTTP header.
+  Multiple bypasses can be created per project. Exactly one bypass per project may have
+  is_env_var = true; that bypass is exposed as the VERCEL_AUTOMATION_BYPASS_SECRET environment variable on deployments.
 ---
 
 # vercel_project_protection_bypass (Resource)
 
 Provides a Project Protection Bypass resource.
 
-A Project Protection Bypass is an automation bypass token that allows automation services to bypass Deployment Protection on a `vercel_project` using the `x-vercel-protection-bypass` HTTP header.
+A Project Protection Bypass is an automation bypass token that allows automation services
+to bypass Deployment Protection on a `vercel_project` using the `x-vercel-protection-bypass` HTTP header.
 
-Multiple bypasses can be created per project. Exactly one bypass per project may have `is_env_var = true`; that bypass is exposed as the `VERCEL_AUTOMATION_BYPASS_SECRET` environment variable on deployments. Promoting a different bypass automatically demotes the previous default.
+Multiple bypasses can be created per project. Exactly one bypass per project may have
+`is_env_var = true`; that bypass is exposed as the `VERCEL_AUTOMATION_BYPASS_SECRET` environment variable on deployments.
 
 ## Example Usage
 
@@ -57,6 +61,7 @@ resource "vercel_project_protection_bypass" "qa" {
 
 - `created_at` (Number) The unix timestamp in milliseconds at which the bypass was created.
 - `created_by` (String) The ID of the user who created the bypass.
+- `id` (String) The unique identifier for this resource.
 - `scope` (String) The scope of the bypass. Always `automation-bypass` for bypasses managed by this resource.
 
 ## Import

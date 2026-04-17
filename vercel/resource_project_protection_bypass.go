@@ -64,6 +64,13 @@ Multiple bypasses can be created per project. Exactly one bypass per project may
 ` + "`is_env_var = true`" + `; that bypass is exposed as the ` + "`VERCEL_AUTOMATION_BYPASS_SECRET`" + ` environment variable on deployments.
 `,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The unique identifier for this resource.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"project_id": schema.StringAttribute{
 				Description:   "The ID of the project the bypass belongs to.",
 				Required:      true,
@@ -121,6 +128,7 @@ Multiple bypasses can be created per project. Exactly one bypass per project may
 }
 
 type ProjectProtectionBypass struct {
+	ID        types.String `tfsdk:"id"`
 	ProjectID types.String `tfsdk:"project_id"`
 	TeamID    types.String `tfsdk:"team_id"`
 	Secret    types.String `tfsdk:"secret"`
@@ -133,6 +141,7 @@ type ProjectProtectionBypass struct {
 
 func convertBypass(projectID, teamID, secret string, bypass client.ProtectionBypass) ProjectProtectionBypass {
 	return ProjectProtectionBypass{
+		ID:        types.StringValue(fmt.Sprintf("%s/%s", projectID, secret)),
 		ProjectID: types.StringValue(projectID),
 		TeamID:    toTeamID(teamID),
 		Secret:    types.StringValue(secret),
