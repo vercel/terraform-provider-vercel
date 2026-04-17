@@ -65,7 +65,7 @@ func TestAcc_ProjectDelegatedProtection(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectDelegatedProtectionExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "client_id", "client-id-initial"),
-					resource.TestCheckResourceAttr(resourceName, "issuer", "https://auth.example.com"),
+					resource.TestCheckResourceAttr(resourceName, "issuer", "https://vercel.com"),
 					resource.TestCheckResourceAttr(resourceName, "deployment_type", "standard_protection_new"),
 					resource.TestCheckResourceAttr(resourceName, "cookie_name", "_vercel_delegated_custom"),
 				),
@@ -82,7 +82,7 @@ func TestAcc_ProjectDelegatedProtection(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectDelegatedProtectionExists(testClient(t), resourceName, testTeam(t)),
 					resource.TestCheckResourceAttr(resourceName, "client_id", "client-id-updated"),
-					resource.TestCheckResourceAttr(resourceName, "issuer", "https://login.example.com"),
+					resource.TestCheckResourceAttr(resourceName, "issuer", "https://vercel.com"),
 					resource.TestCheckResourceAttr(resourceName, "deployment_type", "standard_protection"),
 					resource.TestCheckNoResourceAttr(resourceName, "cookie_name"),
 				),
@@ -104,7 +104,7 @@ resource "vercel_project_delegated_protection" "example" {
 	client_secret   = "client-secret-initial"
 	cookie_name     = "_vercel_delegated_custom"
 	deployment_type = "standard_protection_new"
-	issuer          = "https://auth.example.com"
+	issuer          = "https://vercel.com"
 }
 `, nameSuffix)
 }
@@ -121,7 +121,7 @@ resource "vercel_project_delegated_protection" "example" {
 	client_id       = "client-id-updated"
 	client_secret   = "client-secret-updated"
 	deployment_type = "standard_protection"
-	issuer          = "https://login.example.com"
+	issuer          = "https://vercel.com"
 }
 `, nameSuffix)
 }
