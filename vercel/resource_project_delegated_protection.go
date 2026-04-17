@@ -246,7 +246,15 @@ func (r *projectDelegatedProtectionResource) Update(ctx context.Context, req res
 	}
 
 	if plan.CookieName.IsNull() {
-		updateRequest.ClearCookieName = true
+		// The API requires tri-state PATCH semantics for cookieName:
+		// - omitted field => leave existing value unchanged
+		// - string value  => set/update cookieName
+		// - null          => clear cookieName
+		//
+		// We model "clear" by sending an empty string pointer to the client layer,
+		// where it is translated into JSON null for the PATCH payload.
+		emptyString := ""
+		updateRequest.CookieName = &emptyString
 	} else {
 		updateRequest.CookieName = plan.CookieName.ValueStringPointer()
 	}

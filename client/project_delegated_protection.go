@@ -33,14 +33,13 @@ type CreateDelegatedProtectionRequest struct {
 
 // UpdateDelegatedProtectionRequest defines delegated protection update fields.
 type UpdateDelegatedProtectionRequest struct {
-	ProjectID       string
-	TeamID          string
-	ClientID        *string
-	ClientSecret    *string
-	CookieName      *string
-	ClearCookieName bool
-	DeploymentType  *string
-	Issuer          *string
+	ProjectID      string
+	TeamID         string
+	ClientID       *string
+	ClientSecret   *string
+	CookieName     *string
+	DeploymentType *string
+	Issuer         *string
 }
 
 type delegatedProtectionPayload struct {
@@ -102,10 +101,11 @@ func (c *Client) UpdateDelegatedProtection(ctx context.Context, request UpdateDe
 		payload["clientSecret"] = *request.ClientSecret
 	}
 	if request.CookieName != nil {
-		payload["cookieName"] = *request.CookieName
-	}
-	if request.ClearCookieName {
-		payload["cookieName"] = nil
+		if *request.CookieName == "" {
+			payload["cookieName"] = nil
+		} else {
+			payload["cookieName"] = *request.CookieName
+		}
 	}
 	if request.DeploymentType != nil {
 		payload["deploymentType"] = *request.DeploymentType
