@@ -79,6 +79,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newMicrofrontendGroupResource,
 		newNetworkResource,
 		newProjectDeploymentRetentionResource,
+		newProjectDelegatedProtectionResource,
 		newProjectCronsResource,
 		newProjectDomainResource,
 		newProjectEnvironmentVariableResource,

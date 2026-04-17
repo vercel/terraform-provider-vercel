@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 )
 
 // NotFound detects if an error returned by the Vercel API was the result of an entity not existing.
@@ -19,6 +20,16 @@ func noContent(err error) bool {
 func conflictingSharedEnv(err error) bool {
 	var apiErr APIError
 	return err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 409 && apiErr.Code == "existing_key_and_target"
+}
+
+// DelegatedProtectionNotEnabled detects if delegated protection is already disabled.
+func DelegatedProtectionNotEnabled(err error) bool {
+	var apiErr APIError
+	return err != nil &&
+		errors.As(err, &apiErr) &&
+		apiErr.StatusCode == 409 &&
+		apiErr.Code == "conflict" &&
+		strings.Contains(strings.ToLower(apiErr.Message), "delegated protection is not enabled")
 }
 
 type EnvConflictError struct {
