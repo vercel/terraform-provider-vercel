@@ -60,6 +60,18 @@ resource "vercel_project_domain" "example_redirect" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `verification` (Attributes List) A list of verification challenges, one of which must be completed to verify the domain for use on the project. Once the challenge is satisfied, the domain will be verified automatically on the next refresh. Typically used to configure DNS records (e.g. a `TXT` record) for domains hosted with an external DNS provider. (see [below for nested schema](#nestedatt--verification))
+- `verified` (Boolean) Whether the domain is verified for use with the project. If `false`, the challenges in `verification` must be completed before the domain will serve traffic for the project.
+
+<a id="nestedatt--verification"></a>
+### Nested Schema for `verification`
+
+Read-Only:
+
+- `domain` (String) The domain name on which the DNS record must be created.
+- `reason` (String) A human-readable explanation of why this challenge was issued.
+- `type` (String) The type of DNS record that must be created to satisfy the challenge (e.g. `TXT`).
+- `value` (String) The value that the DNS record must contain.
 
 ## Import
 
