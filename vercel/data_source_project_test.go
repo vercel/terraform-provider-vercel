@@ -109,6 +109,7 @@ resource "vercel_project" "test" {
       key    = "foo"
       value  = "bar"
       target = ["production"]
+      sensitive = false
     }
   ]
   automatically_expose_system_environment_variables = true

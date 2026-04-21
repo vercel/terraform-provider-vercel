@@ -51,6 +51,7 @@ resource "vercel_shared_environment_variable" "test" {
   target = [ "production", "preview" ]
   project_ids = [ vercel_project.test.id ]
   apply_to_all_custom_environments = true
+  sensitive = false
 }
 
 data "vercel_shared_environment_variable" "test" {

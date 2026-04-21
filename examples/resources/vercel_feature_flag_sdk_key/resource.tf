@@ -12,6 +12,7 @@ resource "vercel_feature_flag_sdk_key" "example" {
 resource "vercel_project_environment_variable" "example" {
   project_id = vercel_project.example.id
   target     = ["production"]
+  sensitive  = true
   key        = "FLAGS_CONNECTION_STRING"
   value      = vercel_feature_flag_sdk_key.example.connection_string
 }

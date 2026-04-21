@@ -56,6 +56,8 @@ Required:
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # To import, use the team_id and user_id.
 terraform import vercel_team_member.example team_xxxxxxxxxxxxxxxxxxxxxxxx/uuuuuuuuuuuuuuuuuuuuuuuuuu

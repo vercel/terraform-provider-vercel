@@ -30,6 +30,7 @@ resource "vercel_feature_flag_sdk_key" "example" {
 resource "vercel_project_environment_variable" "example" {
   project_id = vercel_project.example.id
   target     = ["production"]
+  sensitive  = true
   key        = "FLAGS_CONNECTION_STRING"
   value      = vercel_feature_flag_sdk_key.example.connection_string
 }
@@ -58,6 +59,8 @@ resource "vercel_project_environment_variable" "example" {
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # If importing into a personal account, or with a team configured on

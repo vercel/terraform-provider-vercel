@@ -8,6 +8,7 @@ description: |-
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/environment-variables.
   ~> Terraform currently provides this Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and a Project resource with Environment Variables defined in-line via the environment field.
   At this time you cannot use a Vercel Project resource with in-line environment in conjunction with any vercel_project_environment_variables or vercel_project_environment_variable resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+  -> Note: Starting in provider version 4.8.0, Project Environment Variables require an explicit sensitive value. Variables targeting only development must set sensitive = false. If your team enforces sensitive environment variables, variables targeting preview, production, or custom environments must set sensitive = true. When that team policy is enabled, a variable cannot target development together with preview, production, or custom environments.
   -> Note: Write-Only argument value_wo is available to use in place of value. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. Learn more https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments.
 ---
 
@@ -21,6 +22,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 ~> Terraform currently provides this Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and a Project resource with Environment Variables defined in-line via the `environment` field.
 At this time you cannot use a Vercel Project resource with in-line `environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+
+-> **Note:** Starting in provider version `4.8.0`, Project Environment Variables require an explicit `sensitive` value. Variables targeting only `development` must set `sensitive = false`. If your team enforces sensitive environment variables, variables targeting `preview`, `production`, or custom environments must set `sensitive = true`. When that team policy is enabled, a variable cannot target `development` together with `preview`, `production`, or custom environments.
 
 -> **Note:** Write-Only argument `value_wo` is available to use in place of `value`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).
 
@@ -36,13 +39,13 @@ resource "vercel_project" "example" {
   }
 }
 
-# An environment variable that will be created
-# for this project for the "production" environment.
+# Project environment variables must explicitly set `sensitive`.
 resource "vercel_project_environment_variable" "example" {
   project_id = vercel_project.example.id
   key        = "foo"
   value      = "bar"
   target     = ["production"]
+  sensitive  = true
   comment    = "a production secret"
 }
 
@@ -53,19 +56,19 @@ resource "vercel_project_environment_variable" "example_git_branch" {
   key        = "foo"
   value      = "bar-staging"
   target     = ["preview"]
+  sensitive  = true
   git_branch = "staging"
   comment    = "a staging secret"
 }
 
-# A sensitive environment variable that will be created
-# for this project for the "production" environment.
-resource "vercel_project_environment_variable" "example_sensitive" {
+# Development environment variables must explicitly set `sensitive = false`.
+resource "vercel_project_environment_variable" "example_development" {
   project_id = vercel_project.example.id
-  key        = "foo"
-  value      = "bar-production"
-  target     = ["production"]
-  sensitive  = true
-  comment    = "a sensitive production secret"
+  key        = "foo-development"
+  value      = "bar-development"
+  target     = ["development"]
+  sensitive  = false
+  comment    = "available during local development"
 }
 
 # An environment variable that will be created referencing
@@ -91,17 +94,19 @@ resource "vercel_project_environment_variable" "example_ephemeral" {
 
 - `key` (String) The name of the Environment Variable.
 - `project_id` (String) The ID of the Vercel project.
+- `sensitive` (Boolean) Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. If a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy) is active, environment variables may have to be sensitive. Variables targeting only `development` must set this to `false`. Variables targeting `preview`, `production`, or custom environments may have to set this to `true`. A variable cannot target `development` together with `preview`, `production`, or custom environments while that team policy is enabled.
 
 ### Optional
+
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
 
 - `comment` (String) A comment explaining what the environment variable is for.
 - `custom_environment_ids` (Set of String) The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.
 - `git_branch` (String) The git branch of the Environment Variable.
-- `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))
 - `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.
 - `team_id` (String) The ID of the Vercel team.Required when configuring a team resource if a default team has not been set in the provider.
 - `value` (String, Sensitive) (Optional, exactly one of `value` or `value_wo` is required) The value of the Environment Variable.
-- `value_wo` (String, Sensitive) (Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephemeral` resource.
+- `value_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) (Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephemeral` resource.
 
 ### Read-Only
 
@@ -110,6 +115,8 @@ resource "vercel_project_environment_variable" "example_ephemeral" {
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # If importing into a personal account, or with a team configured on

@@ -79,6 +79,8 @@ Optional:
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # If importing with a team configured on the provider, simply use the project ID.
 # - project_id can be found in the project `settings` tab in the Vercel UI.

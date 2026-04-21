@@ -65,6 +65,8 @@ resource "vercel_project_domain" "example_redirect" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # If importing into a personal account, or with a team configured on
 # the provider, simply use the project ID and domain.

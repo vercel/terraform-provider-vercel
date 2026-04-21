@@ -47,12 +47,34 @@ func (r *sharedEnvironmentVariableResource) ModifyPlan(ctx context.Context, req 
 		return
 	}
 
-	if config.ID.ValueString() != "" {
-		// The resource already exists, so this is okay.
+	hasDevelopmentTarget, diags := config.hasTarget(ctx, "development")
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-	if config.Sensitive.IsUnknown() || config.Sensitive.IsNull() || config.Sensitive.ValueBool() {
-		// Sensitive is either true, or computed, which is fine.
+
+	if hasDevelopmentTarget && !config.isExplicitlyNonSensitive() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("sensitive"),
+			"Shared Environment Variable Invalid",
+			"Environment variables targeting `development` must explicitly set `sensitive = false`.",
+		)
+		return
+	}
+
+	shouldValidatePolicy, diags := shouldValidateSensitiveEnvironmentVariablePolicy(
+		ctx,
+		config.Target,
+		types.SetNull(types.StringType),
+		!config.ApplyToAllCustomEnvironments.IsNull() && !config.ApplyToAllCustomEnvironments.IsUnknown() && config.ApplyToAllCustomEnvironments.ValueBool(),
+		config.isExplicitlyNonSensitive(),
+		config.ID,
+	)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !shouldValidatePolicy {
 		return
 	}
 
@@ -75,7 +97,7 @@ func (r *sharedEnvironmentVariableResource) ModifyPlan(ctx context.Context, req 
 	resp.Diagnostics.AddAttributeError(
 		path.Root("sensitive"),
 		"Shared Environment Variable Invalid",
-		"This team has a policy that forces all environment variables to be sensitive. Please remove the `sensitive` field or set the `sensitive` field to `true` in your configuration.",
+		"This team has a policy that forces environment variables targeting `preview`, `production`, or custom environments to be sensitive. Set `sensitive = true` in your configuration.",
 	)
 }
 
@@ -110,6 +132,8 @@ Provides a Shared Environment Variable resource.
 A Shared Environment Variable resource defines an Environment Variable that can be shared between multiple Vercel Projects.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables/shared-environment-variables).
+
+-> **Note:** Starting in provider version ` + "`4.8.0`" + `, Shared Environment Variables require an explicit ` + "`sensitive`" + ` value. Variables targeting only ` + "`development`" + ` must set ` + "`sensitive = false`" + `. If your team enforces sensitive environment variables, variables targeting ` + "`preview`" + `, ` + "`production`" + `, or custom environments must set ` + "`sensitive = true`" + `. When that team policy is enabled, a variable cannot target ` + "`development`" + ` together with ` + "`preview`" + `, ` + "`production`" + `, or custom environments.
 
 -> **Note:** Write-Only argument ` + "`value_wo`" + ` is available to use in place of ` + "`value`" + `. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).
 `,
@@ -168,9 +192,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:      true,
 			},
 			"sensitive": schema.BoolAttribute{
-				Description:   "Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))",
-				Optional:      true,
-				Computed:      true,
+				Description:   "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. If a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy) is active, environment variables may have to be sensitive. Variables targeting only `development` must set this to `false`. Variables targeting `preview`, `production`, or custom environments may have to set this to `true`. A variable cannot target `development` together with `preview`, `production`, or custom environments while that team policy is enabled.",
+				Required:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
 			"comment": schema.StringAttribute{
@@ -278,6 +301,34 @@ type SharedEnvironmentVariable struct {
 	ApplyToAllCustomEnvironments types.Bool   `tfsdk:"apply_to_all_custom_environments"`
 }
 
+func (e SharedEnvironmentVariable) isExplicitlyNonSensitive() bool {
+	return !e.Sensitive.IsNull() && !e.Sensitive.IsUnknown() && !e.Sensitive.ValueBool()
+}
+
+func (e SharedEnvironmentVariable) isSensitive() bool {
+	return !e.isExplicitlyNonSensitive()
+}
+
+func (e SharedEnvironmentVariable) hasTarget(ctx context.Context, target string) (bool, diag.Diagnostics) {
+	if e.Target.IsNull() || e.Target.IsUnknown() {
+		return false, nil
+	}
+
+	var targets []string
+	diags := e.Target.ElementsAs(ctx, &targets, true)
+	if diags.HasError() {
+		return false, diags
+	}
+
+	for _, t := range targets {
+		if t == target {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics, valueWO types.String) (req client.CreateSharedEnvironmentVariableRequest, ok bool) {
 	var target []string
 	if e.Target.IsNull() || e.Target.IsUnknown() {
@@ -299,7 +350,7 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx
 
 	var envVariableType string
 
-	if e.Sensitive.ValueBool() {
+	if e.isSensitive() {
 		envVariableType = "sensitive"
 	} else {
 		envVariableType = "encrypted"
@@ -347,7 +398,7 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx
 	}
 	var envVariableType string
 
-	if e.Sensitive.ValueBool() {
+	if e.isSensitive() {
 		envVariableType = "sensitive"
 	} else {
 		envVariableType = "encrypted"

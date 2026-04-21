@@ -8,6 +8,7 @@ description: |-
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/environment-variables.
   ~> Terraform currently provides this Project Environment Variables resource (multiple Environment Variables), a single Project Environment Variable Resource, and a Project resource with Environment Variables defined in-line via the environment field.
   At this time you cannot use a Vercel Project resource with in-line environment in conjunction with any vercel_project_environment_variables or vercel_project_environment_variable resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+  -> Note: Starting in provider version 4.8.0, Project Environment Variables require an explicit sensitive value. Variables targeting only development must set sensitive = false. If your team enforces sensitive environment variables, variables targeting preview, production, or custom environments must set sensitive = true. When that team policy is enabled, a variable cannot target development together with preview, production, or custom environments.
 ---
 
 # vercel_project_environment_variables (Resource)
@@ -20,6 +21,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 ~> Terraform currently provides this Project Environment Variables resource (multiple Environment Variables), a single Project Environment Variable Resource, and a Project resource with Environment Variables defined in-line via the `environment` field.
 At this time you cannot use a Vercel Project resource with in-line `environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+
+-> **Note:** Starting in provider version `4.8.0`, Project Environment Variables require an explicit `sensitive` value. Variables targeting only `development` must set `sensitive = false`. If your team enforces sensitive environment variables, variables targeting `preview`, `production`, or custom environments must set `sensitive = true`. When that team policy is enabled, a variable cannot target `development` together with `preview`, `production`, or custom environments.
 
 ## Example Usage
 
@@ -34,24 +37,26 @@ resource "vercel_project" "example" {
 }
 
 resource "vercel_project_environment_variables" "example" {
-  project_id = vercel_project.test.id
+  project_id = vercel_project.example.id
   variables = [
     {
       key    = "SOME_VARIABLE"
       value  = "some_value"
       target = ["production", "preview"]
+      sensitive = true
     },
     {
       key        = "ANOTHER_VARIABLE"
       value      = "another_value"
       git_branch = "staging"
       target     = ["preview"]
+      sensitive  = true
     },
     {
-      key       = "SENSITIVE_VARIABLE"
-      value     = "sensitive_value"
-      target    = ["production"]
-      sensitive = true
+      key       = "DEVELOPMENT_VARIABLE"
+      value     = "development_value"
+      target    = ["development"]
+      sensitive = false
     }
   ]
 }
@@ -79,6 +84,7 @@ resource "vercel_project_environment_variables" "example" {
 Required:
 
 - `key` (String) The name of the Environment Variable.
+- `sensitive` (Boolean) Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. If a team-wide environment variable policy is active, environment variables may have to be sensitive. Variables targeting only `development` must set this to `false`. Variables targeting `preview`, `production`, or custom environments may have to set this to `true`. A variable cannot target `development` together with `preview`, `production`, or custom environments while that team policy is enabled.
 - `value` (String, Sensitive) The value of the Environment Variable.
 
 Optional:
@@ -86,7 +92,6 @@ Optional:
 - `comment` (String) A comment explaining what the environment variable is for.
 - `custom_environment_ids` (Set of String) The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.
 - `git_branch` (String) The git branch of the Environment Variable.
-- `sensitive` (Boolean) Whether the Environment Variable is sensitive or not.
 - `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.
 
 Read-Only:

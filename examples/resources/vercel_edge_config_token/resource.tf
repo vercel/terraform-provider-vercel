@@ -13,7 +13,8 @@ resource "vercel_edge_config_token" "example" {
 
 resource "vercel_project_environment_variable" "example" {
   project_id = vercel_project.example.id
-  target     = ["production", "preview", "development"]
+  target     = ["production", "preview"]
+  sensitive  = true
   key        = "EDGE_CONFIG"
   value      = vercel_edge_config_token.example.connection_string
 }

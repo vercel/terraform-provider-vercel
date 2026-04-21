@@ -8,6 +8,7 @@ description: |-
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/overview.
   ~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and this Project resource with Environment Variables defined in-line via the environment field.
   At this time you cannot use a Vercel Project resource with in-line environment in conjunction with any vercel_project_environment_variables or vercel_project_environment_variable resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+  -> Note: Starting in provider version 4.8.0, in-line Project Environment Variables require an explicit sensitive value. Variables targeting only development must set sensitive = false. If your team enforces sensitive environment variables, variables targeting preview, production, or custom environments must set sensitive = true. When that team policy is enabled, a variable cannot target development together with preview, production, or custom environments.
 ---
 
 # vercel_project (Resource)
@@ -20,6 +21,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 ~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and this Project resource with Environment Variables defined in-line via the `environment` field.
 At this time you cannot use a Vercel Project resource with in-line `environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+
+-> **Note:** Starting in provider version `4.8.0`, in-line Project Environment Variables require an explicit `sensitive` value. Variables targeting only `development` must set `sensitive = false`. If your team enforces sensitive environment variables, variables targeting `preview`, `production`, or custom environments must set `sensitive = true`. When that team policy is enabled, a variable cannot target `development` together with `preview`, `production`, or custom environments.
 
 ## Example Usage
 
@@ -106,6 +109,7 @@ resource "vercel_project" "example" {
 Required:
 
 - `key` (String) The name of the Environment Variable.
+- `sensitive` (Boolean) Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. If a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy) is active, environment variables may have to be sensitive. Variables targeting only `development` must set this to `false`. Variables targeting `preview`, `production`, or custom environments may have to set this to `true`. A variable cannot target `development` together with `preview`, `production`, or custom environments while that team policy is enabled.
 - `value` (String, Sensitive) The value of the Environment Variable.
 
 Optional:
@@ -113,7 +117,6 @@ Optional:
 - `comment` (String) A comment explaining what the environment variable is for.
 - `custom_environment_ids` (Set of String) The IDs of Custom Environments that the Environment Variable should be present on. At least one of `target` or `custom_environment_ids` must be set.
 - `git_branch` (String) The git branch of the Environment Variable.
-- `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))
 - `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`. At least one of `target` or `custom_environment_ids` must be set.
 
 Read-Only:
@@ -247,6 +250,8 @@ Optional:
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # If importing into a personal account, or with a team configured on
