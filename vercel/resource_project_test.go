@@ -627,6 +627,75 @@ resource "vercel_project" "idempotent" {
 	})
 }
 
+// TestAcc_ProjectAutomationBypassRotateViaComputedInput verifies that rotating
+// protection_bypass_for_automation_secret via a computed/unknown input (e.g.
+// random_password.result with keepers) applies cleanly. Previously this
+// triggered "Provider produced inconsistent final plan ... inconsistent values
+// for sensitive attribute" because the plan modifier preserved the stale
+// state value when the config was unknown.
+func TestAcc_ProjectAutomationBypassRotateViaComputedInput(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	configTemplate := `
+terraform {
+  required_providers {
+    random = {
+      source = "hashicorp/random"
+    }
+  }
+}
+
+resource "random_password" "rotating_secret" {
+  length  = 32
+  special = false
+
+  keepers = {
+    seed = "%s"
+  }
+}
+
+resource "vercel_project" "rotate_via_computed" {
+  name                                    = "test-acc-bypass-rotate-%s"
+  protection_bypass_for_automation        = true
+  protection_bypass_for_automation_secret = random_password.rotating_secret.result
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"random": {
+				Source: "hashicorp/random",
+			},
+		},
+		CheckDestroy: testAccProjectDestroy(testClient(t), "vercel_project.rotate_via_computed", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(fmt.Sprintf(configTemplate, "seed-1", projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.rotate_via_computed", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.rotate_via_computed", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project.rotate_via_computed", "protection_bypass_for_automation_secret"),
+				),
+			},
+			{
+				Config: cfg(fmt.Sprintf(configTemplate, "seed-2", projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.rotate_via_computed", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project.rotate_via_computed", "protection_bypass_for_automation_secret"),
+				),
+			},
+			{
+				Config: cfg(fmt.Sprintf(configTemplate, "seed-2", projectSuffix)),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func getProjectImportID(n string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[n]

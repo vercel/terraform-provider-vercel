@@ -14,6 +14,15 @@ import (
 // this, the attribute is recomputed to Unknown on every plan which produces a
 // spurious diff and, during apply, causes the Update path to issue a
 // revoke-only request to the API (see issue #473).
+//
+// When the config value is Unknown (e.g. because the user wired
+// `random_password.result` — or any other computed attribute — into
+// protection_bypass_for_automation_secret and that upstream resource is being
+// replaced), we must NOT freeze the old state value into the plan. Doing so
+// causes Terraform core to report "inconsistent values for sensitive
+// attribute" once the upstream value becomes known during apply and differs
+// from the preserved state value. In that case we explicitly plan Unknown so
+// the newly learned value flows through normally.
 func useStateForAutomationBypassSecret() planmodifier.String {
 	return automationBypassSecretPlanModifier{}
 }
@@ -32,7 +41,13 @@ func (m automationBypassSecretPlanModifier) PlanModifyString(ctx context.Context
 	if req.StateValue.IsNull() {
 		return
 	}
-	if !req.ConfigValue.IsNull() && !req.ConfigValue.IsUnknown() {
+
+	if req.ConfigValue.IsUnknown() {
+		resp.PlanValue = types.StringUnknown()
+		return
+	}
+
+	if !req.ConfigValue.IsNull() {
 		return
 	}
 
