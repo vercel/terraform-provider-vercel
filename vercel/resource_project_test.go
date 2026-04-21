@@ -594,6 +594,39 @@ func TestAcc_ProjectWithAutomationBypass(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectAutomationBypassIdempotent(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	config := fmt.Sprintf(`
+resource "vercel_project" "idempotent" {
+    name = "test-acc-bypass-idem-%s"
+    protection_bypass_for_automation = true
+}
+`, projectSuffix)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.idempotent", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(config),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.idempotent", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.idempotent", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project.idempotent", "protection_bypass_for_automation_secret"),
+				),
+			},
+			{
+				Config: cfg(config),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func getProjectImportID(n string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[n]
