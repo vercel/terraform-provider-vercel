@@ -305,6 +305,7 @@ resource "vercel_project" "test" {
       key    = "bar"
       value  = "baz"
       target = ["preview"]
+      sensitive = false
     }
   ]
 }
@@ -320,6 +321,7 @@ resource "vercel_project" "test" {
       key    = "bar"
       value  = "baz"
       target = ["preview"]
+      sensitive = false
     }
   ]
 }
@@ -346,6 +348,7 @@ resource "vercel_project" "test" {
       key    = "bar"
       value  = "baz"
       target = ["preview"]
+      sensitive = false
     }
   ]
 }

@@ -80,6 +80,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 ~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and this Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
+
+-> **Note:** Starting in provider version ` + "`4.8.0`" + `, in-line Project Environment Variables require an explicit ` + "`sensitive`" + ` value. Variables targeting only ` + "`development`" + ` must set ` + "`sensitive = false`" + `. If your team enforces sensitive environment variables, variables targeting ` + "`preview`" + `, ` + "`production`" + `, or custom environments must set ` + "`sensitive = true`" + `. When that team policy is enabled, a variable cannot target ` + "`development`" + ` together with ` + "`preview`" + `, ` + "`production`" + `, or custom environments.
         `,
 		Attributes: map[string]schema.Attribute{
 			"team_id": schema.StringAttribute{
@@ -194,9 +196,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Computed:    true,
 						},
 						"sensitive": schema.BoolAttribute{
-							Description: "Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))",
-							Optional:    true,
-							Computed:    true,
+							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. If a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy) is active, environment variables may have to be sensitive. Variables targeting only `development` must set this to `false`. Variables targeting `preview`, `production`, or custom environments may have to set this to `true`. A variable cannot target `development` together with `preview`, `production`, or custom environments while that team policy is enabled.",
+							Required:    true,
 						},
 						"comment": schema.StringAttribute{
 							Description: "A comment explaining what the environment variable is for.",
@@ -753,7 +754,7 @@ func parseEnvironment(ctx context.Context, vars []EnvironmentItem) (out []client
 		}
 
 		var envVariableType string
-		if e.Sensitive.ValueBool() {
+		if e.isSensitive() {
 			envVariableType = "sensitive"
 		} else {
 			envVariableType = "encrypted"
@@ -1031,13 +1032,41 @@ type EnvironmentItem struct {
 	Comment              types.String `tfsdk:"comment"`
 }
 
+func (e EnvironmentItem) isExplicitlyNonSensitive() bool {
+	return !e.Sensitive.IsNull() && !e.Sensitive.IsUnknown() && !e.Sensitive.ValueBool()
+}
+
+func (e EnvironmentItem) isSensitive() bool {
+	return !e.isExplicitlyNonSensitive()
+}
+
+func (e EnvironmentItem) hasTarget(ctx context.Context, target string) (bool, diag.Diagnostics) {
+	if e.Target.IsNull() || e.Target.IsUnknown() {
+		return false, nil
+	}
+
+	var targets []string
+	diags := e.Target.ElementsAs(ctx, &targets, true)
+	if diags.HasError() {
+		return false, diags
+	}
+
+	for _, t := range targets {
+		if t == target {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func (e *EnvironmentItem) equal(other *EnvironmentItem) bool {
 	return e.Key.ValueString() == other.Key.ValueString() &&
 		e.Value.ValueString() == other.Value.ValueString() &&
 		e.Target.Equal(other.Target) &&
 		e.CustomEnvironmentIDs.Equal(other.CustomEnvironmentIDs) &&
 		e.GitBranch.ValueString() == other.GitBranch.ValueString() &&
-		e.Sensitive.ValueBool() == other.Sensitive.ValueBool() &&
+		e.isSensitive() == other.isSensitive() &&
 		e.Comment.ValueString() == other.Comment.ValueString()
 }
 
@@ -1049,7 +1078,7 @@ func (e *EnvironmentItem) toAttrValue() attr.Value {
 		"target":                 e.Target,
 		"custom_environment_ids": e.CustomEnvironmentIDs,
 		"git_branch":             e.GitBranch,
-		"sensitive":              e.Sensitive,
+		"sensitive":              types.BoolValue(e.isSensitive()),
 		"comment":                e.Comment,
 	})
 }
@@ -1067,7 +1096,7 @@ func (e *EnvironmentItem) toEnvironmentVariableRequest(ctx context.Context) (req
 	}
 
 	var envVariableType string
-	if e.Sensitive.ValueBool() {
+	if e.isSensitive() {
 		envVariableType = "sensitive"
 	} else {
 		envVariableType = "encrypted"
@@ -1799,14 +1828,14 @@ func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	if req.Plan.Raw.IsNull() {
 		return
 	}
-	var config Project
-	diags := req.Plan.Get(ctx, &config)
+	var plan Project
+	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	environment, err := config.environment(ctx)
+	environment, err := plan.environment(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing project environment variables",
@@ -1815,21 +1844,57 @@ func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 		return
 	}
 
-	// work out if there are any new env vars that are specifying sensitive = false
+	var invalidDevelopmentEnvVars []path.Path
 	var nonSensitiveEnvVars []path.Path
 	for i, e := range environment {
-		if e.ID.ValueString() != "" {
+		hasDevelopmentTarget, diags := e.hasTarget(ctx, "development")
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if hasDevelopmentTarget && !e.isExplicitlyNonSensitive() {
+			invalidDevelopmentEnvVars = append(
+				invalidDevelopmentEnvVars,
+				path.Root("environment").
+					AtSetValue(plan.Environment.Elements()[i]).
+					AtName("sensitive"),
+			)
 			continue
 		}
-		if e.Sensitive.IsUnknown() || e.Sensitive.IsNull() || e.Sensitive.ValueBool() {
+
+		shouldValidatePolicy, diags := shouldValidateSensitiveEnvironmentVariablePolicy(
+			ctx,
+			e.Target,
+			e.CustomEnvironmentIDs,
+			false,
+			e.isExplicitlyNonSensitive(),
+			e.ID,
+		)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if !shouldValidatePolicy {
 			continue
 		}
+
 		nonSensitiveEnvVars = append(
 			nonSensitiveEnvVars,
 			path.Root("environment").
-				AtSetValue(config.Environment.Elements()[i]).
+				AtSetValue(plan.Environment.Elements()[i]).
 				AtName("sensitive"),
 		)
+	}
+
+	if len(invalidDevelopmentEnvVars) > 0 {
+		for _, p := range invalidDevelopmentEnvVars {
+			resp.Diagnostics.AddAttributeError(
+				p,
+				"Project Invalid",
+				"Environment variables targeting `development` must explicitly set `sensitive = false`.",
+			)
+		}
+		return
 	}
 
 	if len(nonSensitiveEnvVars) == 0 {
@@ -1838,7 +1903,7 @@ func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 
 	// if sensitive is explicitly set to `false`, then validate that an env var can be created with the given
 	// team sensitive environment variable policy.
-	team, err := r.client.Team(ctx, config.TeamID.ValueString())
+	team, err := r.client.Team(ctx, plan.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error validating project environment variable",
@@ -1856,7 +1921,7 @@ func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 		resp.Diagnostics.AddAttributeError(
 			p,
 			"Project Invalid",
-			"This team has a policy that forces all environment variables to be sensitive. Please remove the `sensitive` field for your environment variables or set the `sensitive` field to `true` in your configuration.",
+			"This team has a policy that forces environment variables targeting `preview`, `production`, or custom environments to be sensitive. Set `sensitive = true` in your configuration.",
 		)
 	}
 }

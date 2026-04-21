@@ -61,8 +61,14 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "syd1"),
 					resource.TestCheckResourceAttr("vercel_project.test", "automatically_expose_system_environment_variables", "true"),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
-						"key":   "foo",
-						"value": "bar",
+						"key":       "foo",
+						"value":     "bar",
+						"sensitive": "true",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
+						"key":       "development_thing",
+						"value":     "bar",
+						"sensitive": "false",
 					}),
 					resource.TestCheckTypeSetElemAttr("vercel_project.test", "environment.0.target.*", "production"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_comments.on_pull_request", "true"),
@@ -93,8 +99,14 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-two-%s", projectSuffix)),
 					resource.TestCheckNoResourceAttr("vercel_project.test", "build_command"),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
-						"key":   "bar",
-						"value": "baz",
+						"key":       "bar",
+						"value":     "baz",
+						"sensitive": "true",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
+						"key":       "development_thing",
+						"value":     "bar",
+						"sensitive": "false",
 					}),
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "false"),
@@ -126,6 +138,20 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "true"),
 				),
+			},
+		},
+	})
+}
+
+func TestAcc_Project_DevelopmentEnvironmentRequiresNonSensitive(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      cfg(testAccProjectConfigDevelopmentSensitiveTrue(projectSuffix)),
+				ExpectError: regexp.MustCompile(`(?s)Environment variables targeting \x60development\x60 must explicitly set \x60sensitive\s*=\s*false\x60\.`),
 			},
 		},
 	})
@@ -716,37 +742,49 @@ resource "vercel_project" "test" {
       key    = "two"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key    = "foo"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key    = "baz"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key    = "three"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key    = "oh_no"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key    = "bar"
       value  = "baz"
       target = ["production"]
+      sensitive = true
     },
     {
       key       = "sensitive_thing"
       value     = "bar_updated"
       target    = ["production"]
       sensitive = true
+    },
+    {
+      key       = "development_thing"
+      value     = "bar"
+      target    = ["development"]
+      sensitive = false
     }
   ]
   on_demand_concurrent_builds = false
@@ -1010,6 +1048,7 @@ resource "vercel_project" "test_git" {
       value      = "bar"
       target     = ["preview"]
       git_branch = "staging"
+      sensitive  = true
       comment    = "some comment"
     }
   ]
@@ -1042,6 +1081,7 @@ resource "vercel_project" "test_git" {
       key        = "foo"
       value      = "bar2"
       target     = ["preview"]
+      sensitive  = true
       comment    = "some updated comment"
     }
   ]
@@ -1059,6 +1099,7 @@ resource "vercel_project" "test_git" {
       key        = "foo"
       value      = "bar2"
       target     = ["preview"]
+      sensitive  = true
     }
   ]
 }
@@ -1153,41 +1194,69 @@ resource "vercel_project" "test" {
       key    = "foo"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key    = "two"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key    = "three"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key    = "baz"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key    = "bar"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key    = "oh_no"
       value  = "bar"
       target = ["production"]
+      sensitive = true
     },
     {
       key       = "sensitive_thing"
       value     = "bar"
       target    = ["production"]
       sensitive = true
+    },
+    {
+      key       = "development_thing"
+      value     = "bar"
+      target    = ["development"]
+      sensitive = false
     }
   ]
   on_demand_concurrent_builds = true
   build_machine_type = "enhanced"
+}
+`, projectSuffix)
+}
+
+func testAccProjectConfigDevelopmentSensitiveTrue(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-project-dev-%s"
+  environment = [
+    {
+      key       = "development_thing"
+      value     = "bar"
+      target    = ["development"]
+      sensitive = true
+    }
+  ]
 }
 `, projectSuffix)
 }

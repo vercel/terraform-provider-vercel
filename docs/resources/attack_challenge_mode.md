@@ -51,6 +51,8 @@ resource "vercel_attack_challenge_mode" "example" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # You can import via the team_id and project_id.
 # - team_id can be found in the team `settings` tab in the Vercel UI.

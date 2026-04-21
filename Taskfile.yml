@@ -28,7 +28,7 @@ tasks:
   install-tfplugindocs:
     desc: "Install the tfplugindocs tool"
     cmds:
-      - go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.19.4
+      - go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.25.0
     status:
       - which tfplugindocs
 

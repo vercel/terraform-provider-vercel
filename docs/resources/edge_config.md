@@ -31,7 +31,8 @@ resource "vercel_edge_config_token" "example" {
 
 resource "vercel_project_environment_variable" "example" {
   project_id = vercel_project.example.id
-  target     = ["production", "preview", "development"]
+  target     = ["production", "preview"]
+  sensitive  = true
   key        = "EDGE_CONFIG"
   value      = vercel_edge_config_token.example.connection_string
 }
@@ -55,6 +56,8 @@ resource "vercel_project_environment_variable" "example" {
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # If importing into a personal account, or with a team configured on

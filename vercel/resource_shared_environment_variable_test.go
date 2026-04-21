@@ -45,18 +45,21 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "comment", "Test comment for example"),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "apply_to_all_custom_environments", "true"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "sensitive", "true"),
 
 					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.sensitive_example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "key", fmt.Sprintf("test_acc_foo_sensitive_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "value", "bar"),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "comment", "Test comment for sensitive example"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.sensitive_example", "target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "sensitive", "true"),
 
 					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.no_comment_example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.no_comment_example", "key", fmt.Sprintf("test_acc_foo_no_comment_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.no_comment_example", "value", "baz"),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.no_comment_example", "comment", ""),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.no_comment_example", "target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.no_comment_example", "sensitive", "true"),
 				),
 			},
 			{
@@ -68,10 +71,12 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "apply_to_all_custom_environments", "false"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "development"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "preview"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "sensitive", "false"),
 
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "key", fmt.Sprintf("test_acc_foo_sensitive_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "value", "bar-updated"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.sensitive_example", "target.*", "production"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "sensitive", "true"),
 				),
 			},
 			{
@@ -82,6 +87,19 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 			},
 			{
 				Config: cfg(testAccSharedEnvironmentVariablesConfigDeleted(nameSuffix)),
+			},
+		},
+	})
+}
+
+func TestAcc_SharedEnvironmentVariables_DevelopmentTargetRequiresNonSensitive(t *testing.T) {
+	nameSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      cfg(testAccSharedEnvironmentVariablesConfigDevelopmentSensitiveTrue(nameSuffix)),
+				ExpectError: regexp.MustCompile(`(?s)Environment variables targeting \x60development\x60 must explicitly set \x60sensitive\s*=\s*false\x60\.`),
 			},
 		},
 	})
@@ -112,10 +130,11 @@ resource "vercel_shared_environment_variable" "example" {
 	key         = "test_acc_foo_%[1]s"
 	value       = "bar"
 	target      = ["production"]
-    project_ids = [
-        vercel_project.example.id
-    ]
-    comment     = "Test comment for example"
+	sensitive   = true
+	project_ids = [
+		vercel_project.example.id
+	]
+	comment     = "Test comment for example"
 	apply_to_all_custom_environments = true
 }
 
@@ -134,9 +153,10 @@ resource "vercel_shared_environment_variable" "no_comment_example" {
 	key         = "test_acc_foo_no_comment_%[1]s"
 	value       = "baz"
 	target      = ["production"]
-    project_ids = [
-        vercel_project.example.id
-    ]
+	sensitive   = true
+	project_ids = [
+		vercel_project.example.id
+	]
 }
 `, projectName)
 }
@@ -155,6 +175,7 @@ resource "vercel_shared_environment_variable" "example" {
 	key         = "test_acc_foo_%[1]s"
 	value       = "updated-bar"
 	target      = ["preview", "development"]
+	sensitive   = false
     project_ids = [
         vercel_project.example.id,
         vercel_project.example2.id
@@ -171,6 +192,24 @@ resource "vercel_shared_environment_variable" "sensitive_example" {
         vercel_project.example.id,
         vercel_project.example2.id
     ]
+}
+`, projectName)
+}
+
+func testAccSharedEnvironmentVariablesConfigDevelopmentSensitiveTrue(projectName string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+	name = "test-acc-example-project-%[1]s"
+}
+
+resource "vercel_shared_environment_variable" "example" {
+	key         = "test_acc_foo_dev_%[1]s"
+	value       = "bar"
+	target      = ["development"]
+	sensitive   = true
+	project_ids = [
+		vercel_project.example.id
+	]
 }
 `, projectName)
 }
@@ -255,6 +294,7 @@ resource "vercel_shared_environment_variable" "example_value_wo" {
 	key         = "test_acc_foo_wo_%[1]s"
 	value_wo    = "bar-wo"
 	target      = ["production"]
+	sensitive   = true
 	project_ids = [
 		vercel_project.example.id
 	]
@@ -272,6 +312,7 @@ resource "vercel_shared_environment_variable" "example_value_wo" {
 	key         = "test_acc_foo_wo_%[1]s"
 	value_wo    = "bar-wo-updated"
 	target      = ["production"]
+	sensitive   = true
 	project_ids = [
 		vercel_project.example.id
 	]
@@ -290,6 +331,7 @@ resource "vercel_shared_environment_variable" "example_both" {
 	value       = "bar"
 	value_wo    = "bar-wo"
 	target      = ["production"]
+	sensitive   = true
 	project_ids = [
 		vercel_project.example.id
 	]
@@ -306,6 +348,7 @@ resource "vercel_project" "example" {
 resource "vercel_shared_environment_variable" "example_none" {
 	key         = "test_acc_foo_none_%[1]s"
 	target      = ["production"]
+	sensitive   = true
 	project_ids = [
 		vercel_project.example.id
 	]
@@ -362,6 +405,7 @@ resource "vercel_project" "example" {
 resource "vercel_shared_environment_variable" "custom_only_omit" {
 	key         = "test_acc_custom_only_omit_%[1]s"
 	value       = "bar"
+	sensitive   = true
 	project_ids = [
 		vercel_project.example.id
 	]
@@ -382,6 +426,7 @@ resource "vercel_shared_environment_variable" "custom_only_empty" {
 	value       = "bar"
 	# explicitly pass an empty set
 	target      = []
+	sensitive   = true
 	project_ids = [
 		vercel_project.example.id
 	]
@@ -445,6 +490,7 @@ resource "vercel_shared_environment_variable" "computed_custom" {
   key                              = local.env_config.key
   value                            = local.env_config.value
   target                           = contains(local.env_config.target, "sandbox") ? tolist(setsubtract(toset(local.env_config.target), toset(["sandbox"]))) : local.env_config.target
+  sensitive                        = true
   apply_to_all_custom_environments = contains(local.env_config.target, "sandbox")
   project_ids                      = [vercel_project.example.id]
 }

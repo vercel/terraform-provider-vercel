@@ -59,6 +59,8 @@ resource "vercel_microfrontend_group_membership" "child_mfe_project_mfe_membersh
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # If importing into a personal account, or with a team configured on the provider, simply use the record id.
 # - the microfrontend ID can be taken from the microfrontend settings page

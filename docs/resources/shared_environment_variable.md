@@ -6,6 +6,7 @@ description: |-
   Provides a Shared Environment Variable resource.
   A Shared Environment Variable resource defines an Environment Variable that can be shared between multiple Vercel Projects.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/environment-variables/shared-environment-variables.
+  -> Note: Starting in provider version 4.8.0, Shared Environment Variables require an explicit sensitive value. Variables targeting only development must set sensitive = false. If your team enforces sensitive environment variables, variables targeting preview, production, or custom environments must set sensitive = true. When that team policy is enabled, a variable cannot target development together with preview, production, or custom environments.
   -> Note: Write-Only argument value_wo is available to use in place of value. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. Learn more https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments.
 ---
 
@@ -16,6 +17,8 @@ Provides a Shared Environment Variable resource.
 A Shared Environment Variable resource defines an Environment Variable that can be shared between multiple Vercel Projects.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables/shared-environment-variables).
+
+-> **Note:** Starting in provider version `4.8.0`, Shared Environment Variables require an explicit `sensitive` value. Variables targeting only `development` must set `sensitive = false`. If your team enforces sensitive environment variables, variables targeting `preview`, `production`, or custom environments must set `sensitive = true`. When that team policy is enabled, a variable cannot target `development` together with `preview`, `production`, or custom environments.
 
 -> **Note:** Write-Only argument `value_wo` is available to use in place of `value`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).
 
@@ -31,13 +34,25 @@ resource "vercel_project" "example" {
   }
 }
 
-# A shared environment variable that will be created
-# and associated with the "example" project.
+# Shared environment variables must explicitly set `sensitive`.
 resource "vercel_shared_environment_variable" "example" {
   key     = "EXAMPLE"
   value   = "some_value"
   target  = ["production"]
+  sensitive = true
   comment = "an example shared variable"
+  project_ids = [
+    vercel_project.example.id
+  ]
+}
+
+# Shared environment variables targeting `development` must explicitly set `sensitive = false`.
+resource "vercel_shared_environment_variable" "example_development" {
+  key       = "EXAMPLE_DEVELOPMENT"
+  value     = "some_development_value"
+  target    = ["development"]
+  sensitive = false
+  comment   = "available during local development"
   project_ids = [
     vercel_project.example.id
   ]
@@ -51,16 +66,18 @@ resource "vercel_shared_environment_variable" "example" {
 
 - `key` (String) The name of the Environment Variable.
 - `project_ids` (Set of String) The ID of the Vercel project.
+- `sensitive` (Boolean) Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. If a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy) is active, environment variables may have to be sensitive. Variables targeting only `development` must set this to `false`. Variables targeting `preview`, `production`, or custom environments may have to set this to `true`. A variable cannot target `development` together with `preview`, `production`, or custom environments while that team policy is enabled.
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `apply_to_all_custom_environments` (Boolean) Whether the shared environment variable should be applied to all custom environments in the linked projects.
 - `comment` (String) A comment explaining what the environment variable is for.
-- `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. (May be affected by a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy))
 - `target` (Set of String) The environments that the Environment Variable should be present on. Valid targets are either `production`, `preview`, or `development`.
 - `team_id` (String) The ID of the Vercel team. Shared environment variables require a team.
 - `value` (String, Sensitive) (Optional, exactly one of `value` or `value_wo` is required) The value of the Environment Variable.
-- `value_wo` (String, Sensitive) (Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephemeral` resource.
+- `value_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) (Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephemeral` resource.
 
 ### Read-Only
 
@@ -69,6 +86,8 @@ resource "vercel_shared_environment_variable" "example" {
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # You can import via the team_id and environment variable id.

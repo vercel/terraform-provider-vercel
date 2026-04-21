@@ -7,13 +7,13 @@ resource "vercel_project" "example" {
   }
 }
 
-# An environment variable that will be created
-# for this project for the "production" environment.
+# Project environment variables must explicitly set `sensitive`.
 resource "vercel_project_environment_variable" "example" {
   project_id = vercel_project.example.id
   key        = "foo"
   value      = "bar"
   target     = ["production"]
+  sensitive  = true
   comment    = "a production secret"
 }
 
@@ -24,19 +24,19 @@ resource "vercel_project_environment_variable" "example_git_branch" {
   key        = "foo"
   value      = "bar-staging"
   target     = ["preview"]
+  sensitive  = true
   git_branch = "staging"
   comment    = "a staging secret"
 }
 
-# A sensitive environment variable that will be created
-# for this project for the "production" environment.
-resource "vercel_project_environment_variable" "example_sensitive" {
+# Development environment variables must explicitly set `sensitive = false`.
+resource "vercel_project_environment_variable" "example_development" {
   project_id = vercel_project.example.id
-  key        = "foo"
-  value      = "bar-production"
-  target     = ["production"]
-  sensitive  = true
-  comment    = "a sensitive production secret"
+  key        = "foo-development"
+  value      = "bar-development"
+  target     = ["development"]
+  sensitive  = false
+  comment    = "available during local development"
 }
 
 # An environment variable that will be created referencing

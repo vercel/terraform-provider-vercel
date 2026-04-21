@@ -2,6 +2,7 @@ package vercel_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -23,13 +24,15 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "variables.#", "2"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
-						"key":   "TEST_VAR_1",
-						"value": "test_value_1",
+						"key":       "TEST_VAR_1",
+						"value":     "test_value_1",
+						"sensitive": "true",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
 						"key":        "TEST_VAR_2",
 						"value":      "test_value_2",
 						"git_branch": "staging",
+						"sensitive":  "true",
 					}),
 					resource.TestCheckResourceAttrSet(resourceName, "variables.0.id"),
 					resource.TestCheckResourceAttrSet(resourceName, "variables.1.id"),
@@ -40,16 +43,19 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "variables.#", "4"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
-						"key":   "TEST_VAR_1",
-						"value": "test_value_1",
+						"key":       "TEST_VAR_1",
+						"value":     "test_value_1",
+						"sensitive": "true",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
-						"key":   "TEST_VAR_2",
-						"value": "test_value_2_updated",
+						"key":       "TEST_VAR_2",
+						"value":     "test_value_2_updated",
+						"sensitive": "false",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
-						"key":   "TEST_VAR_3",
-						"value": "test_value_3",
+						"key":       "TEST_VAR_3",
+						"value":     "test_value_3",
+						"sensitive": "true",
 					}),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "variables.*", map[string]string{
 						"key":       "TEST_VAR_4",
@@ -60,6 +66,20 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "variables.1.id"),
 					resource.TestCheckResourceAttrSet(resourceName, "variables.2.id"),
 				),
+			},
+		},
+	})
+}
+
+func TestAcc_ProjectEnvironmentVariables_DevelopmentTargetRequiresNonSensitive(t *testing.T) {
+	projectName := "test-acc-example-env-vars-" + acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      cfg(testAccProjectEnvironmentVariablesConfigDevelopmentSensitiveTrue(projectName, testGithubRepo(t))),
+				ExpectError: regexp.MustCompile(`(?s)Environment variables targeting \x60development\x60 must explicitly set \x60sensitive\s*=\s*false\x60\.`),
 			},
 		},
 	})
@@ -83,12 +103,14 @@ resource "vercel_project_environment_variables" "test" {
       key   = "TEST_VAR_1"
       value = "test_value_1"
       target = ["production", "preview"]
+      sensitive = true
     },
     {
       key   = "TEST_VAR_2"
       value = "test_value_2"
       git_branch = "staging"
       target = ["preview"]
+      sensitive = true
     }
   ]
 }
@@ -113,21 +135,49 @@ resource "vercel_project_environment_variables" "test" {
       key   = "TEST_VAR_1" // unchanged
       value = "test_value_1"
       target = ["production", "preview"]
+      sensitive = true
     },
     {
       key    = "TEST_VAR_2"
       value  = "test_value_2_updated"
       target = ["preview", "development"]
+      sensitive = false
     },
     {
       key = "TEST_VAR_3"
       value = "test_value_3"
       target = ["production"]
+      sensitive = true
     },
     {
       key = "TEST_VAR_4"
       value = "sensitive_value"
       target = ["production"]
+      sensitive = true
+    }
+  ]
+}
+`, projectName, githubRepo)
+}
+
+func testAccProjectEnvironmentVariablesConfigDevelopmentSensitiveTrue(projectName string, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "%s"
+
+  git_repository = {
+    type = "github"
+    repo = "%[2]s"
+  }
+}
+
+resource "vercel_project_environment_variables" "test" {
+  project_id = vercel_project.test.id
+  variables = [
+    {
+      key       = "DEV_VAR"
+      value     = "dev_value"
+      target    = ["development"]
       sensitive = true
     }
   ]

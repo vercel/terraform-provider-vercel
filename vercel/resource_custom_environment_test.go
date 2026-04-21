@@ -63,9 +63,11 @@ func TestAcc_CustomEnvironmentResource(t *testing.T) {
 
 					// check project env var
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.test", "custom_environment_ids.#", "1"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.test", "sensitive", "true"),
 
 					// check shared env var
 					resource.TestCheckResourceAttr("vercel_project_environment_variables.test", "variables.0.custom_environment_ids.#", "1"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variables.test", "variables.0.sensitive", "true"),
 				),
 			},
 			{
@@ -123,6 +125,7 @@ resource "vercel_project_environment_variable" "test" {
     key = "foo"
     value = "test-acc-env-var"
     custom_environment_ids = [vercel_custom_environment.test.id]
+    sensitive = true
 }
 
 // Ensure project_environment_variables works
@@ -132,6 +135,7 @@ resource "vercel_project_environment_variables" "test" {
         key = "bar"
         value = "test-acc-env-var"
         custom_environment_ids = [vercel_custom_environment.test.id]
+        sensitive = true
     }]
 }
 

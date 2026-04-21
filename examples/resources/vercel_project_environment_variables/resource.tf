@@ -8,24 +8,26 @@ resource "vercel_project" "example" {
 }
 
 resource "vercel_project_environment_variables" "example" {
-  project_id = vercel_project.test.id
+  project_id = vercel_project.example.id
   variables = [
     {
       key    = "SOME_VARIABLE"
       value  = "some_value"
       target = ["production", "preview"]
+      sensitive = true
     },
     {
       key        = "ANOTHER_VARIABLE"
       value      = "another_value"
       git_branch = "staging"
       target     = ["preview"]
+      sensitive  = true
     },
     {
-      key       = "SENSITIVE_VARIABLE"
-      value     = "sensitive_value"
-      target    = ["production"]
-      sensitive = true
+      key       = "DEVELOPMENT_VARIABLE"
+      value     = "development_value"
+      target    = ["development"]
+      sensitive = false
     }
   ]
 }
