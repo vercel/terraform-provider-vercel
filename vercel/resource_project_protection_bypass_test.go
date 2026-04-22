@@ -544,6 +544,7 @@ resource "vercel_project_protection_bypass" "second" {
   project_id = vercel_project.test.id
   secret     = "%[2]s"
   note       = "replacement"
+  depends_on = [vercel_project_protection_bypass.first]
 }
 `, projectSuffix, secondSecret)
 }
@@ -564,6 +565,7 @@ resource "vercel_project_protection_bypass" "second" {
   project_id = vercel_project.test.id
   secret     = "%[2]s"
   note       = "replacement"
+  depends_on = [vercel_project_protection_bypass.first]
 }
 `, projectSuffix, secondSecret)
 }
