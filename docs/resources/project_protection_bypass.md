@@ -52,7 +52,7 @@ resource "vercel_project_protection_bypass" "qa" {
 
 ### Optional
 
-- `is_env_var` (Boolean) Whether this bypass is exposed as the `VERCEL_AUTOMATION_BYPASS_SECRET` environment variable on deployments. Exactly one bypass per project may have this set to true; promoting a different bypass automatically demotes the previous one.
+- `is_env_var` (Boolean) Whether this bypass is exposed as the `VERCEL_AUTOMATION_BYPASS_SECRET` environment variable on deployments. Exactly one bypass per project may have this set to true; promoting a different bypass automatically demotes the previous one. Setting this to `false` when no other bypass on the project has `is_env_var = true` is invalid — Vercel requires exactly one default per project, and a solo bypass is always the default.
 - `note` (String) An optional note shown in the Vercel UI for this bypass. Maximum 100 characters.
 - `secret` (String, Sensitive) The 32-character alphanumeric secret used as the value of the `x-vercel-protection-bypass` header. If omitted, Vercel generates one.
 - `team_id` (String) The ID of the team the project exists under. Required when configuring a team resource if a default team has not been set in the provider.
@@ -67,6 +67,8 @@ resource "vercel_project_protection_bypass" "qa" {
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # If importing into a personal account, or with a team configured on

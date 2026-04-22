@@ -106,7 +106,7 @@ Multiple bypasses can be created per project. Exactly one bypass per project may
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
-				Description:   "Whether this bypass is exposed as the `VERCEL_AUTOMATION_BYPASS_SECRET` environment variable on deployments. Exactly one bypass per project may have this set to true; promoting a different bypass automatically demotes the previous one.",
+				Description:   "Whether this bypass is exposed as the `VERCEL_AUTOMATION_BYPASS_SECRET` environment variable on deployments. Exactly one bypass per project may have this set to true; promoting a different bypass automatically demotes the previous one. Setting this to `false` when no other bypass on the project has `is_env_var = true` is invalid — Vercel requires exactly one default per project, and a solo bypass is always the default.",
 			},
 			"scope": schema.StringAttribute{
 				Computed:    true,
@@ -174,10 +174,32 @@ func (r *projectProtectionBypassResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	// Promote this bypass to the env-var default if the user asked for it and the API
-	// didn't already make it the default (i.e. another bypass still holds that slot).
-	needsPromotion := !plan.IsEnvVar.IsNull() && !plan.IsEnvVar.IsUnknown() && plan.IsEnvVar.ValueBool()
+	plannedIsEnvVarSet := !plan.IsEnvVar.IsNull() && !plan.IsEnvVar.IsUnknown()
+	needsPromotion := plannedIsEnvVarSet && plan.IsEnvVar.ValueBool()
 	actuallyDefault := bypass.IsEnvVar != nil && *bypass.IsEnvVar
+
+	// Vercel requires exactly one default per project, so the API always marks
+	// a solo bypass as the env-var default. Catch the `is_env_var = false` vs
+	// solo-bypass conflict explicitly — otherwise Terraform surfaces a generic
+	// "provider produced inconsistent result" error that's hard to act on.
+	if plannedIsEnvVarSet && !plan.IsEnvVar.ValueBool() && actuallyDefault {
+		if cleanupErr := r.client.DeleteProtectionBypass(ctx, client.DeleteProtectionBypassRequest{
+			TeamID:    plan.TeamID.ValueString(),
+			ProjectID: plan.ProjectID.ValueString(),
+			Secret:    secret,
+		}); cleanupErr != nil {
+			resp.Diagnostics.AddWarning(
+				"Failed to clean up protection bypass after rejected config",
+				fmt.Sprintf("A bypass was created on project %s with secret %s but could not be revoked automatically: %s. Revoke it manually in the Vercel dashboard.", plan.ProjectID.ValueString(), secret, cleanupErr),
+			)
+		}
+		resp.Diagnostics.AddError(
+			"Invalid is_env_var = false for a solo protection bypass",
+			"Vercel requires exactly one bypass per project to have is_env_var = true, and this is currently the only bypass on the project. "+
+				"Leave is_env_var unset, or also define another vercel_project_protection_bypass on the same project with is_env_var = true.",
+		)
+		return
+	}
 	if needsPromotion && !actuallyDefault {
 		isEnvVar := true
 		updated, err := r.client.UpdateProtectionBypass(ctx, client.UpdateProtectionBypassRequest{

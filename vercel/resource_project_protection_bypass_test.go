@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -88,11 +89,19 @@ func TestAcc_ProjectProtectionBypass(t *testing.T) {
 					testAccProjectProtectionBypassRevoked(testClient(t), "vercel_project.test", customSecret),
 				),
 			},
-			// Remove the second bypass — verify it's revoked while the first remains.
+			// Remove the `second` bypass while it is the env-var default.
+			// The provider must promote `first` to isEnvVar=true before revoking
+			// `second`, otherwise the API rejects the revoke with a 400 because
+			// the project would be left with no env-var default.
 			{
 				Config: cfg(testAccProjectProtectionBypassSingle(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectProtectionBypassRevoked(testClient(t), "vercel_project.test", replacementSecret),
+					// The live API check is what matters here: the sibling's Delete
+					// triggered a direct PATCH that promotes `first`. Its own state
+					// is not refreshed between the apply and the Check, so we deliberately
+					// assert against the server rather than state.
+					testAccProjectProtectionBypassIsEnvVarDefault(testClient(t), "vercel_project.test", "vercel_project_protection_bypass.first"),
 				),
 			},
 			// Remove the last bypass on the project — verify it's revoked cleanly.
@@ -178,4 +187,290 @@ resource "vercel_project_protection_bypass" "second" {
   is_env_var = %[5]t
 }
 `, projectSuffix, customSecret, secondNote, firstIsEnvVar, secondIsEnvVar)
+}
+
+func testAccProjectProtectionBypassIsEnvVarDefault(testClient *client.Client, projectResource, bypassResource string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		p, ok := s.RootModule().Resources[projectResource]
+		if !ok {
+			return fmt.Errorf("not found: %s", projectResource)
+		}
+		b, ok := s.RootModule().Resources[bypassResource]
+		if !ok {
+			return fmt.Errorf("not found: %s", bypassResource)
+		}
+		bypass, err := testClient.GetProtectionBypass(
+			context.TODO(),
+			p.Primary.ID,
+			b.Primary.Attributes["team_id"],
+			b.Primary.Attributes["secret"],
+		)
+		if err != nil {
+			return err
+		}
+		if bypass.IsEnvVar == nil || !*bypass.IsEnvVar {
+			return fmt.Errorf("expected %s to be the env-var default, but isEnvVar=%v", bypassResource, bypass.IsEnvVar)
+		}
+		return nil
+	}
+}
+
+// Covers the Create path where is_env_var=true is requested at creation time
+// on a non-first bypass. The API assigns isEnvVar=false because a default
+// already exists, so the provider must issue a follow-up promotion to honor
+// the plan. Without that branch, state and config would disagree.
+func TestAcc_ProjectProtectionBypass_PromoteOnCreate(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	customSecret := acctest.RandString(32)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			// First bypass alone — the API marks it as the env-var default.
+			// is_env_var is left unset so the computed value matches reality.
+			{
+				Config: cfg(testAccProjectProtectionBypassPromoteOnCreateFirstOnly(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.first", "is_env_var", "true"),
+				),
+			},
+			// Add a second bypass with is_env_var=true set at creation. The API
+			// initially makes it non-default (first still holds the slot), so the
+			// provider must issue a follow-up promotion to honour the plan.
+			{
+				Config: cfg(testAccProjectProtectionBypassPromoteOnCreateBoth(projectSuffix, customSecret)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.promoted", "is_env_var", "true"),
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.promoted", "secret", customSecret),
+					testAccProjectProtectionBypassIsEnvVarDefault(testClient(t), "vercel_project.test", "vercel_project_protection_bypass.promoted"),
+				),
+			},
+		},
+	})
+}
+
+func testAccProjectProtectionBypassPromoteOnCreateFirstOnly(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-bypass-promote-%[1]s"
+}
+
+resource "vercel_project_protection_bypass" "first" {
+  project_id = vercel_project.test.id
+  note       = "first"
+}
+`, projectSuffix)
+}
+
+func testAccProjectProtectionBypassPromoteOnCreateBoth(projectSuffix, customSecret string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-bypass-promote-%[1]s"
+}
+
+resource "vercel_project_protection_bypass" "first" {
+  project_id = vercel_project.test.id
+  note       = "first"
+}
+
+resource "vercel_project_protection_bypass" "promoted" {
+  project_id = vercel_project.test.id
+  secret     = "%[2]s"
+  note       = "promote at creation"
+  is_env_var = true
+}
+`, projectSuffix, customSecret)
+}
+
+// Covers out-of-band revocation. A bypass deleted via the API outside of
+// Terraform should be removed from state on refresh and re-created on the
+// next apply. Without that, `terraform plan` silently stays clean against
+// a broken project.
+func TestAcc_ProjectProtectionBypass_ExternalDrift(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	var capturedProjectID, capturedTeamID, capturedSecret string
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectProtectionBypassSingle(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectProtectionBypassExists(testClient(t), "vercel_project.test", "vercel_project_protection_bypass.first"),
+					func(s *terraform.State) error {
+						b := s.RootModule().Resources["vercel_project_protection_bypass.first"]
+						capturedProjectID = b.Primary.Attributes["project_id"]
+						capturedTeamID = b.Primary.Attributes["team_id"]
+						capturedSecret = b.Primary.Attributes["secret"]
+						return nil
+					},
+				),
+			},
+			{
+				PreConfig: func() {
+					err := testClient(t).DeleteProtectionBypass(context.TODO(), client.DeleteProtectionBypassRequest{
+						TeamID:    capturedTeamID,
+						ProjectID: capturedProjectID,
+						Secret:    capturedSecret,
+					})
+					if err != nil {
+						t.Fatalf("failed to revoke bypass out-of-band: %s", err)
+					}
+				},
+				Config: cfg(testAccProjectProtectionBypassSingle(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectProtectionBypassExists(testClient(t), "vercel_project.test", "vercel_project_protection_bypass.first"),
+					testAccProjectProtectionBypassRevoked(testClient(t), "vercel_project.test", capturedSecret),
+					func(s *terraform.State) error {
+						newSecret := s.RootModule().Resources["vercel_project_protection_bypass.first"].Primary.Attributes["secret"]
+						if newSecret == capturedSecret {
+							return fmt.Errorf("expected secret to change after external revoke, got same value %q", newSecret)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// Covers the two-segment import form (project_id/secret) used when a default
+// team is configured on the provider. The three-segment form is exercised in
+// the main test; this one makes sure splitInto2Or3 handles the shorter id.
+func TestAcc_ProjectProtectionBypass_Import2Segment(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectProtectionBypassSingle(projectSuffix)),
+			},
+			{
+				ResourceName:      "vercel_project_protection_bypass.first",
+				ImportState:       true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources["vercel_project_protection_bypass.first"]
+					if !ok {
+						return "", fmt.Errorf("not found: vercel_project_protection_bypass.first")
+					}
+					return fmt.Sprintf("%s/%s", rs.Primary.Attributes["project_id"], rs.Primary.Attributes["secret"]), nil
+				},
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					if len(states) != 1 {
+						return fmt.Errorf("expected 1 imported state, got %d", len(states))
+					}
+					attrs := states[0].Attributes
+					if attrs["scope"] != "automation-bypass" {
+						return fmt.Errorf("expected scope=automation-bypass on import, got %q", attrs["scope"])
+					}
+					if attrs["is_env_var"] != "true" {
+						return fmt.Errorf("expected is_env_var=true on import, got %q", attrs["is_env_var"])
+					}
+					if attrs["secret"] == "" {
+						return fmt.Errorf("expected secret to be set on import")
+					}
+					if attrs["project_id"] == "" {
+						return fmt.Errorf("expected project_id to be set on import")
+					}
+					return nil
+				},
+			},
+		},
+	})
+}
+
+// Covers coexistence of the deprecated project-level attribute with the new
+// resource on the same project. Guards the convertResponseToProject change
+// that hides new-resource bypasses from the legacy attribute's state.
+func TestAcc_ProjectProtectionBypass_CoexistWithDeprecated(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	extraSecret := acctest.RandString(32)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectProtectionBypassCoexist(projectSuffix, extraSecret)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project.test", "protection_bypass_for_automation_secret"),
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.extra", "secret", extraSecret),
+					testAccProjectProtectionBypassExists(testClient(t), "vercel_project.test", "vercel_project_protection_bypass.extra"),
+					// The extra-resource secret must not leak into the legacy attr.
+					func(s *terraform.State) error {
+						legacy := s.RootModule().Resources["vercel_project.test"].Primary.Attributes["protection_bypass_for_automation_secret"]
+						if legacy == extraSecret {
+							return fmt.Errorf("legacy protection_bypass_for_automation_secret should not equal the new resource's secret")
+						}
+						if legacy == "" {
+							return fmt.Errorf("expected legacy protection_bypass_for_automation_secret to be set")
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// Covers the new solo-bypass error path. A user who writes is_env_var = false
+// on the only bypass for a project should get an actionable error instead of
+// Terraform's generic "inconsistent result" diagnostic.
+func TestAcc_ProjectProtectionBypass_RejectsSoloFalse(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config:      cfg(testAccProjectProtectionBypassSoloFalse(projectSuffix)),
+				ExpectError: regexp.MustCompile(`(?s)Invalid is_env_var = false for a solo protection bypass`),
+			},
+			// The project still applies cleanly once the invalid resource is removed,
+			// which confirms the rejected bypass was cleaned up server-side (a lingering
+			// solo bypass with is_env_var=true would not block this apply, but leaking
+			// state would be visible in the next test run's team if the cleanup failed).
+			{
+				Config: cfg(testAccProjectProtectionBypassEmpty(projectSuffix)),
+			},
+		},
+	})
+}
+
+func testAccProjectProtectionBypassSoloFalse(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-bypass-solo-%[1]s"
+}
+
+resource "vercel_project_protection_bypass" "solo" {
+  project_id = vercel_project.test.id
+  note       = "solo false"
+  is_env_var = false
+}
+`, projectSuffix)
+}
+
+func testAccProjectProtectionBypassCoexist(projectSuffix, extraSecret string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name                             = "test-acc-bypass-coexist-%[1]s"
+  protection_bypass_for_automation = true
+}
+
+resource "vercel_project_protection_bypass" "extra" {
+  project_id = vercel_project.test.id
+  secret     = "%[2]s"
+  note       = "managed by new resource"
+  is_env_var = false
+  depends_on = [vercel_project.test]
+}
+`, projectSuffix, extraSecret)
 }
