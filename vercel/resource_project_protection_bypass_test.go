@@ -454,10 +454,15 @@ func TestAcc_ProjectProtectionBypass_DeletePromotedSibling(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: cfg(testAccProjectProtectionBypassDeletePromotedSiblingInitial(projectSuffix, firstSecret, secondSecret, thirdSecret)),
+				// Whichever of second/third is created first wins the env-var
+				// slot server-side and writes is_env_var=true to its own state.
+				// Promoting `first` later demotes that sibling on the server,
+				// but its Terraform state is never rewritten in this apply, so
+				// we assert the invariant that matters (first is the live env-var
+				// default) against the server rather than state.
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project_protection_bypass.first", "is_env_var", "true"),
-					resource.TestCheckResourceAttr("vercel_project_protection_bypass.second", "is_env_var", "false"),
-					resource.TestCheckResourceAttr("vercel_project_protection_bypass.third", "is_env_var", "false"),
+					testAccProjectProtectionBypassIsEnvVarDefault(testClient(t), "vercel_project.test", "vercel_project_protection_bypass.first"),
 				),
 			},
 			{
@@ -470,6 +475,44 @@ func TestAcc_ProjectProtectionBypass_DeletePromotedSibling(t *testing.T) {
 			},
 		},
 	})
+}
+
+// Covers the Update path when a user sets is_env_var = false on a solo bypass
+// after create. The provider should reject this with the same actionable
+// message as the Create-path solo-false check, not a raw client error.
+func TestAcc_ProjectProtectionBypass_UpdateRejectsSoloFalse(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectProtectionBypassSingle(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.first", "is_env_var", "true"),
+				),
+			},
+			{
+				Config:      cfg(testAccProjectProtectionBypassSingleSoloFalse(projectSuffix)),
+				ExpectError: regexp.MustCompile(`(?s)Invalid is_env_var = false for a solo protection bypass`),
+			},
+		},
+	})
+}
+
+func testAccProjectProtectionBypassSingleSoloFalse(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-bypass-%[1]s"
+}
+
+resource "vercel_project_protection_bypass" "first" {
+  project_id = vercel_project.test.id
+  note       = "first bypass"
+  is_env_var = false
+}
+`, projectSuffix)
 }
 
 func testAccProjectProtectionBypassSoloFalse(projectSuffix string) string {

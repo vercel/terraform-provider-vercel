@@ -3,12 +3,19 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
+
+// ErrSoloProtectionBypass is returned when a caller attempts to demote the
+// only automation bypass on a project. Vercel requires exactly one env-var
+// default per project whenever any bypass exists, so a solo bypass cannot
+// have is_env_var = false. Callers can wrap this in a friendlier diagnostic.
+var ErrSoloProtectionBypass = errors.New("cannot demote the only protection bypass on a project; promote or create another bypass first")
 
 // protectionBypassLocks serialises protection-bypass mutations per project.
 // Bypasses with a generated secret are identified by diffing the project's
@@ -151,7 +158,7 @@ func (c *Client) promoteReplacementProtectionBypass(ctx context.Context, project
 	candidates := automationBypassCandidateSecrets(project, currentSecret)
 	if len(candidates) == 0 {
 		if requireReplacement {
-			return protectionBypassResponse{}, true, fmt.Errorf("cannot demote the only protection bypass on a project; promote or create another bypass first")
+			return protectionBypassResponse{}, true, ErrSoloProtectionBypass
 		}
 		return protectionBypassResponse{}, true, nil
 	}

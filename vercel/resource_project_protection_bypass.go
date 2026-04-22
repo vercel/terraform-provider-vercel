@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -273,6 +274,14 @@ func (r *projectProtectionBypassResource) Update(ctx context.Context, req resour
 			ProjectID: plan.ProjectID.ValueString(),
 			Secret:    state.Secret.ValueString(),
 		})
+		if errors.Is(err, client.ErrSoloProtectionBypass) {
+			resp.Diagnostics.AddError(
+				"Invalid is_env_var = false for a solo protection bypass",
+				"Vercel requires exactly one bypass per project to have is_env_var = true, and this is currently the only bypass on the project. "+
+					"Leave is_env_var unset, or also define another vercel_project_protection_bypass on the same project with is_env_var = true.",
+			)
+			return
+		}
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating project protection bypass",
