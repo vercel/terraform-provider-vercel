@@ -41,28 +41,36 @@ type DeploymentExpiration struct {
 	ExpirationErrored    int `json:"expirationDaysErrored"`
 }
 
+type ConnectConfiguration struct {
+	EnvID                  string `json:"envId"`
+	ConnectConfigurationID string `json:"connectConfigurationId"`
+	Passive                bool   `json:"passive"`
+	BuildsEnabled          bool   `json:"buildsEnabled"`
+}
+
 // CreateProjectRequest defines the information necessary to create a project.
 type CreateProjectRequest struct {
-	BuildCommand                      *string               `json:"buildCommand"`
-	CommandForIgnoringBuildStep       *string               `json:"commandForIgnoringBuildStep,omitempty"`
-	DevCommand                        *string               `json:"devCommand"`
-	EnableAffectedProjectsDeployments *bool                 `json:"enableAffectedProjectsDeployments,omitempty"`
-	EnvironmentVariables              []EnvironmentVariable `json:"environmentVariables,omitempty"`
-	Framework                         *string               `json:"framework"`
-	GitRepository                     *GitRepository        `json:"gitRepository,omitempty"`
-	InstallCommand                    *string               `json:"installCommand"`
-	Name                              string                `json:"name"`
-	OIDCTokenConfig                   *OIDCTokenConfig      `json:"oidcTokenConfig,omitempty"`
-	OutputDirectory                   *string               `json:"outputDirectory"`
-	PreviewDeploymentSuffix           *string               `json:"previewDeploymentSuffix"`
-	PublicSource                      *bool                 `json:"publicSource"`
-	RootDirectory                     *string               `json:"rootDirectory"`
-	ServerlessFunctionRegion          string                `json:"serverlessFunctionRegion,omitempty"`
-	ResourceConfig                    *ResourceConfig       `json:"resourceConfig,omitempty"`
-	EnablePreviewFeedback             *bool                 `json:"enablePreviewFeedback,omitempty"`
-	EnableProductionFeedback          *bool                 `json:"enableProductionFeedback,omitempty"`
-	VercelAuthentication              *VercelAuthentication `json:"ssoProtection,omitempty"`
-	PreviewDeploymentsDisabled        *bool                 `json:"previewDeploymentsDisabled,omitempty"`
+	BuildCommand                      *string                `json:"buildCommand"`
+	CommandForIgnoringBuildStep       *string                `json:"commandForIgnoringBuildStep,omitempty"`
+	DevCommand                        *string                `json:"devCommand"`
+	EnableAffectedProjectsDeployments *bool                  `json:"enableAffectedProjectsDeployments,omitempty"`
+	EnvironmentVariables              []EnvironmentVariable  `json:"environmentVariables,omitempty"`
+	Framework                         *string                `json:"framework"`
+	GitRepository                     *GitRepository         `json:"gitRepository,omitempty"`
+	InstallCommand                    *string                `json:"installCommand"`
+	Name                              string                 `json:"name"`
+	OIDCTokenConfig                   *OIDCTokenConfig       `json:"oidcTokenConfig,omitempty"`
+	OutputDirectory                   *string                `json:"outputDirectory"`
+	PreviewDeploymentSuffix           *string                `json:"previewDeploymentSuffix"`
+	PublicSource                      *bool                  `json:"publicSource"`
+	RootDirectory                     *string                `json:"rootDirectory"`
+	ServerlessFunctionRegion          string                 `json:"serverlessFunctionRegion,omitempty"`
+	ConnectConfigurations             []ConnectConfiguration `json:"connectConfigurations,omitempty"`
+	ResourceConfig                    *ResourceConfig        `json:"resourceConfig,omitempty"`
+	EnablePreviewFeedback             *bool                  `json:"enablePreviewFeedback,omitempty"`
+	EnableProductionFeedback          *bool                  `json:"enableProductionFeedback,omitempty"`
+	VercelAuthentication              *VercelAuthentication  `json:"ssoProtection,omitempty"`
+	PreviewDeploymentsDisabled        *bool                  `json:"previewDeploymentsDisabled,omitempty"`
 }
 
 // CreateProject will create a project within Vercel.
@@ -189,6 +197,7 @@ type ProjectResponse struct {
 	PublicSource                         *bool                       `json:"publicSource"`
 	RootDirectory                        *string                     `json:"rootDirectory"`
 	ServerlessFunctionRegion             *string                     `json:"serverlessFunctionRegion"`
+	ConnectConfigurations                []ConnectConfiguration      `json:"connectConfigurations"`
 	VercelAuthentication                 *VercelAuthentication       `json:"ssoProtection"`
 	PasswordProtection                   *PasswordProtection         `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                 `json:"trustedIps"`
@@ -328,6 +337,7 @@ type UpdateProjectRequest struct {
 	PublicSource                         *bool                           `json:"publicSource"`
 	RootDirectory                        *string                         `json:"rootDirectory"`
 	ServerlessFunctionRegion             string                          `json:"serverlessFunctionRegion,omitempty"`
+	ConnectConfigurations                *[]ConnectConfiguration         `json:"connectConfigurations,omitempty"`
 	VercelAuthentication                 *VercelAuthentication           `json:"ssoProtection"`
 	PasswordProtection                   *PasswordProtectionWithPassword `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                     `json:"trustedIps"`

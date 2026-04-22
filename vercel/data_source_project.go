@@ -263,6 +263,30 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					},
 				},
 			},
+			"connect_configurations": schema.SetNestedAttribute{
+				Description: "The list of connections from project environment to Secure Compute network.",
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"env_id": schema.StringAttribute{
+							Description: "The ID of the environment.",
+							Computed:    true,
+						},
+						"connect_configuration_id": schema.StringAttribute{
+							Description: "The ID of the Secure Compute network.",
+							Computed:    true,
+						},
+						"passive": schema.BoolAttribute{
+							Description: "Whether the configuration is passive, meaning builds do not run there and only passive Serverless Functions are deployed.",
+							Computed:    true,
+						},
+						"builds_enabled": schema.BoolAttribute{
+							Description: "Whether project builds should use Secure Compute.",
+							Computed:    true,
+						},
+					},
+				},
+			},
 			"id": schema.StringAttribute{
 				Computed: true,
 			},
@@ -451,6 +475,7 @@ type ProjectDataSource struct {
 	TrustedIps                          types.Object `tfsdk:"trusted_ips"`
 	OIDCTokenConfig                     types.Object `tfsdk:"oidc_token_config"`
 	OptionsAllowlist                    types.Object `tfsdk:"options_allowlist"`
+	ConnectConfigurations               types.Set    `tfsdk:"connect_configurations"`
 	ProtectionBypassForAutomation       types.Bool   `tfsdk:"protection_bypass_for_automation"`
 	ProtectionBypassForAutomationSecret types.String `tfsdk:"protection_bypass_for_automation_secret"`
 	AutoExposeSystemEnvVars             types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
@@ -481,6 +506,10 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 	   for the data source we always want to read the value */
 	plan.Environment = types.SetValueMust(envVariableElemType, []attr.Value{})
 	plan.GitComments = types.ObjectNull(gitCommentsAttrTypes)
+	plan.ConnectConfigurations = types.SetNull(connectConfigurationAttrType)
+	if response.ConnectConfigurations != nil {
+		plan.ConnectConfigurations = types.SetValueMust(connectConfigurationAttrType, []attr.Value{})
+	}
 	if response.GitComments != nil {
 		plan.GitComments = types.ObjectValueMust(gitCommentsAttrTypes, map[string]attr.Value{
 			"on_pull_request": types.BoolValue(response.GitComments.OnPullRequest),
@@ -539,6 +568,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		TrustedIps:                          project.TrustedIps,
 		OIDCTokenConfig:                     project.OIDCTokenConfig,
 		OptionsAllowlist:                    project.OptionsAllowlist,
+		ConnectConfigurations:               project.ConnectConfigurations,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
 		ProtectionBypassForAutomation:       project.ProtectionBypassForAutomation,
 		ProtectionBypassForAutomationSecret: project.ProtectionBypassForAutomationSecret,

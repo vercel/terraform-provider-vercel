@@ -397,6 +397,30 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
+			"connect_configurations": schema.SetNestedAttribute{
+				Description: "The list of connections from project environment to Secure Compute network. If omitted, Terraform does not manage existing connections. Set to an empty list to remove all connections.",
+				Optional:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"env_id": schema.StringAttribute{
+							Description: "The ID of the environment.",
+							Required:    true,
+						},
+						"connect_configuration_id": schema.StringAttribute{
+							Description: "The ID of the Secure Compute network.",
+							Required:    true,
+						},
+						"passive": schema.BoolAttribute{
+							Description: "Whether the configuration is passive, meaning builds do not run there and only passive Serverless Functions are deployed.",
+							Required:    true,
+						},
+						"builds_enabled": schema.BoolAttribute{
+							Description: "Whether project builds should use Secure Compute.",
+							Required:    true,
+						},
+					},
+				},
+			},
 			"id": schema.StringAttribute{
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
@@ -662,6 +686,7 @@ type Project struct {
 	TrustedIps                          types.Object `tfsdk:"trusted_ips"`
 	OIDCTokenConfig                     types.Object `tfsdk:"oidc_token_config"`
 	OptionsAllowlist                    types.Object `tfsdk:"options_allowlist"`
+	ConnectConfigurations               types.Set    `tfsdk:"connect_configurations"`
 	ProtectionBypassForAutomation       types.Bool   `tfsdk:"protection_bypass_for_automation"`
 	ProtectionBypassForAutomationSecret types.String `tfsdk:"protection_bypass_for_automation_secret"`
 	AutoExposeSystemEnvVars             types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
@@ -705,6 +730,7 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 		(!p.TrustedIps.IsNull() && !p.TrustedIps.IsUnknown()) ||
 		(!p.OIDCTokenConfig.IsNull() && !p.OIDCTokenConfig.IsUnknown()) ||
 		(!p.OptionsAllowlist.IsNull() && !p.OptionsAllowlist.IsUnknown()) ||
+		(!p.ConnectConfigurations.IsNull() && !p.ConnectConfigurations.IsUnknown()) ||
 		!p.AutoExposeSystemEnvVars.IsNull() ||
 		p.GitComments.IsNull() ||
 		(!p.AutoAssignCustomDomains.IsNull() && !p.AutoAssignCustomDomains.ValueBool()) ||
@@ -836,6 +862,30 @@ func (p *Project) optionsAllowlistObj(ctx context.Context) (*OptionsAllowlist, d
 		return nil, diags
 	}
 	return &o, nil
+}
+
+func (p *Project) connectConfigurations(ctx context.Context) (*[]client.ConnectConfiguration, diag.Diagnostics) {
+	if p.ConnectConfigurations.IsNull() || p.ConnectConfigurations.IsUnknown() {
+		return nil, nil
+	}
+
+	var connectConfigurations []ConnectConfiguration
+	diags := p.ConnectConfigurations.ElementsAs(ctx, &connectConfigurations, true)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	out := make([]client.ConnectConfiguration, 0, len(connectConfigurations))
+	for _, connectConfiguration := range connectConfigurations {
+		out = append(out, client.ConnectConfiguration{
+			EnvID:                  connectConfiguration.EnvID.ValueString(),
+			ConnectConfigurationID: connectConfiguration.ConnectConfigurationID.ValueString(),
+			Passive:                connectConfiguration.Passive.ValueBool(),
+			BuildsEnabled:          connectConfiguration.BuildsEnabled.ValueBool(),
+		})
+	}
+
+	return &out, nil
 }
 
 func (p *Project) gitProviderOptionsObj(ctx context.Context) (*GitProviderOptions, diag.Diagnostics) {
@@ -980,8 +1030,10 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	diags.Append(d3...)
 	oal, d4 := p.optionsAllowlistObj(ctx)
 	diags.Append(d4...)
-	gpo, d5 := p.gitProviderOptionsObj(ctx)
+	cc, d5 := p.connectConfigurations(ctx)
 	diags.Append(d5...)
+	gpo, d6 := p.gitProviderOptionsObj(ctx)
+	diags.Append(d6...)
 	if diags.HasError() {
 		return req, diags
 	}
@@ -1001,6 +1053,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		TrustedIps:                           ti.toUpdateProjectRequest(),
 		OIDCTokenConfig:                      oidc.toUpdateProjectRequest(),
 		OptionsAllowlist:                     oal.toUpdateProjectRequest(),
+		ConnectConfigurations:                cc,
 		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
 		EnablePreviewFeedback:                oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:             p.EnableProductionFeedback.ValueBoolPointer(),
@@ -1327,6 +1380,15 @@ var optionsAllowlistAttrType = types.ObjectType{
 	},
 }
 
+var connectConfigurationAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"env_id":                   types.StringType,
+		"connect_configuration_id": types.StringType,
+		"passive":                  types.BoolType,
+		"builds_enabled":           types.BoolType,
+	},
+}
+
 var gitProviderOptionsAttrType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
 		"require_verified_commits":   types.BoolType,
@@ -1346,6 +1408,13 @@ type ResourceConfig struct {
 	FunctionDefaultTimeout types.Int64  `tfsdk:"function_default_timeout"`
 	FunctionDefaultRegions types.Set    `tfsdk:"function_default_regions"`
 	Fluid                  types.Bool   `tfsdk:"fluid"`
+}
+
+type ConnectConfiguration struct {
+	EnvID                  types.String `tfsdk:"env_id"`
+	ConnectConfigurationID types.String `tfsdk:"connect_configuration_id"`
+	Passive                types.Bool   `tfsdk:"passive"`
+	BuildsEnabled          types.Bool   `tfsdk:"builds_enabled"`
 }
 
 func (p *Project) resourceConfig(ctx context.Context) (rc *ResourceConfig, diags diag.Diagnostics) {
@@ -1672,6 +1741,20 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		})
 	}
 
+	connectConfigurations := types.SetNull(connectConfigurationAttrType)
+	if !plan.ConnectConfigurations.IsNull() && !plan.ConnectConfigurations.IsUnknown() {
+		connectConfigurationValues := make([]attr.Value, 0, len(response.ConnectConfigurations))
+		for _, connectConfiguration := range response.ConnectConfigurations {
+			connectConfigurationValues = append(connectConfigurationValues, types.ObjectValueMust(connectConfigurationAttrType.AttrTypes, map[string]attr.Value{
+				"env_id":                   types.StringValue(connectConfiguration.EnvID),
+				"connect_configuration_id": types.StringValue(connectConfiguration.ConnectConfigurationID),
+				"passive":                  types.BoolValue(connectConfiguration.Passive),
+				"builds_enabled":           types.BoolValue(connectConfiguration.BuildsEnabled),
+			}))
+		}
+		connectConfigurations = types.SetValueMust(connectConfigurationAttrType, connectConfigurationValues)
+	}
+
 	var env []attr.Value
 	for _, e := range environmentVariables {
 		var targetValue attr.Value
@@ -1800,6 +1883,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		TrustedIps:                          trustedIpsObj,
 		OIDCTokenConfig:                     oidcObj,
 		OptionsAllowlist:                    oalObj,
+		ConnectConfigurations:               connectConfigurations,
 		ProtectionBypassForAutomation:       protectionBypass,
 		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
