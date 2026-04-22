@@ -71,16 +71,20 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 
 func TestAcc_ProjectDataSourceProtectionBypassForAutomation(t *testing.T) {
 	name := acctest.RandString(16)
+	firstSecret := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	secondSecret := "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccProjectDataSourceConfigWithProtectionBypass(name)),
+				Config: cfg(testAccProjectDataSourceConfigWithProtectionBypass(name, firstSecret, secondSecret)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_project.test", "name", "test-acc-bypass-ds-"+name),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "protection_bypass_for_automation", "true"),
-					resource.TestCheckResourceAttrSet("data.vercel_project.test", "protection_bypass_for_automation_secret"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "protection_bypass_for_automation_secret.#", "2"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "protection_bypass_for_automation_secret.0", firstSecret),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "protection_bypass_for_automation_secret.1", secondSecret),
 				),
 			},
 		},
@@ -175,22 +179,32 @@ data "vercel_project" "test" {
 `, name, githubRepo)
 }
 
-func testAccProjectDataSourceConfigWithProtectionBypass(name string) string {
+func testAccProjectDataSourceConfigWithProtectionBypass(name, firstSecret, secondSecret string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-bypass-ds-%s"
 }
 
-resource "vercel_project_protection_bypass" "test" {
+resource "vercel_project_protection_bypass" "first" {
   project_id = vercel_project.test.id
-  note       = "data source bypass"
+  secret     = "%s"
+  note       = "data source bypass one"
+}
+
+resource "vercel_project_protection_bypass" "second" {
+  project_id = vercel_project.test.id
+  secret     = "%s"
+  note       = "data source bypass two"
 }
 
 data "vercel_project" "test" {
     name = vercel_project.test.name
-    depends_on = [vercel_project_protection_bypass.test]
+    depends_on = [
+      vercel_project_protection_bypass.first,
+      vercel_project_protection_bypass.second,
+    ]
 }
-`, name)
+`, name, firstSecret, secondSecret)
 }
 
 func TestAcc_ProjectDataSourcePreviewDeploymentSuffix(t *testing.T) {
