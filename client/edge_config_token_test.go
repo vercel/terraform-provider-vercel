@@ -16,10 +16,8 @@ func TestGetEdgeConfigToken(t *testing.T) {
 
 	// Both shapes must round-trip to a struct where Token matches the value
 	// passed in the request. "WithToken" is what GET /v1/edge-config/:id/token/:token
-	// emits today (the field is currently deprecated — see FLA-2777);
-	// "WithoutToken" is the forthcoming shape once the deprecated field is
-	// removed (FLA-2803). `edgeConfigId` is retained on the response in both
-	// cases — its removal is explicitly not in scope.
+	// emits today (the `token` field is currently deprecated); "WithoutToken"
+	// is the forthcoming shape once the deprecated field is removed.
 	for _, tc := range []TestCase{
 		{
 			Name:         "WithToken",
