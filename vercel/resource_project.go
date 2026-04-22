@@ -1740,11 +1740,29 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	// plan actually uses them. Bypasses created via the vercel_project_protection_bypass
 	// resource live in the same API map but must not leak into this project's state.
 	if !plan.ProtectionBypassForAutomation.IsNull() || !plan.ProtectionBypassForAutomationSecret.IsNull() {
-		for k, v := range response.ProtectionBypass {
-			if v.Scope == "automation-bypass" {
+		// Identity-match first: if this attribute is already bound to a specific
+		// secret, stay with it so sibling vercel_project_protection_bypass resources
+		// on the same project can't hijack the legacy attribute via Go's random map
+		// iteration order.
+		plannedSecret := plan.ProtectionBypassForAutomationSecret.ValueString()
+		if plannedSecret != "" {
+			if v, ok := response.ProtectionBypass[plannedSecret]; ok && v.Scope == "automation-bypass" {
 				protectionBypass = types.BoolValue(true)
-				protectionBypassSecret = types.StringValue(k)
-				break
+				protectionBypassSecret = types.StringValue(plannedSecret)
+			}
+		}
+		// Fallback: no prior binding (e.g. first create, or the bound secret was
+		// revoked out of band). Pick the env-var default deterministically, since
+		// that is what the legacy attribute represents semantically
+		// (VERCEL_AUTOMATION_BYPASS_SECRET). The API guarantees at most one entry
+		// with isEnvVar=true, so this is unambiguous.
+		if protectionBypassSecret.IsNull() {
+			for k, v := range response.ProtectionBypass {
+				if v.Scope == "automation-bypass" && (v.IsEnvVar == nil || *v.IsEnvVar) {
+					protectionBypass = types.BoolValue(true)
+					protectionBypassSecret = types.StringValue(k)
+					break
+				}
 			}
 		}
 		if !plan.ProtectionBypassForAutomation.IsNull() && !plan.ProtectionBypassForAutomation.ValueBool() {

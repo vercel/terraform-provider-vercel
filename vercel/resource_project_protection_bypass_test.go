@@ -340,7 +340,7 @@ func TestAcc_ProjectProtectionBypass_ExternalDrift(t *testing.T) {
 // Covers the two-segment import form (project_id/secret) used when a default
 // team is configured on the provider. The three-segment form is exercised in
 // the main test; this one makes sure splitInto2Or3 handles the shorter id.
-func TestAcc_ProjectProtectionBypass_Import2Segment(t *testing.T) {
+func TestAcc_ProjectProtectionBypass_TwoSegmentID(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 
 	resource.Test(t, resource.TestCase{
@@ -351,8 +351,8 @@ func TestAcc_ProjectProtectionBypass_Import2Segment(t *testing.T) {
 				Config: cfg(testAccProjectProtectionBypassSingle(projectSuffix)),
 			},
 			{
-				ResourceName:      "vercel_project_protection_bypass.first",
-				ImportState:       true,
+				ResourceName: "vercel_project_protection_bypass.first",
+				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					rs, ok := s.RootModule().Resources["vercel_project_protection_bypass.first"]
 					if !ok {
@@ -385,31 +385,129 @@ func TestAcc_ProjectProtectionBypass_Import2Segment(t *testing.T) {
 }
 
 // Covers coexistence of the deprecated project-level attribute with the new
-// resource on the same project. Guards the convertResponseToProject change
-// that hides new-resource bypasses from the legacy attribute's state.
+// resource on the same project. Guards convertResponseToProject's identity-match:
+// once the legacy attribute is bound to a specific bypass, adding or promoting
+// sibling bypasses via vercel_project_protection_bypass must not flip its state.
 func TestAcc_ProjectProtectionBypass_CoexistWithDeprecated(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	extraSecret := acctest.RandString(32)
+
+	var legacySecretAfterCreate string
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             noopDestroyCheck,
 		Steps: []resource.TestStep{
+			// Step 1: project-managed bypass created first, exposed via the legacy attr.
+			// It holds the env-var default because it is the only bypass on the project.
 			{
-				Config: cfg(testAccProjectProtectionBypassCoexist(projectSuffix, extraSecret)),
+				Config: cfg(testAccProjectProtectionBypassCoexistProjectOnly(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "protection_bypass_for_automation", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project.test", "protection_bypass_for_automation_secret"),
+					func(s *terraform.State) error {
+						legacySecretAfterCreate = s.RootModule().Resources["vercel_project.test"].Primary.Attributes["protection_bypass_for_automation_secret"]
+						if legacySecretAfterCreate == "" {
+							return fmt.Errorf("expected legacy secret to be populated")
+						}
+						return nil
+					},
+				),
+			},
+			// Step 2: add a sibling via the new resource. The legacy attr must still
+			// point at the original bypass — not the new one — across refresh.
+			{
+				Config: cfg(testAccProjectProtectionBypassCoexistBoth(projectSuffix, extraSecret)),
+				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project_protection_bypass.extra", "secret", extraSecret),
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.extra", "is_env_var", "false"),
 					testAccProjectProtectionBypassExists(testClient(t), "vercel_project.test", "vercel_project_protection_bypass.extra"),
-					// The extra-resource secret must not leak into the legacy attr.
 					func(s *terraform.State) error {
 						legacy := s.RootModule().Resources["vercel_project.test"].Primary.Attributes["protection_bypass_for_automation_secret"]
-						if legacy == extraSecret {
-							return fmt.Errorf("legacy protection_bypass_for_automation_secret should not equal the new resource's secret")
+						if legacy != legacySecretAfterCreate {
+							return fmt.Errorf("legacy secret flipped after adding sibling: was %q, now %q", legacySecretAfterCreate, legacy)
 						}
-						if legacy == "" {
-							return fmt.Errorf("expected legacy protection_bypass_for_automation_secret to be set")
+						if legacy == extraSecret {
+							return fmt.Errorf("legacy secret must not equal the new resource's secret")
+						}
+						return nil
+					},
+				),
+			},
+			// Step 3: promote the sibling to the env-var default. The legacy attr
+			// still points at the original project-managed bypass (identity-match),
+			// even though it is no longer the env-var default.
+			{
+				Config: cfg(testAccProjectProtectionBypassCoexistPromoted(projectSuffix, extraSecret)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.extra", "is_env_var", "true"),
+					func(s *terraform.State) error {
+						legacy := s.RootModule().Resources["vercel_project.test"].Primary.Attributes["protection_bypass_for_automation_secret"]
+						if legacy != legacySecretAfterCreate {
+							return fmt.Errorf("legacy secret moved to sibling after promotion: was %q, now %q", legacySecretAfterCreate, legacy)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// Covers the identity-match miss → isEnvVar=true fallback. After the
+// project-managed bypass is revoked out-of-band, the next refresh can no longer
+// identity-match; it must deterministically pick the env-var default (the only
+// automation-bypass with isEnvVar=true) instead of hitting random map iteration.
+func TestAcc_ProjectProtectionBypass_CoexistFallbackToDefault(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	extraSecret := acctest.RandString(32)
+
+	var capturedProjectID, capturedTeamID, capturedLegacySecret string
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			// Two bypasses: legacy-created (will be revoked out-of-band) and
+			// new-resource-created (explicitly the env-var default).
+			{
+				Config: cfg(testAccProjectProtectionBypassCoexistPromoted(projectSuffix, extraSecret)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					func(s *terraform.State) error {
+						p := s.RootModule().Resources["vercel_project.test"]
+						capturedProjectID = p.Primary.ID
+						capturedTeamID = p.Primary.Attributes["team_id"]
+						capturedLegacySecret = p.Primary.Attributes["protection_bypass_for_automation_secret"]
+						if capturedLegacySecret == "" {
+							return fmt.Errorf("expected legacy secret to be set before out-of-band revoke")
+						}
+						return nil
+					},
+				),
+			},
+			// Revoke the legacy-bound bypass out-of-band, then re-apply the same config.
+			// identity-match misses; fallback must pick the env-var default (extraSecret)
+			// because that is now the only bypass with isEnvVar=true.
+			{
+				PreConfig: func() {
+					err := testClient(t).DeleteProtectionBypass(context.TODO(), client.DeleteProtectionBypassRequest{
+						TeamID:    capturedTeamID,
+						ProjectID: capturedProjectID,
+						Secret:    capturedLegacySecret,
+					})
+					if err != nil {
+						t.Fatalf("failed to revoke legacy bypass out-of-band: %s", err)
+					}
+				},
+				Config: cfg(testAccProjectProtectionBypassCoexistPromoted(projectSuffix, extraSecret)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// After fallback, the legacy attr points at the env-var default,
+					// which is the sibling bypass. The project resource's next Update
+					// will re-provision its own bypass — here we just pin the state.
+					func(s *terraform.State) error {
+						legacy := s.RootModule().Resources["vercel_project.test"].Primary.Attributes["protection_bypass_for_automation_secret"]
+						if legacy == capturedLegacySecret {
+							return fmt.Errorf("legacy secret %q still present in state after out-of-band revoke", legacy)
 						}
 						return nil
 					},
@@ -458,7 +556,16 @@ resource "vercel_project_protection_bypass" "solo" {
 `, projectSuffix)
 }
 
-func testAccProjectProtectionBypassCoexist(projectSuffix, extraSecret string) string {
+func testAccProjectProtectionBypassCoexistProjectOnly(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name                             = "test-acc-bypass-coexist-%[1]s"
+  protection_bypass_for_automation = true
+}
+`, projectSuffix)
+}
+
+func testAccProjectProtectionBypassCoexistBoth(projectSuffix, extraSecret string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name                             = "test-acc-bypass-coexist-%[1]s"
@@ -470,6 +577,23 @@ resource "vercel_project_protection_bypass" "extra" {
   secret     = "%[2]s"
   note       = "managed by new resource"
   is_env_var = false
+  depends_on = [vercel_project.test]
+}
+`, projectSuffix, extraSecret)
+}
+
+func testAccProjectProtectionBypassCoexistPromoted(projectSuffix, extraSecret string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name                             = "test-acc-bypass-coexist-%[1]s"
+  protection_bypass_for_automation = true
+}
+
+resource "vercel_project_protection_bypass" "extra" {
+  project_id = vercel_project.test.id
+  secret     = "%[2]s"
+  note       = "promoted sibling"
+  is_env_var = true
   depends_on = [vercel_project.test]
 }
 `, projectSuffix, extraSecret)
