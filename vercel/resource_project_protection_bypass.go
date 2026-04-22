@@ -190,7 +190,7 @@ func (r *projectProtectionBypassResource) Create(ctx context.Context, req resour
 		}); cleanupErr != nil {
 			resp.Diagnostics.AddWarning(
 				"Failed to clean up protection bypass after rejected config",
-				fmt.Sprintf("A bypass was created on project %s with secret %s but could not be revoked automatically: %s. Revoke it manually in the Vercel dashboard.", plan.ProjectID.ValueString(), secret, cleanupErr),
+				fmt.Sprintf("A bypass was created on project %s but could not be revoked automatically: %s. Revoke it manually in the Vercel dashboard.", plan.ProjectID.ValueString(), cleanupErr),
 			)
 		}
 		resp.Diagnostics.AddError(

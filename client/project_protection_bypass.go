@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
@@ -49,6 +50,40 @@ type protectionBypassResponse struct {
 	ProtectionBypass map[string]ProtectionBypass `json:"protectionBypass"`
 }
 
+const redactedProtectionBypassSecret = "[REDACTED]"
+
+func redactProtectionBypassPayload(payload string) string {
+	if payload == "" {
+		return payload
+	}
+
+	var body any
+	if err := json.Unmarshal([]byte(payload), &body); err != nil {
+		return redactedProtectionBypassSecret
+	}
+
+	redactProtectionBypassSecrets(body)
+
+	return string(mustMarshal(body))
+}
+
+func redactProtectionBypassSecrets(value any) {
+	switch value := value.(type) {
+	case map[string]any:
+		for key, nested := range value {
+			if key == "secret" {
+				value[key] = redactedProtectionBypassSecret
+				continue
+			}
+			redactProtectionBypassSecrets(nested)
+		}
+	case []any:
+		for _, nested := range value {
+			redactProtectionBypassSecrets(nested)
+		}
+	}
+}
+
 func (c *Client) protectionBypassURL(projectID, teamID string) string {
 	url := fmt.Sprintf("%s/v10/projects/%s/protection-bypass", c.baseURL, projectID)
 	if c.TeamID(teamID) != "" {
@@ -88,7 +123,7 @@ func (c *Client) patchProtectionBypass(ctx context.Context, projectID, teamID st
 
 	tflog.Info(ctx, "updating protection bypass", map[string]any{
 		"url":     c.protectionBypassURL(projectID, teamID),
-		"payload": payload,
+		"payload": redactProtectionBypassPayload(payload),
 	})
 
 	var response protectionBypassResponse
@@ -166,7 +201,7 @@ func (c *Client) CreateProtectionBypass(ctx context.Context, req CreateProtectio
 
 	tflog.Info(ctx, "creating protection bypass", map[string]any{
 		"url":     c.protectionBypassURL(req.ProjectID, req.TeamID),
-		"payload": payload,
+		"payload": redactProtectionBypassPayload(payload),
 	})
 
 	var response protectionBypassResponse
@@ -314,7 +349,7 @@ func (c *Client) DeleteProtectionBypass(ctx context.Context, req DeleteProtectio
 
 	tflog.Info(ctx, "deleting protection bypass", map[string]any{
 		"url":     c.protectionBypassURL(req.ProjectID, req.TeamID),
-		"payload": payload,
+		"payload": redactProtectionBypassPayload(payload),
 	})
 
 	err := c.doRequest(clientRequest{

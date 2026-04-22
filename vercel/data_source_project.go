@@ -292,20 +292,19 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			},
 			"protection_bypass_for_automation": schema.BoolAttribute{
 				Computed:           true,
-				DeprecationMessage: "Use the `vercel_project_protection_bypass` resource instead. This attribute will be removed in a future major release.",
-				Description:        "Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with the value from `protection_bypass_for_automation_secret`.",
+				DeprecationMessage: "Use the `vercel_project_protection_bypass` resource instead. This deprecated attribute does not support projects with multiple protection bypasses and will be removed in a future major release.",
+				Description:        "Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with the value from `protection_bypass_for_automation_secret`. Deprecated: this attribute does not support projects with multiple protection bypasses; use the `vercel_project_protection_bypass` resource instead.",
 			},
 			"protection_bypass_for_automation_secret": schema.StringAttribute{
 				Sensitive:          true,
 				Computed:           true,
-				DeprecationMessage: "Use the `vercel_project_protection_bypass` resource instead. This attribute will be removed in a future major release.",
-				Description:        "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
+				DeprecationMessage: "Use the `vercel_project_protection_bypass` resource instead. This deprecated attribute does not support projects with multiple protection bypasses and will be removed in a future major release.",
+				Description:        "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated. Deprecated: this attribute does not support projects with multiple protection bypasses; use the `vercel_project_protection_bypass` resource instead.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),
 						"Specify `generate` to have the value generated automatically, or specify a 32 character secret.",
 					),
-					validateAutomationBypassSecret(),
 				},
 			},
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
@@ -482,7 +481,6 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 	   otherwise it causes issues with terraform thinking there are changes when there aren't. However,
 	   for the data source we always want to read the value */
 	plan.Environment = types.SetValueMust(envVariableElemType, []attr.Value{})
-	plan.ProtectionBypassForAutomation = types.BoolValue(true)
 	plan.GitComments = types.ObjectNull(gitCommentsAttrTypes)
 	if response.GitComments != nil {
 		plan.GitComments = types.ObjectValueMust(gitCommentsAttrTypes, map[string]attr.Value{
@@ -508,6 +506,11 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 	}
 
 	project, err := convertResponseToProject(ctx, response, plan, environmentVariables)
+	if err != nil {
+		return ProjectDataSource{}, err
+	}
+
+	protectionBypass, protectionBypassSecret, err := dataSourceProtectionBypassForAutomation(response)
 	if err != nil {
 		return ProjectDataSource{}, err
 	}
@@ -543,8 +546,8 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		OIDCTokenConfig:                     project.OIDCTokenConfig,
 		OptionsAllowlist:                    project.OptionsAllowlist,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
-		ProtectionBypassForAutomation:       project.ProtectionBypassForAutomation,
-		ProtectionBypassForAutomationSecret: project.ProtectionBypassForAutomationSecret,
+		ProtectionBypassForAutomation:       protectionBypass,
+		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 		GitComments:                         project.GitComments,
 		GitProviderOptions:                  project.GitProviderOptions,
 		PreviewComments:                     project.PreviewComments,
@@ -565,6 +568,21 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		OnDemandConcurrentBuilds:            project.OnDemandConcurrentBuilds,
 		BuildMachineTYpe:                    project.BuildMachineType,
 	}, nil
+}
+
+func dataSourceProtectionBypassForAutomation(response client.ProjectResponse) (types.Bool, types.String, error) {
+	if len(response.ProtectionBypass) > 1 {
+		return types.BoolNull(), types.StringNull(), fmt.Errorf("`protection_bypass_for_automation` is deprecated and cannot describe a project with multiple protection bypasses; inspect `vercel_project_protection_bypass` resources instead")
+	}
+
+	for secret, bypass := range response.ProtectionBypass {
+		if bypass.Scope != "automation-bypass" {
+			continue
+		}
+		return types.BoolValue(true), types.StringValue(secret), nil
+	}
+
+	return types.BoolNull(), types.StringNull(), nil
 }
 
 // Read will read project information by requesting it from the Vercel API, and will update terraform

@@ -178,12 +178,17 @@ data "vercel_project" "test" {
 func testAccProjectDataSourceConfigWithProtectionBypass(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name                             = "test-acc-bypass-ds-%s"
-  protection_bypass_for_automation = true
+  name = "test-acc-bypass-ds-%s"
+}
+
+resource "vercel_project_protection_bypass" "test" {
+  project_id = vercel_project.test.id
+  note       = "data source bypass"
 }
 
 data "vercel_project" "test" {
     name = vercel_project.test.name
+    depends_on = [vercel_project_protection_bypass.test]
 }
 `, name)
 }
