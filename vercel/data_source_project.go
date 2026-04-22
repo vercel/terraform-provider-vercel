@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -291,20 +292,16 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.",
 			},
 			"protection_bypass_for_automation": schema.BoolAttribute{
-				Computed:    true,
-				Description: "Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with the value from `protection_bypass_for_automation_secret`.",
+				Computed:           true,
+				DeprecationMessage: "Use the `vercel_project_protection_bypass` resource instead. This deprecated attribute will be removed in a future major release.",
+				Description:        "Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value from `protection_bypass_for_automation_secret`. Deprecated: use the `vercel_project_protection_bypass` resource instead.",
 			},
-			"protection_bypass_for_automation_secret": schema.StringAttribute{
-				Sensitive:   true,
-				Computed:    true,
-				Description: "If `protection_bypass_for_automation` is enabled, optionally set this value to specify a 32 character secret, otherwise a secret will be generated.",
-				Validators: []validator.String{
-					stringvalidator.RegexMatches(
-						regexp.MustCompile(`^[a-zA-Z0-9]{32}$`),
-						"Specify `generate` to have the value generated automatically, or specify a 32 character secret.",
-					),
-					validateAutomationBypassSecret(),
-				},
+			"protection_bypass_for_automation_secret": schema.ListAttribute{
+				Sensitive:          true,
+				Computed:           true,
+				ElementType:        types.StringType,
+				DeprecationMessage: "Use the `vercel_project_protection_bypass` resource instead. This deprecated attribute will be removed in a future major release.",
+				Description:        "The automation bypass secrets for this project. Use each value as the `x-vercel-protection-bypass` header. Deprecated: use the `vercel_project_protection_bypass` resource instead.",
 			},
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
 				Computed:    true,
@@ -452,7 +449,7 @@ type ProjectDataSource struct {
 	OIDCTokenConfig                     types.Object `tfsdk:"oidc_token_config"`
 	OptionsAllowlist                    types.Object `tfsdk:"options_allowlist"`
 	ProtectionBypassForAutomation       types.Bool   `tfsdk:"protection_bypass_for_automation"`
-	ProtectionBypassForAutomationSecret types.String `tfsdk:"protection_bypass_for_automation_secret"`
+	ProtectionBypassForAutomationSecret types.List   `tfsdk:"protection_bypass_for_automation_secret"`
 	AutoExposeSystemEnvVars             types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
 	GitComments                         types.Object `tfsdk:"git_comments"`
 	GitProviderOptions                  types.Object `tfsdk:"git_provider_options"`
@@ -509,6 +506,8 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		return ProjectDataSource{}, err
 	}
 
+	protectionBypass, protectionBypassSecret := dataSourceProtectionBypassForAutomation(response)
+
 	// Build data-source specific password_protection object without password field
 	ppAttrTypes := map[string]attr.Type{"deployment_type": types.StringType}
 	ppObj := types.ObjectNull(ppAttrTypes)
@@ -540,8 +539,8 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		OIDCTokenConfig:                     project.OIDCTokenConfig,
 		OptionsAllowlist:                    project.OptionsAllowlist,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
-		ProtectionBypassForAutomation:       project.ProtectionBypassForAutomation,
-		ProtectionBypassForAutomationSecret: project.ProtectionBypassForAutomationSecret,
+		ProtectionBypassForAutomation:       protectionBypass,
+		ProtectionBypassForAutomationSecret: protectionBypassSecret,
 		GitComments:                         project.GitComments,
 		GitProviderOptions:                  project.GitProviderOptions,
 		PreviewComments:                     project.PreviewComments,
@@ -562,6 +561,29 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		OnDemandConcurrentBuilds:            project.OnDemandConcurrentBuilds,
 		BuildMachineTYpe:                    project.BuildMachineType,
 	}, nil
+}
+
+func dataSourceProtectionBypassForAutomation(response client.ProjectResponse) (types.Bool, types.List) {
+	secrets := make([]string, 0, len(response.ProtectionBypass))
+	for secret, bypass := range response.ProtectionBypass {
+		if bypass.Scope != "automation-bypass" {
+			continue
+		}
+		secrets = append(secrets, secret)
+	}
+
+	if len(secrets) == 0 {
+		return types.BoolNull(), types.ListNull(types.StringType)
+	}
+
+	sort.Strings(secrets)
+
+	values := make([]attr.Value, 0, len(secrets))
+	for _, secret := range secrets {
+		values = append(values, types.StringValue(secret))
+	}
+
+	return types.BoolValue(true), types.ListValueMust(types.StringType, values)
 }
 
 // Read will read project information by requesting it from the Vercel API, and will update terraform
