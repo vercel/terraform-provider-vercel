@@ -542,6 +542,69 @@ func TestAcc_ProjectProtectionBypass_RejectsSoloFalse(t *testing.T) {
 	})
 }
 
+// Covers the update path where the current env-var default is set to
+// is_env_var=false without any sibling resource being updated in the same
+// apply. The provider must promote a live replacement instead of rewriting
+// local state to false while the server still keeps this bypass as default.
+func TestAcc_ProjectProtectionBypass_DemoteWithoutSiblingPlanChange(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	secondSecret := acctest.RandString(32)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectProtectionBypassDemoteWithoutSiblingPlanChangeInitial(projectSuffix, secondSecret)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.first", "is_env_var", "true"),
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.second", "is_env_var", "false"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectProtectionBypassDemoteWithoutSiblingPlanChangeUpdated(projectSuffix, secondSecret)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.first", "is_env_var", "false"),
+					testAccProjectProtectionBypassIsEnvVarDefault(testClient(t), "vercel_project.test", "vercel_project_protection_bypass.second"),
+				),
+			},
+		},
+	})
+}
+
+// Covers deleting a bypass that becomes the env-var default earlier in the
+// same apply. The second delete must consult live server state rather than the
+// resource's stale pre-plan is_env_var value.
+func TestAcc_ProjectProtectionBypass_DeletePromotedSibling(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	firstSecret := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	secondSecret := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	thirdSecret := "cccccccccccccccccccccccccccccccc"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectProtectionBypassDeletePromotedSiblingInitial(projectSuffix, firstSecret, secondSecret, thirdSecret)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.first", "is_env_var", "true"),
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.second", "is_env_var", "false"),
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.third", "is_env_var", "false"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectProtectionBypassDeletePromotedSiblingUpdated(projectSuffix, thirdSecret)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectProtectionBypassRevoked(testClient(t), "vercel_project.test", firstSecret),
+					testAccProjectProtectionBypassRevoked(testClient(t), "vercel_project.test", secondSecret),
+					testAccProjectProtectionBypassIsEnvVarDefault(testClient(t), "vercel_project.test", "vercel_project_protection_bypass.third"),
+				),
+			},
+		},
+	})
+}
+
 func testAccProjectProtectionBypassSoloFalse(projectSuffix string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
@@ -554,6 +617,90 @@ resource "vercel_project_protection_bypass" "solo" {
   is_env_var = false
 }
 `, projectSuffix)
+}
+
+func testAccProjectProtectionBypassDemoteWithoutSiblingPlanChangeInitial(projectSuffix, secondSecret string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-bypass-demote-%[1]s"
+}
+
+resource "vercel_project_protection_bypass" "first" {
+  project_id = vercel_project.test.id
+  note       = "first default"
+}
+
+resource "vercel_project_protection_bypass" "second" {
+  project_id = vercel_project.test.id
+  secret     = "%[2]s"
+  note       = "replacement"
+}
+`, projectSuffix, secondSecret)
+}
+
+func testAccProjectProtectionBypassDemoteWithoutSiblingPlanChangeUpdated(projectSuffix, secondSecret string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-bypass-demote-%[1]s"
+}
+
+resource "vercel_project_protection_bypass" "first" {
+  project_id = vercel_project.test.id
+  note       = "first default"
+  is_env_var = false
+}
+
+resource "vercel_project_protection_bypass" "second" {
+  project_id = vercel_project.test.id
+  secret     = "%[2]s"
+  note       = "replacement"
+}
+`, projectSuffix, secondSecret)
+}
+
+func testAccProjectProtectionBypassDeletePromotedSiblingInitial(projectSuffix, firstSecret, secondSecret, thirdSecret string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-bypass-delete-promoted-%[1]s"
+}
+
+resource "vercel_project_protection_bypass" "second" {
+  project_id = vercel_project.test.id
+  secret     = "%[3]s"
+  note       = "second"
+}
+
+resource "vercel_project_protection_bypass" "third" {
+  project_id = vercel_project.test.id
+  secret     = "%[4]s"
+  note       = "third"
+}
+
+resource "vercel_project_protection_bypass" "first" {
+  project_id = vercel_project.test.id
+  secret     = "%[2]s"
+  note       = "first"
+  is_env_var = true
+  depends_on = [
+    vercel_project_protection_bypass.second,
+    vercel_project_protection_bypass.third,
+  ]
+}
+`, projectSuffix, firstSecret, secondSecret, thirdSecret)
+}
+
+func testAccProjectProtectionBypassDeletePromotedSiblingUpdated(projectSuffix, thirdSecret string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-bypass-delete-promoted-%[1]s"
+}
+
+resource "vercel_project_protection_bypass" "third" {
+  project_id = vercel_project.test.id
+  secret     = "%[2]s"
+  note       = "third"
+}
+`, projectSuffix, thirdSecret)
 }
 
 func testAccProjectProtectionBypassCoexistProjectOnly(projectSuffix string) string {

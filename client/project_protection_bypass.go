@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -54,6 +55,81 @@ func (c *Client) protectionBypassURL(projectID, teamID string) string {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
 	return url
+}
+
+func protectionBypassNotFoundError() APIError {
+	return APIError{
+		StatusCode: 404,
+		Message:    "Protection bypass not found",
+		Code:       "not_found",
+	}
+}
+
+// Sort candidate secrets so the replacement selection does not depend on Go's
+// randomized map iteration.
+func automationBypassCandidateSecrets(project ProjectResponse, excludedSecret string) []string {
+	secrets := make([]string, 0, len(project.ProtectionBypass))
+	for secret, bypass := range project.ProtectionBypass {
+		if secret == excludedSecret || bypass.Scope != "automation-bypass" {
+			continue
+		}
+		secrets = append(secrets, secret)
+	}
+	sort.Strings(secrets)
+	return secrets
+}
+
+func (c *Client) patchProtectionBypass(ctx context.Context, projectID, teamID string, update updateBypassBody) (protectionBypassResponse, error) {
+	payload := string(mustMarshal(struct {
+		Update updateBypassBody `json:"update"`
+	}{
+		Update: update,
+	}))
+
+	tflog.Info(ctx, "updating protection bypass", map[string]any{
+		"url":     c.protectionBypassURL(projectID, teamID),
+		"payload": payload,
+	})
+
+	var response protectionBypassResponse
+	err := c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PATCH",
+		url:    c.protectionBypassURL(projectID, teamID),
+		body:   payload,
+	}, &response)
+	if err != nil {
+		return protectionBypassResponse{}, err
+	}
+	return response, nil
+}
+
+func (c *Client) promoteReplacementProtectionBypass(ctx context.Context, project ProjectResponse, projectID, teamID, currentSecret string, requireReplacement bool) (protectionBypassResponse, bool, error) {
+	current, ok := project.ProtectionBypass[currentSecret]
+	if !ok {
+		return protectionBypassResponse{}, false, protectionBypassNotFoundError()
+	}
+	if current.IsEnvVar == nil || !*current.IsEnvVar {
+		return protectionBypassResponse{}, false, nil
+	}
+
+	candidates := automationBypassCandidateSecrets(project, currentSecret)
+	if len(candidates) == 0 {
+		if requireReplacement {
+			return protectionBypassResponse{}, true, fmt.Errorf("cannot demote the only protection bypass on a project; promote or create another bypass first")
+		}
+		return protectionBypassResponse{}, true, nil
+	}
+
+	isEnvVar := true
+	response, err := c.patchProtectionBypass(ctx, projectID, teamID, updateBypassBody{
+		Secret:   candidates[0],
+		IsEnvVar: &isEnvVar,
+	})
+	if err != nil {
+		return protectionBypassResponse{}, true, fmt.Errorf("unable to promote replacement bypass: %w", err)
+	}
+	return response, true, nil
 }
 
 // CreateProtectionBypass generates a new automation bypass on a project. If secret is
@@ -139,39 +215,56 @@ func (c *Client) UpdateProtectionBypass(ctx context.Context, req UpdateProtectio
 	lock.Lock()
 	defer lock.Unlock()
 
-	payload := string(mustMarshal(struct {
-		Update updateBypassBody `json:"update"`
-	}{
-		Update: updateBypassBody{
-			Secret:   req.Secret,
-			IsEnvVar: req.IsEnvVar,
-			Note:     req.Note,
-		},
-	}))
-
-	tflog.Info(ctx, "updating protection bypass", map[string]any{
-		"url":     c.protectionBypassURL(req.ProjectID, req.TeamID),
-		"payload": payload,
+	response, err := c.patchProtectionBypass(ctx, req.ProjectID, req.TeamID, updateBypassBody{
+		Secret:   req.Secret,
+		IsEnvVar: req.IsEnvVar,
+		Note:     req.Note,
 	})
-
-	var response protectionBypassResponse
-	err := c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "PATCH",
-		url:    c.protectionBypassURL(req.ProjectID, req.TeamID),
-		body:   payload,
-	}, &response)
 	if err != nil {
 		return ProtectionBypass{}, fmt.Errorf("unable to update protection bypass: %w", err)
 	}
 
 	bypass, ok := response.ProtectionBypass[req.Secret]
 	if !ok {
-		return ProtectionBypass{}, APIError{
-			StatusCode: 404,
-			Message:    "Protection bypass not found",
-			Code:       "not_found",
-		}
+		return ProtectionBypass{}, protectionBypassNotFoundError()
+	}
+	return bypass, nil
+}
+
+type DemoteProtectionBypassRequest struct {
+	TeamID    string
+	ProjectID string
+	Secret    string
+}
+
+// DemoteProtectionBypass clears the env-var default assignment by promoting a
+// sibling bypass under the same lock. It errors when no replacement exists.
+func (c *Client) DemoteProtectionBypass(ctx context.Context, req DemoteProtectionBypassRequest) (ProtectionBypass, error) {
+	lock := protectionBypassLock(req.ProjectID)
+	lock.Lock()
+	defer lock.Unlock()
+
+	project, err := c.GetProject(ctx, req.ProjectID, req.TeamID)
+	if err != nil {
+		return ProtectionBypass{}, fmt.Errorf("unable to read project to demote protection bypass: %w", err)
+	}
+
+	current, ok := project.ProtectionBypass[req.Secret]
+	if !ok {
+		return ProtectionBypass{}, protectionBypassNotFoundError()
+	}
+
+	response, currentWasDefault, err := c.promoteReplacementProtectionBypass(ctx, project, req.ProjectID, req.TeamID, req.Secret, true)
+	if err != nil {
+		return ProtectionBypass{}, fmt.Errorf("unable to demote protection bypass: %w", err)
+	}
+	if !currentWasDefault {
+		return current, nil
+	}
+
+	bypass, ok := response.ProtectionBypass[req.Secret]
+	if !ok {
+		return ProtectionBypass{}, protectionBypassNotFoundError()
 	}
 	return bypass, nil
 }
@@ -204,29 +297,8 @@ func (c *Client) DeleteProtectionBypass(ctx context.Context, req DeleteProtectio
 			return fmt.Errorf("unable to read project to locate replacement bypass: %w", err)
 		}
 		if err == nil {
-			current, ok := project.ProtectionBypass[req.Secret]
-			isDefault := ok && current.IsEnvVar != nil && *current.IsEnvVar
-			if isDefault {
-				for secret, b := range project.ProtectionBypass {
-					if secret == req.Secret || b.Scope != "automation-bypass" {
-						continue
-					}
-					isEnvVar := true
-					payload := string(mustMarshal(struct {
-						Update updateBypassBody `json:"update"`
-					}{
-						Update: updateBypassBody{Secret: secret, IsEnvVar: &isEnvVar},
-					}))
-					if err := c.doRequest(clientRequest{
-						ctx:    ctx,
-						method: "PATCH",
-						url:    c.protectionBypassURL(req.ProjectID, req.TeamID),
-						body:   payload,
-					}, nil); err != nil {
-						return fmt.Errorf("unable to promote replacement bypass: %w", err)
-					}
-					break
-				}
+			if _, _, err := c.promoteReplacementProtectionBypass(ctx, project, req.ProjectID, req.TeamID, req.Secret, false); err != nil {
+				return err
 			}
 		}
 	}

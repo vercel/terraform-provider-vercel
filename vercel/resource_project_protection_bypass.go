@@ -260,41 +260,65 @@ func (r *projectProtectionBypassResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	updateReq := client.UpdateProtectionBypassRequest{
-		TeamID:    plan.TeamID.ValueString(),
-		ProjectID: plan.ProjectID.ValueString(),
-		Secret:    state.Secret.ValueString(),
-	}
-	if !plan.Note.Equal(state.Note) {
-		note := plan.Note.ValueString()
-		updateReq.Note = &note
-	}
-	// Only send IsEnvVar when promoting to true. Demotion to false is handled
-	// atomically by the API when some other bypass is promoted — sending an
-	// explicit false here would fail the "one default must exist" invariant
-	// when two sibling resources are updated in the same plan.
-	if !plan.IsEnvVar.Equal(state.IsEnvVar) && !plan.IsEnvVar.IsNull() && !plan.IsEnvVar.IsUnknown() && plan.IsEnvVar.ValueBool() {
-		isEnvVar := true
-		updateReq.IsEnvVar = &isEnvVar
+	needsNoteUpdate := !plan.Note.Equal(state.Note)
+	needsPromotion := !plan.IsEnvVar.Equal(state.IsEnvVar) && !plan.IsEnvVar.IsNull() && !plan.IsEnvVar.IsUnknown() && plan.IsEnvVar.ValueBool()
+	needsDemotion := !plan.IsEnvVar.Equal(state.IsEnvVar) && !plan.IsEnvVar.IsNull() && !plan.IsEnvVar.IsUnknown() && !plan.IsEnvVar.ValueBool()
+
+	var bypass client.ProtectionBypass
+	var err error
+
+	if needsDemotion {
+		bypass, err = r.client.DemoteProtectionBypass(ctx, client.DemoteProtectionBypassRequest{
+			TeamID:    plan.TeamID.ValueString(),
+			ProjectID: plan.ProjectID.ValueString(),
+			Secret:    state.Secret.ValueString(),
+		})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project protection bypass",
+				fmt.Sprintf("Could not update protection bypass for project %s: %s", plan.ProjectID.ValueString(), err),
+			)
+			return
+		}
 	}
 
-	bypass, err := r.client.UpdateProtectionBypass(ctx, updateReq)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error updating project protection bypass",
-			fmt.Sprintf("Could not update protection bypass for project %s: %s", plan.ProjectID.ValueString(), err),
-		)
-		return
+	if needsNoteUpdate || needsPromotion {
+		updateReq := client.UpdateProtectionBypassRequest{
+			TeamID:    plan.TeamID.ValueString(),
+			ProjectID: plan.ProjectID.ValueString(),
+			Secret:    state.Secret.ValueString(),
+		}
+		if needsNoteUpdate {
+			note := plan.Note.ValueString()
+			updateReq.Note = &note
+		}
+		if needsPromotion {
+			isEnvVar := true
+			updateReq.IsEnvVar = &isEnvVar
+		}
+
+		bypass, err = r.client.UpdateProtectionBypass(ctx, updateReq)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project protection bypass",
+				fmt.Sprintf("Could not update protection bypass for project %s: %s", plan.ProjectID.ValueString(), err),
+			)
+			return
+		}
+	}
+
+	if !needsNoteUpdate && !needsPromotion && !needsDemotion {
+		bypass, err = r.client.GetProtectionBypass(ctx, plan.ProjectID.ValueString(), plan.TeamID.ValueString(), state.Secret.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating project protection bypass",
+				fmt.Sprintf("Could not read protection bypass for project %s after update: %s", plan.ProjectID.ValueString(), err),
+			)
+			return
+		}
 	}
 
 	result := convertBypass(plan.ProjectID.ValueString(), plan.TeamID.ValueString(), state.Secret.ValueString(), bypass)
-	// When the plan demotes is_env_var to false we skip the API call (a sibling
-	// bypass is being promoted in the same apply and will trigger the atomic swap).
-	// Mirror that in state so Terraform sees a consistent result — the actual
-	// demotion has either already happened or is about to in this apply.
-	if !plan.IsEnvVar.IsNull() && !plan.IsEnvVar.IsUnknown() && !plan.IsEnvVar.ValueBool() {
-		result.IsEnvVar = types.BoolValue(false)
-	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 
@@ -309,7 +333,7 @@ func (r *projectProtectionBypassResource) Delete(ctx context.Context, req resour
 		TeamID:                      state.TeamID.ValueString(),
 		ProjectID:                   state.ProjectID.ValueString(),
 		Secret:                      state.Secret.ValueString(),
-		PromoteReplacementIfDefault: state.IsEnvVar.ValueBool(),
+		PromoteReplacementIfDefault: true,
 	})
 	if client.NotFound(err) {
 		return

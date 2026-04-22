@@ -69,6 +69,24 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectDataSourceProtectionBypassForAutomation(t *testing.T) {
+	name := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectDataSourceConfigWithProtectionBypass(name)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.vercel_project.test", "name", "test-acc-bypass-ds-"+name),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "protection_bypass_for_automation", "true"),
+					resource.TestCheckResourceAttrSet("data.vercel_project.test", "protection_bypass_for_automation_secret"),
+				),
+			},
+		},
+	})
+}
+
 func testAccProjectDataSourceConfig(name, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
@@ -155,6 +173,19 @@ data "vercel_project" "test" {
     name = vercel_project.test.name
 }
 `, name, githubRepo)
+}
+
+func testAccProjectDataSourceConfigWithProtectionBypass(name string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name                             = "test-acc-bypass-ds-%s"
+  protection_bypass_for_automation = true
+}
+
+data "vercel_project" "test" {
+    name = vercel_project.test.name
+}
+`, name)
 }
 
 func TestAcc_ProjectDataSourcePreviewDeploymentSuffix(t *testing.T) {
