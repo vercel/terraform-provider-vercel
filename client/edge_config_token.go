@@ -97,6 +97,14 @@ func (c *Client) GetEdgeConfigToken(ctx context.Context, request EdgeConfigToken
 		method: "GET",
 		url:    url,
 	}, &e)
+	// The plaintext `token` and `edgeConfigId` are no longer guaranteed to be
+	// present on the GET response — the Vercel API is moving toward only
+	// returning the plaintext token once, at creation time. Both values are
+	// already known to the caller (they're part of the request path), so we
+	// repopulate them here to keep the returned struct stable regardless of
+	// which response shape the API currently emits.
+	e.Token = request.Token
+	e.EdgeConfigID = request.EdgeConfigID
 	e.TeamID = request.TeamID
 	return e, err
 }
