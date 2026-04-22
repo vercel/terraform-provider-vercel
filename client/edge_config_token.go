@@ -97,14 +97,14 @@ func (c *Client) GetEdgeConfigToken(ctx context.Context, request EdgeConfigToken
 		method: "GET",
 		url:    url,
 	}, &e)
-	// The plaintext `token` and `edgeConfigId` are no longer guaranteed to be
-	// present on the GET response — the Vercel API is moving toward only
-	// returning the plaintext token once, at creation time. Both values are
-	// already known to the caller (they're part of the request path), so we
-	// repopulate them here to keep the returned struct stable regardless of
-	// which response shape the API currently emits.
+	// The Vercel API has marked the plaintext `token` field on this endpoint's
+	// response as deprecated and intends to remove it in a future rollout
+	// (FLA-2777 / FLA-2803). The plaintext is already part of the request path,
+	// so we repopulate it from the request to keep the returned struct — and
+	// the computed `connection_string` that depends on it — stable across that
+	// future response-shape change. Getting this patch adopted in-wild is an
+	// explicit prerequisite for the server-side removal.
 	e.Token = request.Token
-	e.EdgeConfigID = request.EdgeConfigID
 	e.TeamID = request.TeamID
 	return e, err
 }
