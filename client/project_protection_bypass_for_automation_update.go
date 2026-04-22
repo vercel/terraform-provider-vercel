@@ -98,14 +98,29 @@ func (c *Client) UpdateProtectionBypassForAutomation(ctx context.Context, reques
 		return
 	}
 
-	if len(response.ProtectionBypass) != 1 {
-		return s, fmt.Errorf("error adding protection bypass for automation: the response contained an unexpected number of items (%d)", len(response.ProtectionBypass))
+	// When the caller supplied an explicit new secret we already know what was
+	// set — no need to inspect the response, which can contain entries for
+	// other bypass scopes (e.g. shareable-link) or both the old and new
+	// automation-bypass during a rotation.
+	if request.NewSecret != "" {
+		return request.NewSecret, nil
 	}
 
-	// return the first key from the map
-	for key := range response.ProtectionBypass {
-		return key, err
+	// The API generated a secret for us. Filter to the automation-bypass scope
+	// since the project may have other bypass scopes (e.g. shareable-link) in
+	// the same response map.
+	var automationKey string
+	var automationCount int
+	for key, bypass := range response.ProtectionBypass {
+		if bypass.Scope == "automation-bypass" {
+			automationKey = key
+			automationCount++
+		}
 	}
 
-	return s, err
+	if automationCount != 1 {
+		return s, fmt.Errorf("error adding protection bypass for automation: the response contained an unexpected number of automation-bypass items (%d)", automationCount)
+	}
+
+	return automationKey, nil
 }
