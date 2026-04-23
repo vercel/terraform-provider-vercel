@@ -1,4 +1,4 @@
-package client
+package client_test
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/vercel/terraform-provider-vercel/v4/client"
 )
 
 func TestGetEdgeConfigToken(t *testing.T) {
@@ -34,10 +36,8 @@ func TestGetEdgeConfigToken(t *testing.T) {
 			}))
 			t.Cleanup(h.Close)
 
-			cl := New("INVALID")
-			cl.baseURL = fmt.Sprintf("http://%s", h.Listener.Addr().String())
-
-			req := EdgeConfigTokenRequest{
+			cl := client.New("INVALID").WithBaseURL(fmt.Sprintf("http://%s", h.Listener.Addr().String()))
+			req := client.EdgeConfigTokenRequest{
 				Token:        "tkn_xxx",
 				TeamID:       "team_123",
 				EdgeConfigID: "ecfg_xxx",

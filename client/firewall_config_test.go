@@ -1,15 +1,17 @@
-package client
+package client_test
 
 import (
 	"context"
 	"net/http"
 	"testing"
+
+	vercelclient "github.com/vercel/terraform-provider-vercel/v4/client"
 )
 
 func TestUpdateFirewallConfig(t *testing.T) {
 	t.Parallel()
 
-	request := UpdateFirewallConfigRequest{
+	request := vercelclient.UpdateFirewallConfigRequest{
 		ProjectID: "prj_123",
 		TeamID:    "team_123",
 		Action:    "rules.update",
@@ -41,9 +43,9 @@ func TestUpdateFirewallConfigUsesConfiguredTeam(t *testing.T) {
 			"value":  nil,
 		})
 		_, _ = w.Write([]byte(`{}`))
-	}).WithTeam(Team{ID: "team_default"})
+	}).WithTeam(vercelclient.Team{ID: "team_default"})
 
-	err := client.UpdateFirewallConfig(context.Background(), UpdateFirewallConfigRequest{
+	err := client.UpdateFirewallConfig(context.Background(), vercelclient.UpdateFirewallConfigRequest{
 		ProjectID: "prj_123",
 		Action:    "rules.remove",
 		ID:        "rule_123",

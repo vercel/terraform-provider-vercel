@@ -1,4 +1,4 @@
-package client
+package client_test
 
 import (
 	"context"
@@ -8,31 +8,33 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	vercelclient "github.com/vercel/terraform-provider-vercel/v4/client"
 )
 
 func TestCreateFeatureFlag(t *testing.T) {
 	t.Parallel()
 
-	request := CreateFeatureFlagRequest{
+	request := vercelclient.CreateFeatureFlagRequest{
 		ProjectID:   "prj_123",
 		TeamID:      "team_123",
 		Slug:        "checkout-banner",
 		Kind:        "string",
 		Description: "Controls the checkout banner copy",
 		State:       "active",
-		Variants: []FeatureFlagVariant{
+		Variants: []vercelclient.FeatureFlagVariant{
 			{ID: "control", Value: "control"},
 			{ID: "variant-a", Label: "Variant A", Value: "variant-a"},
 		},
-		Environments: map[string]FeatureFlagEnvironment{
+		Environments: map[string]vercelclient.FeatureFlagEnvironment{
 			"production": {
 				Active: true,
 				Rules:  []json.RawMessage{},
-				Fallthrough: FeatureFlagOutcome{
+				Fallthrough: vercelclient.FeatureFlagOutcome{
 					Type:      "variant",
 					VariantID: "variant-a",
 				},
-				PausedOutcome: FeatureFlagOutcome{
+				PausedOutcome: vercelclient.FeatureFlagOutcome{
 					Type:      "variant",
 					VariantID: "control",
 				},
@@ -88,14 +90,14 @@ func TestCreateFeatureFlag(t *testing.T) {
 func TestCreateFeatureFlagOmitsEnvironmentsWhenUnset(t *testing.T) {
 	t.Parallel()
 
-	request := CreateFeatureFlagRequest{
+	request := vercelclient.CreateFeatureFlagRequest{
 		ProjectID:   "prj_123",
 		TeamID:      "team_123",
 		Slug:        "checkout-banner",
 		Kind:        "string",
 		Description: "Controls the checkout banner copy",
 		State:       "active",
-		Variants: []FeatureFlagVariant{
+		Variants: []vercelclient.FeatureFlagVariant{
 			{ID: "control", Value: "control"},
 			{ID: "variant-a", Value: "variant-a"},
 		},
@@ -168,9 +170,9 @@ func TestGetFeatureFlagUsesConfiguredTeam(t *testing.T) {
 				}
 			}
 		}`))
-	}).WithTeam(Team{ID: "team_default"})
+	}).WithTeam(vercelclient.Team{ID: "team_default"})
 
-	flag, err := client.GetFeatureFlag(context.Background(), GetFeatureFlagRequest{
+	flag, err := client.GetFeatureFlag(context.Background(), vercelclient.GetFeatureFlagRequest{
 		ProjectID:    "prj_123",
 		FlagIDOrSlug: "flag_123",
 	})
@@ -190,24 +192,24 @@ func TestGetFeatureFlagUsesConfiguredTeam(t *testing.T) {
 func TestCreateFeatureFlagSupportsLegacyKeyField(t *testing.T) {
 	t.Parallel()
 
-	request := CreateFeatureFlagRequest{
+	request := vercelclient.CreateFeatureFlagRequest{
 		ProjectID: "prj_123",
 		TeamID:    "team_123",
 		Key:       "legacy-key",
 		Kind:      "boolean",
-		Variants: []FeatureFlagVariant{
+		Variants: []vercelclient.FeatureFlagVariant{
 			{ID: "off", Value: false},
 			{ID: "on", Value: true},
 		},
-		Environments: map[string]FeatureFlagEnvironment{
+		Environments: map[string]vercelclient.FeatureFlagEnvironment{
 			"production": {
 				Active: true,
 				Rules:  []json.RawMessage{},
-				Fallthrough: FeatureFlagOutcome{
+				Fallthrough: vercelclient.FeatureFlagOutcome{
 					Type:      "variant",
 					VariantID: "on",
 				},
-				PausedOutcome: FeatureFlagOutcome{
+				PausedOutcome: vercelclient.FeatureFlagOutcome{
 					Type:      "variant",
 					VariantID: "off",
 				},
@@ -278,21 +280,21 @@ func TestCreateFeatureFlagSupportsLegacyKeyField(t *testing.T) {
 func TestUpdateFeatureFlag(t *testing.T) {
 	t.Parallel()
 
-	request := UpdateFeatureFlagRequest{
+	request := vercelclient.UpdateFeatureFlagRequest{
 		ProjectID:    "prj_123",
 		FlagIDOrSlug: "flag_123",
 		TeamID:       "team_123",
 		Message:      "pause rollout",
 		State:        "archived",
-		Environments: map[string]FeatureFlagEnvironment{
+		Environments: map[string]vercelclient.FeatureFlagEnvironment{
 			"production": {
 				Active: false,
 				Rules:  []json.RawMessage{},
-				Fallthrough: FeatureFlagOutcome{
+				Fallthrough: vercelclient.FeatureFlagOutcome{
 					Type:      "variant",
 					VariantID: "control",
 				},
-				PausedOutcome: FeatureFlagOutcome{
+				PausedOutcome: vercelclient.FeatureFlagOutcome{
 					Type:      "variant",
 					VariantID: "control",
 				},
@@ -347,7 +349,7 @@ func TestDeleteFeatureFlag(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.DeleteFeatureFlag(context.Background(), DeleteFeatureFlagRequest{
+	err := client.DeleteFeatureFlag(context.Background(), vercelclient.DeleteFeatureFlagRequest{
 		ProjectID:    "prj_123",
 		FlagIDOrSlug: "flag_123",
 		TeamID:       "team_123",
@@ -381,7 +383,7 @@ func TestFeatureFlagRequestAliasesUseLegacyFlagID(t *testing.T) {
 			}`))
 		})
 
-		_, err := client.GetFeatureFlag(context.Background(), GetFeatureFlagRequest{
+		_, err := client.GetFeatureFlag(context.Background(), vercelclient.GetFeatureFlagRequest{
 			ProjectID: "prj_123",
 			TeamID:    "team_123",
 			FlagID:    "flag_legacy",
@@ -415,7 +417,7 @@ func TestFeatureFlagRequestAliasesUseLegacyFlagID(t *testing.T) {
 			}`))
 		})
 
-		_, err := client.UpdateFeatureFlag(context.Background(), UpdateFeatureFlagRequest{
+		_, err := client.UpdateFeatureFlag(context.Background(), vercelclient.UpdateFeatureFlagRequest{
 			ProjectID: "prj_123",
 			TeamID:    "team_123",
 			FlagID:    "flag_legacy",
@@ -435,7 +437,7 @@ func TestFeatureFlagRequestAliasesUseLegacyFlagID(t *testing.T) {
 			w.WriteHeader(http.StatusNoContent)
 		})
 
-		err := client.DeleteFeatureFlag(context.Background(), DeleteFeatureFlagRequest{
+		err := client.DeleteFeatureFlag(context.Background(), vercelclient.DeleteFeatureFlagRequest{
 			ProjectID: "prj_123",
 			TeamID:    "team_123",
 			FlagID:    "flag_legacy",
@@ -449,27 +451,27 @@ func TestFeatureFlagRequestAliasesUseLegacyFlagID(t *testing.T) {
 func TestCreateFeatureFlagSegment(t *testing.T) {
 	t.Parallel()
 
-	request := CreateFeatureFlagSegmentRequest{
+	request := vercelclient.CreateFeatureFlagSegmentRequest{
 		ProjectID:   "prj_123",
 		TeamID:      "team_123",
 		Slug:        "internal-users",
 		Label:       "Internal Users",
 		Description: "Matches employees",
 		Hint:        "user-email",
-		Data: FeatureFlagSegmentData{
-			Include: map[string]map[string][]FeatureFlagSegmentValue{
+		Data: vercelclient.FeatureFlagSegmentData{
+			Include: map[string]map[string][]vercelclient.FeatureFlagSegmentValue{
 				"user": {
 					"email": {
 						{Value: "alice@example.com"},
 					},
 				},
 			},
-			Rules: []FeatureFlagSegmentRule{
+			Rules: []vercelclient.FeatureFlagSegmentRule{
 				{
 					ID: "rule-1",
-					Conditions: []FeatureFlagSegmentCondition{
+					Conditions: []vercelclient.FeatureFlagSegmentCondition{
 						{
-							LHS: FeatureFlagSegmentConditionLHS{
+							LHS: vercelclient.FeatureFlagSegmentConditionLHS{
 								Type:      "entity",
 								Kind:      "user",
 								Attribute: "email",
@@ -478,7 +480,7 @@ func TestCreateFeatureFlagSegment(t *testing.T) {
 							RHS: "@example.com",
 						},
 					},
-					Outcome: FeatureFlagSegmentOutcome{Type: "all"},
+					Outcome: vercelclient.FeatureFlagSegmentOutcome{Type: "all"},
 				},
 			},
 		},
@@ -551,7 +553,7 @@ func TestGetFeatureFlagSegment(t *testing.T) {
 		}`))
 	})
 
-	segment, err := client.GetFeatureFlagSegment(context.Background(), GetFeatureFlagSegmentRequest{
+	segment, err := client.GetFeatureFlagSegment(context.Background(), vercelclient.GetFeatureFlagSegmentRequest{
 		ProjectID:       "prj_123",
 		SegmentIDOrSlug: "segment_123",
 		TeamID:          "team_123",
@@ -568,19 +570,19 @@ func TestGetFeatureFlagSegment(t *testing.T) {
 func TestUpdateFeatureFlagSegment(t *testing.T) {
 	t.Parallel()
 
-	request := UpdateFeatureFlagSegmentRequest{
+	request := vercelclient.UpdateFeatureFlagSegmentRequest{
 		ProjectID:       "prj_123",
 		SegmentIDOrSlug: "segment_123",
 		TeamID:          "team_123",
 		Label:           "Beta Users",
 		Hint:            "user-id",
-		Data: FeatureFlagSegmentData{
-			Rules: []FeatureFlagSegmentRule{
+		Data: vercelclient.FeatureFlagSegmentData{
+			Rules: []vercelclient.FeatureFlagSegmentRule{
 				{
 					ID: "rule-1",
-					Conditions: []FeatureFlagSegmentCondition{
+					Conditions: []vercelclient.FeatureFlagSegmentCondition{
 						{
-							LHS: FeatureFlagSegmentConditionLHS{
+							LHS: vercelclient.FeatureFlagSegmentConditionLHS{
 								Type:      "entity",
 								Kind:      "user",
 								Attribute: "plan",
@@ -589,9 +591,9 @@ func TestUpdateFeatureFlagSegment(t *testing.T) {
 							RHS: "beta",
 						},
 					},
-					Outcome: FeatureFlagSegmentOutcome{
+					Outcome: vercelclient.FeatureFlagSegmentOutcome{
 						Type: "split",
-						Base: &FeatureFlagSegmentConditionLHS{
+						Base: &vercelclient.FeatureFlagSegmentConditionLHS{
 							Type:      "entity",
 							Kind:      "user",
 							Attribute: "id",
@@ -656,7 +658,7 @@ func TestDeleteFeatureFlagSegment(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.DeleteFeatureFlagSegment(context.Background(), DeleteFeatureFlagSegmentRequest{
+	err := client.DeleteFeatureFlagSegment(context.Background(), vercelclient.DeleteFeatureFlagSegmentRequest{
 		ProjectID:       "prj_123",
 		SegmentIDOrSlug: "segment_123",
 		TeamID:          "team_123",
@@ -687,7 +689,7 @@ func TestFeatureFlagSegmentRequestAliasesUseLegacySegmentID(t *testing.T) {
 			}`))
 		})
 
-		_, err := client.GetFeatureFlagSegment(context.Background(), GetFeatureFlagSegmentRequest{
+		_, err := client.GetFeatureFlagSegment(context.Background(), vercelclient.GetFeatureFlagSegmentRequest{
 			ProjectID: "prj_123",
 			TeamID:    "team_123",
 			SegmentID: "segment_legacy",
@@ -723,16 +725,16 @@ func TestFeatureFlagSegmentRequestAliasesUseLegacySegmentID(t *testing.T) {
 			}`))
 		})
 
-		_, err := client.UpdateFeatureFlagSegment(context.Background(), UpdateFeatureFlagSegmentRequest{
+		_, err := client.UpdateFeatureFlagSegment(context.Background(), vercelclient.UpdateFeatureFlagSegmentRequest{
 			ProjectID: "prj_123",
 			TeamID:    "team_123",
 			SegmentID: "segment_legacy",
 			Label:     "Legacy Segment",
 			Hint:      "user-id",
-			Data: FeatureFlagSegmentData{
-				Rules:   []FeatureFlagSegmentRule{},
-				Include: map[string]map[string][]FeatureFlagSegmentValue{},
-				Exclude: map[string]map[string][]FeatureFlagSegmentValue{},
+			Data: vercelclient.FeatureFlagSegmentData{
+				Rules:   []vercelclient.FeatureFlagSegmentRule{},
+				Include: map[string]map[string][]vercelclient.FeatureFlagSegmentValue{},
+				Exclude: map[string]map[string][]vercelclient.FeatureFlagSegmentValue{},
 			},
 		})
 		if err != nil {
@@ -748,7 +750,7 @@ func TestFeatureFlagSegmentRequestAliasesUseLegacySegmentID(t *testing.T) {
 			w.WriteHeader(http.StatusNoContent)
 		})
 
-		err := client.DeleteFeatureFlagSegment(context.Background(), DeleteFeatureFlagSegmentRequest{
+		err := client.DeleteFeatureFlagSegment(context.Background(), vercelclient.DeleteFeatureFlagSegmentRequest{
 			ProjectID: "prj_123",
 			TeamID:    "team_123",
 			SegmentID: "segment_legacy",
@@ -762,7 +764,7 @@ func TestFeatureFlagSegmentRequestAliasesUseLegacySegmentID(t *testing.T) {
 func TestCreateFeatureFlagSDKKey(t *testing.T) {
 	t.Parallel()
 
-	request := CreateFeatureFlagSDKKeyRequest{
+	request := vercelclient.CreateFeatureFlagSDKKeyRequest{
 		ProjectID:   "prj_123",
 		TeamID:      "team_123",
 		Type:        "server",
@@ -831,7 +833,7 @@ func TestListFeatureFlagSDKKeys(t *testing.T) {
 		}`))
 	})
 
-	keys, err := client.ListFeatureFlagSDKKeys(context.Background(), ListFeatureFlagSDKKeysRequest{
+	keys, err := client.ListFeatureFlagSDKKeys(context.Background(), vercelclient.ListFeatureFlagSDKKeysRequest{
 		ProjectID: "prj_123",
 		TeamID:    "team_123",
 	})
@@ -855,7 +857,7 @@ func TestDeleteFeatureFlagSDKKey(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.DeleteFeatureFlagSDKKey(context.Background(), DeleteFeatureFlagSDKKeyRequest{
+	err := client.DeleteFeatureFlagSDKKey(context.Background(), vercelclient.DeleteFeatureFlagSDKKeyRequest{
 		ProjectID: "prj_123",
 		HashKey:   "sdk_123",
 		TeamID:    "team_123",
@@ -865,14 +867,14 @@ func TestDeleteFeatureFlagSDKKey(t *testing.T) {
 	}
 }
 
-func newFeatureFlagTestClient(t *testing.T, handler http.HandlerFunc) *Client {
+func newFeatureFlagTestClient(t *testing.T, handler http.HandlerFunc) *vercelclient.Client {
 	t.Helper()
 
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
 
-	client := New("test-token")
-	client.baseURL = server.URL
+	client := vercelclient.New("test-token")
+	client.WithBaseURL(server.URL)
 	return client
 }
 
@@ -917,8 +919,13 @@ func assertJSONEqual(t *testing.T, expected any, body io.Reader) {
 		t.Fatalf("unmarshaling request body: %v", err)
 	}
 
+	wantJSON, err := json.Marshal(expected)
+	if err != nil {
+		t.Fatalf("marshaling expected body: %v", err)
+	}
+
 	var want any
-	if err := json.Unmarshal(mustMarshal(expected), &want); err != nil {
+	if err := json.Unmarshal(wantJSON, &want); err != nil {
 		t.Fatalf("unmarshaling expected body: %v", err)
 	}
 
