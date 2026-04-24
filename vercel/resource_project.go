@@ -120,10 +120,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:        "The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.",
 				Validators: []validator.String{
 					validateServerlessFunctionRegion(),
-					stringvalidator.ConflictsWith(
-						path.MatchRoot("serverless_function_region"),
-						path.MatchRoot("resource_config").AtName("function_default_regions"),
-					),
 				},
 			},
 			"node_version": schema.StringAttribute{
@@ -582,10 +578,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Validators: []validator.Set{
 							setvalidator.ValueStringsAre(
 								validateServerlessFunctionRegion(),
-							),
-							setvalidator.ConflictsWith(
-								path.MatchRoot("serverless_function_region"),
-								path.MatchRoot("resource_config").AtName("function_default_regions"),
 							),
 						},
 					},
@@ -1799,6 +1791,30 @@ func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// Warn when both region fields are set in user config. The Vercel API returns
+	// serverless_function_region as a derived alias of resource_config.function_default_regions[0],
+	// so the provider prefers the modern field and ignores the legacy one. Read from req.Config
+	// so this only fires for user-authored dual-declaration, not for state round-trips on import.
+	if !req.Config.Raw.IsNull() {
+		var cfg Project
+		if cd := req.Config.Get(ctx, &cfg); !cd.HasError() {
+			legacySet := !cfg.ServerlessFunctionRegion.IsNull() && !cfg.ServerlessFunctionRegion.IsUnknown()
+			modernSet := false
+			if !cfg.ResourceConfig.IsNull() && !cfg.ResourceConfig.IsUnknown() {
+				if rc, rcDiags := cfg.resourceConfig(ctx); !rcDiags.HasError() && rc != nil {
+					modernSet = !rc.FunctionDefaultRegions.IsNull() && !rc.FunctionDefaultRegions.IsUnknown()
+				}
+			}
+			if legacySet && modernSet {
+				resp.Diagnostics.AddAttributeWarning(
+					path.Root("serverless_function_region"),
+					"Deprecated attribute ignored",
+					"`serverless_function_region` is deprecated and is ignored when `resource_config.function_default_regions` is also set. `resource_config.function_default_regions` is the source of truth; remove `serverless_function_region` from your configuration to silence this warning.",
+				)
+			}
+		}
 	}
 
 	environment, err := plan.environment(ctx)

@@ -57,7 +57,6 @@ type CreateProjectRequest struct {
 	PreviewDeploymentSuffix           *string               `json:"previewDeploymentSuffix"`
 	PublicSource                      *bool                 `json:"publicSource"`
 	RootDirectory                     *string               `json:"rootDirectory"`
-	ServerlessFunctionRegion          string                `json:"serverlessFunctionRegion,omitempty"`
 	ResourceConfig                    *ResourceConfig       `json:"resourceConfig,omitempty"`
 	EnablePreviewFeedback             *bool                 `json:"enablePreviewFeedback,omitempty"`
 	EnableProductionFeedback          *bool                 `json:"enableProductionFeedback,omitempty"`
@@ -327,7 +326,6 @@ type UpdateProjectRequest struct {
 	PreviewDeploymentSuffix              *string                         `json:"previewDeploymentSuffix"`
 	PublicSource                         *bool                           `json:"publicSource"`
 	RootDirectory                        *string                         `json:"rootDirectory"`
-	ServerlessFunctionRegion             string                          `json:"serverlessFunctionRegion,omitempty"`
 	VercelAuthentication                 *VercelAuthentication           `json:"ssoProtection"`
 	PasswordProtection                   *PasswordProtectionWithPassword `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                     `json:"trustedIps"`

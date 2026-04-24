@@ -226,6 +226,72 @@ func TestAcc_ProjectFluidCompute(t *testing.T) {
 	})
 }
 
+// TestAcc_ProjectImportDualRegion is a regression test for issue #475.
+//
+// The Vercel API returns serverless_function_region as a derived alias of
+// resource_config.function_default_regions[0], so any project created with the
+// modern field also has the legacy field populated in its stored state. Before
+// the fix, the provider's ConflictsWith validators rejected that coexistence on
+// import, making projects unimportable once the API started auto-mirroring.
+//
+// This test creates a project via resource_config.function_default_regions
+// (producing the dual-populated state), imports it, and asserts that a follow-up
+// plan is empty — proving the provider now ingests the live state cleanly.
+func TestAcc_ProjectImportDualRegion(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(fmt.Sprintf(`
+                resource "vercel_project" "test" {
+                    name = "test-acc-import-dual-region-%[1]s"
+                    resource_config = {
+                        function_default_regions = ["sfo1"]
+                    }
+                }
+                `, projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					// Vercel mirrors the modern value into the legacy field on the
+					// server side; both should now be present in state without
+					// tripping ConflictsWith.
+					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "sfo1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.#", "1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.0", "sfo1"),
+				),
+			},
+			{
+				// Import the dual-populated project and verify state parity.
+				ResourceName:      "vercel_project.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getProjectImportID("vercel_project.test"),
+			},
+			{
+				// Re-apply with the same config and assert an empty plan. This is
+				// the reduction of the Pulumi-bridge failure to plain Terraform:
+				// after import, a no-op plan must succeed.
+				Config: cfg(fmt.Sprintf(`
+                resource "vercel_project" "test" {
+                    name = "test-acc-import-dual-region-%[1]s"
+                    resource_config = {
+                        function_default_regions = ["sfo1"]
+                    }
+                }
+                `, projectSuffix)),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func TestAcc_ProjectFunctionDefaultRegions(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 
@@ -234,17 +300,26 @@ func TestAcc_ProjectFunctionDefaultRegions(t *testing.T) {
 		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				// check if legacy setting serverless_function_region conflicts with resource_config.function_default_regions
+				// Declaring both the legacy and modern region fields is tolerated:
+				// resource_config.function_default_regions is the source of truth,
+				// and the legacy field is surfaced as a deprecation warning. This
+				// matches the Vercel API, which returns serverless_function_region
+				// as a derived alias of resource_config.function_default_regions[0]
+				// even when only the modern field is written.
 				Config: cfg(fmt.Sprintf(`
                 resource "vercel_project" "test" {
-                    name = "test-acc-regions-conflict-%[1]s"
+                    name = "test-acc-regions-both-%[1]s"
                     serverless_function_region = "sfo1"
                     resource_config = {
                         function_default_regions = ["iad1", "fra1"]
                     }
                 }
                 `, projectSuffix)),
-				ExpectError: regexp.MustCompile(strings.ReplaceAll("Attribute \"serverless_function_region\" cannot be specified when \"resource_config.function_default_regions\" is specified", " ", `\s*`)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.#", "2"),
+					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "iad1"),
+					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "fra1"),
+				),
 			},
 			{
 				// check invalid region value
