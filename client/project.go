@@ -229,15 +229,24 @@ type GitComments struct {
 }
 
 type GitProviderOptions struct {
-	RequireVerifiedCommits          *bool   `json:"requireVerifiedCommits,omitempty"`
-	CreateDeployments               *string `json:"createDeployments,omitempty"`
-	DisableRepositoryDispatchEvents *bool   `json:"disableRepositoryDispatchEvents,omitempty"`
+	RequireVerifiedCommits          *bool                        `json:"requireVerifiedCommits,omitempty"`
+	CreateDeployments               *string                      `json:"createDeployments,omitempty"`
+	DisableRepositoryDispatchEvents *bool                        `json:"disableRepositoryDispatchEvents,omitempty"`
+	GitCommitStatus                 *bool                        `json:"gitCommitStatus,omitempty"`
+	ConsolidatedGitCommitStatus     *ConsolidatedGitCommitStatus `json:"consolidatedGitCommitStatus,omitempty"`
 }
 
 type GitProviderOptionsResponse struct {
-	RequireVerifiedCommits          *bool   `json:"requireVerifiedCommits"`
-	CreateDeployments               *string `json:"createDeployments"`
-	DisableRepositoryDispatchEvents *bool   `json:"disableRepositoryDispatchEvents"`
+	RequireVerifiedCommits          *bool                        `json:"requireVerifiedCommits"`
+	CreateDeployments               *string                      `json:"createDeployments"`
+	DisableRepositoryDispatchEvents *bool                        `json:"disableRepositoryDispatchEvents"`
+	GitCommitStatus                 *bool                        `json:"gitCommitStatus"`
+	ConsolidatedGitCommitStatus     *ConsolidatedGitCommitStatus `json:"consolidatedGitCommitStatus"`
+}
+
+type ConsolidatedGitCommitStatus struct {
+	Enabled           bool `json:"enabled"`
+	PropagateFailures bool `json:"propagateFailures"`
 }
 
 type Security struct {

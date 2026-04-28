@@ -337,6 +337,24 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						MarkdownDescription: "Whether repository dispatch events are enabled.",
 						Computed:            true,
 					},
+					"git_commit_status": schema.BoolAttribute{
+						MarkdownDescription: "Whether Vercel posts git commit statuses for this project.",
+						Computed:            true,
+					},
+					"consolidated_git_commit_status": schema.SingleNestedAttribute{
+						MarkdownDescription: "Configuration for consolidated git commit status reporting.",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								MarkdownDescription: "Whether consolidated commit status is enabled.",
+								Computed:            true,
+							},
+							"propagate_failures": schema.BoolAttribute{
+								MarkdownDescription: "Whether to propagate individual deployment failures to the consolidated status.",
+								Computed:            true,
+							},
+						},
+					},
 				},
 			},
 			"preview_comments": schema.BoolAttribute{
@@ -494,10 +512,19 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		if response.GitProviderOptions.DisableRepositoryDispatchEvents != nil {
 			repositoryDispatchEvents = types.BoolValue(!*response.GitProviderOptions.DisableRepositoryDispatchEvents)
 		}
+		consolidated := types.ObjectNull(consolidatedGitCommitStatusAttrType.AttrTypes)
+		if response.GitProviderOptions.ConsolidatedGitCommitStatus != nil {
+			consolidated = types.ObjectValueMust(consolidatedGitCommitStatusAttrType.AttrTypes, map[string]attr.Value{
+				"enabled":            types.BoolValue(response.GitProviderOptions.ConsolidatedGitCommitStatus.Enabled),
+				"propagate_failures": types.BoolValue(response.GitProviderOptions.ConsolidatedGitCommitStatus.PropagateFailures),
+			})
+		}
 		plan.GitProviderOptions = types.ObjectValueMust(gitProviderOptionsAttrType.AttrTypes, map[string]attr.Value{
-			"require_verified_commits":   types.BoolPointerValue(response.GitProviderOptions.RequireVerifiedCommits),
-			"create_deployments":         createDeployments,
-			"repository_dispatch_events": repositoryDispatchEvents,
+			"require_verified_commits":       types.BoolPointerValue(response.GitProviderOptions.RequireVerifiedCommits),
+			"create_deployments":             createDeployments,
+			"repository_dispatch_events":     repositoryDispatchEvents,
+			"git_commit_status":              types.BoolPointerValue(response.GitProviderOptions.GitCommitStatus),
+			"consolidated_git_commit_status": consolidated,
 		})
 	}
 
