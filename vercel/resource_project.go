@@ -473,16 +473,16 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Computed:            true,
 					},
 					"consolidated_git_commit_status": schema.SingleNestedAttribute{
-						MarkdownDescription: "Configuration for consolidated git commit status reporting. When enabled, Vercel posts a single consolidated commit status instead of one per deployment.",
+						MarkdownDescription: "**Beta:** Configuration for consolidated git commit status reporting. When enabled, Vercel posts a single consolidated commit status instead of one per deployment. This feature is in beta and may change in backwards-incompatible ways.",
 						Optional:            true,
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
-								MarkdownDescription: "Whether consolidated commit status is enabled.",
+								MarkdownDescription: "**Beta:** Whether consolidated commit status is enabled.",
 								Required:            true,
 							},
 							"propagate_failures": schema.BoolAttribute{
-								MarkdownDescription: "Whether to propagate individual deployment failures to the consolidated status.",
+								MarkdownDescription: "**Beta:** Whether to propagate individual deployment failures to the consolidated status.",
 								Required:            true,
 							},
 						},

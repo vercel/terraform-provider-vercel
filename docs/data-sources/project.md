@@ -107,7 +107,7 @@ Required:
 
 Read-Only:
 
-- `consolidated_git_commit_status` (Attributes) Configuration for consolidated git commit status reporting. (see [below for nested schema](#nestedatt--git_provider_options--consolidated_git_commit_status))
+- `consolidated_git_commit_status` (Attributes) **Beta:** Configuration for consolidated git commit status reporting. This feature is in beta and may change in backwards-incompatible ways. (see [below for nested schema](#nestedatt--git_provider_options--consolidated_git_commit_status))
 - `create_deployments` (Boolean) Whether to create deployments.
 - `git_commit_status` (Boolean) Whether Vercel posts git commit statuses for this project.
 - `repository_dispatch_events` (Boolean) Whether repository dispatch events are enabled.
@@ -118,8 +118,8 @@ Read-Only:
 
 Read-Only:
 
-- `enabled` (Boolean) Whether consolidated commit status is enabled.
-- `propagate_failures` (Boolean) Whether to propagate individual deployment failures to the consolidated status.
+- `enabled` (Boolean) **Beta:** Whether consolidated commit status is enabled.
+- `propagate_failures` (Boolean) **Beta:** Whether to propagate individual deployment failures to the consolidated status.
 
 
 

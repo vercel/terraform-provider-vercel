@@ -342,15 +342,15 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Computed:            true,
 					},
 					"consolidated_git_commit_status": schema.SingleNestedAttribute{
-						MarkdownDescription: "Configuration for consolidated git commit status reporting.",
+						MarkdownDescription: "**Beta:** Configuration for consolidated git commit status reporting. This feature is in beta and may change in backwards-incompatible ways.",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
-								MarkdownDescription: "Whether consolidated commit status is enabled.",
+								MarkdownDescription: "**Beta:** Whether consolidated commit status is enabled.",
 								Computed:            true,
 							},
 							"propagate_failures": schema.BoolAttribute{
-								MarkdownDescription: "Whether to propagate individual deployment failures to the consolidated status.",
+								MarkdownDescription: "**Beta:** Whether to propagate individual deployment failures to the consolidated status.",
 								Computed:            true,
 							},
 						},
