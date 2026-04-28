@@ -248,6 +248,8 @@ func TestAcc_ProjectDataSourceGitProviderOptions(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "name", "test-acc-gpo-ds-"+name),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "git_provider_options.create_deployments", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "git_provider_options.repository_dispatch_events", "false"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "git_provider_options.consolidated_git_commit_status.enabled", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "git_provider_options.consolidated_git_commit_status.propagate_failures", "true"),
 				),
 			},
 		},
@@ -265,6 +267,10 @@ resource "vercel_project" "test" {
   git_provider_options = {
     create_deployments = true
     repository_dispatch_events = false
+    consolidated_git_commit_status = {
+      enabled = true
+      propagate_failures = true
+    }
   }
 }
 
