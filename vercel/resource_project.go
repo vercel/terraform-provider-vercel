@@ -604,11 +604,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"build_machine_type": schema.StringAttribute{
-				Description: "The build machine type to use for this project. Must be one of \"enhanced\" or \"turbo\".",
+				Description: "The build machine type to use for this project. Must be one of \"enhanced\", \"turbo\", or \"elastic\". When set to \"elastic\", Vercel automatically adjusts the underlying machine type based on build duration.",
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
-					stringvalidator.OneOf("enhanced", "turbo"),
+					stringvalidator.OneOf("enhanced", "turbo", "elastic"),
 				},
 			},
 		},
@@ -1390,7 +1390,11 @@ func (r *ResourceConfig) toClientResourceConfig(ctx context.Context, onDemandCon
 		if resourceConfig == nil {
 			resourceConfig = &client.ResourceConfig{}
 		}
-		resourceConfig.BuildMachineType = buildMachineType.ValueStringPointer()
+		if buildMachineType.ValueString() == "elastic" {
+			resourceConfig.BuildMachineSelection = buildMachineType.ValueStringPointer()
+		} else {
+			resourceConfig.BuildMachineType = buildMachineType.ValueStringPointer()
+		}
 	}
 	return resourceConfig
 }

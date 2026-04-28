@@ -87,6 +87,7 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 		return r, err
 	}
 	r.TeamID = c.TeamID(teamID)
+	r.normalizeBuildMachineType()
 	return r, err
 }
 
@@ -251,6 +252,7 @@ type ResourceConfigResponse struct {
 	Fluid                     bool     `json:"fluid"`
 	ElasticConcurrencyEnabled bool     `json:"elasticConcurrencyEnabled"`
 	BuildMachineType          string   `json:"buildMachineType"`
+	BuildMachineSelection     string   `json:"buildMachineSelection"`
 }
 
 type ResourceConfig struct {
@@ -260,6 +262,21 @@ type ResourceConfig struct {
 	Fluid                     *bool    `json:"fluid,omitempty"`
 	ElasticConcurrencyEnabled *bool    `json:"elasticConcurrencyEnabled,omitempty"`
 	BuildMachineType          *string  `json:"buildMachineType,omitempty"`
+	BuildMachineSelection     *string  `json:"buildMachineSelection,omitempty"`
+}
+
+// normalizeBuildMachineType collapses the API's (buildMachineType, buildMachineSelection)
+// pair into a single value for the provider: when selection is "elastic", the effective
+// type is "elastic" regardless of the concrete buildMachineType returned by the API (which
+// can auto-adjust between standard/enhanced/turbo). This mirrors the value the user sets
+// in their Terraform config via `build_machine_type = "elastic"`.
+func (r *ProjectResponse) normalizeBuildMachineType() {
+	if r.ResourceConfig == nil {
+		return
+	}
+	if r.ResourceConfig.BuildMachineSelection == "elastic" {
+		r.ResourceConfig.BuildMachineType = "elastic"
+	}
 }
 
 // GetProject retrieves information about an existing project from Vercel.
@@ -282,6 +299,7 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r Pr
 	}
 
 	r.TeamID = c.TeamID(teamID)
+	r.normalizeBuildMachineType()
 	return r, err
 }
 
@@ -306,6 +324,7 @@ func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectRe
 	}, &pr)
 	for i := range pr.Projects {
 		pr.Projects[i].TeamID = c.TeamID(teamID)
+		pr.Projects[i].normalizeBuildMachineType()
 	}
 	return pr.Projects, err
 }
@@ -374,6 +393,7 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 	}
 
 	r.TeamID = c.TeamID(teamID)
+	r.normalizeBuildMachineType()
 	return r, err
 }
 
@@ -403,6 +423,7 @@ func (c *Client) UpdateProductionBranch(ctx context.Context, request UpdateProdu
 		return r, err
 	}
 	r.TeamID = c.TeamID(c.TeamID(request.TeamID))
+	r.normalizeBuildMachineType()
 	return r, err
 }
 
@@ -423,6 +444,7 @@ func (c *Client) UnlinkGitRepoFromProject(ctx context.Context, projectID, teamID
 		return r, fmt.Errorf("error unlinking git repo: %w", err)
 	}
 	r.TeamID = c.TeamID(teamID)
+	r.normalizeBuildMachineType()
 	return r, err
 }
 
@@ -452,5 +474,6 @@ func (c *Client) LinkGitRepoToProject(ctx context.Context, request LinkGitRepoTo
 		return r, fmt.Errorf("error linking git repo: %w", err)
 	}
 	r.TeamID = c.TeamID(c.TeamID(request.TeamID))
+	r.normalizeBuildMachineType()
 	return r, err
 }
