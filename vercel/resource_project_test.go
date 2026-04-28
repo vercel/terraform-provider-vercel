@@ -418,15 +418,28 @@ func TestAcc_ProjectBuildMachineTypeElastic(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
+			// Create with a concrete (fixed) build machine type, then
+			// transition to elastic. The transition step pins down the
+			// request payload: the API treats `buildMachineType: "elastic"`
+			// as the elastic trigger and ignores `buildMachineSelection`
+			// from the request body, so the provider must send the value
+			// through `buildMachineType`.
 			{
-				Config: cfg(testAccProjectConfigWithElasticBuildMachine(projectSuffix)),
+				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "enhanced")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "enhanced"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "elastic")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "elastic"),
 				),
 			},
 			{
-				Config: cfg(testAccProjectConfigWithElasticBuildMachine(projectSuffix)),
+				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "elastic")),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -691,13 +704,13 @@ resource "vercel_project" "test" {
 `, projectSuffix)
 }
 
-func testAccProjectConfigWithElasticBuildMachine(projectSuffix string) string {
+func testAccProjectConfigWithBuildMachineType(projectSuffix, buildMachineType string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
-  name = "test-acc-elastic-build-machine-%s"
-  build_machine_type = "elastic"
+  name = "test-acc-build-machine-%s"
+  build_machine_type = %q
 }
-`, projectSuffix)
+`, projectSuffix, buildMachineType)
 }
 
 func testAccProjectConfigWithoutEnv(projectSuffix string) string {
