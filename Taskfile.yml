@@ -30,7 +30,7 @@ tasks:
     cmds:
       - go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.25.0
     status:
-      - which tfplugindocs
+      - go version -m "$(command -v tfplugindocs)" | grep -Eq '^\s*mod\s+github.com/hashicorp/terraform-plugin-docs\s+v0\.25\.0\s'
 
   install-goreleaser:
     desc: "Install goreleaser"
@@ -44,7 +44,7 @@ tasks:
     deps:
       - install-tfplugindocs
     cmds:
-      - tfplugindocs generate --provider-name terraform-provider-vercel
+      - tfplugindocs generate --provider-name terraform-provider-vercel --tf-version 1.14.9
       - sed -i.bak 's/vercel Provider/Vercel Provider/g' docs/index.md
       - rm docs/index.md.bak
     sources:
