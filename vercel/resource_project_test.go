@@ -412,6 +412,31 @@ func TestAcc_ProjectUpdateResourceConfig(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectBuildMachineTypeElastic(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectConfigWithElasticBuildMachine(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "elastic"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithElasticBuildMachine(projectSuffix)),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func TestAcc_ProjectWithGitRepository(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
@@ -662,6 +687,15 @@ resource "vercel_project" "test" {
     function_default_timeout = 30
     fluid = false
   }
+}
+`, projectSuffix)
+}
+
+func testAccProjectConfigWithElasticBuildMachine(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-elastic-build-machine-%s"
+  build_machine_type = "elastic"
 }
 `, projectSuffix)
 }

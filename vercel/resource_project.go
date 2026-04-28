@@ -1390,7 +1390,11 @@ func (r *ResourceConfig) toClientResourceConfig(ctx context.Context, onDemandCon
 		if resourceConfig == nil {
 			resourceConfig = &client.ResourceConfig{}
 		}
-		resourceConfig.BuildMachineType = buildMachineType.ValueStringPointer()
+		if buildMachineType.ValueString() == "elastic" {
+			resourceConfig.BuildMachineSelection = buildMachineType.ValueStringPointer()
+		} else {
+			resourceConfig.BuildMachineType = buildMachineType.ValueStringPointer()
+		}
 	}
 	return resourceConfig
 }

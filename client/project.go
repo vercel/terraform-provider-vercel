@@ -262,6 +262,7 @@ type ResourceConfig struct {
 	Fluid                     *bool    `json:"fluid,omitempty"`
 	ElasticConcurrencyEnabled *bool    `json:"elasticConcurrencyEnabled,omitempty"`
 	BuildMachineType          *string  `json:"buildMachineType,omitempty"`
+	BuildMachineSelection     *string  `json:"buildMachineSelection,omitempty"`
 }
 
 // normalizeBuildMachineType collapses the API's (buildMachineType, buildMachineSelection)
