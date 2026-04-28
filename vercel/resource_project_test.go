@@ -1249,6 +1249,7 @@ func TestAcc_ProjectGitProviderOptions(t *testing.T) {
 					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.create_deployments", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.repository_dispatch_events", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.git_commit_status", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.consolidated_git_commit_status.enabled", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.consolidated_git_commit_status.propagate_failures", "true"),
 				),
@@ -1259,6 +1260,7 @@ func TestAcc_ProjectGitProviderOptions(t *testing.T) {
 					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.create_deployments", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.repository_dispatch_events", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.git_commit_status", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.consolidated_git_commit_status.enabled", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.consolidated_git_commit_status.propagate_failures", "false"),
 				),
@@ -1278,6 +1280,7 @@ resource "vercel_project" "test" {
   git_provider_options = {
     create_deployments = true
     repository_dispatch_events = false
+    git_commit_status = true
     consolidated_git_commit_status = {
       enabled = true
       propagate_failures = true
@@ -1298,6 +1301,7 @@ resource "vercel_project" "test" {
   git_provider_options = {
     create_deployments = false
     repository_dispatch_events = true
+    git_commit_status = false
     consolidated_git_commit_status = {
       enabled = false
       propagate_failures = false

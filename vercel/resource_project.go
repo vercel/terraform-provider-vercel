@@ -705,6 +705,7 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 		(!p.TrustedIps.IsNull() && !p.TrustedIps.IsUnknown()) ||
 		(!p.OIDCTokenConfig.IsNull() && !p.OIDCTokenConfig.IsUnknown()) ||
 		(!p.OptionsAllowlist.IsNull() && !p.OptionsAllowlist.IsUnknown()) ||
+		(!p.GitProviderOptions.IsNull() && !p.GitProviderOptions.IsUnknown()) ||
 		!p.AutoExposeSystemEnvVars.IsNull() ||
 		p.GitComments.IsNull() ||
 		(!p.AutoAssignCustomDomains.IsNull() && !p.AutoAssignCustomDomains.ValueBool()) ||
