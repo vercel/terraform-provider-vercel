@@ -1443,11 +1443,11 @@ func (r *ResourceConfig) toClientResourceConfig(ctx context.Context, onDemandCon
 		if resourceConfig == nil {
 			resourceConfig = &client.ResourceConfig{}
 		}
-		if buildMachineType.ValueString() == "elastic" {
-			resourceConfig.BuildMachineSelection = buildMachineType.ValueStringPointer()
-		} else {
-			resourceConfig.BuildMachineType = buildMachineType.ValueStringPointer()
-		}
+		// Always send the user's value through `buildMachineType`, including
+		// "elastic". The API treats `buildMachineType: "elastic"` as the
+		// elastic-mode trigger and writes `buildMachineSelection: "elastic"`
+		// itself; it ignores `buildMachineSelection` from the request body.
+		resourceConfig.BuildMachineType = buildMachineType.ValueStringPointer()
 	}
 	return resourceConfig
 }
