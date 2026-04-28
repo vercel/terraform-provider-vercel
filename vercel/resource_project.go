@@ -467,6 +467,26 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Optional:            true,
 						Computed:            true,
 					},
+					"git_commit_status": schema.BoolAttribute{
+						MarkdownDescription: "Whether Vercel should post git commit statuses for this project. Defaults to `true` when unset.",
+						Optional:            true,
+						Computed:            true,
+					},
+					"consolidated_git_commit_status": schema.SingleNestedAttribute{
+						MarkdownDescription: "**Beta:** Configuration for consolidated git commit status reporting. When enabled, Vercel posts a single consolidated commit status instead of one per deployment. This feature is in beta and may change in backwards-incompatible ways.",
+						Optional:            true,
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								MarkdownDescription: "**Beta:** Whether consolidated commit status is enabled.",
+								Required:            true,
+							},
+							"propagate_failures": schema.BoolAttribute{
+								MarkdownDescription: "**Beta:** Whether to propagate individual deployment failures to the consolidated status.",
+								Required:            true,
+							},
+						},
+					},
 				},
 			},
 			"preview_comments": schema.BoolAttribute{
@@ -685,6 +705,7 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 		(!p.TrustedIps.IsNull() && !p.TrustedIps.IsUnknown()) ||
 		(!p.OIDCTokenConfig.IsNull() && !p.OIDCTokenConfig.IsUnknown()) ||
 		(!p.OptionsAllowlist.IsNull() && !p.OptionsAllowlist.IsUnknown()) ||
+		(!p.GitProviderOptions.IsNull() && !p.GitProviderOptions.IsUnknown()) ||
 		!p.AutoExposeSystemEnvVars.IsNull() ||
 		p.GitComments.IsNull() ||
 		(!p.AutoAssignCustomDomains.IsNull() && !p.AutoAssignCustomDomains.ValueBool()) ||
@@ -830,9 +851,9 @@ func (p *Project) gitProviderOptionsObj(ctx context.Context) (*GitProviderOption
 	return &gpo, nil
 }
 
-func (g *GitProviderOptions) toUpdateProjectRequest() *client.GitProviderOptions {
+func (g *GitProviderOptions) toUpdateProjectRequest(ctx context.Context) (*client.GitProviderOptions, diag.Diagnostics) {
 	if g == nil {
-		return nil
+		return nil, nil
 	}
 	var createDeployments *string
 	if !g.CreateDeployments.IsNull() && !g.CreateDeployments.IsUnknown() {
@@ -847,11 +868,25 @@ func (g *GitProviderOptions) toUpdateProjectRequest() *client.GitProviderOptions
 		val := !g.RepositoryDispatchEvents.ValueBool()
 		disableRepositoryDispatchEvents = &val
 	}
+	var consolidated *client.ConsolidatedGitCommitStatus
+	if !g.ConsolidatedGitCommitStatus.IsNull() && !g.ConsolidatedGitCommitStatus.IsUnknown() {
+		var c ConsolidatedGitCommitStatus
+		diags := g.ConsolidatedGitCommitStatus.As(ctx, &c, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+		if diags.HasError() {
+			return nil, diags
+		}
+		consolidated = &client.ConsolidatedGitCommitStatus{
+			Enabled:           c.Enabled.ValueBool(),
+			PropagateFailures: c.PropagateFailures.ValueBool(),
+		}
+	}
 	return &client.GitProviderOptions{
 		RequireVerifiedCommits:          g.RequireVerifiedCommits.ValueBoolPointer(),
 		CreateDeployments:               createDeployments,
 		DisableRepositoryDispatchEvents: disableRepositoryDispatchEvents,
-	}
+		GitCommitStatus:                 g.GitCommitStatus.ValueBoolPointer(),
+		ConsolidatedGitCommitStatus:     consolidated,
+	}, nil
 }
 
 func (p *Project) toCreateProjectRequest(ctx context.Context, envs []EnvironmentItem) (req client.CreateProjectRequest, diags diag.Diagnostics) {
@@ -962,6 +997,8 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	diags.Append(d4...)
 	gpo, d5 := p.gitProviderOptionsObj(ctx)
 	diags.Append(d5...)
+	gpoReq, d6 := gpo.toUpdateProjectRequest(ctx)
+	diags.Append(d6...)
 	if diags.HasError() {
 		return req, diags
 	}
@@ -995,7 +1032,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		DirectoryListing:                     p.DirectoryListing.ValueBool(),
 		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
 		GitComments:                          gc.toUpdateProjectRequest(),
-		GitProviderOptions:                   gpo.toUpdateProjectRequest(),
+		GitProviderOptions:                   gpoReq,
 		ResourceConfig:                       resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		NodeVersion:                          p.NodeVersion.ValueString(),
 	}, nil
@@ -1307,18 +1344,34 @@ var optionsAllowlistAttrType = types.ObjectType{
 	},
 }
 
+var consolidatedGitCommitStatusAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"enabled":            types.BoolType,
+		"propagate_failures": types.BoolType,
+	},
+}
+
 var gitProviderOptionsAttrType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
-		"require_verified_commits":   types.BoolType,
-		"create_deployments":         types.BoolType,
-		"repository_dispatch_events": types.BoolType,
+		"require_verified_commits":       types.BoolType,
+		"create_deployments":             types.BoolType,
+		"repository_dispatch_events":     types.BoolType,
+		"git_commit_status":              types.BoolType,
+		"consolidated_git_commit_status": consolidatedGitCommitStatusAttrType,
 	},
 }
 
 type GitProviderOptions struct {
-	RequireVerifiedCommits   types.Bool `tfsdk:"require_verified_commits"`
-	CreateDeployments        types.Bool `tfsdk:"create_deployments"`
-	RepositoryDispatchEvents types.Bool `tfsdk:"repository_dispatch_events"`
+	RequireVerifiedCommits      types.Bool   `tfsdk:"require_verified_commits"`
+	CreateDeployments           types.Bool   `tfsdk:"create_deployments"`
+	RepositoryDispatchEvents    types.Bool   `tfsdk:"repository_dispatch_events"`
+	GitCommitStatus             types.Bool   `tfsdk:"git_commit_status"`
+	ConsolidatedGitCommitStatus types.Object `tfsdk:"consolidated_git_commit_status"`
+}
+
+type ConsolidatedGitCommitStatus struct {
+	Enabled           types.Bool `tfsdk:"enabled"`
+	PropagateFailures types.Bool `tfsdk:"propagate_failures"`
 }
 
 type ResourceConfig struct {
@@ -1743,10 +1796,19 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		if response.GitProviderOptions.DisableRepositoryDispatchEvents != nil {
 			repositoryDispatchEvents = types.BoolValue(!*response.GitProviderOptions.DisableRepositoryDispatchEvents)
 		}
+		consolidated := types.ObjectNull(consolidatedGitCommitStatusAttrType.AttrTypes)
+		if response.GitProviderOptions.ConsolidatedGitCommitStatus != nil {
+			consolidated = types.ObjectValueMust(consolidatedGitCommitStatusAttrType.AttrTypes, map[string]attr.Value{
+				"enabled":            types.BoolValue(response.GitProviderOptions.ConsolidatedGitCommitStatus.Enabled),
+				"propagate_failures": types.BoolValue(response.GitProviderOptions.ConsolidatedGitCommitStatus.PropagateFailures),
+			})
+		}
 		gitProviderOptions = types.ObjectValueMust(gitProviderOptionsAttrType.AttrTypes, map[string]attr.Value{
-			"require_verified_commits":   types.BoolPointerValue(response.GitProviderOptions.RequireVerifiedCommits),
-			"create_deployments":         createDeployments,
-			"repository_dispatch_events": repositoryDispatchEvents,
+			"require_verified_commits":       types.BoolPointerValue(response.GitProviderOptions.RequireVerifiedCommits),
+			"create_deployments":             createDeployments,
+			"repository_dispatch_events":     repositoryDispatchEvents,
+			"git_commit_status":              types.BoolPointerValue(response.GitProviderOptions.GitCommitStatus),
+			"consolidated_git_commit_status": consolidated,
 		})
 	}
 
