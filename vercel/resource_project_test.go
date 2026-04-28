@@ -412,6 +412,40 @@ func TestAcc_ProjectUpdateResourceConfig(t *testing.T) {
 	})
 }
 
+// Regression: when a project's API response had no `buildMachineType`,
+// the Read path stored it in state as `types.StringValue("")`. On any
+// subsequent update — including ones that didn't touch the build machine
+// — the provider forwarded that empty string to the API, which rejects
+// `buildMachineType: ""` (allowed values are null, "enhanced", "turbo",
+// "standard", "elastic"). The fix is to omit empty/null values from the
+// request payload.
+//
+// This test exercises the create → update lifecycle without ever setting
+// `build_machine_type`. The update step changes `root_directory`, which
+// goes through the same `toClientResourceConfig` path that previously
+// forwarded the empty `build_machine_type` from state.
+func TestAcc_ProjectBuildMachineTypeUnsetUpdate(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectConfigWithoutBuildMachineType(projectSuffix, "")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithoutBuildMachineType(projectSuffix, "apps/web")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "root_directory", "apps/web"),
+				),
+			},
+		},
+	})
+}
+
 func TestAcc_ProjectBuildMachineTypeElastic(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
@@ -711,6 +745,18 @@ resource "vercel_project" "test" {
   build_machine_type = %q
 }
 `, projectSuffix, buildMachineType)
+}
+
+func testAccProjectConfigWithoutBuildMachineType(projectSuffix, rootDirectory string) string {
+	rootDirectoryAttr := ""
+	if rootDirectory != "" {
+		rootDirectoryAttr = fmt.Sprintf("\n  root_directory = %q", rootDirectory)
+	}
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-build-machine-unset-%s"%s
+}
+`, projectSuffix, rootDirectoryAttr)
 }
 
 func testAccProjectConfigWithoutEnv(projectSuffix string) string {

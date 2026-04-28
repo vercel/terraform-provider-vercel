@@ -1439,14 +1439,17 @@ func (r *ResourceConfig) toClientResourceConfig(ctx context.Context, onDemandCon
 		}
 		resourceConfig.ElasticConcurrencyEnabled = onDemandConcurrentBuilds.ValueBoolPointer()
 	}
-	if !buildMachineType.IsUnknown() {
+	// The API rejects an explicit `buildMachineType: ""` (allowed values are
+	// null, "enhanced", "turbo", "standard", "elastic"). Adopted projects
+	// can land in state with an empty string when the API returned no
+	// value, so only forward concrete, non-empty values. The "elastic" case
+	// goes through `buildMachineType` too — the API treats that value as
+	// the elastic-mode trigger and writes `buildMachineSelection: "elastic"`
+	// itself; it ignores `buildMachineSelection` from the request body.
+	if !buildMachineType.IsUnknown() && !buildMachineType.IsNull() && buildMachineType.ValueString() != "" {
 		if resourceConfig == nil {
 			resourceConfig = &client.ResourceConfig{}
 		}
-		// Always send the user's value through `buildMachineType`, including
-		// "elastic". The API treats `buildMachineType: "elastic"` as the
-		// elastic-mode trigger and writes `buildMachineSelection: "elastic"`
-		// itself; it ignores `buildMachineSelection` from the request body.
 		resourceConfig.BuildMachineType = buildMachineType.ValueStringPointer()
 	}
 	return resourceConfig
