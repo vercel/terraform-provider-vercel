@@ -1439,7 +1439,11 @@ func (r *ResourceConfig) toClientResourceConfig(ctx context.Context, onDemandCon
 		}
 		resourceConfig.ElasticConcurrencyEnabled = onDemandConcurrentBuilds.ValueBoolPointer()
 	}
-	if !buildMachineType.IsUnknown() {
+	// The API rejects an explicit `buildMachineType: ""` (allowed values are
+	// null, "enhanced", "turbo", "standard", "elastic"). Adopted projects can
+	// land in state with an empty string when the API returned no value, so
+	// only forward concrete, non-empty values.
+	if !buildMachineType.IsUnknown() && !buildMachineType.IsNull() && buildMachineType.ValueString() != "" {
 		if resourceConfig == nil {
 			resourceConfig = &client.ResourceConfig{}
 		}
