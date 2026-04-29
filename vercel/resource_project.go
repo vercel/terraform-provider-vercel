@@ -1697,6 +1697,12 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 			"fluid":                     types.BoolValue(response.ResourceConfig.Fluid),
 		})
 	}
+	onDemandConcurrentBuilds := types.BoolNull()
+	buildMachineType := types.StringNull()
+	if response.ResourceConfig != nil {
+		onDemandConcurrentBuilds = types.BoolValue(response.ResourceConfig.ElasticConcurrencyEnabled)
+		buildMachineType = types.StringValue(response.ResourceConfig.BuildMachineType)
+	}
 
 	// Options allowlist
 	oalObj := types.ObjectNull(optionsAllowlistAttrType.AttrTypes)
@@ -1753,7 +1759,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 				if diags.HasError() {
 					return Project{}, fmt.Errorf("error reading project environment variables: %s", diags)
 				}
-				if p.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) {
+				if p.Key.ValueString() == e.Key && isSameStringSet(target, e.Target) && isSameStringSet(customEnvironmentIDs, e.CustomEnvironmentIDs) && strPtrEqual(p.GitBranch.ValueStringPointer(), e.GitBranch) {
 					value = p.Value
 					break
 				}
@@ -1854,8 +1860,8 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		GitProviderOptions:                gitProviderOptions,
 		ResourceConfig:                    resourceConfig,
 		NodeVersion:                       types.StringValue(response.NodeVersion),
-		OnDemandConcurrentBuilds:          types.BoolValue(response.ResourceConfig.ElasticConcurrencyEnabled),
-		BuildMachineType:                  types.StringValue(response.ResourceConfig.BuildMachineType),
+		OnDemandConcurrentBuilds:          onDemandConcurrentBuilds,
+		BuildMachineType:                  buildMachineType,
 	}, nil
 }
 

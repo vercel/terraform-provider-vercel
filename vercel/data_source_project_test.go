@@ -37,10 +37,11 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "options_allowlist.paths.0.value", "/api"),
 
 					resource.TestCheckTypeSetElemNestedAttrs("data.vercel_project.test", "environment.*", map[string]string{
-						"key":   "foo",
-						"value": "bar",
+						"key":      "foo",
+						"value":    "bar",
+						"target.#": "1",
+						"target.0": "production",
 					}),
-					resource.TestCheckTypeSetElemAttr("data.vercel_project.test", "environment.0.target.*", "production"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "git_comments.on_pull_request", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "git_comments.on_commit", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "preview_comments", "true"),
