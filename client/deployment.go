@@ -221,8 +221,7 @@ func (c *Client) CreateDeployment(ctx context.Context, request CreateDeploymentR
 	payload := string(mustMarshal(request))
 
 	tflog.Info(ctx, "creating deployment", map[string]any{
-		"url":     url,
-		"payload": payload,
+		"url": url,
 	})
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,

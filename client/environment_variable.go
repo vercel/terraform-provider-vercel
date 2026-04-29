@@ -37,8 +37,7 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 	payload := string(mustMarshal(request.EnvironmentVariable))
 
 	tflog.Info(ctx, "creating environment variable", map[string]any{
-		"url":     url,
-		"payload": payload,
+		"url": url,
 	})
 	var response CreateEnvironmentVariableResponse
 	err = c.doRequest(clientRequest{
@@ -98,7 +97,7 @@ func (c *Client) CreateEnvironmentVariable(ctx context.Context, request CreateEn
 				return e, fmt.Errorf("failed to create environment variable, %s", msg)
 			}
 		}
-		return e, fmt.Errorf("%w - %s", err, payload)
+		return e, err
 	}
 	response.Created.Value = request.EnvironmentVariable.Value
 	response.Created.TeamID = c.TeamID(request.TeamID)
@@ -258,7 +257,7 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 				return nil, fmt.Errorf("failed to create environment variables, %s", strings.Join(uniq, "; "))
 			}
 		}
-		return nil, fmt.Errorf("%w - %s", err, payload)
+		return nil, err
 	}
 
 	decrypted := false
@@ -327,8 +326,7 @@ func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEn
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "updating environment variable", map[string]any{
-		"url":     url,
-		"payload": payload,
+		"url": url,
 	})
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,

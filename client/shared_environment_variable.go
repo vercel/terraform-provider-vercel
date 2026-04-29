@@ -68,8 +68,7 @@ func (c *Client) CreateSharedEnvironmentVariable(ctx context.Context, request Cr
 	}
 	payload := string(mustMarshal(request.EnvironmentVariable))
 	tflog.Info(ctx, "creating shared environment variable", map[string]any{
-		"url":     url,
-		"payload": payload,
+		"url": url,
 	})
 	var response struct {
 		Created []SharedEnvironmentVariableResponse `json:"created"`
@@ -196,8 +195,7 @@ func (c *Client) UpdateSharedEnvironmentVariable(ctx context.Context, request Up
 	}))
 
 	tflog.Info(ctx, "updating shared environment variable", map[string]any{
-		"url":     url,
-		"payload": payload,
+		"url": url,
 	})
 	var response struct {
 		Updated []SharedEnvironmentVariableResponse `json:"updated"`
