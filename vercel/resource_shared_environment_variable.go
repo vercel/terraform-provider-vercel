@@ -407,8 +407,12 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx
 	if value == "" {
 		value = valueWO.ValueString()
 	}
+	var applyToAllCustomEnvironments *bool
+	if !e.ApplyToAllCustomEnvironments.IsNull() && !e.ApplyToAllCustomEnvironments.IsUnknown() {
+		applyToAllCustomEnvironments = e.ApplyToAllCustomEnvironments.ValueBoolPointer()
+	}
 	return client.UpdateSharedEnvironmentVariableRequest{
-		ApplyToAllCustomEnvironments: e.ApplyToAllCustomEnvironments.ValueBool(),
+		ApplyToAllCustomEnvironments: applyToAllCustomEnvironments,
 		Value:                        value,
 		Target:                       target,
 		Type:                         envVariableType,

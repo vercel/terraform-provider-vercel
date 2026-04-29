@@ -175,7 +175,7 @@ type UpdateSharedEnvironmentVariableRequest struct {
 	Type                         string                                                 `json:"type,omitempty"`
 	ProjectIDs                   []string                                               `json:"projectId,omitempty"`
 	ProjectIDUpdates             UpdateSharedEnvironmentVariableRequestProjectIDUpdates `json:"projectIdUpdates,omitempty"`
-	ApplyToAllCustomEnvironments bool                                                   `json:"applyToAllCustomEnvironments,omitempty"`
+	ApplyToAllCustomEnvironments *bool                                                  `json:"applyToAllCustomEnvironments,omitempty"`
 	Target                       []string                                               `json:"target,omitempty"`
 	Comment                      string                                                 `json:"comment,omitempty"`
 	TeamID                       string                                                 `json:"-"`
