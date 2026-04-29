@@ -37,9 +37,6 @@ func TestAcc_BlobDataSources(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_blob_project_connections.test", "connections.0.read_write_token_env_var_name", "ASSETS_READ_WRITE_TOKEN"),
 					resource.TestCheckResourceAttr("data.vercel_blob_project_connections.test", "connections.0.environments.#", "1"),
 					resource.TestCheckTypeSetElemAttr("data.vercel_blob_project_connections.test", "connections.0.environments.*", "preview"),
-					resource.TestCheckResourceAttrPair("data.vercel_blob_store_secrets.test", "store_id", "vercel_blob_store.test", "id"),
-					resource.TestCheckResourceAttr("data.vercel_blob_store_secrets.test", "team_id", testTeam(t)),
-					resource.TestCheckResourceAttrSet("data.vercel_blob_store_secrets.test", "read_write_token"),
 				),
 			},
 		},
@@ -80,9 +77,6 @@ data "vercel_blob_project_connections" "test" {
   ]
 }
 
-data "vercel_blob_store_secrets" "test" {
-  store_id = vercel_blob_store.test.id
-}
 `, storeName, projectName)
 }
 

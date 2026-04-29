@@ -121,6 +121,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						"value": schema.StringAttribute{
 							Description: "The value of the environment variable.",
 							Computed:    true,
+							Sensitive:   true,
 						},
 						"id": schema.StringAttribute{
 							Description: "The ID of the environment variable",
