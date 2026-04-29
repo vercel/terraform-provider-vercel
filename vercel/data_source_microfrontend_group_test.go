@@ -35,6 +35,8 @@ func TestAcc_MicrofrontendGroupDataSource(t *testing.T) {
 						id = vercel_microfrontend_group.test_group.id
 					}
 					data "vercel_microfrontend_group_membership" "test_child" {
+						depends_on = [vercel_microfrontend_group_membership.test_child]
+
 						microfrontend_group_id = vercel_microfrontend_group.test_group.id
 						project_id = vercel_project.test_project_2.id
 					}

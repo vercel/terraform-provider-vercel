@@ -97,7 +97,13 @@ func (d *microfrontendGroupMembershipDataSource) Read(ctx context.Context, req d
 		config.ProjectID.ValueString(),
 	)
 	if client.NotFound(err) {
-		resp.State.RemoveResource(ctx)
+		resp.Diagnostics.AddError(
+			"Microfrontend group membership not found",
+			fmt.Sprintf("Could not find microfrontend group membership for project %s in group %s",
+				config.ProjectID.ValueString(),
+				config.MicrofrontendGroupID.ValueString(),
+			),
+		)
 		return
 	}
 	if err != nil {
