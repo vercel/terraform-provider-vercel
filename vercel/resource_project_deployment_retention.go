@@ -304,6 +304,7 @@ func (r *projectDeploymentRetentionResource) ImportState(ctx context.Context, re
 			"Error importing project deployment retention",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id\" or \"project_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetDeploymentRetention(ctx, projectID, teamID)

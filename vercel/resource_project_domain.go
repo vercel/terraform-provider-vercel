@@ -348,6 +348,7 @@ func (r *projectDomainResource) ImportState(ctx context.Context, req resource.Im
 			"Error importing project domain",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id/domain\" or \"project_id/domain\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetProjectDomain(ctx, projectID, domain, teamID)

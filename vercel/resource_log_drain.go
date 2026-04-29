@@ -384,6 +384,7 @@ func (r *logDrainResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing Log Drain",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/log_drain_id\" or \"log_drain_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetLogDrain(ctx, id, teamID)

@@ -322,6 +322,7 @@ func (r *microfrontendGroupMembershipResource) ImportState(ctx context.Context, 
 			"Error importing Microfrontend Group Membership",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/microfrontend_id/project_id\" or \"microfrontend_id/project_id\"", req.ID),
 		)
+		return
 	}
 	out, err := r.client.GetMicrofrontendGroupMembership(ctx, teamID, microfrontendID, projectID)
 	if client.NotFound(err) {

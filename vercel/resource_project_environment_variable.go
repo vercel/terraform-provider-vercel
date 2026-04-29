@@ -571,6 +571,7 @@ func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, re
 			"Error importing project environment variable",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id/env_id\" or \"project_id/env_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetEnvironmentVariable(ctx, projectID, teamID, envID)

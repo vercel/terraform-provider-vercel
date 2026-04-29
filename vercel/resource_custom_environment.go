@@ -352,6 +352,7 @@ func (r *customEnvironmentResource) ImportState(ctx context.Context, req resourc
 			"Error importing Custom Environment",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id/custom_environment_name\" or \"project_id/custom_environment_name\"", req.ID),
 		)
+		return
 	}
 	res, err := r.client.GetCustomEnvironment(ctx, client.GetCustomEnvironmentRequest{
 		TeamID:    teamID,
@@ -360,6 +361,7 @@ func (r *customEnvironmentResource) ImportState(ctx context.Context, req resourc
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
+		return
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(

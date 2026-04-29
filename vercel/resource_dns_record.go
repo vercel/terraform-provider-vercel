@@ -576,6 +576,7 @@ func (r *dnsRecordResource) ImportState(ctx context.Context, req resource.Import
 			"Error importing DNS Record",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/record_id\" or \"record_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetDNSRecord(ctx, recordID, teamID)
@@ -601,6 +602,7 @@ func (r *dnsRecordResource) ImportState(ctx context.Context, req resource.Import
 				err,
 			),
 		)
+		return
 	}
 
 	diags := resp.State.Set(ctx, result)

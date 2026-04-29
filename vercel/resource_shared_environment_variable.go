@@ -621,6 +621,7 @@ func (r *sharedEnvironmentVariableResource) ImportState(ctx context.Context, req
 			"Error importing shared environment variable",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/env_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetSharedEnvironmentVariable(ctx, teamID, envID)

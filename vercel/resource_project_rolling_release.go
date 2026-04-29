@@ -634,6 +634,7 @@ func (r *projectRollingReleaseResource) ImportState(ctx context.Context, req res
 			"Error importing project rolling release",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id\" or \"project_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetRollingRelease(ctx, projectID, teamID)
