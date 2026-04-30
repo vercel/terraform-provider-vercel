@@ -74,8 +74,7 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "creating project", map[string]any{
-		"url":     url,
-		"payload": payload,
+		"url": url,
 	})
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
@@ -388,8 +387,7 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 	}
 	payload := string(mustMarshal(request))
 	tflog.Info(ctx, "updating project", map[string]any{
-		"url":     url,
-		"payload": payload,
+		"url": url,
 	})
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
