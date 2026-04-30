@@ -706,17 +706,17 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 		(!p.OIDCTokenConfig.IsNull() && !p.OIDCTokenConfig.IsUnknown()) ||
 		(!p.OptionsAllowlist.IsNull() && !p.OptionsAllowlist.IsUnknown()) ||
 		(!p.GitProviderOptions.IsNull() && !p.GitProviderOptions.IsUnknown()) ||
-		!p.AutoExposeSystemEnvVars.IsNull() ||
-		p.GitComments.IsNull() ||
-		(!p.AutoAssignCustomDomains.IsNull() && !p.AutoAssignCustomDomains.ValueBool()) ||
-		!p.GitLFS.IsNull() ||
-		!p.FunctionFailover.IsNull() ||
-		!p.CustomerSuccessCodeVisibility.IsNull() ||
-		(!p.GitForkProtection.IsNull() && !p.GitForkProtection.ValueBool()) ||
-		!p.PrioritiseProductionBuilds.IsNull() ||
-		!p.DirectoryListing.IsNull() ||
-		!p.SkewProtection.IsNull() ||
-		!p.NodeVersion.IsNull()
+		knownBool(p.AutoExposeSystemEnvVars) ||
+		(!p.GitComments.IsNull() && !p.GitComments.IsUnknown()) ||
+		(knownBool(p.AutoAssignCustomDomains) && !p.AutoAssignCustomDomains.ValueBool()) ||
+		knownBool(p.GitLFS) ||
+		knownBool(p.FunctionFailover) ||
+		knownBool(p.CustomerSuccessCodeVisibility) ||
+		(knownBool(p.GitForkProtection) && !p.GitForkProtection.ValueBool()) ||
+		knownBool(p.PrioritiseProductionBuilds) ||
+		knownBool(p.DirectoryListing) ||
+		knownString(p.SkewProtection) ||
+		knownString(p.NodeVersion)
 }
 
 var nullProject = Project{
@@ -965,6 +965,14 @@ func oneBoolPointer(a, b types.Bool) *bool {
 	return nil
 }
 
+func knownBool(v types.Bool) bool {
+	return !v.IsNull() && !v.IsUnknown()
+}
+
+func knownString(v types.String) bool {
+	return !v.IsNull() && !v.IsUnknown()
+}
+
 func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (req client.UpdateProjectRequest, diags diag.Diagnostics) {
 	var name *string = nil
 	if oldName != p.Name.ValueString() {
@@ -972,12 +980,14 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		name = &n
 	}
 	var gc *GitComments
-	diags = p.GitComments.As(ctx, &gc, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    true,
-		UnhandledUnknownAsEmpty: true,
-	})
-	if diags.HasError() {
-		return req, diags
+	if !p.GitComments.IsNull() && !p.GitComments.IsUnknown() {
+		diags = p.GitComments.As(ctx, &gc, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    true,
+			UnhandledUnknownAsEmpty: true,
+		})
+		if diags.HasError() {
+			return req, diags
+		}
 	}
 	resourceConfig, diags := p.resourceConfig(ctx)
 	if diags.HasError() {
@@ -1414,10 +1424,10 @@ func (r *ResourceConfig) toClientResourceConfig(ctx context.Context, onDemandCon
 	if r != nil {
 		resourceConfig = &client.ResourceConfig{}
 	}
-	if r != nil && !r.FunctionDefaultCPUType.IsUnknown() {
+	if r != nil && !r.FunctionDefaultCPUType.IsUnknown() && !r.FunctionDefaultCPUType.IsNull() {
 		resourceConfig.FunctionDefaultMemoryType = r.FunctionDefaultCPUType.ValueStringPointer()
 	}
-	if r != nil && !r.FunctionDefaultTimeout.IsUnknown() {
+	if r != nil && !r.FunctionDefaultTimeout.IsUnknown() && !r.FunctionDefaultTimeout.IsNull() {
 		resourceConfig.FunctionDefaultTimeout = r.FunctionDefaultTimeout.ValueInt64Pointer()
 	}
 	if r != nil && !r.FunctionDefaultRegions.IsUnknown() && !r.FunctionDefaultRegions.IsNull() {
@@ -1430,10 +1440,10 @@ func (r *ResourceConfig) toClientResourceConfig(ctx context.Context, onDemandCon
 		}
 		resourceConfig.FunctionDefaultRegions = []string{serverlessFunctionRegion.ValueString()}
 	}
-	if r != nil && !r.Fluid.IsUnknown() {
+	if r != nil && !r.Fluid.IsUnknown() && !r.Fluid.IsNull() {
 		resourceConfig.Fluid = r.Fluid.ValueBoolPointer()
 	}
-	if !onDemandConcurrentBuilds.IsUnknown() {
+	if !onDemandConcurrentBuilds.IsUnknown() && !onDemandConcurrentBuilds.IsNull() {
 		if resourceConfig == nil {
 			resourceConfig = &client.ResourceConfig{}
 		}
