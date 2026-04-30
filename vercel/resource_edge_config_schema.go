@@ -60,8 +60,9 @@ An Edge Config Schema provides an existing Edge Config with a JSON schema. Use s
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description:   "The ID of the Edge Config that the schema should apply to.",
-				Required:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"definition": schema.StringAttribute{
 				Required:    true,
@@ -104,6 +105,14 @@ func (r *edgeConfigSchemaResource) Create(ctx context.Context, req resource.Crea
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.ID.IsNull() || plan.ID.IsUnknown() || plan.ID.ValueString() == "" {
+		resp.Diagnostics.AddError(
+			"Missing required field",
+			"The 'id' field is required and must be set to the Edge Config ID.",
+		)
 		return
 	}
 
