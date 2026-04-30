@@ -46,11 +46,6 @@ type PutBlobObjectRequest struct {
 }
 
 func (c *Client) GetBlobObject(ctx context.Context, request GetBlobObjectRequest) (object BlobObject, err error) {
-	secrets, err := c.GetBlobStoreSecrets(ctx, request.StoreID, request.TeamID)
-	if err != nil {
-		return object, err
-	}
-
 	query := url.Values{}
 	query.Set("url", request.Pathname)
 	endpoint := fmt.Sprintf("%s?%s", blobDataPlaneURL, query.Encode())
@@ -62,11 +57,9 @@ func (c *Client) GetBlobObject(ctx context.Context, request GetBlobObjectRequest
 	})
 
 	requestID := blobDataPlaneRequestID(request.StoreID)
-	headers := map[string]string{
-		"Authorization":         fmt.Sprintf("Bearer %s", secrets.ReadWriteToken),
-		"x-api-version":         blobDataPlaneAPIVersion,
-		"x-api-blob-request-id": requestID,
-	}
+	headers := c.blobDataPlaneHeaders(request.StoreID, request.TeamID)
+	headers["x-api-version"] = blobDataPlaneAPIVersion
+	headers["x-api-blob-request-id"] = requestID
 
 	for attempt := 1; attempt <= blobDataPlaneTransientAttempts; attempt++ {
 		headers["x-api-blob-request-attempt"] = strconv.Itoa(attempt - 1)
@@ -98,23 +91,16 @@ func (c *Client) PutBlobObject(ctx context.Context, request PutBlobObjectRequest
 		return object, err
 	}
 
-	secrets, err := c.GetBlobStoreSecrets(ctx, request.StoreID, request.TeamID)
-	if err != nil {
-		return object, err
-	}
-
 	query := url.Values{}
 	query.Set("pathname", request.Pathname)
 	endpoint := fmt.Sprintf("%s?%s", blobDataPlaneURL, query.Encode())
 
-	headers := map[string]string{
-		"Authorization":         fmt.Sprintf("Bearer %s", secrets.ReadWriteToken),
-		"x-add-random-suffix":   "0",
-		"x-allow-overwrite":     "1",
-		"x-api-version":         blobDataPlaneAPIVersion,
-		"x-api-blob-request-id": blobDataPlaneRequestID(request.StoreID),
-		"x-vercel-blob-access":  store.Access,
-	}
+	headers := c.blobDataPlaneHeaders(request.StoreID, request.TeamID)
+	headers["x-add-random-suffix"] = "0"
+	headers["x-allow-overwrite"] = "1"
+	headers["x-api-version"] = blobDataPlaneAPIVersion
+	headers["x-api-blob-request-id"] = blobDataPlaneRequestID(request.StoreID)
+	headers["x-vercel-blob-access"] = store.Access
 	if request.ContentType != "" {
 		headers["x-content-type"] = request.ContentType
 	}
@@ -163,11 +149,6 @@ func (c *Client) PutBlobObject(ctx context.Context, request PutBlobObjectRequest
 }
 
 func (c *Client) DeleteBlobObject(ctx context.Context, storeID, pathname, teamID string) error {
-	secrets, err := c.GetBlobStoreSecrets(ctx, storeID, teamID)
-	if err != nil {
-		return err
-	}
-
 	endpoint := fmt.Sprintf("%s/delete", blobDataPlaneURL)
 	body := string(mustMarshal(struct {
 		URLs []string `json:"urls"`
@@ -187,11 +168,21 @@ func (c *Client) DeleteBlobObject(ctx context.Context, storeID, pathname, teamID
 		url:         endpoint,
 		body:        body,
 		contentType: "application/json",
-		headers: map[string]string{
-			"Authorization": fmt.Sprintf("Bearer %s", secrets.ReadWriteToken),
-			"x-api-version": blobDataPlaneAPIVersion,
-		},
+		headers:     c.blobDataPlaneHeaders(storeID, teamID),
 	}, nil)
+}
+
+func (c *Client) blobDataPlaneHeaders(storeID, teamID string) map[string]string {
+	headers := map[string]string{
+		"x-api-version":          blobDataPlaneAPIVersion,
+		"x-vercel-blob-store-id": strings.TrimPrefix(storeID, "store_"),
+	}
+
+	if resolvedTeamID := c.TeamID(teamID); resolvedTeamID != "" {
+		headers["x-vercel-blob-team-id"] = resolvedTeamID
+	}
+
+	return headers
 }
 
 func normalizeBlobObjectETag(etag string) string {
