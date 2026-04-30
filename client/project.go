@@ -212,6 +212,7 @@ type ProjectResponse struct {
 	GitProviderOptions                   *GitProviderOptionsResponse `json:"gitProviderOptions"`
 	Security                             *Security                   `json:"security"`
 	DeploymentExpiration                 *DeploymentExpiration       `json:"deploymentExpiration"`
+	DelegatedProtection                  *DelegatedProtection        `json:"delegatedProtection"`
 	ResourceConfig                       *ResourceConfigResponse     `json:"resourceConfig"`
 	NodeVersion                          string                      `json:"nodeVersion"`
 	Crons                                *ProjectCronsResponse       `json:"crons"`
