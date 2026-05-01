@@ -170,13 +170,13 @@ type UpdateSharedEnvironmentVariableRequestProjectIDUpdates struct {
 }
 
 type UpdateSharedEnvironmentVariableRequest struct {
-	Value                        string                                                 `json:"value,omitempty"`
-	Type                         string                                                 `json:"type,omitempty"`
-	ProjectIDs                   []string                                               `json:"projectId,omitempty"`
+	Value                        string                                                 `json:"value"`
+	Type                         string                                                 `json:"type"`
+	ProjectIDs                   []string                                               `json:"projectId"`
 	ProjectIDUpdates             UpdateSharedEnvironmentVariableRequestProjectIDUpdates `json:"projectIdUpdates,omitempty"`
-	ApplyToAllCustomEnvironments bool                                                   `json:"applyToAllCustomEnvironments,omitempty"`
-	Target                       []string                                               `json:"target,omitempty"`
-	Comment                      string                                                 `json:"comment,omitempty"`
+	ApplyToAllCustomEnvironments bool                                                   `json:"applyToAllCustomEnvironments"`
+	Target                       []string                                               `json:"target"`
+	Comment                      string                                                 `json:"comment"`
 	TeamID                       string                                                 `json:"-"`
 	EnvID                        string                                                 `json:"-"`
 }
