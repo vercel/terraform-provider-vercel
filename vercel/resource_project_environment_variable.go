@@ -414,6 +414,13 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 		)
 		return
 	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating project environment variable",
+			"Error reading project information, unexpected error: "+err.Error(),
+		)
+		return
+	}
 
 	request, diags := plan.toCreateEnvironmentVariableRequest(ctx, config.ValueWO)
 	if diags.HasError() {
