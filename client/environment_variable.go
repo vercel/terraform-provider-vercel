@@ -111,6 +111,13 @@ func derefString(p *string) string {
 	return *p
 }
 
+func stringPtrEqual(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
 func overlaps(s []string, e []string) bool {
 	set := make(map[string]struct{}, len(s))
 	for _, a := range s {
@@ -130,7 +137,7 @@ func findConflictingEnvID(teamID, projectID string, envConflict EnvConflictError
 	checkTargetOverlap := len(envConflict.Target) != 0
 
 	for _, env := range envs {
-		if env.Key != envConflict.EnvVarKey || env.GitBranch != envConflict.GitBranch {
+		if env.Key != envConflict.EnvVarKey || !stringPtrEqual(env.GitBranch, envConflict.GitBranch) {
 			continue
 		}
 
