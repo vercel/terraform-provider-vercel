@@ -146,7 +146,7 @@ type providerData struct {
 
 // apiTokenRe is a regex for an API access token. We use this to validate that the
 // token provided matches the expected format.
-var apiTokenRe = regexp.MustCompile("[0-9a-zA-Z]{24}")
+var apiTokenRe = regexp.MustCompile("^[0-9a-zA-Z]{24}$")
 
 // Configure takes a provider and applies any configuration. In the context of Vercel
 // this allows us to set up an API token.
@@ -185,7 +185,7 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	if !apiTokenRe.MatchString(apiToken) {
 		resp.Diagnostics.AddError(
 			"Invalid api_token",
-			"api_token (VERCEL_API_TOKEN) must be 24 characters and only contain characters 0-9 and a-f (all lowercased)",
+			"api_token (VERCEL_API_TOKEN) must be 24 alphanumeric characters",
 		)
 		return
 	}
