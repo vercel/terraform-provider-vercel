@@ -148,6 +148,7 @@ func (d *teamMemberDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			"Error reading Team Member",
 			"Could not read Team Member, unexpected error: "+err.Error(),
 		)
+		return
 	}
 	teamMember := convertResponseToTeamMember(response, TeamMember{
 		UserID:       config.UserID,
