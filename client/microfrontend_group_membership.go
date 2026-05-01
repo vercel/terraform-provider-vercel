@@ -11,7 +11,7 @@ type MicrofrontendGroupMembership struct {
 	MicrofrontendGroupID            string `json:"microfrontendsGroupId"`
 	IsDefaultApp                    bool   `json:"isDefaultApp,omitempty"`
 	DefaultRoute                    string `json:"defaultRoute,omitempty"`
-	RouteObservabilityToThisProject bool   `json:"routeObservabilityToThisProject,omitempty"`
+	RouteObservabilityToThisProject bool   `json:"routeObservabilityToThisProject"`
 	ProjectID                       string `json:"projectId"`
 	Enabled                         bool   `json:"enabled"`
 	TeamID                          string `json:"team_id"`
