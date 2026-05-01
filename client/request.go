@@ -155,7 +155,7 @@ func (c *Client) _doRequest(req *http.Request, v any, errorOnNoContent bool) err
 		}
 		errorResponse.StatusCode = resp.StatusCode
 		errorResponse.RawMessage = responseBody
-		errorResponse.retryAfter = 1000 // set a sensible default for retrying. This is in milliseconds.
+		errorResponse.retryAfter = 1 // set a sensible default for retrying. This is in seconds.
 		if resp.StatusCode == 429 {
 			retryAfterRaw := resp.Header.Get("Retry-After")
 			if retryAfterRaw != "" {
