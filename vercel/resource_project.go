@@ -2412,6 +2412,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 					err,
 				),
 			)
+			return
 		}
 		tflog.Info(ctx, "upserted environment variables", map[string]any{
 			"team_id":    plan.TeamID.ValueString(),
