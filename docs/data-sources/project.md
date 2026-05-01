@@ -90,7 +90,7 @@ Read-Only:
 - `key` (String) The name of the environment variable.
 - `sensitive` (Boolean) Whether the Environment Variable is sensitive or not. Note that the value will be `null` for sensitive environment variables.
 - `target` (Set of String) The environments that the environment variable should be present on. Valid targets are either `production`, `preview`, or `development`.
-- `value` (String) The value of the environment variable.
+- `value` (String, Sensitive) The value of the environment variable.
 
 
 <a id="nestedatt--git_comments"></a>
