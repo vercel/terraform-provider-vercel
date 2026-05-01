@@ -13,10 +13,14 @@ import (
 )
 
 const blobDataPlaneAPIVersion = "12"
-const blobDataPlaneURL = "https://vercel.com/api/blob"
-const blobDataPlaneTransientAttempts = 8
+const blobDataPlaneTransientAttempts = 24
 const blobDataPlaneProvisioningAttempts = 6
 const blobDataPlaneProvisioningRetryBase = 200 * time.Millisecond
+const blobDataPlaneProvisioningRetryMax = 10 * time.Second
+
+// Package vars keep the Blob data-plane retry path testable without live waits.
+var blobDataPlaneURL = "https://vercel.com/api/blob"
+var blobDataPlaneSleep = time.Sleep
 
 type BlobObject struct {
 	CacheControl       string `json:"cacheControl"`
@@ -79,7 +83,7 @@ func (c *Client) GetBlobObject(ctx context.Context, request GetBlobObjectRequest
 			return object, err
 		}
 
-		time.Sleep(blobDataPlaneProvisioningRetryBase * time.Duration(1<<(attempt-1)))
+		blobDataPlaneSleep(blobDataPlaneRetryDelay(attempt))
 	}
 
 	return object, err
@@ -142,7 +146,7 @@ func (c *Client) PutBlobObject(ctx context.Context, request PutBlobObjectRequest
 			return object, err
 		}
 
-		time.Sleep(blobDataPlaneProvisioningRetryBase * time.Duration(1<<(attempt-1)))
+		blobDataPlaneSleep(blobDataPlaneRetryDelay(attempt))
 	}
 
 	return object, err
@@ -203,6 +207,15 @@ func blobDataPlaneRetryMaxAttempts(err error) int {
 	default:
 		return 0
 	}
+}
+
+func blobDataPlaneRetryDelay(attempt int) time.Duration {
+	delay := blobDataPlaneProvisioningRetryBase * time.Duration(1<<(attempt-1))
+	if delay > blobDataPlaneProvisioningRetryMax {
+		return blobDataPlaneProvisioningRetryMax
+	}
+
+	return delay
 }
 
 func blobDataPlaneRequestID(scope string) string {
