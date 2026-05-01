@@ -487,6 +487,7 @@ func (r *teamMemberResource) Read(ctx context.Context, req resource.ReadRequest,
 			"Error reading Team Member",
 			"Could not read Team Member, unexpected error: "+err.Error(),
 		)
+		return
 	}
 	teamMember := convertResponseToTeamMember(response, state)
 	diags = resp.State.Set(ctx, teamMember)
@@ -575,6 +576,7 @@ func (r *teamMemberResource) Update(ctx context.Context, req resource.UpdateRequ
 			"Error reading Team Member",
 			"Could not read Team Member, unexpected error: "+err.Error(),
 		)
+		return
 	}
 	tflog.Info(ctx, "updated Team member", map[string]any{
 		"team_id": request.TeamID,
@@ -643,6 +645,7 @@ func (r *teamMemberResource) ImportState(ctx context.Context, req resource.Impor
 			"Error reading Team Member",
 			"Could not read Team Member, unexpected error: "+err.Error(),
 		)
+		return
 	}
 	teamMember := convertResponseToTeamMember(response, TeamMember{
 		TeamID: types.StringValue(teamID),
