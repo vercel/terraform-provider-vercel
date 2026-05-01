@@ -607,6 +607,7 @@ func (r *teamMemberResource) Delete(ctx context.Context, req resource.DeleteRequ
 			"Error removing Team Member",
 			"Could not remove Team Member, unexpected error: "+err.Error(),
 		)
+		return
 	}
 
 	resp.State.RemoveResource(ctx)
