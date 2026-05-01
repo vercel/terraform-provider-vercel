@@ -46,7 +46,15 @@ func (c *Client) GetMicrofrontendGroupMembership(ctx context.Context, TeamID str
 		"project_id": ProjectID,
 		"group":      group,
 	})
-	return group.Projects[ProjectID], nil
+	membership, ok := group.Projects[ProjectID]
+	if !ok {
+		return r, APIError{
+			Code:       "not_found",
+			Message:    "Microfrontend group membership not found",
+			StatusCode: 404,
+		}
+	}
+	return membership, nil
 }
 
 func (c *Client) AddOrUpdateMicrofrontendGroupMembership(ctx context.Context, request MicrofrontendGroupMembership) (r MicrofrontendGroupMembership, err error) {
