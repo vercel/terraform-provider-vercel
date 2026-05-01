@@ -220,6 +220,7 @@ func (r *projectMembersResource) Create(ctx context.Context, req resource.Create
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
+		return
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -317,6 +318,7 @@ func (r *projectMembersResource) Read(ctx context.Context, req resource.ReadRequ
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
+		return
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -530,6 +532,7 @@ func (r *projectMembersResource) Delete(ctx context.Context, req resource.Delete
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
+		return
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(

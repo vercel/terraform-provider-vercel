@@ -268,6 +268,7 @@ func (r *customEnvironmentResource) Read(ctx context.Context, req resource.ReadR
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
+		return
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -334,6 +335,7 @@ func (r *customEnvironmentResource) Delete(ctx context.Context, req resource.Del
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
+		return
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
