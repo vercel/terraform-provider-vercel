@@ -360,19 +360,19 @@ type UpdateProjectRequest struct {
 	TrustedIps                           *TrustedIps                     `json:"trustedIps"`
 	OIDCTokenConfig                      *OIDCTokenConfig                `json:"oidcTokenConfig"`
 	OptionsAllowlist                     *OptionsAllowlist               `json:"optionsAllowlist"`
-	AutoExposeSystemEnvVars              bool                            `json:"autoExposeSystemEnvs"`
+	AutoExposeSystemEnvVars              *bool                           `json:"autoExposeSystemEnvs,omitempty"`
 	EnablePreviewFeedback                *bool                           `json:"enablePreviewFeedback"`
 	EnableProductionFeedback             *bool                           `json:"enableProductionFeedback"`
 	EnableAffectedProjectsDeployments    *bool                           `json:"enableAffectedProjectsDeployments,omitempty"`
-	PreviewDeploymentsDisabled           bool                            `json:"previewDeploymentsDisabled"`
-	AutoAssignCustomDomains              bool                            `json:"autoAssignCustomDomains"`
-	GitLFS                               bool                            `json:"gitLFS"`
-	ServerlessFunctionZeroConfigFailover bool                            `json:"serverlessFunctionZeroConfigFailover"`
-	CustomerSupportCodeVisibility        bool                            `json:"customerSupportCodeVisibility"`
-	GitForkProtection                    bool                            `json:"gitForkProtection"`
-	ProductionDeploymentsFastLane        bool                            `json:"productionDeploymentsFastLane"`
-	DirectoryListing                     bool                            `json:"directoryListing"`
-	SkewProtectionMaxAge                 int                             `json:"skewProtectionMaxAge"`
+	PreviewDeploymentsDisabled           *bool                           `json:"previewDeploymentsDisabled,omitempty"`
+	AutoAssignCustomDomains              *bool                           `json:"autoAssignCustomDomains,omitempty"`
+	GitLFS                               *bool                           `json:"gitLFS,omitempty"`
+	ServerlessFunctionZeroConfigFailover *bool                           `json:"serverlessFunctionZeroConfigFailover,omitempty"`
+	CustomerSupportCodeVisibility        *bool                           `json:"customerSupportCodeVisibility,omitempty"`
+	GitForkProtection                    *bool                           `json:"gitForkProtection,omitempty"`
+	ProductionDeploymentsFastLane        *bool                           `json:"productionDeploymentsFastLane,omitempty"`
+	DirectoryListing                     *bool                           `json:"directoryListing,omitempty"`
+	SkewProtectionMaxAge                 *int                            `json:"skewProtectionMaxAge,omitempty"`
 	GitComments                          *GitComments                    `json:"gitComments"`
 	GitProviderOptions                   *GitProviderOptions             `json:"gitProviderOptions,omitempty"`
 	ResourceConfig                       *ResourceConfig                 `json:"resourceConfig,omitempty"`
