@@ -26,7 +26,7 @@ func setIsUnset(ctx context.Context, set types.Set) (bool, diag.Diagnostics) {
 		return true, nil
 	}
 	if set.IsUnknown() {
-		return false, nil
+		return true, nil
 	}
 
 	var values []string

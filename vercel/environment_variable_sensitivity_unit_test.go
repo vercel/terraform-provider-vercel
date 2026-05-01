@@ -45,9 +45,9 @@ func TestShouldValidateSensitiveEnvironmentVariablePolicy(t *testing.T) {
 			want:                         true,
 		},
 		{
-			name:                         "development only skips validation",
+			name:                         "development only with unknown custom environments skips validation",
 			target:                       stringSet("development"),
-			customEnvironmentIDs:         types.SetNull(types.StringType),
+			customEnvironmentIDs:         types.SetUnknown(types.StringType),
 			targetsAllCustomEnvironments: false,
 			explicitlyNonSensitive:       true,
 			id:                           types.StringNull(),
