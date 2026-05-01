@@ -264,6 +264,7 @@ func (r *accessGroupResource) ImportState(ctx context.Context, req resource.Impo
 			"Error importing Access Group",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/access_group_id\" or \"access_group_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetAccessGroup(ctx, client.GetAccessGroupRequest{

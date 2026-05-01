@@ -299,6 +299,7 @@ func (r *accessGroupProjectResource) ImportState(ctx context.Context, req resour
 			"Error importing Access Group",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/access_group_id/project_id\" or \"access_group_id/project_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetAccessGroupProject(ctx, client.GetAccessGroupProjectRequest{

@@ -514,6 +514,7 @@ func (r *edgeConfigItemResource) ImportState(ctx context.Context, req resource.I
 			"Error importing Edge Config Item",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/edge_config_id/key\" or \"edge_config_id/key\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetEdgeConfigItem(ctx, client.EdgeConfigItemRequest{

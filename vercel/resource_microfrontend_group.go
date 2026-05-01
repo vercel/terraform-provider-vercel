@@ -388,6 +388,7 @@ func (r *microfrontendGroupResource) ImportState(ctx context.Context, req resour
 			"Error importing Microfrontend Group",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/microfrontend_id\" or \"microfrontend_id\"", req.ID),
 		)
+		return
 	}
 	out, err := r.client.GetMicrofrontendGroup(ctx, microfrontendID, teamID)
 	if client.NotFound(err) {

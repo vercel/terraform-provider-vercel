@@ -2617,6 +2617,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 			"Error importing project",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id\" or \"project_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetProject(ctx, projectID, teamID)

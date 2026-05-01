@@ -257,6 +257,7 @@ func (r *edgeConfigResource) ImportState(ctx context.Context, req resource.Impor
 			"Error importing Edge Config",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/edge_config_id\" or \"edge_config_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetEdgeConfig(ctx, id, teamID)

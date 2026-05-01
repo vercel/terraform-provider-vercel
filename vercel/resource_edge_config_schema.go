@@ -264,6 +264,7 @@ func (r *edgeConfigSchemaResource) ImportState(ctx context.Context, req resource
 			"Error importing Edge Config Schema",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/edge_config_id\" or \"edge_config_id\"", req.ID),
 		)
+		return
 	}
 
 	out, err := r.client.GetEdgeConfigSchema(ctx, id, teamID)

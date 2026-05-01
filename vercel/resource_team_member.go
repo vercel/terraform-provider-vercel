@@ -620,6 +620,7 @@ func (r *teamMemberResource) ImportState(ctx context.Context, req resource.Impor
 			"Error importing Team Member",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/user_id\"", req.ID),
 		)
+		return
 	}
 
 	var response client.TeamMember
