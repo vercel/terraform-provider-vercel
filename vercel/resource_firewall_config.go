@@ -1530,29 +1530,26 @@ func (r *firewallConfigResource) updateFirewallRules(ctx context.Context, state,
 func (r *firewallConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan FirewallConfig
 	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	conf, err := plan.toClient()
 	if err != nil {
-		diags.AddError("failed to convert plan to client", err.Error())
-		resp.Diagnostics.Append(diags...)
+		resp.Diagnostics.AddError("failed to convert plan to client", err.Error())
 		return
 	}
 
 	out, err := r.client.PutFirewallConfig(ctx, conf)
 	if err != nil {
-		diags.AddError("failed to create firewall config", err.Error())
-	}
-
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+		resp.Diagnostics.AddError("failed to create firewall config", err.Error())
 		return
 	}
+
 	cfg, err := fromClient(out, plan)
 	if err != nil {
-		diags.AddError("failed to read created firewall config", err.Error())
+		resp.Diagnostics.AddError("failed to read created firewall config", err.Error())
 		return
 	}
 	diags = resp.State.Set(ctx, cfg)
@@ -1568,17 +1565,17 @@ func (r *firewallConfigResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	out, err := r.client.GetFirewallConfig(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
-	if err != nil {
-		diags.AddError("failed to read firewall config", err.Error())
-		return
-	}
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	if err != nil {
+		resp.Diagnostics.AddError("failed to read firewall config", err.Error())
+		return
+	}
 	cfg, err := fromClient(out, state)
 	if err != nil {
-		diags.AddError("failed to read firewall config", err.Error())
+		resp.Diagnostics.AddError("failed to read firewall config", err.Error())
 		return
 	}
 	diags = resp.State.Set(ctx, cfg)
@@ -1588,12 +1585,13 @@ func (r *firewallConfigResource) Read(ctx context.Context, req resource.ReadRequ
 func (r *firewallConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan FirewallConfig
 	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var state FirewallConfig
-	diags.Append(req.State.Get(ctx, &state)...)
+	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1632,23 +1630,19 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 
 	conf, err := plan.toClient()
 	if err != nil {
-		diags.AddError("failed to convert plan to client", err.Error())
-		resp.Diagnostics.Append(diags...)
+		resp.Diagnostics.AddError("failed to convert plan to client", err.Error())
 		return
 	}
 
 	out, err = r.client.PutFirewallConfig(ctx, conf)
 	if err != nil {
-		diags.AddError("failed to update firewall config", err.Error())
-	}
-
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+		resp.Diagnostics.AddError("failed to update firewall config", err.Error())
 		return
 	}
+
 	cfg, err := fromClient(out, plan)
 	if err != nil {
-		diags.AddError("failed to read updated firewall config", err.Error())
+		resp.Diagnostics.AddError("failed to read updated firewall config", err.Error())
 		return
 	}
 	diags = resp.State.Set(ctx, cfg)
