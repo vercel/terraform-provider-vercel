@@ -97,6 +97,12 @@ func (c *Client) GetEdgeConfigToken(ctx context.Context, request EdgeConfigToken
 		method: "GET",
 		url:    url,
 	}, &e)
+	// The plaintext `token` on this endpoint's response is deprecated and will
+	// be removed in a future API rollout. It's already part of the request
+	// path, so we repopulate it from the request to keep the returned struct —
+	// and the computed `connection_string` that depends on it — stable across
+	// that response-shape change.
+	e.Token = request.Token
 	e.TeamID = request.TeamID
 	return e, err
 }

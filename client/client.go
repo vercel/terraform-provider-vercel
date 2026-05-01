@@ -39,6 +39,11 @@ func (c *Client) WithTeam(team Team) *Client {
 	return c
 }
 
+func (c *Client) WithBaseURL(baseURL string) *Client {
+	c.baseURL = baseURL
+	return c
+}
+
 func (c *Client) Team(ctx context.Context, teamID string) (Team, error) {
 	if teamID != "" {
 		return c.GetTeam(ctx, teamID)
