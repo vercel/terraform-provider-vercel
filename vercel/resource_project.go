@@ -1691,28 +1691,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		})
 	}
 
-	resourceConfig := types.ObjectNull(resourceConfigAttrType.AttrTypes)
-	if response.ResourceConfig != nil {
-		var functionDefaultRegions attr.Value
-		regions := make([]attr.Value, 0, len(response.ResourceConfig.FunctionDefaultRegions))
-		for _, region := range response.ResourceConfig.FunctionDefaultRegions {
-			regions = append(regions, types.StringValue(region))
-		}
-		functionDefaultRegions = types.SetValueMust(types.StringType, regions)
-
-		resourceConfig = types.ObjectValueMust(resourceConfigAttrType.AttrTypes, map[string]attr.Value{
-			"function_default_cpu_type": types.StringPointerValue(response.ResourceConfig.FunctionDefaultMemoryType),
-			"function_default_timeout":  types.Int64PointerValue(response.ResourceConfig.FunctionDefaultTimeout),
-			"function_default_regions":  functionDefaultRegions,
-			"fluid":                     types.BoolValue(response.ResourceConfig.Fluid),
-		})
-	}
-	onDemandConcurrentBuilds := types.BoolNull()
-	buildMachineType := types.StringNull()
-	if response.ResourceConfig != nil {
-		onDemandConcurrentBuilds = types.BoolValue(response.ResourceConfig.ElasticConcurrencyEnabled)
-		buildMachineType = types.StringValue(response.ResourceConfig.BuildMachineType)
-	}
+	resourceConfig := projectResourceConfigFromResponse(response)
 
 	// Options allowlist
 	oalObj := types.ObjectNull(optionsAllowlistAttrType.AttrTypes)
@@ -1831,6 +1810,18 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		})
 	}
 
+	serverlessFunctionRegion := types.StringNull()
+	if !plan.ServerlessFunctionRegion.IsNull() && !plan.ServerlessFunctionRegion.IsUnknown() {
+		serverlessFunctionRegion = types.StringPointerValue(response.ServerlessFunctionRegion)
+	}
+
+	onDemandConcurrentBuilds := types.BoolNull()
+	buildMachineType := types.StringNull()
+	if response.ResourceConfig != nil {
+		onDemandConcurrentBuilds = types.BoolValue(response.ResourceConfig.ElasticConcurrencyEnabled)
+		buildMachineType = types.StringValue(response.ResourceConfig.BuildMachineType)
+	}
+
 	return Project{
 		BuildCommand:                      uncoerceString(fields.BuildCommand, types.StringPointerValue(response.BuildCommand)),
 		DevCommand:                        uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
@@ -1845,7 +1836,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		PreviewDeploymentSuffix:           types.StringPointerValue(response.PreviewDeploymentSuffix),
 		PublicSource:                      uncoerceBool(fields.PublicSource, types.BoolPointerValue(response.PublicSource)),
 		RootDirectory:                     types.StringPointerValue(response.RootDirectory),
-		ServerlessFunctionRegion:          types.StringPointerValue(response.ServerlessFunctionRegion),
+		ServerlessFunctionRegion:          serverlessFunctionRegion,
 		TeamID:                            toTeamID(response.TeamID),
 		PasswordProtection:                passwordObj,
 		VercelAuthentication:              va,
@@ -1873,6 +1864,44 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		OnDemandConcurrentBuilds:          onDemandConcurrentBuilds,
 		BuildMachineType:                  buildMachineType,
 	}, nil
+}
+
+func projectResourceConfigFromResponse(response client.ProjectResponse) types.Object {
+	regions := responseFunctionDefaultRegions(response)
+	if response.ResourceConfig == nil && len(regions) == 0 {
+		return types.ObjectNull(resourceConfigAttrType.AttrTypes)
+	}
+
+	regionValues := make([]attr.Value, 0, len(regions))
+	for _, region := range regions {
+		regionValues = append(regionValues, types.StringValue(region))
+	}
+
+	functionDefaultCPUType := types.StringNull()
+	functionDefaultTimeout := types.Int64Null()
+	fluid := types.BoolNull()
+	if response.ResourceConfig != nil {
+		functionDefaultCPUType = types.StringPointerValue(response.ResourceConfig.FunctionDefaultMemoryType)
+		functionDefaultTimeout = types.Int64PointerValue(response.ResourceConfig.FunctionDefaultTimeout)
+		fluid = types.BoolValue(response.ResourceConfig.Fluid)
+	}
+
+	return types.ObjectValueMust(resourceConfigAttrType.AttrTypes, map[string]attr.Value{
+		"function_default_cpu_type": functionDefaultCPUType,
+		"function_default_timeout":  functionDefaultTimeout,
+		"function_default_regions":  types.SetValueMust(types.StringType, regionValues),
+		"fluid":                     fluid,
+	})
+}
+
+func responseFunctionDefaultRegions(response client.ProjectResponse) []string {
+	if response.ResourceConfig != nil && len(response.ResourceConfig.FunctionDefaultRegions) > 0 {
+		return response.ResourceConfig.FunctionDefaultRegions
+	}
+	if response.ServerlessFunctionRegion != nil && *response.ServerlessFunctionRegion != "" {
+		return []string{*response.ServerlessFunctionRegion}
+	}
+	return nil
 }
 
 func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {

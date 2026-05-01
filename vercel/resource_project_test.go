@@ -58,7 +58,8 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "public_source", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "root_directory", "ui/src"),
 					resource.TestCheckResourceAttr("vercel_project.test", "ignore_command", "echo 'wat'"),
-					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "syd1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.#", "1"),
+					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "syd1"),
 					resource.TestCheckResourceAttr("vercel_project.test", "automatically_expose_system_environment_variables", "true"),
 					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
 						"key":       "foo",
@@ -297,7 +298,6 @@ func TestAcc_ProjectFunctionDefaultRegions(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project.test", "name", fmt.Sprintf("test-acc-regions-%s", projectSuffix)),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.#", "2"),
-					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "hkg1"),
 					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "hkg1"),
 					resource.TestCheckTypeSetElemAttr("vercel_project.test", "resource_config.function_default_regions.*", "sin1"),
 					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_cpu_type", "performance"),
