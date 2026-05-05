@@ -127,6 +127,13 @@ func (r *attackChallengeModeResource) Create(ctx context.Context, req resource.C
 		)
 		return
 	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating Attack Challenge Mode",
+			"Error reading project information, unexpected error: "+err.Error(),
+		)
+		return
+	}
 	out, err := r.client.UpdateAttackChallengeMode(ctx, client.AttackChallengeMode{
 		TeamID:                plan.TeamID.ValueString(),
 		ProjectID:             plan.ProjectID.ValueString(),
