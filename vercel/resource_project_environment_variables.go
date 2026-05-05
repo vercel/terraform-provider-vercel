@@ -794,6 +794,9 @@ func (r *projectEnvironmentVariablesResource) Delete(ctx context.Context, req re
 	}
 	for _, v := range envs {
 		err := r.client.DeleteEnvironmentVariable(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString(), v.ID.ValueString())
+		if client.NotFound(err) {
+			continue
+		}
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating Project Environment Variables",
