@@ -566,7 +566,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:    true,
 				Description: "Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("30 minutes", "12 hours", "1 day", "7 days"),
+					stringvalidator.OneOf("30 minutes", "4 hours", "12 hours", "1 day", "7 days"),
 				},
 			},
 			"resource_config": schema.SingleNestedAttribute{
@@ -943,6 +943,7 @@ func toSkewProtectionAge(sp types.String) int {
 	}
 	var ages = map[string]int{
 		"30 minutes": 1800,
+		"4 hours":    14400,
 		"12 hours":   43200,
 		"1 day":      86400,
 		"7 days":     604800,
@@ -1586,6 +1587,7 @@ func fromSkewProtectionMaxAge(sp int) types.String {
 	}
 	var ages = map[int]string{
 		1800:   "30 minutes",
+		14400:  "4 hours",
 		43200:  "12 hours",
 		86400:  "1 day",
 		604800: "7 days",
