@@ -955,6 +955,14 @@ func toSkewProtectionAge(sp types.String) int {
 	return v
 }
 
+func toSkewProtectionAgePointer(sp types.String) *int {
+	if sp.IsNull() || sp.IsUnknown() {
+		return nil
+	}
+	v := toSkewProtectionAge(sp)
+	return &v
+}
+
 func oneBoolPointer(a, b types.Bool) *bool {
 	if !a.IsNull() && !a.IsUnknown() {
 		return a.ValueBoolPointer()
@@ -967,6 +975,13 @@ func oneBoolPointer(a, b types.Bool) *bool {
 
 func knownBool(v types.Bool) bool {
 	return !v.IsNull() && !v.IsUnknown()
+}
+
+func knownBoolPointer(v types.Bool) *bool {
+	if !knownBool(v) {
+		return nil
+	}
+	return v.ValueBoolPointer()
 }
 
 func knownString(v types.String) bool {
@@ -1028,19 +1043,19 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		TrustedIps:                           ti.toUpdateProjectRequest(),
 		OIDCTokenConfig:                      oidc.toUpdateProjectRequest(),
 		OptionsAllowlist:                     oal.toUpdateProjectRequest(),
-		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
+		AutoExposeSystemEnvVars:              knownBoolPointer(p.AutoExposeSystemEnvVars),
 		EnablePreviewFeedback:                oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:             p.EnableProductionFeedback.ValueBoolPointer(),
 		EnableAffectedProjectsDeployments:    p.EnableAffectedProjectsDeployments.ValueBoolPointer(),
-		PreviewDeploymentsDisabled:           p.PreviewDeploymentsDisabled.ValueBool(),
-		AutoAssignCustomDomains:              p.AutoAssignCustomDomains.ValueBool(),
-		GitLFS:                               p.GitLFS.ValueBool(),
-		ServerlessFunctionZeroConfigFailover: p.FunctionFailover.ValueBool(),
-		CustomerSupportCodeVisibility:        p.CustomerSuccessCodeVisibility.ValueBool(),
-		GitForkProtection:                    p.GitForkProtection.ValueBool(),
-		ProductionDeploymentsFastLane:        p.PrioritiseProductionBuilds.ValueBool(),
-		DirectoryListing:                     p.DirectoryListing.ValueBool(),
-		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
+		PreviewDeploymentsDisabled:           knownBoolPointer(p.PreviewDeploymentsDisabled),
+		AutoAssignCustomDomains:              knownBoolPointer(p.AutoAssignCustomDomains),
+		GitLFS:                               knownBoolPointer(p.GitLFS),
+		ServerlessFunctionZeroConfigFailover: knownBoolPointer(p.FunctionFailover),
+		CustomerSupportCodeVisibility:        knownBoolPointer(p.CustomerSuccessCodeVisibility),
+		GitForkProtection:                    knownBoolPointer(p.GitForkProtection),
+		ProductionDeploymentsFastLane:        knownBoolPointer(p.PrioritiseProductionBuilds),
+		DirectoryListing:                     knownBoolPointer(p.DirectoryListing),
+		SkewProtectionMaxAge:                 toSkewProtectionAgePointer(p.SkewProtection),
 		GitComments:                          gc.toUpdateProjectRequest(),
 		GitProviderOptions:                   gpoReq,
 		ResourceConfig:                       resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
