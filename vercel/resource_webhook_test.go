@@ -62,6 +62,7 @@ func TestAcc_WebhookResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckWebhookExists(testClient(t), testTeam(t), "vercel_webhook.with_project_ids"),
 					resource.TestCheckTypeSetElemAttr("vercel_webhook.with_project_ids", "events.*", "deployment.created"),
+					resource.TestCheckTypeSetElemAttr("vercel_webhook.with_project_ids", "events.*", "flag.created"),
 					resource.TestCheckTypeSetElemAttr("vercel_webhook.with_project_ids", "events.*", "deployment.succeeded"),
 					resource.TestCheckResourceAttrSet("vercel_webhook.with_project_ids", "id"),
 					resource.TestCheckResourceAttrSet("vercel_webhook.with_project_ids", "secret"),
@@ -88,7 +89,7 @@ resource "vercel_project" "test2" {
 }
 
 resource "vercel_webhook" "with_project_ids" {
-    events = ["deployment.created", "deployment.succeeded"]
+    events = ["deployment.created", "flag.created", "deployment.succeeded"]
     endpoint = "https://example.com/foo"
     project_ids = [vercel_project.test.id, vercel_project.test2.id]
 }
