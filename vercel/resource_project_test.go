@@ -447,6 +447,80 @@ func TestAcc_ProjectBuildMachineTypeUnsetUpdate(t *testing.T) {
 	})
 }
 
+// `standard` is a valid value at the API but was previously missing from
+// the provider's schema validator, so users on plans where `standard`
+// is the desired explicit type had no way to set it from Terraform —
+// leaving the attribute unset was the only workaround.
+func TestAcc_ProjectBuildMachineTypeStandard(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "standard")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "standard"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "standard")),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Round-trip standard ↔ turbo to confirm standard behaves like
+			// a first-class peer of the other concrete machine types.
+			{
+				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "turbo")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "turbo"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "standard")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "standard"),
+				),
+			},
+		},
+	})
+}
+
+// Regression test for https://github.com/vercel/terraform-provider-vercel/issues/513:
+// creating a project with `build_machine_type = "elastic"` (no prior
+// concrete type) used to fail at the API with `bad_request: Invalid
+// request: resourceConfig.buildMachineType should be equal to one of
+// the allowed values "enhanced, turbo, standard"`. This test pins down
+// the first-apply path so the regression cannot return silently.
+func TestAcc_ProjectBuildMachineTypeElasticOnCreate(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "elastic")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "elastic"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "elastic")),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func TestAcc_ProjectBuildMachineTypeElastic(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
