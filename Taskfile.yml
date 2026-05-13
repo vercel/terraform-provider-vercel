@@ -2,7 +2,7 @@
 version: "3"
 
 vars:
-  GORELEASER_VERSION: v2.14
+  GORELEASER_VERSION: v2.15.4
 
 tasks:
   build:
@@ -37,7 +37,7 @@ tasks:
     cmds:
       - go install github.com/goreleaser/goreleaser/v2@{{.GORELEASER_VERSION}}
     status:
-      - command -v goreleaser >/dev/null && goreleaser --version | grep -Eq 'GitVersion:.*v2\.14(\.|$)'
+      - command -v goreleaser >/dev/null && goreleaser --version | grep -Eq 'GitVersion:.*v2\.15\.4([[:space:]]|$)'
 
   docs:
     desc: "Update the docs generated from description fields"
@@ -58,9 +58,9 @@ tasks:
   install-staticcheck:
     desc: "Install the staticheck tool"
     cmds:
-      - go install honnef.co/go/tools/cmd/staticcheck@2025.1
+      - go install honnef.co/go/tools/cmd/staticcheck@2026.1
     status:
-      - which staticcheck
+      - command -v staticcheck >/dev/null && staticcheck -version | grep -Eq 'staticcheck 2026\.1([[:space:]]|$)'
 
   install-providerlint:
     desc: "Install tfproviderlint tool"
