@@ -18,3 +18,46 @@ resource "vercel_project" "example" {
   name      = "example-project"
   framework = "nextjs"
 }
+
+locals {
+  github_actions_trusted_source = {
+    issuer = "https://token.actions.githubusercontent.com"
+    label  = "GitHub Actions"
+    to = {
+      slugs = ["preview"]
+    }
+    claims = {
+      aud = ["example-audience"]
+      sub = ["repo:vercel/some-repo:ref:refs/heads/main"]
+    }
+  }
+}
+
+# A project that allows trusted sources to bypass Deployment Protection.
+resource "vercel_project" "with_trusted_sources" {
+  name      = "example-project-with-trusted-sources"
+  framework = "nextjs"
+
+  trusted_sources = {
+    projects = [
+      {
+        project_id = vercel_project.with_git.id
+        label      = "Source project"
+        custom_allow = [
+          {
+            from = {
+              slugs = ["production"]
+            }
+            to = {
+              slugs = ["preview", "production"]
+            }
+          }
+        ]
+      }
+    ]
+
+    oidc_providers = [
+      local.github_actions_trusted_source,
+    ]
+  }
+}

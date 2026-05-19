@@ -2,10 +2,12 @@ package vercel
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/vercel/terraform-provider-vercel/v4/client"
 )
 
@@ -84,6 +86,112 @@ func TestConvertResponseToProjectHandlesMissingResourceConfigAndBranchSensitiveE
 	}
 }
 
+func TestConvertResponseToProjectTrustedSources(t *testing.T) {
+	ctx := context.Background()
+	projectLabel := "Source project"
+	providerLabel := "GitHub Actions"
+	result, err := convertResponseToProject(ctx, client.ProjectResponse{
+		ID:     "prj_123",
+		Name:   "example",
+		TeamID: "team_123",
+		TrustedSources: &client.TrustedSources{
+			Projects: map[string]client.TrustedSourcesProject{
+				"prj_source": {
+					Label: &projectLabel,
+					CustomAllow: []client.TrustedSourcesAccessRule{
+						{
+							From: client.TrustedSourcesEnvMatcher{Slugs: []string{"production"}},
+							To:   client.TrustedSourcesEnvMatcher{Slugs: []string{"preview", "production"}},
+						},
+					},
+				},
+			},
+			OIDCProviders: map[string][]client.TrustedSourcesOIDCProvider{
+				"https://token.actions.githubusercontent.com": {
+					{
+						TrustedSourcesTargetAccess: client.TrustedSourcesTargetAccess{
+							To: client.TrustedSourcesEnvMatcher{Slugs: []string{"preview"}},
+						},
+						Label: &providerLabel,
+						Claims: client.TrustedSourcesClaims{
+							"aud": {"example-audience"},
+							"sub": {
+								"repo:vercel/example:ref:refs/heads/main",
+								"repo:vercel/example:ref:refs/heads/dev",
+							},
+						},
+					},
+				},
+			},
+		},
+	}, projectForReadTests(), nil)
+	if err != nil {
+		t.Fatalf("convertResponseToProject() returned error: %v", err)
+	}
+
+	var trustedSources TrustedSources
+	diags := result.TrustedSources.As(ctx, &trustedSources, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+	if diags.HasError() {
+		t.Fatalf("TrustedSources.As() returned diagnostics: %v", diags)
+	}
+
+	var projects []TrustedSourcesProject
+	diags = trustedSources.Projects.ElementsAs(ctx, &projects, false)
+	if diags.HasError() {
+		t.Fatalf("TrustedSources.Projects.ElementsAs() returned diagnostics: %v", diags)
+	}
+	if len(projects) != 1 {
+		t.Fatalf("trusted source projects = %d, want 1", len(projects))
+	}
+	if projects[0].ProjectID.ValueString() != "prj_source" {
+		t.Fatalf("trusted source project ID = %q, want prj_source", projects[0].ProjectID.ValueString())
+	}
+	if projects[0].Label.ValueString() != projectLabel {
+		t.Fatalf("trusted source project label = %q, want %q", projects[0].Label.ValueString(), projectLabel)
+	}
+	var rules []TrustedSourcesAccessRule
+	diags = projects[0].CustomAllow.ElementsAs(ctx, &rules, false)
+	if diags.HasError() {
+		t.Fatalf("TrustedSourcesProject.CustomAllow.ElementsAs() returned diagnostics: %v", diags)
+	}
+	if len(rules) != 1 {
+		t.Fatalf("trusted source project custom allow rules = %d, want 1", len(rules))
+	}
+	from := trustedSourcesEnvMatcherFromObject(t, ctx, rules[0].From)
+	to := trustedSourcesEnvMatcherFromObject(t, ctx, rules[0].To)
+	if !reflect.DeepEqual(trustedSourcesSlugValues(t, ctx, from.Slugs), []string{"production"}) {
+		t.Fatalf("trusted source project from slugs = %#v, want production", trustedSourcesSlugValues(t, ctx, from.Slugs))
+	}
+	assertStringSliceSet(t, trustedSourcesSlugValues(t, ctx, to.Slugs), []string{"preview", "production"})
+
+	var providers []TrustedSourcesOIDCProvider
+	diags = trustedSources.OIDCProviders.ElementsAs(ctx, &providers, false)
+	if diags.HasError() {
+		t.Fatalf("TrustedSources.OIDCProviders.ElementsAs() returned diagnostics: %v", diags)
+	}
+	if len(providers) != 1 {
+		t.Fatalf("trusted OIDC provider entries = %d, want 1", len(providers))
+	}
+	if providers[0].Issuer.ValueString() != "https://token.actions.githubusercontent.com" {
+		t.Fatalf("trusted OIDC provider issuer = %q, want GitHub Actions issuer", providers[0].Issuer.ValueString())
+	}
+	if providers[0].Label.ValueString() != providerLabel {
+		t.Fatalf("trusted OIDC provider label = %q, want %q", providers[0].Label.ValueString(), providerLabel)
+	}
+	providerTo := trustedSourcesEnvMatcherFromObject(t, ctx, providers[0].To)
+	if !reflect.DeepEqual(trustedSourcesSlugValues(t, ctx, providerTo.Slugs), []string{"preview"}) {
+		t.Fatalf("trusted OIDC provider target slugs = %#v, want preview", trustedSourcesSlugValues(t, ctx, providerTo.Slugs))
+	}
+	claims := trustedSourcesClaimsFromMap(t, ctx, providers[0].Claims)
+	if !reflect.DeepEqual(claims["aud"], []string{"example-audience"}) {
+		t.Fatalf("trusted OIDC provider aud claim = %#v, want example-audience", claims["aud"])
+	}
+	assertStringSliceSet(t, claims["sub"], []string{
+		"repo:vercel/example:ref:refs/heads/main",
+		"repo:vercel/example:ref:refs/heads/dev",
+	})
+}
+
 func projectForReadTests() Project {
 	return Project{
 		Name:                              types.StringValue("example"),
@@ -100,6 +208,7 @@ func projectForReadTests() Project {
 		VercelAuthentication:              types.ObjectNull(vercelAuthenticationAttrType.AttrTypes),
 		PasswordProtection:                types.ObjectNull(passwordProtectionWithPasswordAttrType.AttrTypes),
 		TrustedIps:                        types.ObjectNull(trustedIpsAttrType.AttrTypes),
+		TrustedSources:                    types.ObjectNull(trustedSourcesAttrType.AttrTypes),
 		OIDCTokenConfig:                   types.ObjectNull(oidcTokenConfigAttrType.AttrTypes),
 		OptionsAllowlist:                  types.ObjectNull(optionsAllowlistAttrType.AttrTypes),
 		AutoExposeSystemEnvVars:           types.BoolUnknown(),
@@ -124,4 +233,42 @@ func projectForReadTests() Project {
 		BuildMachineType:                  types.StringUnknown(),
 		Environment:                       types.SetNull(envVariableElemType),
 	}
+}
+
+func trustedSourcesEnvMatcherFromObject(t *testing.T, ctx context.Context, value types.Object) TrustedSourcesEnvMatcher {
+	t.Helper()
+	var matcher TrustedSourcesEnvMatcher
+	diags := value.As(ctx, &matcher, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+	if diags.HasError() {
+		t.Fatalf("trusted sources env matcher As() returned diagnostics: %v", diags)
+	}
+	return matcher
+}
+
+func trustedSourcesSlugValues(t *testing.T, ctx context.Context, value types.Set) []string {
+	t.Helper()
+	var slugs []string
+	diags := value.ElementsAs(ctx, &slugs, false)
+	if diags.HasError() {
+		t.Fatalf("trusted sources slugs ElementsAs() returned diagnostics: %v", diags)
+	}
+	return slugs
+}
+
+func trustedSourcesClaimsFromMap(t *testing.T, ctx context.Context, value types.Map) map[string][]string {
+	t.Helper()
+	claims := map[string][]string{}
+	for name, claimValues := range value.Elements() {
+		valuesSet, ok := claimValues.(types.Set)
+		if !ok {
+			t.Fatalf("claim %q value type = %T, want types.Set", name, claimValues)
+		}
+		var values []string
+		diags := valuesSet.ElementsAs(ctx, &values, false)
+		if diags.HasError() {
+			t.Fatalf("claim %q ElementsAs() returned diagnostics: %v", name, diags)
+		}
+		claims[name] = values
+	}
+	return claims
 }

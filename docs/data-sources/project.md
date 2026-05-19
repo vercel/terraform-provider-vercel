@@ -76,6 +76,7 @@ data "vercel_project" "example" {
 - `serverless_function_region` (String) The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.
 - `skew_protection` (String) Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
+- `trusted_sources` (Attributes) Vercel projects and external OIDC providers that can reach this project's protected deployments using short-lived OIDC tokens. (see [below for nested schema](#nestedatt--trusted_sources))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
 
 <a id="nestedatt--environment"></a>
@@ -204,6 +205,72 @@ Read-Only:
 
 - `note` (String)
 - `value` (String)
+
+
+
+<a id="nestedatt--trusted_sources"></a>
+### Nested Schema for `trusted_sources`
+
+Read-Only:
+
+- `oidc_providers` (Attributes Set) External OIDC providers that can reach this project's protected deployments. (see [below for nested schema](#nestedatt--trusted_sources--oidc_providers))
+- `projects` (Attributes Set) Vercel projects in the same team that can reach this project's protected deployments. (see [below for nested schema](#nestedatt--trusted_sources--projects))
+
+<a id="nestedatt--trusted_sources--oidc_providers"></a>
+### Nested Schema for `trusted_sources.oidc_providers`
+
+Read-Only:
+
+- `claims` (Map of Set of String) Claims that must match on the OIDC token.
+- `issuer` (String) The OIDC issuer URL.
+- `label` (String) A label or description for the trusted OIDC provider entry.
+- `to` (Attributes) The target environments on this project that may be accessed. (see [below for nested schema](#nestedatt--trusted_sources--oidc_providers--to))
+
+<a id="nestedatt--trusted_sources--oidc_providers--to"></a>
+### Nested Schema for `trusted_sources.oidc_providers.to`
+
+Read-Only:
+
+- `preset` (String) Named environment preset. Currently only `all-custom` is supported.
+- `slugs` (Set of String) System environment slugs (`production`, `preview`, `development`) or custom environment slugs.
+
+
+
+<a id="nestedatt--trusted_sources--projects"></a>
+### Nested Schema for `trusted_sources.projects`
+
+Read-Only:
+
+- `custom_allow` (Attributes Set) Optional overrides for default same-environment matching. (see [below for nested schema](#nestedatt--trusted_sources--projects--custom_allow))
+- `label` (String) A label or description for the trusted project.
+- `project_id` (String) The trusted Vercel project ID.
+
+<a id="nestedatt--trusted_sources--projects--custom_allow"></a>
+### Nested Schema for `trusted_sources.projects.custom_allow`
+
+Read-Only:
+
+- `from` (Attributes) The source environments on the trusted project that are allowed to access the target environments. (see [below for nested schema](#nestedatt--trusted_sources--projects--custom_allow--from))
+- `to` (Attributes) The target environments on this project that may be accessed. (see [below for nested schema](#nestedatt--trusted_sources--projects--custom_allow--to))
+
+<a id="nestedatt--trusted_sources--projects--custom_allow--from"></a>
+### Nested Schema for `trusted_sources.projects.custom_allow.from`
+
+Read-Only:
+
+- `preset` (String) Named environment preset. Currently only `all-custom` is supported.
+- `slugs` (Set of String) System environment slugs (`production`, `preview`, `development`) or custom environment slugs.
+
+
+<a id="nestedatt--trusted_sources--projects--custom_allow--to"></a>
+### Nested Schema for `trusted_sources.projects.custom_allow.to`
+
+Read-Only:
+
+- `preset` (String) Named environment preset. Currently only `all-custom` is supported.
+- `slugs` (Set of String) System environment slugs (`production`, `preview`, `development`) or custom environment slugs.
+
+
 
 
 

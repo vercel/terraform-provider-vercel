@@ -192,6 +192,7 @@ type ProjectResponse struct {
 	VercelAuthentication                 *VercelAuthentication       `json:"ssoProtection"`
 	PasswordProtection                   *PasswordProtection         `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                 `json:"trustedIps"`
+	TrustedSources                       *TrustedSources             `json:"trustedSources"`
 	OIDCTokenConfig                      *OIDCTokenConfig            `json:"oidcTokenConfig"`
 	OptionsAllowlist                     *OptionsAllowlist           `json:"optionsAllowlist"`
 	ProtectionBypass                     map[string]ProtectionBypass `json:"protectionBypass"`
@@ -358,6 +359,7 @@ type UpdateProjectRequest struct {
 	VercelAuthentication                 *VercelAuthentication           `json:"ssoProtection"`
 	PasswordProtection                   *PasswordProtectionWithPassword `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                     `json:"trustedIps"`
+	TrustedSources                       *TrustedSources                 `json:"trustedSources"`
 	OIDCTokenConfig                      *OIDCTokenConfig                `json:"oidcTokenConfig"`
 	OptionsAllowlist                     *OptionsAllowlist               `json:"optionsAllowlist"`
 	AutoExposeSystemEnvVars              bool                            `json:"autoExposeSystemEnvs"`

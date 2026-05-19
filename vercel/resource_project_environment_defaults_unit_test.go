@@ -196,6 +196,7 @@ func TestProjectResourceModifyPlanSkipsPolicyValidationForExistingInlineEnvironm
 		VercelAuthentication: types.ObjectNull(vercelAuthenticationAttrType.AttrTypes),
 		PasswordProtection:   types.ObjectNull(passwordProtectionWithPasswordAttrType.AttrTypes),
 		TrustedIps:           types.ObjectNull(trustedIpsAttrType.AttrTypes),
+		TrustedSources:       types.ObjectNull(trustedSourcesAttrType.AttrTypes),
 		OIDCTokenConfig:      types.ObjectNull(oidcTokenConfigAttrType.AttrTypes),
 		OptionsAllowlist:     types.ObjectNull(optionsAllowlistAttrType.AttrTypes),
 		GitComments:          types.ObjectNull(gitCommentsAttrTypes),

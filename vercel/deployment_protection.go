@@ -25,6 +25,34 @@ type TrustedIps struct {
 	ProtectionMode types.String       `tfsdk:"protection_mode"`
 }
 
+type TrustedSources struct {
+	Projects      types.Set `tfsdk:"projects"`
+	OIDCProviders types.Set `tfsdk:"oidc_providers"`
+}
+
+type TrustedSourcesProject struct {
+	ProjectID   types.String `tfsdk:"project_id"`
+	Label       types.String `tfsdk:"label"`
+	CustomAllow types.Set    `tfsdk:"custom_allow"`
+}
+
+type TrustedSourcesOIDCProvider struct {
+	Issuer types.String `tfsdk:"issuer"`
+	Label  types.String `tfsdk:"label"`
+	To     types.Object `tfsdk:"to"`
+	Claims types.Map    `tfsdk:"claims"`
+}
+
+type TrustedSourcesAccessRule struct {
+	From types.Object `tfsdk:"from"`
+	To   types.Object `tfsdk:"to"`
+}
+
+type TrustedSourcesEnvMatcher struct {
+	Slugs  types.Set    `tfsdk:"slugs"`
+	Preset types.String `tfsdk:"preset"`
+}
+
 type ProtectionBypass struct {
 	Scope types.String `tfsdk:"scope"`
 }

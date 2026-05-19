@@ -350,6 +350,80 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
+			"trusted_sources": schema.SingleNestedAttribute{
+				Description: "Allows configured Vercel projects and external OIDC providers to reach this project's protected deployments using short-lived OIDC tokens.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"projects": schema.SetNestedAttribute{
+						Description: "Vercel projects in the same team that can reach this project's protected deployments.",
+						Optional:    true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"project_id": schema.StringAttribute{
+									Description: "The trusted Vercel project ID.",
+									Required:    true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 64),
+									},
+								},
+								"label": schema.StringAttribute{
+									Description: "A label or description for the trusted project.",
+									Optional:    true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 100),
+									},
+								},
+								"custom_allow": schema.SetNestedAttribute{
+									Description: "Optional overrides for default same-environment matching. Saved rules replace the API defaults for this trusted project.",
+									Optional:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: trustedSourcesAccessRuleResourceSchema(),
+									},
+									Validators: []validator.Set{
+										setvalidator.SizeAtLeast(1),
+										setvalidator.SizeAtMost(20),
+									},
+								},
+							},
+						},
+						Validators: []validator.Set{
+							setvalidator.SizeAtMost(100),
+						},
+					},
+					"oidc_providers": schema.SetNestedAttribute{
+						Description: "External OIDC providers that can reach this project's protected deployments.",
+						Optional:    true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"issuer": schema.StringAttribute{
+									Description: "The OIDC issuer URL.",
+									Required:    true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 512),
+									},
+								},
+								"label": schema.StringAttribute{
+									Description: "A label or description for the trusted OIDC provider entry.",
+									Optional:    true,
+									Validators: []validator.String{
+										stringvalidator.LengthBetween(1, 100),
+									},
+								},
+								"to": schema.SingleNestedAttribute{
+									Description: "The target environments on this project that may be accessed.",
+									Required:    true,
+									Attributes:  trustedSourcesEnvMatcherResourceSchema(),
+								},
+								"claims": schema.MapAttribute{
+									Description: "Claims that must match on the OIDC token. Each key is a claim name, and each value is a set of accepted values. The API requires `aud` and issuer-specific identity claims.",
+									Required:    true,
+									ElementType: trustedSourcesClaimValuesType,
+								},
+							},
+						},
+					},
+				},
+			},
 			"oidc_token_config": schema.SingleNestedAttribute{
 				Description: "Configuration for OpenID Connect (OIDC) tokens.",
 				Optional:    true,
@@ -635,6 +709,50 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 	}
 }
 
+func trustedSourcesAccessRuleResourceSchema() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"from": schema.SingleNestedAttribute{
+			Description: "The source environments on the trusted project that are allowed to access the target environments.",
+			Required:    true,
+			Attributes:  trustedSourcesEnvMatcherResourceSchema(),
+		},
+		"to": schema.SingleNestedAttribute{
+			Description: "The target environments on this project that may be accessed.",
+			Required:    true,
+			Attributes:  trustedSourcesEnvMatcherResourceSchema(),
+		},
+	}
+}
+
+func trustedSourcesEnvMatcherResourceSchema() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"slugs": schema.SetAttribute{
+			Description: "System environment slugs (`production`, `preview`, `development`) or custom environment slugs.",
+			ElementType: types.StringType,
+			Optional:    true,
+			Validators: []validator.Set{
+				setvalidator.SizeAtLeast(1),
+				setvalidator.SizeAtMost(10),
+				setvalidator.AtLeastOneOf(
+					path.MatchRelative().AtParent().AtName("slugs"),
+					path.MatchRelative().AtParent().AtName("preset"),
+				),
+			},
+		},
+		"preset": schema.StringAttribute{
+			Description: "Named environment preset. Currently only `all-custom` is supported.",
+			Optional:    true,
+			Validators: []validator.String{
+				stringvalidator.OneOf("all-custom"),
+				stringvalidator.AtLeastOneOf(
+					path.MatchRelative().AtParent().AtName("slugs"),
+					path.MatchRelative().AtParent().AtName("preset"),
+				),
+			},
+		},
+	}
+}
+
 func (r *projectResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		&fluidComputeBasicCPUValidator{},
@@ -662,6 +780,7 @@ type Project struct {
 	VercelAuthentication              types.Object `tfsdk:"vercel_authentication"`
 	PasswordProtection                types.Object `tfsdk:"password_protection"`
 	TrustedIps                        types.Object `tfsdk:"trusted_ips"`
+	TrustedSources                    types.Object `tfsdk:"trusted_sources"`
 	OIDCTokenConfig                   types.Object `tfsdk:"oidc_token_config"`
 	OptionsAllowlist                  types.Object `tfsdk:"options_allowlist"`
 	AutoExposeSystemEnvVars           types.Bool   `tfsdk:"automatically_expose_system_environment_variables"`
@@ -703,6 +822,7 @@ func (g *GitComments) toUpdateProjectRequest() *client.GitComments {
 func (p Project) RequiresUpdateAfterCreation() bool {
 	return (!p.PasswordProtection.IsNull() && !p.PasswordProtection.IsUnknown()) ||
 		(!p.TrustedIps.IsNull() && !p.TrustedIps.IsUnknown()) ||
+		(!p.TrustedSources.IsNull() && !p.TrustedSources.IsUnknown()) ||
 		(!p.OIDCTokenConfig.IsNull() && !p.OIDCTokenConfig.IsUnknown()) ||
 		(!p.OptionsAllowlist.IsNull() && !p.OptionsAllowlist.IsUnknown()) ||
 		(!p.GitProviderOptions.IsNull() && !p.GitProviderOptions.IsUnknown()) ||
@@ -813,6 +933,18 @@ func (p *Project) trustedIps(ctx context.Context) (*TrustedIps, diag.Diagnostics
 		return nil, diags
 	}
 	return &ti, nil
+}
+
+func (p *Project) trustedSources(ctx context.Context) (*TrustedSources, diag.Diagnostics) {
+	if p.TrustedSources.IsNull() || p.TrustedSources.IsUnknown() {
+		return nil, nil
+	}
+	var ts TrustedSources
+	diags := p.TrustedSources.As(ctx, &ts, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+	if diags.HasError() {
+		return nil, diags
+	}
+	return &ts, nil
 }
 
 func (p *Project) oidcTokenConfigObj(ctx context.Context) (*OIDCTokenConfig, diag.Diagnostics) {
@@ -1002,14 +1134,18 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	diags.Append(d1...)
 	ti, d2 := p.trustedIps(ctx)
 	diags.Append(d2...)
-	oidc, d3 := p.oidcTokenConfigObj(ctx)
+	ts, d3 := p.trustedSources(ctx)
 	diags.Append(d3...)
-	oal, d4 := p.optionsAllowlistObj(ctx)
+	tsReq, d4 := ts.toUpdateProjectRequest(ctx)
 	diags.Append(d4...)
-	gpo, d5 := p.gitProviderOptionsObj(ctx)
+	oidc, d5 := p.oidcTokenConfigObj(ctx)
 	diags.Append(d5...)
-	gpoReq, d6 := gpo.toUpdateProjectRequest(ctx)
+	oal, d6 := p.optionsAllowlistObj(ctx)
 	diags.Append(d6...)
+	gpo, d7 := p.gitProviderOptionsObj(ctx)
+	diags.Append(d7...)
+	gpoReq, d8 := gpo.toUpdateProjectRequest(ctx)
+	diags.Append(d8...)
 	if diags.HasError() {
 		return req, diags
 	}
@@ -1027,6 +1163,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		PasswordProtection:                   pp.toUpdateProjectRequest(),
 		VercelAuthentication:                 vercelAuthentication.toVercelAuthentication(),
 		TrustedIps:                           ti.toUpdateProjectRequest(),
+		TrustedSources:                       tsReq,
 		OIDCTokenConfig:                      oidc.toUpdateProjectRequest(),
 		OptionsAllowlist:                     oal.toUpdateProjectRequest(),
 		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
@@ -1266,6 +1403,136 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 	}
 }
 
+func (t *TrustedSources) toUpdateProjectRequest(ctx context.Context) (*client.TrustedSources, diag.Diagnostics) {
+	if t == nil {
+		return nil, nil
+	}
+
+	out := &client.TrustedSources{}
+	if !t.Projects.IsNull() && !t.Projects.IsUnknown() {
+		var projects []TrustedSourcesProject
+		diags := t.Projects.ElementsAs(ctx, &projects, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+		out.Projects = make(map[string]client.TrustedSourcesProject, len(projects))
+		for _, project := range projects {
+			projectID := project.ProjectID.ValueString()
+			if _, exists := out.Projects[projectID]; exists {
+				var diags diag.Diagnostics
+				diags.AddError(
+					"Duplicate Trusted Sources Project",
+					fmt.Sprintf("The trusted_sources.projects set contains more than one entry for project_id %q. Use a single entry per trusted project.", projectID),
+				)
+				return nil, diags
+			}
+
+			var customAllow []client.TrustedSourcesAccessRule
+			if !project.CustomAllow.IsNull() && !project.CustomAllow.IsUnknown() {
+				var rules []TrustedSourcesAccessRule
+				diags = project.CustomAllow.ElementsAs(ctx, &rules, false)
+				if diags.HasError() {
+					return nil, diags
+				}
+				customAllow = make([]client.TrustedSourcesAccessRule, 0, len(rules))
+				for _, rule := range rules {
+					from, d := trustedSourcesEnvMatcherToClient(ctx, rule.From)
+					diags.Append(d...)
+					to, d := trustedSourcesEnvMatcherToClient(ctx, rule.To)
+					diags.Append(d...)
+					if diags.HasError() {
+						return nil, diags
+					}
+					customAllow = append(customAllow, client.TrustedSourcesAccessRule{
+						From: from,
+						To:   to,
+					})
+				}
+			}
+
+			out.Projects[projectID] = client.TrustedSourcesProject{
+				Label:       project.Label.ValueStringPointer(),
+				CustomAllow: customAllow,
+			}
+		}
+	}
+
+	if !t.OIDCProviders.IsNull() && !t.OIDCProviders.IsUnknown() {
+		var providers []TrustedSourcesOIDCProvider
+		diags := t.OIDCProviders.ElementsAs(ctx, &providers, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+		out.OIDCProviders = map[string][]client.TrustedSourcesOIDCProvider{}
+		for _, provider := range providers {
+			to, d := trustedSourcesEnvMatcherToClient(ctx, provider.To)
+			diags.Append(d...)
+			claims, d := trustedSourcesClaimsToClient(ctx, provider.Claims)
+			diags.Append(d...)
+			if diags.HasError() {
+				return nil, diags
+			}
+			issuer := provider.Issuer.ValueString()
+			out.OIDCProviders[issuer] = append(out.OIDCProviders[issuer], client.TrustedSourcesOIDCProvider{
+				TrustedSourcesTargetAccess: client.TrustedSourcesTargetAccess{To: to},
+				Label:                      provider.Label.ValueStringPointer(),
+				Claims:                     claims,
+			})
+		}
+	}
+
+	return out, nil
+}
+
+func trustedSourcesEnvMatcherToClient(ctx context.Context, value types.Object) (client.TrustedSourcesEnvMatcher, diag.Diagnostics) {
+	var matcher TrustedSourcesEnvMatcher
+	diags := value.As(ctx, &matcher, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+	if diags.HasError() {
+		return client.TrustedSourcesEnvMatcher{}, diags
+	}
+
+	var slugs []string
+	if !matcher.Slugs.IsNull() && !matcher.Slugs.IsUnknown() {
+		diags = matcher.Slugs.ElementsAs(ctx, &slugs, false)
+		if diags.HasError() {
+			return client.TrustedSourcesEnvMatcher{}, diags
+		}
+	}
+
+	return client.TrustedSourcesEnvMatcher{
+		Slugs:  slugs,
+		Preset: matcher.Preset.ValueStringPointer(),
+	}, nil
+}
+
+func trustedSourcesClaimsToClient(ctx context.Context, claims types.Map) (client.TrustedSourcesClaims, diag.Diagnostics) {
+	out := client.TrustedSourcesClaims{}
+	if claims.IsNull() || claims.IsUnknown() {
+		return out, nil
+	}
+
+	for name, value := range claims.Elements() {
+		valuesSet, ok := value.(types.Set)
+		if !ok {
+			var diags diag.Diagnostics
+			diags.AddError(
+				"Invalid Trusted Sources claims",
+				fmt.Sprintf("Expected claim %q to be a set of strings, got %T.", name, value),
+			)
+			return nil, diags
+		}
+
+		var values []string
+		diags := valuesSet.ElementsAs(ctx, &values, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+		out[name] = values
+	}
+
+	return out, nil
+}
+
 type OIDCTokenConfig struct {
 	IssuerMode types.String `tfsdk:"issuer_mode"`
 }
@@ -1334,6 +1601,46 @@ var trustedIpsAttrType = types.ObjectType{
 		"deployment_type": types.StringType,
 		"protection_mode": types.StringType,
 		"addresses":       types.SetType{ElemType: trustedIpAddressAttrType},
+	},
+}
+
+var trustedSourcesClaimValuesType = types.SetType{ElemType: types.StringType}
+
+var trustedSourcesEnvMatcherAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"slugs":  types.SetType{ElemType: types.StringType},
+		"preset": types.StringType,
+	},
+}
+
+var trustedSourcesAccessRuleAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"from": trustedSourcesEnvMatcherAttrType,
+		"to":   trustedSourcesEnvMatcherAttrType,
+	},
+}
+
+var trustedSourcesProjectAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"project_id":   types.StringType,
+		"label":        types.StringType,
+		"custom_allow": types.SetType{ElemType: trustedSourcesAccessRuleAttrType},
+	},
+}
+
+var trustedSourcesOIDCProviderAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"issuer": types.StringType,
+		"label":  types.StringType,
+		"to":     trustedSourcesEnvMatcherAttrType,
+		"claims": types.MapType{ElemType: trustedSourcesClaimValuesType},
+	},
+}
+
+var trustedSourcesAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"projects":       types.SetType{ElemType: trustedSourcesProjectAttrType},
+		"oidc_providers": types.SetType{ElemType: trustedSourcesOIDCProviderAttrType},
 	},
 }
 
@@ -1683,6 +1990,12 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		})
 	}
 
+	// Trusted Sources
+	trustedSourcesObj := types.ObjectNull(trustedSourcesAttrType.AttrTypes)
+	if response.TrustedSources != nil {
+		trustedSourcesObj = trustedSourcesObjectFromResponse(*response.TrustedSources)
+	}
+
 	// OIDC token config
 	oidcObj := types.ObjectValueMust(oidcTokenConfigAttrType.AttrTypes, map[string]attr.Value{
 		"issuer_mode": types.StringValue("team"),
@@ -1843,6 +2156,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		PasswordProtection:                passwordObj,
 		VercelAuthentication:              va,
 		TrustedIps:                        trustedIpsObj,
+		TrustedSources:                    trustedSourcesObj,
 		OIDCTokenConfig:                   oidcObj,
 		OptionsAllowlist:                  oalObj,
 		AutoExposeSystemEnvVars:           types.BoolPointerValue(response.AutoExposeSystemEnvVars),
@@ -1866,6 +2180,85 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		OnDemandConcurrentBuilds:          onDemandConcurrentBuilds,
 		BuildMachineType:                  buildMachineType,
 	}, nil
+}
+
+func trustedSourcesObjectFromResponse(response client.TrustedSources) types.Object {
+	projects := types.SetNull(trustedSourcesProjectAttrType)
+	if response.Projects != nil {
+		projectValues := make([]attr.Value, 0, len(response.Projects))
+		for projectID, project := range response.Projects {
+			customAllow := types.SetNull(trustedSourcesAccessRuleAttrType)
+			if project.CustomAllow != nil {
+				ruleValues := make([]attr.Value, 0, len(project.CustomAllow))
+				for _, rule := range project.CustomAllow {
+					ruleValues = append(ruleValues, types.ObjectValueMust(trustedSourcesAccessRuleAttrType.AttrTypes, map[string]attr.Value{
+						"from": trustedSourcesEnvMatcherObjectFromResponse(rule.From),
+						"to":   trustedSourcesEnvMatcherObjectFromResponse(rule.To),
+					}))
+				}
+				customAllow = types.SetValueMust(trustedSourcesAccessRuleAttrType, ruleValues)
+			}
+			projectValues = append(projectValues, types.ObjectValueMust(trustedSourcesProjectAttrType.AttrTypes, map[string]attr.Value{
+				"project_id":   types.StringValue(projectID),
+				"label":        types.StringPointerValue(project.Label),
+				"custom_allow": customAllow,
+			}))
+		}
+		projects = types.SetValueMust(trustedSourcesProjectAttrType, projectValues)
+	}
+
+	oidcProviders := types.SetNull(trustedSourcesOIDCProviderAttrType)
+	if response.OIDCProviders != nil {
+		providerValues := []attr.Value{}
+		for issuer, providers := range response.OIDCProviders {
+			for _, provider := range providers {
+				providerValues = append(providerValues, types.ObjectValueMust(trustedSourcesOIDCProviderAttrType.AttrTypes, map[string]attr.Value{
+					"issuer": types.StringValue(issuer),
+					"label":  types.StringPointerValue(provider.Label),
+					"to":     trustedSourcesEnvMatcherObjectFromResponse(provider.To),
+					"claims": trustedSourcesClaimsMapFromResponse(provider.Claims),
+				}))
+			}
+		}
+		oidcProviders = types.SetValueMust(trustedSourcesOIDCProviderAttrType, providerValues)
+	}
+
+	return types.ObjectValueMust(trustedSourcesAttrType.AttrTypes, map[string]attr.Value{
+		"projects":       projects,
+		"oidc_providers": oidcProviders,
+	})
+}
+
+func trustedSourcesEnvMatcherObjectFromResponse(matcher client.TrustedSourcesEnvMatcher) types.Object {
+	slugs := types.SetNull(types.StringType)
+	if matcher.Slugs != nil {
+		values := make([]attr.Value, 0, len(matcher.Slugs))
+		for _, slug := range matcher.Slugs {
+			values = append(values, types.StringValue(slug))
+		}
+		slugs = types.SetValueMust(types.StringType, values)
+	}
+
+	return types.ObjectValueMust(trustedSourcesEnvMatcherAttrType.AttrTypes, map[string]attr.Value{
+		"slugs":  slugs,
+		"preset": types.StringPointerValue(matcher.Preset),
+	})
+}
+
+func trustedSourcesClaimsMapFromResponse(claims client.TrustedSourcesClaims) types.Map {
+	if claims == nil {
+		return types.MapNull(trustedSourcesClaimValuesType)
+	}
+
+	values := make(map[string]attr.Value, len(claims))
+	for name, claimValues := range claims {
+		setValues := make([]attr.Value, 0, len(claimValues))
+		for _, value := range claimValues {
+			setValues = append(setValues, types.StringValue(value))
+		}
+		values[name] = types.SetValueMust(types.StringType, setValues)
+	}
+	return types.MapValueMust(trustedSourcesClaimValuesType, values)
 }
 
 func projectResourceConfigFromResponse(response client.ProjectResponse) types.Object {
