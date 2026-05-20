@@ -76,7 +76,7 @@ data "vercel_project" "example" {
 - `serverless_function_region` (String) The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.
 - `skew_protection` (String) Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
-- `trusted_sources` (Attributes) Vercel projects and external OIDC providers that can reach this project's protected deployments using short-lived OIDC tokens. (see [below for nested schema](#nestedatt--trusted_sources))
+- `trusted_sources` (Attributes) Vercel projects and external sources that can reach this project's protected deployments using short-lived OIDC tokens. (see [below for nested schema](#nestedatt--trusted_sources))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
 
 <a id="nestedatt--environment"></a>
@@ -213,21 +213,21 @@ Read-Only:
 
 Read-Only:
 
-- `oidc_providers` (Attributes Set) External OIDC providers that can reach this project's protected deployments. (see [below for nested schema](#nestedatt--trusted_sources--oidc_providers))
+- `external_sources` (Attributes Set) External sources that can reach this project's protected deployments using short-lived OIDC tokens. (see [below for nested schema](#nestedatt--trusted_sources--external_sources))
 - `projects` (Attributes Set) Vercel projects in the same team that can reach this project's protected deployments. (see [below for nested schema](#nestedatt--trusted_sources--projects))
 
-<a id="nestedatt--trusted_sources--oidc_providers"></a>
-### Nested Schema for `trusted_sources.oidc_providers`
+<a id="nestedatt--trusted_sources--external_sources"></a>
+### Nested Schema for `trusted_sources.external_sources`
 
 Read-Only:
 
 - `claims` (Map of Set of String) Claims that must match on the OIDC token.
 - `issuer` (String) The OIDC issuer URL.
-- `label` (String) A label or description for the trusted OIDC provider entry.
-- `to` (Attributes) The target environments on this project that may be accessed. (see [below for nested schema](#nestedatt--trusted_sources--oidc_providers--to))
+- `label` (String) A label or description for the trusted external source entry.
+- `to` (Attributes) The target environments on this project that may be accessed. (see [below for nested schema](#nestedatt--trusted_sources--external_sources--to))
 
-<a id="nestedatt--trusted_sources--oidc_providers--to"></a>
-### Nested Schema for `trusted_sources.oidc_providers.to`
+<a id="nestedatt--trusted_sources--external_sources--to"></a>
+### Nested Schema for `trusted_sources.external_sources.to`
 
 Read-Only:
 

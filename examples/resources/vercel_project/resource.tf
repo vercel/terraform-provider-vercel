@@ -56,7 +56,7 @@ resource "vercel_project" "with_trusted_sources" {
       }
     ]
 
-    oidc_providers = [
+    external_sources = [
       local.github_actions_trusted_source,
     ]
   }

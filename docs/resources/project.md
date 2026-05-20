@@ -85,7 +85,7 @@ resource "vercel_project" "with_trusted_sources" {
       }
     ]
 
-    oidc_providers = [
+    external_sources = [
       local.github_actions_trusted_source,
     ]
   }
@@ -138,7 +138,7 @@ resource "vercel_project" "with_trusted_sources" {
 - `skew_protection` (String) Ensures that outdated clients always fetch the correct version for a given deployment. This value defines how long Vercel keeps Skew Protection active.
 - `team_id` (String) The team ID to add the project to. Required when configuring a team resource if a default team has not been set in the provider.
 - `trusted_ips` (Attributes) Ensures only visitors from an allowed IP address can access your deployment. (see [below for nested schema](#nestedatt--trusted_ips))
-- `trusted_sources` (Attributes) Allows configured Vercel projects and external OIDC providers to reach this project's protected deployments using short-lived OIDC tokens. (see [below for nested schema](#nestedatt--trusted_sources))
+- `trusted_sources` (Attributes) Allows configured Vercel projects and external sources to reach this project's protected deployments using short-lived OIDC tokens. (see [below for nested schema](#nestedatt--trusted_sources))
 - `vercel_authentication` (Attributes) Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team. (see [below for nested schema](#nestedatt--vercel_authentication))
 
 ### Read-Only
@@ -298,24 +298,24 @@ Optional:
 
 Optional:
 
-- `oidc_providers` (Attributes Set) External OIDC providers that can reach this project's protected deployments. (see [below for nested schema](#nestedatt--trusted_sources--oidc_providers))
+- `external_sources` (Attributes Set) External sources that can reach this project's protected deployments using short-lived OIDC tokens. (see [below for nested schema](#nestedatt--trusted_sources--external_sources))
 - `projects` (Attributes Set) Vercel projects in the same team that can reach this project's protected deployments. (see [below for nested schema](#nestedatt--trusted_sources--projects))
 
-<a id="nestedatt--trusted_sources--oidc_providers"></a>
-### Nested Schema for `trusted_sources.oidc_providers`
+<a id="nestedatt--trusted_sources--external_sources"></a>
+### Nested Schema for `trusted_sources.external_sources`
 
 Required:
 
 - `claims` (Map of Set of String) Claims that must match on the OIDC token. Each key is a claim name, and each value is a set of accepted values. The API requires `aud` and issuer-specific identity claims.
 - `issuer` (String) The OIDC issuer URL.
-- `to` (Attributes) The target environments on this project that may be accessed. (see [below for nested schema](#nestedatt--trusted_sources--oidc_providers--to))
+- `to` (Attributes) The target environments on this project that may be accessed. (see [below for nested schema](#nestedatt--trusted_sources--external_sources--to))
 
 Optional:
 
-- `label` (String) A label or description for the trusted OIDC provider entry.
+- `label` (String) A label or description for the trusted external source entry.
 
-<a id="nestedatt--trusted_sources--oidc_providers--to"></a>
-### Nested Schema for `trusted_sources.oidc_providers.to`
+<a id="nestedatt--trusted_sources--external_sources--to"></a>
+### Nested Schema for `trusted_sources.external_sources.to`
 
 Optional:
 

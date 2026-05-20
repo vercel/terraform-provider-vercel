@@ -164,27 +164,27 @@ func TestConvertResponseToProjectTrustedSources(t *testing.T) {
 	}
 	assertStringSliceSet(t, trustedSourcesSlugValues(t, ctx, to.Slugs), []string{"preview", "production"})
 
-	var providers []TrustedSourcesOIDCProvider
-	diags = trustedSources.OIDCProviders.ElementsAs(ctx, &providers, false)
+	var externalSources []TrustedSourcesExternalSource
+	diags = trustedSources.ExternalSources.ElementsAs(ctx, &externalSources, false)
 	if diags.HasError() {
-		t.Fatalf("TrustedSources.OIDCProviders.ElementsAs() returned diagnostics: %v", diags)
+		t.Fatalf("TrustedSources.ExternalSources.ElementsAs() returned diagnostics: %v", diags)
 	}
-	if len(providers) != 1 {
-		t.Fatalf("trusted OIDC provider entries = %d, want 1", len(providers))
+	if len(externalSources) != 1 {
+		t.Fatalf("trusted external source entries = %d, want 1", len(externalSources))
 	}
-	if providers[0].Issuer.ValueString() != "https://token.actions.githubusercontent.com" {
-		t.Fatalf("trusted OIDC provider issuer = %q, want GitHub Actions issuer", providers[0].Issuer.ValueString())
+	if externalSources[0].Issuer.ValueString() != "https://token.actions.githubusercontent.com" {
+		t.Fatalf("trusted external source issuer = %q, want GitHub Actions issuer", externalSources[0].Issuer.ValueString())
 	}
-	if providers[0].Label.ValueString() != providerLabel {
-		t.Fatalf("trusted OIDC provider label = %q, want %q", providers[0].Label.ValueString(), providerLabel)
+	if externalSources[0].Label.ValueString() != providerLabel {
+		t.Fatalf("trusted external source label = %q, want %q", externalSources[0].Label.ValueString(), providerLabel)
 	}
-	providerTo := trustedSourcesEnvMatcherFromObject(t, ctx, providers[0].To)
-	if !reflect.DeepEqual(trustedSourcesSlugValues(t, ctx, providerTo.Slugs), []string{"preview"}) {
-		t.Fatalf("trusted OIDC provider target slugs = %#v, want preview", trustedSourcesSlugValues(t, ctx, providerTo.Slugs))
+	externalSourceTo := trustedSourcesEnvMatcherFromObject(t, ctx, externalSources[0].To)
+	if !reflect.DeepEqual(trustedSourcesSlugValues(t, ctx, externalSourceTo.Slugs), []string{"preview"}) {
+		t.Fatalf("trusted external source target slugs = %#v, want preview", trustedSourcesSlugValues(t, ctx, externalSourceTo.Slugs))
 	}
-	claims := trustedSourcesClaimsFromMap(t, ctx, providers[0].Claims)
+	claims := trustedSourcesClaimsFromMap(t, ctx, externalSources[0].Claims)
 	if !reflect.DeepEqual(claims["aud"], []string{"example-audience"}) {
-		t.Fatalf("trusted OIDC provider aud claim = %#v, want example-audience", claims["aud"])
+		t.Fatalf("trusted external source aud claim = %#v, want example-audience", claims["aud"])
 	}
 	assertStringSliceSet(t, claims["sub"], []string{
 		"repo:vercel/example:ref:refs/heads/main",

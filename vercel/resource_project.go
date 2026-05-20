@@ -351,7 +351,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"trusted_sources": schema.SingleNestedAttribute{
-				Description: "Allows configured Vercel projects and external OIDC providers to reach this project's protected deployments using short-lived OIDC tokens.",
+				Description: "Allows configured Vercel projects and external sources to reach this project's protected deployments using short-lived OIDC tokens.",
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"projects": schema.SetNestedAttribute{
@@ -390,8 +390,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							setvalidator.SizeAtMost(100),
 						},
 					},
-					"oidc_providers": schema.SetNestedAttribute{
-						Description: "External OIDC providers that can reach this project's protected deployments.",
+					"external_sources": schema.SetNestedAttribute{
+						Description: "External sources that can reach this project's protected deployments using short-lived OIDC tokens.",
 						Optional:    true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
@@ -403,7 +403,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 									},
 								},
 								"label": schema.StringAttribute{
-									Description: "A label or description for the trusted OIDC provider entry.",
+									Description: "A label or description for the trusted external source entry.",
 									Optional:    true,
 									Validators: []validator.String{
 										stringvalidator.LengthBetween(1, 100),
@@ -1457,25 +1457,25 @@ func (t *TrustedSources) toUpdateProjectRequest(ctx context.Context) (*client.Tr
 		}
 	}
 
-	if !t.OIDCProviders.IsNull() && !t.OIDCProviders.IsUnknown() {
-		var providers []TrustedSourcesOIDCProvider
-		diags := t.OIDCProviders.ElementsAs(ctx, &providers, false)
+	if !t.ExternalSources.IsNull() && !t.ExternalSources.IsUnknown() {
+		var externalSources []TrustedSourcesExternalSource
+		diags := t.ExternalSources.ElementsAs(ctx, &externalSources, false)
 		if diags.HasError() {
 			return nil, diags
 		}
 		out.OIDCProviders = map[string][]client.TrustedSourcesOIDCProvider{}
-		for _, provider := range providers {
-			to, d := trustedSourcesEnvMatcherToClient(ctx, provider.To)
+		for _, externalSource := range externalSources {
+			to, d := trustedSourcesEnvMatcherToClient(ctx, externalSource.To)
 			diags.Append(d...)
-			claims, d := trustedSourcesClaimsToClient(ctx, provider.Claims)
+			claims, d := trustedSourcesClaimsToClient(ctx, externalSource.Claims)
 			diags.Append(d...)
 			if diags.HasError() {
 				return nil, diags
 			}
-			issuer := provider.Issuer.ValueString()
+			issuer := externalSource.Issuer.ValueString()
 			out.OIDCProviders[issuer] = append(out.OIDCProviders[issuer], client.TrustedSourcesOIDCProvider{
 				TrustedSourcesTargetAccess: client.TrustedSourcesTargetAccess{To: to},
-				Label:                      provider.Label.ValueStringPointer(),
+				Label:                      externalSource.Label.ValueStringPointer(),
 				Claims:                     claims,
 			})
 		}
@@ -1628,7 +1628,7 @@ var trustedSourcesProjectAttrType = types.ObjectType{
 	},
 }
 
-var trustedSourcesOIDCProviderAttrType = types.ObjectType{
+var trustedSourcesExternalSourceAttrType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
 		"issuer": types.StringType,
 		"label":  types.StringType,
@@ -1639,8 +1639,8 @@ var trustedSourcesOIDCProviderAttrType = types.ObjectType{
 
 var trustedSourcesAttrType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
-		"projects":       types.SetType{ElemType: trustedSourcesProjectAttrType},
-		"oidc_providers": types.SetType{ElemType: trustedSourcesOIDCProviderAttrType},
+		"projects":         types.SetType{ElemType: trustedSourcesProjectAttrType},
+		"external_sources": types.SetType{ElemType: trustedSourcesExternalSourceAttrType},
 	},
 }
 
@@ -2207,25 +2207,25 @@ func trustedSourcesObjectFromResponse(response client.TrustedSources) types.Obje
 		projects = types.SetValueMust(trustedSourcesProjectAttrType, projectValues)
 	}
 
-	oidcProviders := types.SetNull(trustedSourcesOIDCProviderAttrType)
+	externalSources := types.SetNull(trustedSourcesExternalSourceAttrType)
 	if response.OIDCProviders != nil {
-		providerValues := []attr.Value{}
-		for issuer, providers := range response.OIDCProviders {
-			for _, provider := range providers {
-				providerValues = append(providerValues, types.ObjectValueMust(trustedSourcesOIDCProviderAttrType.AttrTypes, map[string]attr.Value{
+		externalSourceValues := []attr.Value{}
+		for issuer, externalSourcesForIssuer := range response.OIDCProviders {
+			for _, externalSource := range externalSourcesForIssuer {
+				externalSourceValues = append(externalSourceValues, types.ObjectValueMust(trustedSourcesExternalSourceAttrType.AttrTypes, map[string]attr.Value{
 					"issuer": types.StringValue(issuer),
-					"label":  types.StringPointerValue(provider.Label),
-					"to":     trustedSourcesEnvMatcherObjectFromResponse(provider.To),
-					"claims": trustedSourcesClaimsMapFromResponse(provider.Claims),
+					"label":  types.StringPointerValue(externalSource.Label),
+					"to":     trustedSourcesEnvMatcherObjectFromResponse(externalSource.To),
+					"claims": trustedSourcesClaimsMapFromResponse(externalSource.Claims),
 				}))
 			}
 		}
-		oidcProviders = types.SetValueMust(trustedSourcesOIDCProviderAttrType, providerValues)
+		externalSources = types.SetValueMust(trustedSourcesExternalSourceAttrType, externalSourceValues)
 	}
 
 	return types.ObjectValueMust(trustedSourcesAttrType.AttrTypes, map[string]attr.Value{
-		"projects":       projects,
-		"oidc_providers": oidcProviders,
+		"projects":         projects,
+		"external_sources": externalSources,
 	})
 }
 

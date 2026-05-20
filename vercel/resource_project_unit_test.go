@@ -56,17 +56,17 @@ func TestProjectTrustedSourcesToUpdateProjectRequest(t *testing.T) {
 
 	providers := request.TrustedSources.OIDCProviders["https://token.actions.githubusercontent.com"]
 	if len(providers) != 1 {
-		t.Fatalf("trusted OIDC provider entries = %d, want 1", len(providers))
+		t.Fatalf("trusted external source entries = %d, want 1", len(providers))
 	}
 	provider := providers[0]
 	if provider.Label == nil || *provider.Label != "GitHub Actions" {
-		t.Fatalf("trusted OIDC provider label = %v, want GitHub Actions", provider.Label)
+		t.Fatalf("trusted external source label = %v, want GitHub Actions", provider.Label)
 	}
 	if !reflect.DeepEqual(provider.To.Slugs, []string{"preview"}) {
-		t.Fatalf("trusted OIDC provider target slugs = %#v, want preview", provider.To.Slugs)
+		t.Fatalf("trusted external source target slugs = %#v, want preview", provider.To.Slugs)
 	}
 	if !reflect.DeepEqual(provider.Claims["aud"], []string{"example-audience"}) {
-		t.Fatalf("trusted OIDC provider aud claim = %#v, want example-audience", provider.Claims["aud"])
+		t.Fatalf("trusted external source aud claim = %#v, want example-audience", provider.Claims["aud"])
 	}
 	assertStringSliceSet(t, provider.Claims["sub"], []string{
 		"repo:vercel/example:ref:refs/heads/main",
@@ -142,8 +142,8 @@ func trustedSourcesValue() types.Object {
 				}),
 			}),
 		}),
-		"oidc_providers": types.SetValueMust(trustedSourcesOIDCProviderAttrType, []attr.Value{
-			types.ObjectValueMust(trustedSourcesOIDCProviderAttrType.AttrTypes, map[string]attr.Value{
+		"external_sources": types.SetValueMust(trustedSourcesExternalSourceAttrType, []attr.Value{
+			types.ObjectValueMust(trustedSourcesExternalSourceAttrType.AttrTypes, map[string]attr.Value{
 				"issuer": types.StringValue("https://token.actions.githubusercontent.com"),
 				"label":  types.StringValue("GitHub Actions"),
 				"to":     trustedSourcesEnvMatcherValue([]string{"preview"}, nil),
@@ -173,7 +173,7 @@ func trustedSourcesDuplicateProjectValue() types.Object {
 				"custom_allow": types.SetNull(trustedSourcesAccessRuleAttrType),
 			}),
 		}),
-		"oidc_providers": types.SetNull(trustedSourcesOIDCProviderAttrType),
+		"external_sources": types.SetNull(trustedSourcesExternalSourceAttrType),
 	})
 }
 

@@ -237,7 +237,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				},
 			},
 			"trusted_sources": schema.SingleNestedAttribute{
-				Description: "Vercel projects and external OIDC providers that can reach this project's protected deployments using short-lived OIDC tokens.",
+				Description: "Vercel projects and external sources that can reach this project's protected deployments using short-lived OIDC tokens.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"projects": schema.SetNestedAttribute{
@@ -263,8 +263,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 							},
 						},
 					},
-					"oidc_providers": schema.SetNestedAttribute{
-						Description: "External OIDC providers that can reach this project's protected deployments.",
+					"external_sources": schema.SetNestedAttribute{
+						Description: "External sources that can reach this project's protected deployments using short-lived OIDC tokens.",
 						Computed:    true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
@@ -273,7 +273,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 									Computed:    true,
 								},
 								"label": schema.StringAttribute{
-									Description: "A label or description for the trusted OIDC provider entry.",
+									Description: "A label or description for the trusted external source entry.",
 									Computed:    true,
 								},
 								"to": schema.SingleNestedAttribute{

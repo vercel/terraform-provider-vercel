@@ -26,8 +26,8 @@ type TrustedIps struct {
 }
 
 type TrustedSources struct {
-	Projects      types.Set `tfsdk:"projects"`
-	OIDCProviders types.Set `tfsdk:"oidc_providers"`
+	Projects        types.Set `tfsdk:"projects"`
+	ExternalSources types.Set `tfsdk:"external_sources"`
 }
 
 type TrustedSourcesProject struct {
@@ -36,7 +36,7 @@ type TrustedSourcesProject struct {
 	CustomAllow types.Set    `tfsdk:"custom_allow"`
 }
 
-type TrustedSourcesOIDCProvider struct {
+type TrustedSourcesExternalSource struct {
 	Issuer types.String `tfsdk:"issuer"`
 	Label  types.String `tfsdk:"label"`
 	To     types.Object `tfsdk:"to"`
