@@ -23,6 +23,38 @@ type TrustedIps struct {
 	ProtectionMode string             `json:"protectionMode"`
 }
 
+type TrustedSourcesClaims map[string][]string
+
+type TrustedSourcesEnvMatcher struct {
+	Slugs  []string `json:"slugs,omitempty"`
+	Preset *string  `json:"preset,omitempty"`
+}
+
+type TrustedSourcesTargetAccess struct {
+	To TrustedSourcesEnvMatcher `json:"to"`
+}
+
+type TrustedSourcesAccessRule struct {
+	From TrustedSourcesEnvMatcher `json:"from"`
+	To   TrustedSourcesEnvMatcher `json:"to"`
+}
+
+type TrustedSourcesProject struct {
+	Label       *string                    `json:"label,omitempty"`
+	CustomAllow []TrustedSourcesAccessRule `json:"customAllow,omitempty"`
+}
+
+type TrustedSourcesOIDCProvider struct {
+	TrustedSourcesTargetAccess
+	Label  *string              `json:"label,omitempty"`
+	Claims TrustedSourcesClaims `json:"claims"`
+}
+
+type TrustedSources struct {
+	Projects      map[string]TrustedSourcesProject        `json:"projects,omitempty"`
+	OIDCProviders map[string][]TrustedSourcesOIDCProvider `json:"oidcProviders,omitempty"`
+}
+
 type ProtectionBypass struct {
 	Scope           string  `json:"scope"`
 	IsEnvVar        *bool   `json:"isEnvVar,omitempty"`

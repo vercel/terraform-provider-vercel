@@ -236,6 +236,61 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					},
 				},
 			},
+			"trusted_sources": schema.SingleNestedAttribute{
+				Description: "Vercel projects and external sources that can reach this project's protected deployments using short-lived OIDC tokens.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"projects": schema.SetNestedAttribute{
+						Description: "Vercel projects in the same team that can reach this project's protected deployments.",
+						Computed:    true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"project_id": schema.StringAttribute{
+									Description: "The trusted Vercel project ID.",
+									Computed:    true,
+								},
+								"label": schema.StringAttribute{
+									Description: "A label or description for the trusted project.",
+									Computed:    true,
+								},
+								"custom_allow": schema.SetNestedAttribute{
+									Description: "Optional overrides for default same-environment matching.",
+									Computed:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: trustedSourcesAccessRuleDataSourceSchema(),
+									},
+								},
+							},
+						},
+					},
+					"external_sources": schema.SetNestedAttribute{
+						Description: "External sources that can reach this project's protected deployments using short-lived OIDC tokens.",
+						Computed:    true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"issuer": schema.StringAttribute{
+									Description: "The OIDC issuer URL.",
+									Computed:    true,
+								},
+								"label": schema.StringAttribute{
+									Description: "A label or description for the trusted external source entry.",
+									Computed:    true,
+								},
+								"to": schema.SingleNestedAttribute{
+									Description: "The target environments on this project that may be accessed.",
+									Computed:    true,
+									Attributes:  trustedSourcesEnvMatcherDataSourceSchema(),
+								},
+								"claims": schema.MapAttribute{
+									Description: "Claims that must match on the OIDC token.",
+									Computed:    true,
+									ElementType: trustedSourcesClaimValuesType,
+								},
+							},
+						},
+					},
+				},
+			},
 			"oidc_token_config": schema.SingleNestedAttribute{
 				Description: "Configuration for OpenID Connect (OIDC) tokens.",
 				Computed:    true,
@@ -445,6 +500,35 @@ For more detailed information, please see the [Vercel documentation](https://ver
 	}
 }
 
+func trustedSourcesAccessRuleDataSourceSchema() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"from": schema.SingleNestedAttribute{
+			Description: "The source environments on the trusted project that are allowed to access the target environments.",
+			Computed:    true,
+			Attributes:  trustedSourcesEnvMatcherDataSourceSchema(),
+		},
+		"to": schema.SingleNestedAttribute{
+			Description: "The target environments on this project that may be accessed.",
+			Computed:    true,
+			Attributes:  trustedSourcesEnvMatcherDataSourceSchema(),
+		},
+	}
+}
+
+func trustedSourcesEnvMatcherDataSourceSchema() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"slugs": schema.SetAttribute{
+			Description: "System environment slugs (`production`, `preview`, `development`) or custom environment slugs.",
+			ElementType: types.StringType,
+			Computed:    true,
+		},
+		"preset": schema.StringAttribute{
+			Description: "Named environment preset. Currently only `all-custom` is supported.",
+			Computed:    true,
+		},
+	}
+}
+
 // Project reflects the state terraform stores internally for a project.
 type ProjectDataSource struct {
 	BuildCommand                        types.String `tfsdk:"build_command"`
@@ -465,6 +549,7 @@ type ProjectDataSource struct {
 	VercelAuthentication                types.Object `tfsdk:"vercel_authentication"`
 	PasswordProtection                  types.Object `tfsdk:"password_protection"`
 	TrustedIps                          types.Object `tfsdk:"trusted_ips"`
+	TrustedSources                      types.Object `tfsdk:"trusted_sources"`
 	OIDCTokenConfig                     types.Object `tfsdk:"oidc_token_config"`
 	OptionsAllowlist                    types.Object `tfsdk:"options_allowlist"`
 	ProtectionBypassForAutomation       types.Bool   `tfsdk:"protection_bypass_for_automation"`
@@ -564,6 +649,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		VercelAuthentication:                project.VercelAuthentication,
 		PasswordProtection:                  ppObj,
 		TrustedIps:                          project.TrustedIps,
+		TrustedSources:                      project.TrustedSources,
 		OIDCTokenConfig:                     project.OIDCTokenConfig,
 		OptionsAllowlist:                    project.OptionsAllowlist,
 		AutoExposeSystemEnvVars:             types.BoolPointerValue(response.AutoExposeSystemEnvVars),
