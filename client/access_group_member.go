@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -79,21 +80,23 @@ type accessGroupMembersResponse struct {
 func (c *Client) GetAccessGroupMember(ctx context.Context, req GetAccessGroupMemberRequest) (r AccessGroupMember, err error) {
 	next := ""
 	for {
-		url := fmt.Sprintf("%s/v1/access-groups/%s/members?limit=100", c.baseURL, req.AccessGroupID)
+		query := url.Values{}
+		query.Set("limit", "100")
 		if c.TeamID(req.TeamID) != "" {
-			url = fmt.Sprintf("%s&teamId=%s", url, c.TeamID(req.TeamID))
+			query.Set("teamId", c.TeamID(req.TeamID))
 		}
 		if next != "" {
-			url = fmt.Sprintf("%s&next=%s", url, next)
+			query.Set("next", next)
 		}
+		endpoint := fmt.Sprintf("%s/v1/access-groups/%s/members?%s", c.baseURL, req.AccessGroupID, query.Encode())
 		tflog.Info(ctx, "getting access group member", map[string]any{
-			"url": url,
+			"url": endpoint,
 		})
 		var response accessGroupMembersResponse
 		err = c.doRequest(clientRequest{
 			ctx:    ctx,
 			method: "GET",
-			url:    url,
+			url:    endpoint,
 		}, &response)
 		if err != nil {
 			return r, fmt.Errorf("unable to get access group member: %w", err)

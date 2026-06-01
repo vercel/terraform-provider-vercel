@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -104,10 +105,27 @@ func (r *accessGroupMemberResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	out, err := r.client.CreateAccessGroupMember(ctx, client.CreateAccessGroupMemberRequest{
-		TeamID:        plan.TeamID.ValueString(),
-		AccessGroupID: plan.AccessGroupID.ValueString(),
-		UserID:        plan.UserID.ValueString(),
+	// A freshly-invited team member may not be immediately recognized by the
+	// access group endpoint, which returns "member_not_found" until membership
+	// propagates. Retry with exponential backoff in that case.
+	var out client.AccessGroupMember
+	createRetry := Retry{
+		Base:     200 * time.Millisecond,
+		Attempts: 7,
+	}
+	err := createRetry.Do(func(attempt int) (shouldRetry bool, err error) {
+		out, err = r.client.CreateAccessGroupMember(ctx, client.CreateAccessGroupMemberRequest{
+			TeamID:        plan.TeamID.ValueString(),
+			AccessGroupID: plan.AccessGroupID.ValueString(),
+			UserID:        plan.UserID.ValueString(),
+		})
+		if client.MemberNotFound(err) {
+			tflog.Info(ctx, "team member not yet propagated, retrying", map[string]any{
+				"user_id": plan.UserID.ValueString(),
+			})
+			return true, err
+		}
+		return false, err
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(

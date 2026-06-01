@@ -23,7 +23,8 @@ For more detailed information, please see the [Vercel documentation](https://ver
 
 ```terraform
 resource "vercel_access_group" "example" {
-  name = "example-access-group"
+  team_id = "team_xxxxxxxxxxxxxxxxxxxxxxxx"
+  name    = "example-access-group"
 }
 
 resource "vercel_team_member" "example" {
@@ -33,6 +34,7 @@ resource "vercel_team_member" "example" {
 }
 
 resource "vercel_access_group_member" "example" {
+  team_id         = "team_xxxxxxxxxxxxxxxxxxxxxxxx"
   access_group_id = vercel_access_group.example.id
   user_id         = vercel_team_member.example.user_id
 }
