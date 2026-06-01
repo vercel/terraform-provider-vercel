@@ -51,6 +51,7 @@ Use the navigation to the left to read about the available resources.
 
 func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		newAccessGroupMemberResource,
 		newAccessGroupProjectResource,
 		newAccessGroupResource,
 		newAliasResource,
