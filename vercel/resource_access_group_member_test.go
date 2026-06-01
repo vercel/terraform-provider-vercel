@@ -14,16 +14,24 @@ import (
 func TestAcc_AccessGroupMemberResource(t *testing.T) {
 	name := acctest.RandString(16)
 
+	// Use the authenticated user, who is a confirmed member of the testing
+	// team. The access group endpoint rejects members whose invitation has not
+	// been confirmed, so a freshly-invited member cannot be used here.
+	user, err := testClient(t).GetUser(context.Background())
+	if err != nil {
+		t.Fatalf("could not get authenticated user: %s", err)
+	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccAccessGroupMemberDoesNotExist(testClient(t), testTeam(t), "vercel_access_group_member.test"),
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccResourceAccessGroupMember(name, testAdditionalUserEmail(t), testTeam(t))),
+				Config: cfg(testAccResourceAccessGroupMember(name, user.ID)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckAccessGroupMemberExists(testClient(t), testTeam(t), "vercel_access_group_member.test"),
 					resource.TestCheckResourceAttrSet("vercel_access_group_member.test", "access_group_id"),
-					resource.TestCheckResourceAttrSet("vercel_access_group_member.test", "user_id"),
+					resource.TestCheckResourceAttr("vercel_access_group_member.test", "user_id", user.ID),
 				),
 			},
 			{
@@ -90,21 +98,15 @@ func testAccAccessGroupMemberDoesNotExist(testClient *client.Client, teamID stri
 	}
 }
 
-func testAccResourceAccessGroupMember(name, userEmail, teamID string) string {
+func testAccResourceAccessGroupMember(name, userID string) string {
 	return fmt.Sprintf(`
-resource "vercel_team_member" "test" {
-  email   = "%[2]s"
-  team_id = "%[3]s"
-  role    = "MEMBER"
-}
-
 resource "vercel_access_group" "test" {
   name = "test-acc-%[1]s"
 }
 
 resource "vercel_access_group_member" "test" {
   access_group_id = vercel_access_group.test.id
-  user_id         = vercel_team_member.test.user_id
+  user_id         = "%[2]s"
 }
-`, name, userEmail, teamID)
+`, name, userID)
 }
