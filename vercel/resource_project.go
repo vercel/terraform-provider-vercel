@@ -2451,7 +2451,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		)
 		return
 	}
-	tflog.Error(ctx, "created project", map[string]any{
+	tflog.Info(ctx, "created project", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 		"project":    result,
