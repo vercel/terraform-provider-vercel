@@ -14,7 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 const defaultBlobObjectCacheControlMaxAge int64 = 30 * 24 * 60 * 60

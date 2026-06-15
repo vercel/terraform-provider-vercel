@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestConvertResponseToProjectHandlesMissingResourceConfigAndBranchSensitiveEnv(t *testing.T) {

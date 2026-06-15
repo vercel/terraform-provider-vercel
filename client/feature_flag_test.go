@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	vercelclient "github.com/vercel/terraform-provider-vercel/v4/client"
+	vercelclient "github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestCreateFeatureFlag(t *testing.T) {
