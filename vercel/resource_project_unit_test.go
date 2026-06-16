@@ -24,6 +24,20 @@ func TestProjectRequiresUpdateAfterCreationOnlyForConfiguredFields(t *testing.T)
 	}
 }
 
+func TestDeprecatedBoolFromPlanWhenOmitted(t *testing.T) {
+	if got := deprecatedBoolFromPlanWhenOmitted(types.BoolValue(true), types.BoolNull()); !got.ValueBool() {
+		t.Fatalf("deprecatedBoolFromPlanWhenOmitted() = %v, want planned true", got)
+	}
+
+	if got := deprecatedBoolFromPlanWhenOmitted(types.BoolValue(false), types.BoolNull()); got.ValueBool() {
+		t.Fatalf("deprecatedBoolFromPlanWhenOmitted() = %v, want planned false", got)
+	}
+
+	if got := deprecatedBoolFromPlanWhenOmitted(types.BoolValue(true), types.BoolValue(false)); got.ValueBool() {
+		t.Fatalf("deprecatedBoolFromPlanWhenOmitted() = %v, want response false", got)
+	}
+}
+
 func TestProjectTrustedSourcesToUpdateProjectRequest(t *testing.T) {
 	ctx := context.Background()
 	project := projectForUpdateRequestTests()

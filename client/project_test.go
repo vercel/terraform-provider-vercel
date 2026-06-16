@@ -5,8 +5,25 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
+
+func TestProjectRequestsDoNotSerializePublicSource(t *testing.T) {
+	projectName := "example"
+	for name, payload := range map[string]string{
+		"create": string(mustMarshal(CreateProjectRequest{Name: "example"})),
+		"update": string(mustMarshal(UpdateProjectRequest{
+			Name: &projectName,
+		})),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if strings.Contains(payload, "publicSource") {
+				t.Fatalf("payload contains publicSource: %s", payload)
+			}
+		})
+	}
+}
 
 func TestNormalizeBuildMachineType(t *testing.T) {
 	type testCase struct {

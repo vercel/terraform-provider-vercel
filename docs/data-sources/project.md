@@ -70,7 +70,7 @@ data "vercel_project" "example" {
 - `prioritise_production_builds` (Boolean) If enabled, builds for the Production environment will be prioritized over Preview environments.
 - `protection_bypass_for_automation` (Boolean, Deprecated) Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value from `protection_bypass_for_automation_secret`. Deprecated: use the `vercel_project_protection_bypass` resource instead.
 - `protection_bypass_for_automation_secret` (List of String, Sensitive, Deprecated) The automation bypass secrets for this project. Use each value as the `x-vercel-protection-bypass` header. Deprecated: use the `vercel_project_protection_bypass` resource instead.
-- `public_source` (Boolean) Specifies whether the source code and logs of the deployments for this project should be public or not.
+- `public_source` (Boolean, Deprecated) Specifies whether the source code and logs of the deployments for this project should be public or not.
 - `resource_config` (Attributes) Resource Configuration for the project. (see [below for nested schema](#nestedatt--resource_config))
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. When null is used it will default to the project root.
 - `serverless_function_region` (String) The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.

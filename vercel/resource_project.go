@@ -488,8 +488,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "The preview deployment suffix to apply to preview deployment URLs for this project. If not set, Vercel's default suffix will be used.",
 			},
 			"public_source": schema.BoolAttribute{
-				Optional:    true,
-				Description: "By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.",
+				Optional:           true,
+				DeprecationMessage: "Vercel no longer supports configuring public_source for projects. This attribute is ignored and will be removed in a future version.",
+				Description:        "By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.",
 			},
 			"root_directory": schema.StringAttribute{
 				Optional:    true,
@@ -1059,7 +1060,6 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		OIDCTokenConfig:                   oidc.toCreateProjectRequest(),
 		OutputDirectory:                   p.OutputDirectory.ValueStringPointer(),
 		PreviewDeploymentSuffix:           p.PreviewDeploymentSuffix.ValueStringPointer(),
-		PublicSource:                      p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
 		ResourceConfig:                    resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
@@ -1158,7 +1158,6 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		Name:                                 name,
 		OutputDirectory:                      p.OutputDirectory.ValueStringPointer(),
 		PreviewDeploymentSuffix:              p.PreviewDeploymentSuffix.ValueStringPointer(),
-		PublicSource:                         p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                        p.RootDirectory.ValueStringPointer(),
 		PasswordProtection:                   pp.toUpdateProjectRequest(),
 		VercelAuthentication:                 vercelAuthentication.toVercelAuthentication(),
@@ -1838,6 +1837,13 @@ func uncoerceBool(plan, res types.Bool) types.Bool {
 	return res
 }
 
+func deprecatedBoolFromPlanWhenOmitted(plan, res types.Bool) types.Bool {
+	if !plan.IsNull() && !plan.IsUnknown() && res.IsNull() {
+		return plan
+	}
+	return res
+}
+
 var envVariableElemType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
 		"key":   types.StringType,
@@ -2149,7 +2155,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		Name:                              types.StringValue(response.Name),
 		OutputDirectory:                   uncoerceString(fields.OutputDirectory, types.StringPointerValue(response.OutputDirectory)),
 		PreviewDeploymentSuffix:           types.StringPointerValue(response.PreviewDeploymentSuffix),
-		PublicSource:                      uncoerceBool(fields.PublicSource, types.BoolPointerValue(response.PublicSource)),
+		PublicSource:                      deprecatedBoolFromPlanWhenOmitted(fields.PublicSource, types.BoolPointerValue(response.PublicSource)),
 		RootDirectory:                     types.StringPointerValue(response.RootDirectory),
 		ServerlessFunctionRegion:          serverlessFunctionRegion,
 		TeamID:                            toTeamID(response.TeamID),
