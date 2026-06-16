@@ -186,7 +186,6 @@ type ProjectResponse struct {
 	Name                                 string                      `json:"name"`
 	OutputDirectory                      *string                     `json:"outputDirectory"`
 	PreviewDeploymentSuffix              *string                     `json:"previewDeploymentSuffix"`
-	PublicSource                         *bool                       `json:"publicSource"`
 	RootDirectory                        *string                     `json:"rootDirectory"`
 	ServerlessFunctionRegion             *string                     `json:"serverlessFunctionRegion"`
 	VercelAuthentication                 *VercelAuthentication       `json:"ssoProtection"`
@@ -353,7 +352,6 @@ type UpdateProjectRequest struct {
 	Name                                 *string                         `json:"name,omitempty"`
 	OutputDirectory                      *string                         `json:"outputDirectory"`
 	PreviewDeploymentSuffix              *string                         `json:"previewDeploymentSuffix"`
-	PublicSource                         *bool                           `json:"publicSource"`
 	RootDirectory                        *string                         `json:"rootDirectory"`
 	ServerlessFunctionRegion             string                          `json:"serverlessFunctionRegion,omitempty"`
 	VercelAuthentication                 *VercelAuthentication           `json:"ssoProtection"`

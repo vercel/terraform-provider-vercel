@@ -336,8 +336,9 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The preview deployment suffix to apply to preview deployment URLs for this project.",
 			},
 			"public_source": schema.BoolAttribute{
-				Computed:    true,
-				Description: "Specifies whether the source code and logs of the deployments for this project should be public or not.",
+				Computed:           true,
+				DeprecationMessage: "This attribute is deprecated and no longer has any effect. The public source feature has been removed from Vercel and is no longer returned by the API. It will be removed in a future major version of this provider.",
+				Description:        "Deprecated. The public source feature has been removed from Vercel; this attribute is no longer populated.",
 			},
 			"enable_affected_projects_deployments": schema.BoolAttribute{
 				Computed:    true,
