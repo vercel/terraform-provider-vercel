@@ -19,8 +19,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &projectMembersResource{}
-	_ resource.ResourceWithConfigure = &projectMembersResource{}
+	_ resource.Resource               = &projectMembersResource{}
+	_ resource.ResourceWithConfigure  = &projectMembersResource{}
+	_ resource.ResourceWithModifyPlan = &projectMembersResource{}
 )
 
 func newProjectMembersResource() resource.Resource {
@@ -89,9 +90,11 @@ This, however, means config drift will not be detected for members that are adde
 							Description: "The ID of the user to add to the project. Exactly one of `user_id`, `email`, or `username` must be specified.",
 							Optional:    true,
 							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseNonNullStateForUnknown(),
-							},
+							// No UseStateForUnknown-style plan modifier here: these
+							// identity fields live inside a Set, whose elements have no
+							// stable identity, so such a modifier can graft one member's
+							// computed values onto another. ModifyPlan fills these from
+							// prior state instead, correlating by the user-specified field.
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("user_id"),
@@ -104,9 +107,6 @@ This, however, means config drift will not be detected for members that are adde
 							Description: "The email of the user to add to the project. Exactly one of `user_id`, `email`, or `username` must be specified.",
 							Optional:    true,
 							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseNonNullStateForUnknown(),
-							},
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("user_id"),
@@ -119,9 +119,6 @@ This, however, means config drift will not be detected for members that are adde
 							Description: "The username of the user to add to the project. Exactly one of `user_id`, `email`, or `username` must be specified.",
 							Optional:    true,
 							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseNonNullStateForUnknown(),
-							},
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("user_id"),
@@ -171,6 +168,93 @@ var memberAttrType = types.ObjectType{
 		"username": types.StringType,
 		"role":     types.StringType,
 	},
+}
+
+// ModifyPlan fills the computed identity fields (user_id, username, email) of
+// members that already exist, copying them from prior state and correlating on
+// the single field the user specified. This replaces a per-attribute
+// UseStateForUnknown plan modifier, which is unsafe on attributes nested inside a
+// Set: set elements have no stable identity, so such a modifier can graft one
+// member's computed values onto another and produce an "inconsistent result
+// after apply" error. New members (no match in state) keep their unknown
+// computed fields, which the API resolves during apply.
+func (r *projectMembersResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// Nothing to correlate on create (no prior state) or destroy (no plan).
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var plan, state ProjectMembersModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	planMembers, diags := plan.members(ctx)
+	resp.Diagnostics.Append(diags...)
+	stateMembers, diags := state.members(ctx)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Index existing members by every identifier they expose, so a planned member
+	// specified by any one of those fields can find its existing counterpart.
+	type identity struct{ field, value string }
+	existing := map[identity]ProjectMemberItem{}
+	for _, m := range stateMembers {
+		if v := m.UserID.ValueString(); v != "" {
+			existing[identity{"user_id", v}] = m
+		}
+		if v := m.Email.ValueString(); v != "" {
+			existing[identity{"email", v}] = m
+		}
+		if v := m.Username.ValueString(); v != "" {
+			existing[identity{"username", v}] = m
+		}
+	}
+
+	changed := false
+	for i := range planMembers {
+		var match ProjectMemberItem
+		var found bool
+		switch {
+		case !planMembers[i].UserID.IsUnknown() && planMembers[i].UserID.ValueString() != "":
+			match, found = existing[identity{"user_id", planMembers[i].UserID.ValueString()}]
+		case !planMembers[i].Email.IsUnknown() && planMembers[i].Email.ValueString() != "":
+			match, found = existing[identity{"email", planMembers[i].Email.ValueString()}]
+		case !planMembers[i].Username.IsUnknown() && planMembers[i].Username.ValueString() != "":
+			match, found = existing[identity{"username", planMembers[i].Username.ValueString()}]
+		}
+		if !found {
+			// New member: leave computed fields unknown so the API can resolve them.
+			continue
+		}
+		if planMembers[i].UserID.IsUnknown() {
+			planMembers[i].UserID = match.UserID
+			changed = true
+		}
+		if planMembers[i].Email.IsUnknown() {
+			planMembers[i].Email = match.Email
+			changed = true
+		}
+		if planMembers[i].Username.IsUnknown() {
+			planMembers[i].Username = match.Username
+			changed = true
+		}
+	}
+
+	if !changed {
+		return
+	}
+
+	newSet, diags := types.SetValueFrom(ctx, memberAttrType, planMembers)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("members"), newSet)...)
 }
 
 func (r *projectMembersResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
