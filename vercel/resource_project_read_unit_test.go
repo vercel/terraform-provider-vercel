@@ -90,10 +90,10 @@ func TestConvertResponseToProjectPreservesConfiguredPublicSourceWhenResponseOmit
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		name             string
-		configuredValue  types.Bool
-		wantNull         bool
-		wantStateValue   bool
+		name            string
+		configuredValue types.Bool
+		wantNull        bool
+		wantStateValue  bool
 	}{
 		{
 			name:            "configured true",
