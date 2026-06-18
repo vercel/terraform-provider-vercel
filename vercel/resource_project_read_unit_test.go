@@ -86,6 +86,54 @@ func TestConvertResponseToProjectHandlesMissingResourceConfigAndBranchSensitiveE
 	}
 }
 
+func TestConvertResponseToProjectPreservesConfiguredPublicSourceWhenResponseOmitsIt(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name            string
+		configuredValue types.Bool
+		wantNull        bool
+		wantStateValue  bool
+	}{
+		{
+			name:            "configured true",
+			configuredValue: types.BoolValue(true),
+			wantStateValue:  true,
+		},
+		{
+			name:            "configured false",
+			configuredValue: types.BoolValue(false),
+			wantStateValue:  false,
+		},
+		{
+			name:            "unset",
+			configuredValue: types.BoolNull(),
+			wantNull:        true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			plan := projectForReadTests()
+			plan.PublicSource = tt.configuredValue
+
+			result, err := convertResponseToProject(ctx, client.ProjectResponse{
+				ID:     "prj_123",
+				Name:   "example",
+				TeamID: "team_123",
+			}, plan, nil)
+			if err != nil {
+				t.Fatalf("convertResponseToProject() returned error: %v", err)
+			}
+
+			if result.PublicSource.IsNull() != tt.wantNull {
+				t.Fatalf("PublicSource null = %t, want %t", result.PublicSource.IsNull(), tt.wantNull)
+			}
+			if !tt.wantNull && result.PublicSource.ValueBool() != tt.wantStateValue {
+				t.Fatalf("PublicSource = %t, want %t", result.PublicSource.ValueBool(), tt.wantStateValue)
+			}
+		})
+	}
+}
+
 func TestConvertResponseToProjectTrustedSources(t *testing.T) {
 	ctx := context.Background()
 	projectLabel := "Source project"
