@@ -714,11 +714,10 @@ func TestAcc_ProjectImport(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            "vercel_project.test",
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"public_source"},
-				ImportStateIdFunc:       getProjectImportID("vercel_project.test"),
+				ResourceName:      "vercel_project.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getProjectImportID("vercel_project.test"),
 			},
 		},
 	})
