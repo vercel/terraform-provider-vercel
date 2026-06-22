@@ -35,7 +35,6 @@ data "vercel_domain" "example" {
 ### Read-Only
 
 - `bought_at` (Number) Timestamp in milliseconds when the domain was purchased, if it was purchased through Vercel.
-- `cdn_enabled` (Boolean) Whether the domain has the Vercel Edge Network enabled or not.
 - `created_at` (Number) Timestamp in milliseconds when the domain was created in the registry.
 - `custom_nameservers` (List of String) A list of custom nameservers for the domain to point to. Only applies to domains purchased with Vercel.
 - `expires_at` (Number) Timestamp in milliseconds at which the domain is set to expire. Null if not bought with Vercel.

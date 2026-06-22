@@ -19,22 +19,21 @@ func TestAcc_Domain(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccDomainDestroy(testClient(t), testTeam(t), domain),
 		Steps: []resource.TestStep{
-			// Create and Read testing, with the optional fields explicitly set.
+			// Create and Read testing, with the optional zone field explicitly set.
 			{
-				Config: cfg(testAccDomainConfig(domain, false, true)),
+				Config: cfg(testAccDomainConfig(domain, false)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccDomainExists(testClient(t), testTeam(t), domain),
 					resource.TestCheckResourceAttr("vercel_domain.test", "name", domain),
 					resource.TestCheckResourceAttrSet("vercel_domain.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_domain.test", "team_id"),
 					resource.TestCheckResourceAttr("vercel_domain.test", "zone", "false"),
-					resource.TestCheckResourceAttr("vercel_domain.test", "cdn_enabled", "true"),
 					resource.TestCheckResourceAttrSet("vercel_domain.test", "verified"),
 				),
 			},
 			// Updating zone is applied in place via PATCH and must not replace the domain.
 			{
-				Config: cfg(testAccDomainConfig(domain, true, true)),
+				Config: cfg(testAccDomainConfig(domain, true)),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("vercel_domain.test", plancheck.ResourceActionUpdate),
@@ -42,20 +41,6 @@ func TestAcc_Domain(t *testing.T) {
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_domain.test", "zone", "true"),
-					resource.TestCheckResourceAttr("vercel_domain.test", "cdn_enabled", "true"),
-				),
-			},
-			// cdn_enabled can only be set at creation, so changing it forces replacement.
-			{
-				Config: cfg(testAccDomainConfig(domain, true, false)),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("vercel_domain.test", plancheck.ResourceActionReplace),
-					},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccDomainExists(testClient(t), testTeam(t), domain),
-					resource.TestCheckResourceAttr("vercel_domain.test", "cdn_enabled", "false"),
 				),
 			},
 			// Import testing via team_id/domain.
@@ -86,7 +71,6 @@ func TestAcc_DomainMinimal(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_domain.test", "name", domain),
 					resource.TestCheckResourceAttrSet("vercel_domain.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_domain.test", "zone"),
-					resource.TestCheckResourceAttrSet("vercel_domain.test", "cdn_enabled"),
 					resource.TestCheckResourceAttrSet("vercel_domain.test", "verified"),
 				),
 			},
@@ -121,14 +105,13 @@ func testAccDomainDestroy(testClient *client.Client, teamID, domain string) reso
 	}
 }
 
-func testAccDomainConfig(domain string, zone, cdnEnabled bool) string {
+func testAccDomainConfig(domain string, zone bool) string {
 	return fmt.Sprintf(`
 resource "vercel_domain" "test" {
-  name        = "%[1]s"
-  zone        = %[2]t
-  cdn_enabled = %[3]t
+  name = "%[1]s"
+  zone = %[2]t
 }
-`, domain, zone, cdnEnabled)
+`, domain, zone)
 }
 
 func testAccDomainConfigMinimal(domain string) string {

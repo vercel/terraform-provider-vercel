@@ -34,7 +34,6 @@ resource "vercel_domain" "example" {
 
 ### Optional
 
-- `cdn_enabled` (Boolean) Whether the domain has the Vercel Edge Network enabled or not. This can only be set when the domain is created.
 - `team_id` (String) The ID of the team the domain should exist under. Required when configuring a team resource if a default team has not been set in the provider.
 - `zone` (Boolean) Whether a DNS zone should be created for the domain on Vercel. Set to `true` if using Vercel nameservers.
 

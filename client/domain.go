@@ -18,7 +18,6 @@ type Domain struct {
 	Nameservers         []string `json:"nameservers"`
 	IntendedNameservers []string `json:"intendedNameservers"`
 	CustomNameservers   []string `json:"customNameservers"`
-	CDNEnabled          bool     `json:"cdnEnabled"`
 	Zone                bool     `json:"zone"`
 	CreatedAt           *int64   `json:"createdAt"`
 	ExpiresAt           *int64   `json:"expiresAt"`
@@ -32,11 +31,10 @@ type domainResponse struct {
 
 // CreateDomainRequest defines the information necessary to add an existing apex domain to Vercel.
 type CreateDomainRequest struct {
-	Name       string `json:"name"`
-	Method     string `json:"method"`
-	CDNEnabled *bool  `json:"cdnEnabled,omitempty"`
-	Zone       *bool  `json:"zone,omitempty"`
-	TeamID     string `json:"-"`
+	Name   string `json:"name"`
+	Method string `json:"method"`
+	Zone   *bool  `json:"zone,omitempty"`
+	TeamID string `json:"-"`
 }
 
 // CreateDomain adds an existing apex domain to a Vercel account or team.

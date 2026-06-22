@@ -72,12 +72,6 @@ which associates a domain name with a specific project.`,
 				Description:   "The ID of the team the domain should exist under. Required when configuring a team resource if a default team has not been set in the provider.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
-			"cdn_enabled": schema.BoolAttribute{
-				Optional:      true,
-				Computed:      true,
-				Description:   "Whether the domain has the Vercel Edge Network enabled or not. This can only be set when the domain is created.",
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplaceIfConfigured(), boolplanmodifier.UseStateForUnknown()},
-			},
 			"zone": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
@@ -128,7 +122,6 @@ type Domain struct {
 	Name                types.String `tfsdk:"name"`
 	ID                  types.String `tfsdk:"id"`
 	TeamID              types.String `tfsdk:"team_id"`
-	CDNEnabled          types.Bool   `tfsdk:"cdn_enabled"`
 	Zone                types.Bool   `tfsdk:"zone"`
 	Verified            types.Bool   `tfsdk:"verified"`
 	Nameservers         types.List   `tfsdk:"nameservers"`
@@ -153,7 +146,6 @@ func responseToDomain(ctx context.Context, out client.Domain) (Domain, diag.Diag
 		Name:                types.StringValue(out.Name),
 		ID:                  types.StringValue(out.ID),
 		TeamID:              toTeamID(out.TeamID),
-		CDNEnabled:          types.BoolValue(out.CDNEnabled),
 		Zone:                types.BoolValue(out.Zone),
 		Verified:            types.BoolValue(out.Verified),
 		Nameservers:         nameservers,
@@ -175,10 +167,9 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	out, err := r.client.CreateDomain(ctx, client.CreateDomainRequest{
-		Name:       plan.Name.ValueString(),
-		CDNEnabled: plan.CDNEnabled.ValueBoolPointer(),
-		Zone:       plan.Zone.ValueBoolPointer(),
-		TeamID:     plan.TeamID.ValueString(),
+		Name:   plan.Name.ValueString(),
+		Zone:   plan.Zone.ValueBoolPointer(),
+		TeamID: plan.TeamID.ValueString(),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(

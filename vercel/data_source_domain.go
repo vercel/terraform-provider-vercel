@@ -64,10 +64,6 @@ This is distinct from a ` + "`vercel_project_domain`" + `, which associates a do
 				Computed:    true,
 				Description: "The ID of the team the domain exists under. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
-			"cdn_enabled": schema.BoolAttribute{
-				Description: "Whether the domain has the Vercel Edge Network enabled or not.",
-				Computed:    true,
-			},
 			"zone": schema.BoolAttribute{
 				Description: "Whether a DNS zone has been created for the domain on Vercel.",
 				Computed:    true,
