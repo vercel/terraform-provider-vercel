@@ -19,8 +19,14 @@ func TestAcc_DomainDataSource(t *testing.T) {
 				Config: cfg(testAccDomainDataSourceConfig(domain)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vercel_domain.test", "name", domain),
-					resource.TestCheckResourceAttrSet("data.vercel_domain.test", "id"),
-					resource.TestCheckResourceAttrSet("data.vercel_domain.test", "team_id"),
+					// The data source should mirror every field exposed by the resource.
+					resource.TestCheckResourceAttrPair("data.vercel_domain.test", "id", "vercel_domain.test", "id"),
+					resource.TestCheckResourceAttrPair("data.vercel_domain.test", "team_id", "vercel_domain.test", "team_id"),
+					resource.TestCheckResourceAttrPair("data.vercel_domain.test", "zone", "vercel_domain.test", "zone"),
+					resource.TestCheckResourceAttrPair("data.vercel_domain.test", "cdn_enabled", "vercel_domain.test", "cdn_enabled"),
+					resource.TestCheckResourceAttrPair("data.vercel_domain.test", "verified", "vercel_domain.test", "verified"),
+					resource.TestCheckResourceAttrPair("data.vercel_domain.test", "nameservers.#", "vercel_domain.test", "nameservers.#"),
+					resource.TestCheckResourceAttrPair("data.vercel_domain.test", "intended_nameservers.#", "vercel_domain.test", "intended_nameservers.#"),
 				),
 			},
 		},
@@ -30,7 +36,9 @@ func TestAcc_DomainDataSource(t *testing.T) {
 func testAccDomainDataSourceConfig(domain string) string {
 	return fmt.Sprintf(`
 resource "vercel_domain" "test" {
-  name = "%[1]s"
+  name        = "%[1]s"
+  zone        = true
+  cdn_enabled = true
 }
 
 data "vercel_domain" "test" {
