@@ -63,6 +63,7 @@ type CreateProjectRequest struct {
 	EnableProductionFeedback          *bool                 `json:"enableProductionFeedback,omitempty"`
 	VercelAuthentication              *VercelAuthentication `json:"ssoProtection,omitempty"`
 	PreviewDeploymentsDisabled        *bool                 `json:"previewDeploymentsDisabled,omitempty"`
+	ProtectedSourcemaps               *bool                 `json:"protectedSourcemaps,omitempty"`
 }
 
 // CreateProject will create a project within Vercel.
@@ -208,6 +209,7 @@ type ProjectResponse struct {
 	GitForkProtection                    bool                        `json:"gitForkProtection"`
 	ProductionDeploymentsFastLane        bool                        `json:"productionDeploymentsFastLane"`
 	DirectoryListing                     bool                        `json:"directoryListing"`
+	ProtectedSourcemaps                  bool                        `json:"protectedSourcemaps"`
 	SkewProtectionMaxAge                 int                         `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                `json:"gitComments"`
 	GitProviderOptions                   *GitProviderOptionsResponse `json:"gitProviderOptions"`
@@ -374,6 +376,7 @@ type UpdateProjectRequest struct {
 	GitForkProtection                    bool                            `json:"gitForkProtection"`
 	ProductionDeploymentsFastLane        bool                            `json:"productionDeploymentsFastLane"`
 	DirectoryListing                     bool                            `json:"directoryListing"`
+	ProtectedSourcemaps                  bool                            `json:"protectedSourcemaps"`
 	SkewProtectionMaxAge                 int                             `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                    `json:"gitComments"`
 	GitProviderOptions                   *GitProviderOptions             `json:"gitProviderOptions,omitempty"`

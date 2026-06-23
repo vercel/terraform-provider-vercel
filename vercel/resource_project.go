@@ -618,6 +618,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.",
 			},
+			"protected_sourcemaps": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
+				Description:   "Specifies whether sourcemaps are protected and require authentication to access.",
+			},
 			"git_fork_protection": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -794,6 +800,7 @@ type Project struct {
 	GitLFS                            types.Bool   `tfsdk:"git_lfs"`
 	FunctionFailover                  types.Bool   `tfsdk:"function_failover"`
 	CustomerSuccessCodeVisibility     types.Bool   `tfsdk:"customer_success_code_visibility"`
+	ProtectedSourcemaps              types.Bool   `tfsdk:"protected_sourcemaps"`
 	GitForkProtection                 types.Bool   `tfsdk:"git_fork_protection"`
 	PrioritiseProductionBuilds        types.Bool   `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                  types.Bool   `tfsdk:"directory_listing"`
@@ -832,6 +839,7 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 		knownBool(p.GitLFS) ||
 		knownBool(p.FunctionFailover) ||
 		knownBool(p.CustomerSuccessCodeVisibility) ||
+		knownBool(p.ProtectedSourcemaps) ||
 		(knownBool(p.GitForkProtection) && !p.GitForkProtection.ValueBool()) ||
 		knownBool(p.PrioritiseProductionBuilds) ||
 		knownBool(p.DirectoryListing) ||
@@ -1066,6 +1074,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
 		VercelAuthentication:              vercelAuthentication.toVercelAuthentication(),
 		PreviewDeploymentsDisabled:        p.PreviewDeploymentsDisabled.ValueBoolPointer(),
+		ProtectedSourcemaps:               p.ProtectedSourcemaps.ValueBoolPointer(),
 	}, diags
 }
 
@@ -1175,6 +1184,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		GitLFS:                               p.GitLFS.ValueBool(),
 		ServerlessFunctionZeroConfigFailover: p.FunctionFailover.ValueBool(),
 		CustomerSupportCodeVisibility:        p.CustomerSuccessCodeVisibility.ValueBool(),
+		ProtectedSourcemaps:                  p.ProtectedSourcemaps.ValueBool(),
 		GitForkProtection:                    p.GitForkProtection.ValueBool(),
 		ProductionDeploymentsFastLane:        p.PrioritiseProductionBuilds.ValueBool(),
 		DirectoryListing:                     p.DirectoryListing.ValueBool(),
@@ -2169,6 +2179,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		GitLFS:                            types.BoolValue(response.GitLFS),
 		FunctionFailover:                  types.BoolValue(response.ServerlessFunctionZeroConfigFailover),
 		CustomerSuccessCodeVisibility:     types.BoolValue(response.CustomerSupportCodeVisibility),
+		ProtectedSourcemaps:              types.BoolValue(response.ProtectedSourcemaps),
 		GitForkProtection:                 types.BoolValue(response.GitForkProtection),
 		PrioritiseProductionBuilds:        types.BoolValue(response.ProductionDeploymentsFastLane),
 		DirectoryListing:                  types.BoolValue(response.DirectoryListing),

@@ -114,6 +114,7 @@ func projectForUpdateRequestTests() Project {
 		GitLFS:                            types.BoolUnknown(),
 		FunctionFailover:                  types.BoolUnknown(),
 		CustomerSuccessCodeVisibility:     types.BoolUnknown(),
+		ProtectedSourcemaps:               types.BoolUnknown(),
 		GitForkProtection:                 types.BoolValue(true),
 		PrioritiseProductionBuilds:        types.BoolUnknown(),
 		DirectoryListing:                  types.BoolUnknown(),
