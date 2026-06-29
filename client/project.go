@@ -55,7 +55,6 @@ type CreateProjectRequest struct {
 	OIDCTokenConfig                   *OIDCTokenConfig      `json:"oidcTokenConfig,omitempty"`
 	OutputDirectory                   *string               `json:"outputDirectory"`
 	PreviewDeploymentSuffix           *string               `json:"previewDeploymentSuffix"`
-	PublicSource                      *bool                 `json:"publicSource"`
 	RootDirectory                     *string               `json:"rootDirectory"`
 	ServerlessFunctionRegion          string                `json:"serverlessFunctionRegion,omitempty"`
 	ResourceConfig                    *ResourceConfig       `json:"resourceConfig,omitempty"`
