@@ -63,7 +63,6 @@ type CreateProjectRequest struct {
 	EnableProductionFeedback          *bool                 `json:"enableProductionFeedback,omitempty"`
 	VercelAuthentication              *VercelAuthentication `json:"ssoProtection,omitempty"`
 	PreviewDeploymentsDisabled        *bool                 `json:"previewDeploymentsDisabled,omitempty"`
-	ProtectedSourcemaps               *bool                 `json:"protectedSourcemaps,omitempty"`
 }
 
 // CreateProject will create a project within Vercel.

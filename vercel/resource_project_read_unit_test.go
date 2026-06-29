@@ -86,6 +86,41 @@ func TestConvertResponseToProjectHandlesMissingResourceConfigAndBranchSensitiveE
 	}
 }
 
+func TestConvertResponseToProjectProtectedSourcemaps(t *testing.T) {
+	ctx := context.Background()
+	result, err := convertResponseToProject(ctx, client.ProjectResponse{
+		ID:                  "prj_123",
+		Name:                "example",
+		TeamID:              "team_123",
+		ProtectedSourcemaps: true,
+	}, projectForReadTests(), nil)
+	if err != nil {
+		t.Fatalf("convertResponseToProject() returned error: %v", err)
+	}
+	if !result.ProtectedSourcemaps.ValueBool() {
+		t.Fatal("ProtectedSourcemaps = false, want true")
+	}
+}
+
+func TestConvertResponseToProjectKeepsConfiguredBoolWhenResponseIsNull(t *testing.T) {
+	ctx := context.Background()
+	plan := projectForReadTests()
+	plan.PublicSource = types.BoolValue(true)
+
+	result, err := convertResponseToProject(ctx, client.ProjectResponse{
+		ID:           "prj_123",
+		Name:         "example",
+		TeamID:       "team_123",
+		PublicSource: nil,
+	}, plan, nil)
+	if err != nil {
+		t.Fatalf("convertResponseToProject() returned error: %v", err)
+	}
+	if !result.PublicSource.ValueBool() {
+		t.Fatal("PublicSource = false/null, want configured true")
+	}
+}
+
 func TestConvertResponseToProjectTrustedSources(t *testing.T) {
 	ctx := context.Background()
 	projectLabel := "Source project"

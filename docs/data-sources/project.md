@@ -68,6 +68,7 @@ data "vercel_project" "example" {
 - `preview_deployment_suffix` (String) The preview deployment suffix to apply to preview deployment URLs for this project.
 - `preview_deployments_disabled` (Boolean) Whether Preview Deployments are disabled for this project.
 - `prioritise_production_builds` (Boolean) If enabled, builds for the Production environment will be prioritized over Preview environments.
+- `protected_sourcemaps` (Boolean) Specifies whether sourcemaps are protected and require authentication to access.
 - `protection_bypass_for_automation` (Boolean, Deprecated) Allows automation services to bypass Deployment Protection on this project when using an HTTP header named `x-vercel-protection-bypass` with a value from `protection_bypass_for_automation_secret`. Deprecated: use the `vercel_project_protection_bypass` resource instead.
 - `protection_bypass_for_automation_secret` (List of String, Sensitive, Deprecated) The automation bypass secrets for this project. Use each value as the `x-vercel-protection-bypass` header. Deprecated: use the `vercel_project_protection_bypass` resource instead.
 - `public_source` (Boolean) Specifies whether the source code and logs of the deployments for this project should be public or not.

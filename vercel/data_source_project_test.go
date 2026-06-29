@@ -22,7 +22,6 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "framework", "nextjs"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "install_command", "npm install"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "output_directory", ".output"),
-					resource.TestCheckResourceAttr("data.vercel_project.test", "public_source", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "root_directory", "ui/src"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "vercel_authentication.deployment_type", "standard_protection"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "password_protection.deployment_type", "standard_protection"),
@@ -52,6 +51,7 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vercel_project.test", "git_lfs", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "function_failover", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "customer_success_code_visibility", "true"),
+					resource.TestCheckResourceAttr("data.vercel_project.test", "protected_sourcemaps", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "git_fork_protection", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "prioritise_production_builds", "true"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "directory_listing", "true"),
@@ -101,7 +101,6 @@ resource "vercel_project" "test" {
   framework = "nextjs"
   install_command = "npm install"
   output_directory = ".output"
-  public_source = true
   root_directory = "ui/src"
   preview_deployments_disabled = true
   vercel_authentication = {
@@ -146,6 +145,7 @@ resource "vercel_project" "test" {
   git_lfs = true
   function_failover = true
   customer_success_code_visibility = true
+  protected_sourcemaps = true
   git_fork_protection = true
   prioritise_production_builds = true
   directory_listing = true

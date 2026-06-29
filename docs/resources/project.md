@@ -44,8 +44,9 @@ resource "vercel_project" "with_git" {
 # Deployments will need to be created manually through
 # terraform, or via the vercel CLI.
 resource "vercel_project" "example" {
-  name      = "example-project"
-  framework = "nextjs"
+  name                 = "example-project"
+  framework            = "nextjs"
+  protected_sourcemaps = true
 }
 
 locals {
@@ -131,6 +132,7 @@ resource "vercel_project" "with_trusted_sources" {
 - `preview_deployment_suffix` (String) The preview deployment suffix to apply to preview deployment URLs for this project. If not set, Vercel's default suffix will be used.
 - `preview_deployments_disabled` (Boolean) Disable creation of Preview Deployments for this project.
 - `prioritise_production_builds` (Boolean) If enabled, builds for the Production environment will be prioritized over Preview environments.
+- `protected_sourcemaps` (Boolean) Specifies whether sourcemaps are protected and require authentication to access.
 - `public_source` (Boolean) By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.
 - `resource_config` (Attributes) Resource Configuration for the project. (see [below for nested schema](#nestedatt--resource_config))
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.

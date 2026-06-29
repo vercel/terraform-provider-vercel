@@ -24,6 +24,40 @@ func TestProjectRequiresUpdateAfterCreationOnlyForConfiguredFields(t *testing.T)
 	}
 }
 
+func TestProjectRequiresUpdateAfterCreationForProtectedSourcemaps(t *testing.T) {
+	project := projectForUpdateRequestTests()
+	project.ProtectedSourcemaps = types.BoolValue(false)
+
+	if !project.RequiresUpdateAfterCreation() {
+		t.Fatal("RequiresUpdateAfterCreation() = false, want true for configured protected_sourcemaps")
+	}
+}
+
+func TestProjectProtectedSourcemapsToUpdateProjectRequest(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tc := range []struct {
+		name  string
+		value bool
+	}{
+		{name: "enabled", value: true},
+		{name: "disabled", value: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			project := projectForUpdateRequestTests()
+			project.ProtectedSourcemaps = types.BoolValue(tc.value)
+
+			request, diags := project.toUpdateProjectRequest(ctx, project.Name.ValueString())
+			if diags.HasError() {
+				t.Fatalf("toUpdateProjectRequest() returned diagnostics: %v", diags)
+			}
+			if request.ProtectedSourcemaps != tc.value {
+				t.Fatalf("ProtectedSourcemaps = %v, want %v", request.ProtectedSourcemaps, tc.value)
+			}
+		})
+	}
+}
+
 func TestProjectTrustedSourcesToUpdateProjectRequest(t *testing.T) {
 	ctx := context.Background()
 	project := projectForUpdateRequestTests()

@@ -800,7 +800,7 @@ type Project struct {
 	GitLFS                            types.Bool   `tfsdk:"git_lfs"`
 	FunctionFailover                  types.Bool   `tfsdk:"function_failover"`
 	CustomerSuccessCodeVisibility     types.Bool   `tfsdk:"customer_success_code_visibility"`
-	ProtectedSourcemaps              types.Bool   `tfsdk:"protected_sourcemaps"`
+	ProtectedSourcemaps               types.Bool   `tfsdk:"protected_sourcemaps"`
 	GitForkProtection                 types.Bool   `tfsdk:"git_fork_protection"`
 	PrioritiseProductionBuilds        types.Bool   `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                  types.Bool   `tfsdk:"directory_listing"`
@@ -1074,7 +1074,6 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
 		VercelAuthentication:              vercelAuthentication.toVercelAuthentication(),
 		PreviewDeploymentsDisabled:        p.PreviewDeploymentsDisabled.ValueBoolPointer(),
-		ProtectedSourcemaps:               p.ProtectedSourcemaps.ValueBoolPointer(),
 	}, diags
 }
 
@@ -1808,8 +1807,8 @@ func (t *OptionsAllowlist) toUpdateProjectRequest() *client.OptionsAllowlist {
 * API returns a different value. This causes an inconsistent plan error.
 
 * We avoid this issue by choosing to use values from the terraform state,
-* but only if they are _explicitly stated_ *and* they are _falsy_ values
-* *and* the response value was null. This is important as drift detection
+* but only if they are _explicitly stated_ and the response value was null.
+* This is important as drift detection
 * would fail to work if the value was always selected, so this is as stringent
 * as possible to allow drift-detection in the majority of scenarios.
 
@@ -1842,7 +1841,7 @@ func uncoerceString(plan, res types.String) types.String {
 	return res
 }
 func uncoerceBool(plan, res types.Bool) types.Bool {
-	if !plan.ValueBool() && !plan.IsNull() && res.IsNull() {
+	if !plan.IsNull() && !plan.IsUnknown() && res.IsNull() {
 		return plan
 	}
 	return res
@@ -2179,7 +2178,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		GitLFS:                            types.BoolValue(response.GitLFS),
 		FunctionFailover:                  types.BoolValue(response.ServerlessFunctionZeroConfigFailover),
 		CustomerSuccessCodeVisibility:     types.BoolValue(response.CustomerSupportCodeVisibility),
-		ProtectedSourcemaps:              types.BoolValue(response.ProtectedSourcemaps),
+		ProtectedSourcemaps:               types.BoolValue(response.ProtectedSourcemaps),
 		GitForkProtection:                 types.BoolValue(response.GitForkProtection),
 		PrioritiseProductionBuilds:        types.BoolValue(response.ProductionDeploymentsFastLane),
 		DirectoryListing:                  types.BoolValue(response.DirectoryListing),
