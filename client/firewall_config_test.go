@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	vercelclient "github.com/vercel/terraform-provider-vercel/v4/client"
+	vercelclient "github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestUpdateFirewallConfig(t *testing.T) {
