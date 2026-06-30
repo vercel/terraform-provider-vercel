@@ -717,7 +717,10 @@ func TestAcc_ProjectImport(t *testing.T) {
 				ResourceName:      "vercel_project.test",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: getProjectImportID("vercel_project.test"),
+				// public_source is deprecated and no longer backed by the API, so
+				// its configured value cannot be recovered on import.
+				ImportStateVerifyIgnore: []string{"public_source"},
+				ImportStateIdFunc:       getProjectImportID("vercel_project.test"),
 			},
 		},
 	})
