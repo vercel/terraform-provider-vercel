@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 // public_source is deprecated: it is no longer sent to or returned by the
