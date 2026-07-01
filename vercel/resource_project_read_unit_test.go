@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestConvertResponseToProjectHandlesMissingResourceConfigAndBranchSensitiveEnv(t *testing.T) {
@@ -99,25 +99,6 @@ func TestConvertResponseToProjectProtectedSourcemaps(t *testing.T) {
 	}
 	if !result.ProtectedSourcemaps.ValueBool() {
 		t.Fatal("ProtectedSourcemaps = false, want true")
-	}
-}
-
-func TestConvertResponseToProjectKeepsConfiguredBoolWhenResponseIsNull(t *testing.T) {
-	ctx := context.Background()
-	plan := projectForReadTests()
-	plan.PublicSource = types.BoolValue(true)
-
-	result, err := convertResponseToProject(ctx, client.ProjectResponse{
-		ID:           "prj_123",
-		Name:         "example",
-		TeamID:       "team_123",
-		PublicSource: nil,
-	}, plan, nil)
-	if err != nil {
-		t.Fatalf("convertResponseToProject() returned error: %v", err)
-	}
-	if !result.PublicSource.ValueBool() {
-		t.Fatal("PublicSource = false/null, want configured true")
 	}
 }
 

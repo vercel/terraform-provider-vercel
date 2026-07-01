@@ -133,7 +133,7 @@ resource "vercel_project" "with_trusted_sources" {
 - `preview_deployments_disabled` (Boolean) Disable creation of Preview Deployments for this project.
 - `prioritise_production_builds` (Boolean) If enabled, builds for the Production environment will be prioritized over Preview environments.
 - `protected_sourcemaps` (Boolean) Specifies whether sourcemaps are protected and require authentication to access.
-- `public_source` (Boolean) By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.
+- `public_source` (Boolean, Deprecated) Deprecated. The public source feature has been removed from Vercel; this attribute no longer has any effect.
 - `resource_config` (Attributes) Resource Configuration for the project. (see [below for nested schema](#nestedatt--resource_config))
 - `root_directory` (String) The name of a directory or relative path to the source code of your project. If omitted, it will default to the project root.
 - `serverless_function_region` (String, Deprecated) The region on Vercel's network to which your Serverless Functions are deployed. It should be close to any data source your Serverless Function might depend on. A new Deployment is required for your changes to take effect. Please see [Vercel's documentation](https://vercel.com/docs/concepts/edge-network/regions) for a full list of regions.

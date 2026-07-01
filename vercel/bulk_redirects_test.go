@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestFindLiveBulkRedirectVersion(t *testing.T) {
