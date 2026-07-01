@@ -20,15 +20,13 @@ type UserToken struct {
 	ExpiresAt   *int64  `json:"expiresAt"`
 	LeakedAt    *int64  `json:"leakedAt"`
 	LeakedURL   *string `json:"leakedUrl"`
-	ProjectID   *string `json:"projectId"`
 	BearerToken *string
 }
 
 type CreateUserTokenRequest struct {
-	Name      string  `json:"name"`
-	ExpiresAt *int64  `json:"expiresAt,omitempty"`
-	ProjectID *string `json:"projectId,omitempty"`
-	TeamID    string  `json:"-"`
+	Name      string `json:"name"`
+	ExpiresAt *int64 `json:"expiresAt,omitempty"`
+	TeamID    string `json:"-"`
 }
 
 func (c *Client) CreateUserToken(ctx context.Context, request CreateUserTokenRequest) (u UserToken, err error) {

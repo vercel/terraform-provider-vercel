@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 var (
@@ -88,11 +88,6 @@ The ` + "`bearer_token`" + ` value is only returned during creation and cannot b
 					int64validator.AtLeast(1),
 				},
 			},
-			"project_id": schema.StringAttribute{
-				Description:   "The ID of the project this token should be scoped to. Requires team scope.",
-				Optional:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
-			},
 			"team_id": schema.StringAttribute{
 				Description:   "The ID of the Vercel team scope for this token. Required when creating a team-scoped token if a default team has not been set in the provider.",
 				Optional:      true,
@@ -153,7 +148,6 @@ type UserToken struct {
 	ID          types.String `tfsdk:"id"`
 	Name        types.String `tfsdk:"name"`
 	ExpiresAt   types.Int64  `tfsdk:"expires_at"`
-	ProjectID   types.String `tfsdk:"project_id"`
 	TeamID      types.String `tfsdk:"team_id"`
 	BearerToken types.String `tfsdk:"bearer_token"`
 	Type        types.String `tfsdk:"type"`
@@ -175,7 +169,6 @@ func responseToUserToken(out client.UserToken, bearerToken types.String) UserTok
 		ID:          types.StringValue(out.ID),
 		Name:        types.StringValue(out.Name),
 		ExpiresAt:   types.Int64PointerValue(out.ExpiresAt),
-		ProjectID:   types.StringPointerValue(out.ProjectID),
 		TeamID:      types.StringPointerValue(out.TeamID),
 		BearerToken: bearerToken,
 		Type:        types.StringValue(out.Type),
@@ -214,19 +207,9 @@ func (r *userTokenResource) Create(ctx context.Context, req resource.CreateReque
 		)
 		return
 	}
-	if !plan.ProjectID.IsNull() && r.client.TeamID(plan.TeamID.ValueString()) == "" {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("project_id"),
-			"Project-scoped token requires team scope",
-			"`project_id` can only be used when the token is created in a team scope. Set `team_id` or configure a default team on the provider.",
-		)
-		return
-	}
-
 	out, err := r.client.CreateUserToken(ctx, client.CreateUserTokenRequest{
 		Name:      name,
 		ExpiresAt: plan.ExpiresAt.ValueInt64Pointer(),
-		ProjectID: plan.ProjectID.ValueStringPointer(),
 		TeamID:    plan.TeamID.ValueString(),
 	})
 	if err != nil {

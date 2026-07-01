@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestAcc_Project(t *testing.T) {
@@ -717,7 +717,10 @@ func TestAcc_ProjectImport(t *testing.T) {
 				ResourceName:      "vercel_project.test",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: getProjectImportID("vercel_project.test"),
+				// public_source is deprecated and no longer backed by the API, so
+				// its configured value cannot be recovered on import.
+				ImportStateVerifyIgnore: []string{"public_source"},
+				ImportStateIdFunc:       getProjectImportID("vercel_project.test"),
 			},
 		},
 	})
