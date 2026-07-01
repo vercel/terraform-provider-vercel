@@ -168,7 +168,7 @@ resource "vercel_project" "test" {
 }
 
 data "vercel_project_directory" "test" {
-  path = "%[3]s"
+  path = %[3]s
 }
 
 resource "vercel_deployment" "test" {
@@ -184,7 +184,7 @@ data "vercel_deployment" "by_id" {
 data "vercel_deployment" "by_url" {
   id = vercel_deployment.test.url
 }
-`, name, testGithubRepo(t), filepath.Clean(repoDir))
+`, name, testGithubRepo(t), hclStringLiteral(filepath.Clean(repoDir)))
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,

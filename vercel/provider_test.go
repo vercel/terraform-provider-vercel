@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -39,6 +40,10 @@ provider "vercel" {
 
 %[2]s
 `, team, config)
+}
+
+func hclStringLiteral(value string) string {
+	return strconv.Quote(value)
 }
 
 func apiToken(t *testing.T) string {

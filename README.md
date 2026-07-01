@@ -5,7 +5,7 @@
 
 ## Requirements
 
-- [Terraform](https://developer.hashicorp.com/terraform/install) 1.1 or higher
+- [Terraform](https://developer.hashicorp.com/terraform/install) 1.11 or higher
 - [Go](https://golang.org/doc/install) 1.26 (to build the provider plugin)
 - [GoReleaser](https://goreleaser.com/install)
 - [Task](https://taskfile.dev/installation) v3 (to run Taskfile commands)
