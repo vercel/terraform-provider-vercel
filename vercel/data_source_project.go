@@ -447,6 +447,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:    true,
 				Description: "Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.",
 			},
+			"protected_sourcemaps": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Specifies whether sourcemaps are protected and require authentication to access.",
+			},
 			"git_fork_protection": schema.BoolAttribute{
 				Computed:    true,
 				Description: "Ensures that pull requests targeting your Git repository must be authorized by a member of your Team before deploying if your Project has Environment Variables or if the pull request includes a change to vercel.json.",
@@ -566,6 +570,7 @@ type ProjectDataSource struct {
 	GitLFS                              types.Bool   `tfsdk:"git_lfs"`
 	FunctionFailover                    types.Bool   `tfsdk:"function_failover"`
 	CustomerSuccessCodeVisibility       types.Bool   `tfsdk:"customer_success_code_visibility"`
+	ProtectedSourcemaps                 types.Bool   `tfsdk:"protected_sourcemaps"`
 	GitForkProtection                   types.Bool   `tfsdk:"git_fork_protection"`
 	PrioritiseProductionBuilds          types.Bool   `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                    types.Bool   `tfsdk:"directory_listing"`
@@ -666,6 +671,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		GitLFS:                              project.GitLFS,
 		FunctionFailover:                    project.FunctionFailover,
 		CustomerSuccessCodeVisibility:       project.CustomerSuccessCodeVisibility,
+		ProtectedSourcemaps:                 project.ProtectedSourcemaps,
 		GitForkProtection:                   project.GitForkProtection,
 		PrioritiseProductionBuilds:          project.PrioritiseProductionBuilds,
 		DirectoryListing:                    project.DirectoryListing,
