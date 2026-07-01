@@ -19,8 +19,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &projectMembersResource{}
-	_ resource.ResourceWithConfigure = &projectMembersResource{}
+	_ resource.Resource               = &projectMembersResource{}
+	_ resource.ResourceWithConfigure  = &projectMembersResource{}
+	_ resource.ResourceWithModifyPlan = &projectMembersResource{}
 )
 
 func newProjectMembersResource() resource.Resource {
@@ -89,9 +90,6 @@ This, however, means config drift will not be detected for members that are adde
 							Description: "The ID of the user to add to the project. Exactly one of `user_id`, `email`, or `username` must be specified.",
 							Optional:    true,
 							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseNonNullStateForUnknown(),
-							},
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("user_id"),
@@ -104,9 +102,6 @@ This, however, means config drift will not be detected for members that are adde
 							Description: "The email of the user to add to the project. Exactly one of `user_id`, `email`, or `username` must be specified.",
 							Optional:    true,
 							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseNonNullStateForUnknown(),
-							},
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("user_id"),
@@ -119,9 +114,6 @@ This, however, means config drift will not be detected for members that are adde
 							Description: "The username of the user to add to the project. Exactly one of `user_id`, `email`, or `username` must be specified.",
 							Optional:    true,
 							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseNonNullStateForUnknown(),
-							},
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("user_id"),
@@ -142,6 +134,45 @@ This, however, means config drift will not be detected for members that are adde
 			},
 		},
 	}
+}
+
+func (r *projectMembersResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
+		return
+	}
+
+	var plan, state ProjectMembersModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	planMembers, diags := plan.members(ctx)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	stateMembers, diags := state.members(ctx)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var memberItems []attr.Value
+	for _, planMember := range planMembers {
+		if stateMember, ok := findProjectMemberInState(planMember, stateMembers); ok {
+			planMember.UserID = projectMemberPlannedIdentity(planMember.UserID, stateMember.UserID)
+			planMember.Email = projectMemberPlannedIdentity(planMember.Email, stateMember.Email)
+			planMember.Username = projectMemberPlannedIdentity(planMember.Username, stateMember.Username)
+		}
+
+		memberItems = append(memberItems, projectMemberItemAttrValue(planMember))
+	}
+
+	plan.Members = types.SetValueMust(memberAttrType, memberItems)
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 }
 
 type ProjectMembersModel struct {
@@ -171,6 +202,40 @@ var memberAttrType = types.ObjectType{
 		"username": types.StringType,
 		"role":     types.StringType,
 	},
+}
+
+func projectMemberItemAttrValue(member ProjectMemberItem) attr.Value {
+	return types.ObjectValueMust(memberAttrType.AttrTypes, map[string]attr.Value{
+		"user_id":  member.UserID,
+		"email":    member.Email,
+		"username": member.Username,
+		"role":     member.Role,
+	})
+}
+
+func findProjectMemberInState(planMember ProjectMemberItem, stateMembers []ProjectMemberItem) (ProjectMemberItem, bool) {
+	for _, stateMember := range stateMembers {
+		if projectMemberIdentityMatches(planMember.UserID, stateMember.UserID) ||
+			projectMemberIdentityMatches(planMember.Email, stateMember.Email) ||
+			projectMemberIdentityMatches(planMember.Username, stateMember.Username) {
+			return stateMember, true
+		}
+	}
+	return ProjectMemberItem{}, false
+}
+
+func projectMemberIdentityMatches(a, b types.String) bool {
+	if a.IsNull() || a.IsUnknown() || b.IsNull() || b.IsUnknown() {
+		return false
+	}
+	return a.ValueString() != "" && a.ValueString() == b.ValueString()
+}
+
+func projectMemberPlannedIdentity(planValue, stateValue types.String) types.String {
+	if !planValue.IsUnknown() || stateValue.IsNull() || stateValue.IsUnknown() {
+		return planValue
+	}
+	return stateValue
 }
 
 func (r *projectMembersResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
