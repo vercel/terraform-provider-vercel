@@ -42,7 +42,6 @@ resource "vercel_user_token" "example_expiring" {
 ### Optional
 
 - `expires_at` (Number) The Unix timestamp in milliseconds when the token should expire.
-- `project_id` (String) The ID of the project this token should be scoped to. Requires team scope.
 - `team_id` (String) The ID of the Vercel team scope for this token. Required when creating a team-scoped token if a default team has not been set in the provider.
 
 ### Read-Only
