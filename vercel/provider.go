@@ -92,6 +92,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newTeamConfigResource,
 		newTeamMemberResource,
 		newUserTokenResource,
+		newVCRRepositoryResource,
 		newWebhookResource,
 		newProjectRollingReleaseResource,
 	}
@@ -132,6 +133,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newSharedEnvironmentVariableDataSource,
 		newTeamConfigDataSource,
 		newTeamMemberDataSource,
+		newVCRRepositoryDataSource,
 		newMicrofrontendGroupDataSource,
 		newMicrofrontendGroupMembershipDataSource,
 		newProjectRollingReleaseDataSource,
