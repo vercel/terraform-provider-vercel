@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -364,16 +365,33 @@ func (c *Client) DeleteEnvironmentVariable(ctx context.Context, projectID, teamI
 	}, nil)
 }
 
-func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID string) ([]EnvironmentVariable, error) {
-	url := fmt.Sprintf("%s/v8/projects/%s/env?decrypt=true", c.baseURL, projectID)
-	if c.TeamID(teamID) != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, c.TeamID(teamID))
-	}
+type ListEnvironmentVariablesRequest struct {
+	ProjectID string
+	TeamID    string
+	Limit     int
+	Until     *int64
+	Since     *int64
+}
 
-	envResponse := struct {
-		Env []EnvironmentVariable `json:"envs"`
+type ListEnvironmentVariablesResponse struct {
+	EnvironmentVariables []EnvironmentVariable
+	Pagination           PageInfo
+}
+
+func (c *Client) ListEnvironmentVariablesPage(ctx context.Context, request ListEnvironmentVariablesRequest) (ListEnvironmentVariablesResponse, error) {
+	baseURL := fmt.Sprintf("%s/v8/projects/%s/env", c.baseURL, request.ProjectID)
+	query := url.Values{}
+	query.Set("decrypt", "true")
+	if c.TeamID(request.TeamID) != "" {
+		query.Set("teamId", c.TeamID(request.TeamID))
+	}
+	url := urlWithQuery(baseURL, paginationQuery(query, request.Limit, request.Until, request.Since))
+
+	response := struct {
+		Env        []EnvironmentVariable `json:"envs"`
+		Pagination PageInfo              `json:"pagination"`
 	}{}
-	tflog.Info(ctx, "getting environment variables", map[string]any{
+	tflog.Info(ctx, "listing environment variables", map[string]any{
 		"url": url,
 	})
 	err := c.doRequest(clientRequest{
@@ -381,11 +399,26 @@ func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID 
 		method: "GET",
 		url:    url,
 		body:   "",
-	}, &envResponse)
-	for i := 0; i < len(envResponse.Env); i++ {
-		envResponse.Env[i].TeamID = c.TeamID(teamID)
+	}, &response)
+	for i := 0; i < len(response.Env); i++ {
+		response.Env[i].TeamID = c.TeamID(request.TeamID)
 	}
-	return envResponse.Env, err
+	return ListEnvironmentVariablesResponse{
+		EnvironmentVariables: response.Env,
+		Pagination:           response.Pagination,
+	}, err
+}
+
+func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID string) ([]EnvironmentVariable, error) {
+	return collectPages(func(until *int64) ([]EnvironmentVariable, PageInfo, error) {
+		response, err := c.ListEnvironmentVariablesPage(ctx, ListEnvironmentVariablesRequest{
+			ProjectID: projectID,
+			TeamID:    teamID,
+			Limit:     defaultPaginationLimit,
+			Until:     until,
+		})
+		return response.EnvironmentVariables, response.Pagination, err
+	})
 }
 
 // GetEnvironmentVariable gets a singluar environment variable from Vercel based on its ID.
