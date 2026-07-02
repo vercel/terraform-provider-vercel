@@ -40,6 +40,8 @@ func TestAcc_ProjectDomain(t *testing.T) {
 					testAccProjectDomainExists(testClient(t), "vercel_project.test", testTeam(t), "2"+domain),
 					testTeamID,
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "domain", "2"+domain),
+					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "verified"),
+					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "verification.#"),
 				),
 			},
 			// Update testing
