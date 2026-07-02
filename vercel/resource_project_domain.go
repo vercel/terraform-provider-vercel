@@ -113,23 +113,71 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 					),
 				},
 			},
+			"verified": schema.BoolAttribute{
+				Description: "Whether the domain is verified for use with the project. If `false`, the challenges in `verification` must be completed before the domain will serve traffic for the project.",
+				Computed:    true,
+			},
+			"verification": schema.ListNestedAttribute{
+				Description: "A list of verification challenges, one of which must be completed to verify the domain for use on the project. Once the challenge is satisfied, the domain will be verified automatically on the next refresh. Typically used to configure DNS records (e.g. a `TXT` record) for domains hosted with an external DNS provider.",
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"type": schema.StringAttribute{
+							Description: "The type of DNS record that must be created to satisfy the challenge (e.g. `TXT`).",
+							Computed:    true,
+						},
+						"domain": schema.StringAttribute{
+							Description: "The domain name on which the DNS record must be created.",
+							Computed:    true,
+						},
+						"value": schema.StringAttribute{
+							Description: "The value that the DNS record must contain.",
+							Computed:    true,
+						},
+						"reason": schema.StringAttribute{
+							Description: "A human-readable explanation of why this challenge was issued.",
+							Computed:    true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
 
+// ProjectDomainVerification mirrors a single verification challenge returned by the Vercel API.
+type ProjectDomainVerification struct {
+	Type   types.String `tfsdk:"type"`
+	Domain types.String `tfsdk:"domain"`
+	Value  types.String `tfsdk:"value"`
+	Reason types.String `tfsdk:"reason"`
+}
+
 // ProjectDomain reflects the state terraform stores internally for a project domain.
 type ProjectDomain struct {
-	Domain              types.String `tfsdk:"domain"`
-	GitBranch           types.String `tfsdk:"git_branch"`
-	CustomEnvironmentID types.String `tfsdk:"custom_environment_id"`
-	ID                  types.String `tfsdk:"id"`
-	ProjectID           types.String `tfsdk:"project_id"`
-	Redirect            types.String `tfsdk:"redirect"`
-	RedirectStatusCode  types.Int64  `tfsdk:"redirect_status_code"`
-	TeamID              types.String `tfsdk:"team_id"`
+	Domain              types.String                `tfsdk:"domain"`
+	GitBranch           types.String                `tfsdk:"git_branch"`
+	CustomEnvironmentID types.String                `tfsdk:"custom_environment_id"`
+	ID                  types.String                `tfsdk:"id"`
+	ProjectID           types.String                `tfsdk:"project_id"`
+	Redirect            types.String                `tfsdk:"redirect"`
+	RedirectStatusCode  types.Int64                 `tfsdk:"redirect_status_code"`
+	TeamID              types.String                `tfsdk:"team_id"`
+	Verified            types.Bool                  `tfsdk:"verified"`
+	Verification        []ProjectDomainVerification `tfsdk:"verification"`
 }
 
 func convertResponseToProjectDomain(response client.ProjectDomainResponse) ProjectDomain {
+	verification := make([]ProjectDomainVerification, 0, len(response.Verification))
+	for _, v := range response.Verification {
+		verification = append(verification, ProjectDomainVerification{
+			Type:   types.StringValue(v.Type),
+			Domain: types.StringValue(v.Domain),
+			Value:  types.StringValue(v.Value),
+			Reason: types.StringValue(v.Reason),
+		})
+	}
+
 	return ProjectDomain{
 		Domain:              types.StringValue(response.Name),
 		GitBranch:           types.StringPointerValue(response.GitBranch),
@@ -139,6 +187,8 @@ func convertResponseToProjectDomain(response client.ProjectDomainResponse) Proje
 		Redirect:            types.StringPointerValue(response.Redirect),
 		RedirectStatusCode:  types.Int64PointerValue(response.RedirectStatusCode),
 		TeamID:              toTeamID(response.TeamID),
+		Verified:            types.BoolValue(response.Verified),
+		Verification:        verification,
 	}
 }
 
