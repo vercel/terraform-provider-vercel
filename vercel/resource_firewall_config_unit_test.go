@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
@@ -51,6 +53,60 @@ func TestFirewallConfigResourceSchemaIncludesSessionFixationRule(t *testing.T) {
 
 	if !active.Optional {
 		t.Fatalf("sf.active should be optional")
+	}
+}
+
+func TestFirewallConfigConditionTypeIncludesRateLimitAPIID(t *testing.T) {
+	res := newFirewallConfigResource()
+
+	resp := &resource.SchemaResponse{}
+	res.Schema(context.Background(), resource.SchemaRequest{}, resp)
+
+	rules, ok := resp.Schema.Blocks["rules"].(schema.SingleNestedBlock)
+	if !ok {
+		t.Fatalf("rules block has unexpected type: %T", resp.Schema.Blocks["rules"])
+	}
+
+	rule, ok := rules.Blocks["rule"].(schema.ListNestedBlock)
+	if !ok {
+		t.Fatalf("rule block has unexpected type: %T", rules.Blocks["rule"])
+	}
+
+	conditionGroup, ok := rule.NestedObject.Attributes["condition_group"].(schema.ListNestedAttribute)
+	if !ok {
+		t.Fatalf("condition_group attribute has unexpected type: %T", rule.NestedObject.Attributes["condition_group"])
+	}
+
+	conditions, ok := conditionGroup.NestedObject.Attributes["conditions"].(schema.ListNestedAttribute)
+	if !ok {
+		t.Fatalf("conditions attribute has unexpected type: %T", conditionGroup.NestedObject.Attributes["conditions"])
+	}
+
+	conditionType, ok := conditions.NestedObject.Attributes["type"].(schema.StringAttribute)
+	if !ok {
+		t.Fatalf("type attribute has unexpected type: %T", conditions.NestedObject.Attributes["type"])
+	}
+
+	hasError := func(value string) bool {
+		errored := false
+		for _, v := range conditionType.Validators {
+			vResp := &validator.StringResponse{}
+			v.ValidateString(context.Background(), validator.StringRequest{
+				Path:        path.Root("type"),
+				ConfigValue: types.StringValue(value),
+			}, vResp)
+			if vResp.Diagnostics.HasError() {
+				errored = true
+			}
+		}
+		return errored
+	}
+
+	if hasError("rate_limit_api_id") {
+		t.Fatalf("rate_limit_api_id should be accepted as a condition type")
+	}
+	if !hasError("not_a_condition_type") {
+		t.Fatalf("invalid condition type should be rejected")
 	}
 }
 
