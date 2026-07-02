@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -16,6 +17,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
+)
+
+const (
+	projectDomainReadyPollInterval = 5 * time.Second
+	projectDomainReadyTimeout      = 10 * time.Minute
 )
 
 var (
@@ -114,6 +120,10 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 					),
 				},
 			},
+			"wait_for_ready": schema.BoolAttribute{
+				Description: "Wait until the project domain is verified before considering it created. This is useful when another resource, such as an alias, depends on the domain being ready immediately.",
+				Optional:    true,
+			},
 			"verified": schema.BoolAttribute{
 				Description: "Whether the domain is verified for use with the project. If `false`, the challenges in `verification` must be completed before the domain will serve traffic for the project.",
 				Computed:    true,
@@ -173,6 +183,7 @@ type ProjectDomain struct {
 	Redirect            types.String `tfsdk:"redirect"`
 	RedirectStatusCode  types.Int64  `tfsdk:"redirect_status_code"`
 	TeamID              types.String `tfsdk:"team_id"`
+	WaitForReady        types.Bool   `tfsdk:"wait_for_ready"`
 	Verified            types.Bool   `tfsdk:"verified"`
 	Verification        types.List   `tfsdk:"verification"`
 }
@@ -271,7 +282,23 @@ func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	if plan.WaitForReady.ValueBool() {
+		out, err = r.waitForProjectDomainReady(ctx, plan.ProjectID.ValueString(), plan.Domain.ValueString(), plan.TeamID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error waiting for project domain",
+				fmt.Sprintf("Could not wait for domain %s for project %s to become verified: %s",
+					plan.Domain.ValueString(),
+					plan.ProjectID.ValueString(),
+					err,
+				),
+			)
+			return
+		}
+	}
+
 	result := convertResponseToProjectDomain(out)
+	result.WaitForReady = plan.WaitForReady
 	tflog.Info(ctx, "added domain to project", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
@@ -313,6 +340,7 @@ func (r *projectDomainResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	result := convertResponseToProjectDomain(out)
+	result.WaitForReady = state.WaitForReady
 	tflog.Info(ctx, "read project domain", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
@@ -354,7 +382,23 @@ func (r *projectDomainResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
+	if plan.WaitForReady.ValueBool() {
+		out, err = r.waitForProjectDomainReady(ctx, plan.ProjectID.ValueString(), plan.Domain.ValueString(), plan.TeamID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error waiting for project domain",
+				fmt.Sprintf("Could not wait for domain %s for project %s to become verified: %s",
+					plan.Domain.ValueString(),
+					plan.ProjectID.ValueString(),
+					err,
+				),
+			)
+			return
+		}
+	}
+
 	result := convertResponseToProjectDomain(out)
+	result.WaitForReady = plan.WaitForReady
 	tflog.Info(ctx, "update project domain", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
@@ -439,5 +483,35 @@ func (r *projectDomainResource) ImportState(ctx context.Context, req resource.Im
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+}
+
+func (r *projectDomainResource) waitForProjectDomainReady(ctx context.Context, projectID, domain, teamID string) (client.ProjectDomainResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, projectDomainReadyTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(projectDomainReadyPollInterval)
+	defer ticker.Stop()
+
+	for {
+		out, err := r.client.GetProjectDomain(ctx, projectID, domain, teamID)
+		if err != nil {
+			return out, err
+		}
+		if out.Verified {
+			return out, nil
+		}
+
+		tflog.Info(ctx, "project domain is not verified yet", map[string]any{
+			"project_id": projectID,
+			"domain":     domain,
+			"team_id":    teamID,
+		})
+
+		select {
+		case <-ctx.Done():
+			return out, ctx.Err()
+		case <-ticker.C:
+		}
 	}
 }

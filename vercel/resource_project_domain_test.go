@@ -91,6 +91,23 @@ func TestAcc_ProjectDomainCustomEnvironment(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectDomainWaitForReady(t *testing.T) {
+	randomSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectDomainConfigWaitForReady(randomSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project_domain.test", "wait_for_ready", "true"),
+					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "custom_environment_id"),
+				),
+			},
+		},
+	})
+}
+
 func testAccProjectDomainExists(testClient *client.Client, n, teamID, domain string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -229,6 +246,26 @@ resource "vercel_project_domain" "test" {
     domain = "test-acc-domain-%[1]s-foobar.vercel.app"
     project_id = vercel_project.test.id
     custom_environment_id = vercel_custom_environment.test.id
+}
+`, randomSuffix)
+}
+
+func testAccProjectDomainConfigWaitForReady(randomSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-domain-%[1]s"
+}
+
+resource "vercel_custom_environment" "test" {
+    name = "test-acc-custom-environment"
+    project_id = vercel_project.test.id
+}
+
+resource "vercel_project_domain" "test" {
+    domain = "test-acc-domain-%[1]s-wait.vercel.app"
+    project_id = vercel_project.test.id
+    custom_environment_id = vercel_custom_environment.test.id
+    wait_for_ready = true
 }
 `, randomSuffix)
 }
