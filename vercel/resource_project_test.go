@@ -83,6 +83,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "git_lfs", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "function_failover", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "customer_success_code_visibility", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "protected_sourcemaps", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_fork_protection", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "prioritise_production_builds", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "directory_listing", "true"),
@@ -114,6 +115,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployments_disabled", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "protected_sourcemaps", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "on_demand_concurrent_builds", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "enhanced"),
 				),
@@ -903,6 +905,7 @@ resource "vercel_project" "test" {
   enable_preview_feedback = false
   enable_production_feedback = true
   preview_deployments_disabled = false
+  protected_sourcemaps = false
 }
 `, projectSuffix)
 }
@@ -1212,6 +1215,7 @@ resource "vercel_project" "test" {
   git_lfs = true
   function_failover = true
   customer_success_code_visibility = true
+  protected_sourcemaps = true
   git_fork_protection = true
   prioritise_production_builds = true
   directory_listing = true
