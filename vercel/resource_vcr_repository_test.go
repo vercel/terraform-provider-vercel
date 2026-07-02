@@ -28,7 +28,7 @@ func testCheckVCRRepositoryExists(testClient *client.Client, teamID string, n st
 		_, err := testClient.GetVCRRepository(context.TODO(), client.GetVCRRepositoryRequest{
 			TeamID:    teamID,
 			ProjectID: projectID,
-			Name:      name,
+			IDOrName:  name,
 		})
 		if client.NotFound(err) {
 			return fmt.Errorf("test failed because the vcr repository %s %s %s - %s could not be found", teamID, projectID, name, rs.Primary.ID)

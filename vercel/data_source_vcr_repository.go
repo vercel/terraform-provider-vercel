@@ -86,7 +86,7 @@ func (d *vcrRepositoryDataSource) Read(ctx context.Context, req datasource.ReadR
 	res, err := d.client.GetVCRRepository(ctx, client.GetVCRRepositoryRequest{
 		TeamID:    config.TeamID.ValueString(),
 		ProjectID: config.ProjectID.ValueString(),
-		Name:      config.Name.ValueString(),
+		IDOrName:  config.Name.ValueString(),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(
