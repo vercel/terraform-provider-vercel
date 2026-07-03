@@ -61,6 +61,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newBlobStoreResource,
 		newCustomCertificateResource,
 		newCustomEnvironmentResource,
+		newDeploymentProtectionExceptionResource,
 		newDeploymentResource,
 		newDNSRecordResource,
 		newEdgeConfigItemResource,

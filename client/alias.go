@@ -77,10 +77,12 @@ func (c *Client) DeleteAlias(ctx context.Context, aliasUID string, teamID string
 
 // AliasResponse defines the response the Vercel API returns for an alias.
 type AliasResponse struct {
-	UID          string `json:"uid"`
-	Alias        string `json:"alias"`
-	DeploymentID string `json:"deploymentId"`
-	TeamID       string `json:"-"`
+	UID              string                      `json:"uid"`
+	Alias            string                      `json:"alias"`
+	DeploymentID     string                      `json:"deploymentId"`
+	ProjectID        string                      `json:"projectId"`
+	TeamID           string                      `json:"-"`
+	ProtectionBypass map[string]ProtectionBypass `json:"protectionBypass"`
 }
 
 // GetAlias retrieves information about an existing alias from vercel.
@@ -100,4 +102,52 @@ func (c *Client) GetAlias(ctx context.Context, alias, teamID string) (r AliasRes
 	}, &r)
 	r.TeamID = c.TeamID(teamID)
 	return r, err
+}
+
+type UpdateDeploymentProtectionExceptionRequest struct {
+	Alias  string `json:"-"`
+	TeamID string `json:"-"`
+	Action string `json:"action"`
+}
+
+type deploymentProtectionExceptionBody struct {
+	Scope  string `json:"scope"`
+	Action string `json:"action"`
+}
+
+type deploymentProtectionExceptionResponse struct {
+	ProtectionBypass map[string]ProtectionBypass `json:"protectionBypass"`
+}
+
+// UpdateDeploymentProtectionException creates or revokes a Deployment Protection Exception for an alias or deployment URL.
+func (c *Client) UpdateDeploymentProtectionException(ctx context.Context, request UpdateDeploymentProtectionExceptionRequest) (map[string]ProtectionBypass, error) {
+	url := fmt.Sprintf("%s/v3/aliases/%s/protection-bypass", c.baseURL, request.Alias)
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
+	}
+	payload := string(mustMarshal(struct {
+		Override deploymentProtectionExceptionBody `json:"override"`
+	}{
+		Override: deploymentProtectionExceptionBody{
+			Scope:  "alias-protection-override",
+			Action: request.Action,
+		},
+	}))
+
+	tflog.Info(ctx, "updating deployment protection exception", map[string]any{
+		"url":     url,
+		"payload": payload,
+	})
+
+	var response deploymentProtectionExceptionResponse
+	err := c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PATCH",
+		url:    url,
+		body:   payload,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+	return response.ProtectionBypass, nil
 }
