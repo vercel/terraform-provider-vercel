@@ -102,6 +102,24 @@ func TestConvertResponseToProjectProtectedSourcemaps(t *testing.T) {
 	}
 }
 
+func TestConvertResponseToProjectKeepsDeprecatedPublicSourceFromPlan(t *testing.T) {
+	ctx := context.Background()
+	plan := projectForReadTests()
+	plan.PublicSource = types.BoolValue(true)
+
+	result, err := convertResponseToProject(ctx, client.ProjectResponse{
+		ID:     "prj_123",
+		Name:   "example",
+		TeamID: "team_123",
+	}, plan, nil)
+	if err != nil {
+		t.Fatalf("convertResponseToProject() returned error: %v", err)
+	}
+	if !result.PublicSource.ValueBool() {
+		t.Fatal("PublicSource = false/null, want configured true")
+	}
+}
+
 func TestConvertResponseToProjectTrustedSources(t *testing.T) {
 	ctx := context.Background()
 	projectLabel := "Source project"
