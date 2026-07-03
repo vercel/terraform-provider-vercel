@@ -156,7 +156,7 @@ func (r *vcrRepositoryResource) Read(ctx context.Context, req resource.ReadReque
 	res, err := r.client.GetVCRRepository(ctx, client.GetVCRRepositoryRequest{
 		TeamID:    state.TeamID.ValueString(),
 		ProjectID: state.ProjectID.ValueString(),
-		IDOrName:  state.Name.ValueString(),
+		IDOrName:  state.ID.ValueString(),
 	})
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
@@ -204,7 +204,7 @@ func (r *vcrRepositoryResource) Delete(ctx context.Context, req resource.DeleteR
 	err := r.client.DeleteVCRRepository(ctx, client.DeleteVCRRepositoryRequest{
 		TeamID:    state.TeamID.ValueString(),
 		ProjectID: state.ProjectID.ValueString(),
-		IDOrName:  state.Name.ValueString(),
+		IDOrName:  state.ID.ValueString(),
 	})
 	if client.NotFound(err) {
 		return
