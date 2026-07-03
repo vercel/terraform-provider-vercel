@@ -349,6 +349,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 																	"geo_as_number",
 																	"ja4_digest",
 																	"ja3_digest",
+																	"rate_limit_api_id",
 																),
 															},
 														},
