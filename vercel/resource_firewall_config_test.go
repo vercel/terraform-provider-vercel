@@ -212,6 +212,18 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"rules.rule.4.condition_group.0.conditions.0.values.1",
 						"/test2"),
 					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom",
+						"rules.rule.5.name",
+						"test_rate_limit_api"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom",
+						"rules.rule.5.condition_group.0.conditions.0.type",
+						"rate_limit_api_id"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom",
+						"rules.rule.5.condition_group.0.conditions.0.value",
+						"login-attempt"),
+					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.ips",
 						"ip_rules.rule.0.action",
 						"deny"),
@@ -408,6 +420,18 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"rules.rule.0.condition_group.0.conditions.0.values.1",
 						"3.4.5.6"),
 					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom",
+						"rules.rule.4.name",
+						"test_rate_limit_api"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom",
+						"rules.rule.4.condition_group.0.conditions.0.type",
+						"rate_limit_api_id"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.custom",
+						"rules.rule.4.condition_group.0.conditions.0.value",
+						"login-attempt-updated"),
+					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.ips",
 						"ip_rules.rule.0.action",
 						"deny"),
@@ -578,6 +602,26 @@ resource "vercel_firewall_config" "custom" {
                     "/test2",
                     "/test3"
                 ]
+            }]
+          }]
+        }
+        rule {
+          name =  "test_rate_limit_api"
+          action = {
+            action = "rate_limit"
+            rate_limit = {
+                limit = 5
+                window = 600
+                algo = "fixed_window"
+                keys = ["header:x-vercel-rate-limit-key"]
+                action = "challenge"
+            }
+          }
+          condition_group = [{
+            conditions = [{
+                type = "rate_limit_api_id"
+                op = "eq"
+                value = "login-attempt"
             }]
           }]
         }
@@ -767,6 +811,26 @@ resource "vercel_firewall_config" "custom" {
                     "/api2",
                     "/api3"
                 ]
+            }]
+          }]
+        }
+        rule {
+          name =  "test_rate_limit_api"
+          action = {
+            action = "rate_limit"
+            rate_limit = {
+                limit = 10
+                window = 600
+                algo = "fixed_window"
+                keys = ["header:x-vercel-rate-limit-key"]
+                action = "challenge"
+            }
+          }
+          condition_group = [{
+            conditions = [{
+                type = "rate_limit_api_id"
+                op = "eq"
+                value = "login-attempt-updated"
             }]
           }]
         }
