@@ -20,6 +20,7 @@ func TestAcc_VCRRepositoryDataSource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.vercel_vcr_repository.test", "id"),
 					resource.TestCheckResourceAttrSet("data.vercel_vcr_repository.test", "project_id"),
 					resource.TestCheckResourceAttr("data.vercel_vcr_repository.test", "name", fmt.Sprintf("test-acc-%s", projectSuffix)),
+					resource.TestCheckResourceAttrSet("data.vercel_vcr_repository.test", "url"),
 				),
 			},
 		},

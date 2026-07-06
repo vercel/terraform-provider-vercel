@@ -88,6 +88,11 @@ used by Vercel Functions and Vercel Sandbox. Images are pushed to and pulled fro
 					),
 				},
 			},
+			"url": schema.StringAttribute{
+				Computed:      true,
+				Description:   "The URL of the repository, used to push and pull images with Docker-compatible tooling.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+			},
 		},
 	}
 }
@@ -97,6 +102,7 @@ type VCRRepository struct {
 	TeamID    types.String `tfsdk:"team_id"`
 	ProjectID types.String `tfsdk:"project_id"`
 	Name      types.String `tfsdk:"name"`
+	URL       types.String `tfsdk:"url"`
 }
 
 func convertResponseToVCRRepository(res client.VCRRepository) VCRRepository {
@@ -111,6 +117,7 @@ func convertResponseToVCRRepository(res client.VCRRepository) VCRRepository {
 		TeamID:    types.StringValue(res.TeamID),
 		ProjectID: types.StringValue(res.ProjectID),
 		Name:      types.StringValue(res.Name),
+		URL:       types.StringValue(res.URL),
 	}
 }
 

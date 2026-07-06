@@ -15,6 +15,7 @@ type VCRRepository struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	ProjectID string `json:"projectId"`
+	URL       string `json:"url"`
 	TeamID    string `json:"-"`
 }
 

@@ -39,3 +39,4 @@ data "vercel_vcr_repository" "example" {
 ### Read-Only
 
 - `id` (String) The ID of the VCR Repository.
+- `url` (String) The URL of the repository, used to push and pull images with Docker-compatible tooling.

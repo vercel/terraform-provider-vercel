@@ -50,6 +50,7 @@ func TestAcc_VCRRepositoryResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_vcr_repository.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_vcr_repository.test", "project_id"),
 					resource.TestCheckResourceAttr("vercel_vcr_repository.test", "name", fmt.Sprintf("test-acc-%s", projectSuffix)),
+					resource.TestCheckResourceAttrSet("vercel_vcr_repository.test", "url"),
 				),
 			},
 			{

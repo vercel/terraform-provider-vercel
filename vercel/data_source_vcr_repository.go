@@ -71,6 +71,10 @@ used by Vercel Functions and Vercel Sandbox.
 				Description: "The name of the repository.",
 				Required:    true,
 			},
+			"url": schema.StringAttribute{
+				Computed:    true,
+				Description: "The URL of the repository, used to push and pull images with Docker-compatible tooling.",
+			},
 		},
 	}
 }
