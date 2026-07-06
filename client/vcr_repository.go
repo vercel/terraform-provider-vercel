@@ -15,8 +15,27 @@ type VCRRepository struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	ProjectID string `json:"projectId"`
-	URL       string `json:"url"`
+	URL       string `json:"-"`
 	TeamID    string `json:"-"`
+}
+
+// vcrRepositoryURL derives the registry URL for a repository. The VCR API does
+// not return it: the URL is composed of the owner (team) slug, the project
+// slug and the repository name, e.g.
+// `vcr.vercel.com/team-slug/project-slug/repository-name`.
+func (c *Client) vcrRepositoryURL(ctx context.Context, teamID, projectID, name string) (string, error) {
+	team, err := c.Team(ctx, teamID)
+	if err != nil {
+		return "", fmt.Errorf("error getting team %s: %w", teamID, err)
+	}
+	if team.Slug == "" {
+		return "", fmt.Errorf("could not determine the owner slug for the VCR repository URL: no team found for team ID %q", teamID)
+	}
+	project, err := c.GetProject(ctx, projectID, teamID)
+	if err != nil {
+		return "", fmt.Errorf("error getting project %s: %w", projectID, err)
+	}
+	return fmt.Sprintf("vcr.vercel.com/%s/%s/%s", team.Slug, project.Name, name), nil
 }
 
 // vcrRepositoryResponse tolerates both a bare repository object and one wrapped
@@ -67,6 +86,10 @@ func (c *Client) CreateVCRRepository(ctx context.Context, request CreateVCRRepos
 		res.ProjectID = request.ProjectID
 	}
 	res.TeamID = c.TeamID(request.TeamID)
+	res.URL, err = c.vcrRepositoryURL(ctx, request.TeamID, res.ProjectID, res.Name)
+	if err != nil {
+		return res, err
+	}
 	return res, nil
 }
 
@@ -103,6 +126,10 @@ func (c *Client) GetVCRRepository(ctx context.Context, request GetVCRRepositoryR
 		res.ProjectID = request.ProjectID
 	}
 	res.TeamID = c.TeamID(request.TeamID)
+	res.URL, err = c.vcrRepositoryURL(ctx, request.TeamID, res.ProjectID, res.Name)
+	if err != nil {
+		return res, err
+	}
 	return res, nil
 }
 

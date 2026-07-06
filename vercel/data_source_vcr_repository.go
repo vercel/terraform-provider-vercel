@@ -73,7 +73,7 @@ used by Vercel Functions and Vercel Sandbox.
 			},
 			"url": schema.StringAttribute{
 				Computed:    true,
-				Description: "The URL of the repository, used to push and pull images with Docker-compatible tooling.",
+				Description: "The URL of the repository, composed of the owner slug, the project slug and the repository name (e.g. `vcr.vercel.com/team-slug/project-slug/repository-name`). Use it to push and pull images with Docker-compatible tooling.",
 			},
 		},
 	}
