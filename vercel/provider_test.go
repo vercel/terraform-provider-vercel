@@ -3,12 +3,13 @@ package vercel_test
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/vercel/terraform-provider-vercel/v4/client"
-	"github.com/vercel/terraform-provider-vercel/v4/vercel"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
+	"github.com/vercel/terraform-provider-vercel/v5/vercel"
 )
 
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
@@ -39,6 +40,10 @@ provider "vercel" {
 
 %[2]s
 `, team, config)
+}
+
+func hclStringLiteral(value string) string {
+	return strconv.Quote(value)
 }
 
 func apiToken(t *testing.T) string {

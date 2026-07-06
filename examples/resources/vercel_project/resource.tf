@@ -15,8 +15,9 @@ resource "vercel_project" "with_git" {
 # Deployments will need to be created manually through
 # terraform, or via the vercel CLI.
 resource "vercel_project" "example" {
-  name      = "example-project"
-  framework = "nextjs"
+  name                 = "example-project"
+  framework            = "nextjs"
+  protected_sourcemaps = true
 }
 
 locals {

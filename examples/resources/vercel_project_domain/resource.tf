@@ -9,6 +9,13 @@ resource "vercel_project_domain" "example" {
   domain     = "i-love.vercel.app"
 }
 
+# Wait for the domain to be verified before resources that depend on it run.
+resource "vercel_project_domain" "example_wait_for_ready" {
+  project_id     = vercel_project.example.id
+  domain         = "i-wait.vercel.app"
+  wait_for_ready = true
+}
+
 # A redirect of a domain name to a second domain name.
 # The status_code can optionally be controlled.
 resource "vercel_project_domain" "example_redirect" {

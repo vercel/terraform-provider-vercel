@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -140,17 +141,32 @@ func (c *Client) GetSharedEnvironmentVariable(ctx context.Context, teamID, envID
 	return e, err
 }
 
-func (c *Client) ListSharedEnvironmentVariables(ctx context.Context, teamID string) ([]SharedEnvironmentVariableResponse, error) {
-	url := fmt.Sprintf("%s/v1/env/all", c.baseURL)
-	if c.TeamID(teamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
-	}
+type ListSharedEnvironmentVariablesRequest struct {
+	TeamID string
+	Limit  int
+	Until  *int64
+	Since  *int64
+}
 
-	tflog.Info(ctx, "listing shared environment variables", map[string]any{
+type ListSharedEnvironmentVariablesResponse struct {
+	EnvironmentVariables []SharedEnvironmentVariableResponse
+	Pagination           PageInfo
+}
+
+func (c *Client) ListSharedEnvironmentVariablesPage(ctx context.Context, request ListSharedEnvironmentVariablesRequest) (ListSharedEnvironmentVariablesResponse, error) {
+	baseURL := fmt.Sprintf("%s/v1/env/all", c.baseURL)
+	query := url.Values{}
+	if c.TeamID(request.TeamID) != "" {
+		query.Set("teamId", c.TeamID(request.TeamID))
+	}
+	url := urlWithQuery(baseURL, paginationQuery(query, request.Limit, request.Until, request.Since))
+
+	tflog.Info(ctx, "listing shared environment variables page", map[string]any{
 		"url": url,
 	})
 	res := struct {
-		Data []SharedEnvironmentVariableResponse `json:"data"`
+		Data       []SharedEnvironmentVariableResponse `json:"data"`
+		Pagination PageInfo                            `json:"pagination"`
 	}{}
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
@@ -159,9 +175,23 @@ func (c *Client) ListSharedEnvironmentVariables(ctx context.Context, teamID stri
 		body:   "",
 	}, &res)
 	for i := 0; i < len(res.Data); i++ {
-		res.Data[i].TeamID = c.TeamID(teamID)
+		res.Data[i].TeamID = c.TeamID(request.TeamID)
 	}
-	return res.Data, err
+	return ListSharedEnvironmentVariablesResponse{
+		EnvironmentVariables: res.Data,
+		Pagination:           res.Pagination,
+	}, err
+}
+
+func (c *Client) ListSharedEnvironmentVariables(ctx context.Context, teamID string) ([]SharedEnvironmentVariableResponse, error) {
+	return collectPages(func(until *int64) ([]SharedEnvironmentVariableResponse, PageInfo, error) {
+		response, err := c.ListSharedEnvironmentVariablesPage(ctx, ListSharedEnvironmentVariablesRequest{
+			TeamID: teamID,
+			Limit:  defaultPaginationLimit,
+			Until:  until,
+		})
+		return response.EnvironmentVariables, response.Pagination, err
+	})
 }
 
 type UpdateSharedEnvironmentVariableRequestProjectIDUpdates struct {

@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -336,8 +336,9 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The preview deployment suffix to apply to preview deployment URLs for this project.",
 			},
 			"public_source": schema.BoolAttribute{
-				Computed:    true,
-				Description: "Specifies whether the source code and logs of the deployments for this project should be public or not.",
+				Computed:           true,
+				DeprecationMessage: "This attribute is deprecated and no longer has any effect. The public source feature has been removed from Vercel and is no longer returned by the API. It will be removed in a future major version of this provider.",
+				Description:        "Deprecated. The public source feature has been removed from Vercel; this attribute is no longer populated.",
 			},
 			"enable_affected_projects_deployments": schema.BoolAttribute{
 				Computed:    true,
@@ -445,6 +446,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 			"customer_success_code_visibility": schema.BoolAttribute{
 				Computed:    true,
 				Description: "Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.",
+			},
+			"protected_sourcemaps": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Specifies whether sourcemaps are protected and require authentication to access.",
 			},
 			"git_fork_protection": schema.BoolAttribute{
 				Computed:    true,
@@ -565,6 +570,7 @@ type ProjectDataSource struct {
 	GitLFS                              types.Bool   `tfsdk:"git_lfs"`
 	FunctionFailover                    types.Bool   `tfsdk:"function_failover"`
 	CustomerSuccessCodeVisibility       types.Bool   `tfsdk:"customer_success_code_visibility"`
+	ProtectedSourcemaps                 types.Bool   `tfsdk:"protected_sourcemaps"`
 	GitForkProtection                   types.Bool   `tfsdk:"git_fork_protection"`
 	PrioritiseProductionBuilds          types.Bool   `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                    types.Bool   `tfsdk:"directory_listing"`
@@ -665,6 +671,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		GitLFS:                              project.GitLFS,
 		FunctionFailover:                    project.FunctionFailover,
 		CustomerSuccessCodeVisibility:       project.CustomerSuccessCodeVisibility,
+		ProtectedSourcemaps:                 project.ProtectedSourcemaps,
 		GitForkProtection:                   project.GitForkProtection,
 		PrioritiseProductionBuilds:          project.PrioritiseProductionBuilds,
 		DirectoryListing:                    project.DirectoryListing,

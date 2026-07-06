@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -349,6 +349,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 																	"geo_as_number",
 																	"ja4_digest",
 																	"ja3_digest",
+																	"rate_limit_api_id",
 																),
 															},
 														},

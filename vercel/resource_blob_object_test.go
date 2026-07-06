@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestAcc_BlobObjectResource(t *testing.T) {
@@ -77,11 +77,11 @@ resource "vercel_blob_store" "test" {
 resource "vercel_blob_object" "test" {
   store_id              = vercel_blob_store.test.id
   pathname              = "terraform/object.txt"
-  source                = "%s"
+  source                = %s
   content_type          = "text/plain"
   cache_control_max_age = 3600
 }
-`, storeName, source)
+`, storeName, hclStringLiteral(source))
 }
 
 func testAccBlobObjectResourceUpdatedConfig(storeName, source string) string {
@@ -93,11 +93,11 @@ resource "vercel_blob_store" "test" {
 resource "vercel_blob_object" "test" {
   store_id              = vercel_blob_store.test.id
   pathname              = "terraform/object.txt"
-  source                = "%s"
+  source                = %s
   content_type          = "text/plain"
   cache_control_max_age = 7200
 }
-`, storeName, source)
+`, storeName, hclStringLiteral(source))
 }
 
 func testCheckBlobObjectExists(testClient *client.Client, teamID, resourceName string) resource.TestCheckFunc {

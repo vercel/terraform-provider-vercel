@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestAcc_Project(t *testing.T) {
@@ -83,6 +83,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "git_lfs", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "function_failover", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "customer_success_code_visibility", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "protected_sourcemaps", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "git_fork_protection", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "prioritise_production_builds", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "directory_listing", "true"),
@@ -114,6 +115,7 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_production_feedback", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_deployments_disabled", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "protected_sourcemaps", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "on_demand_concurrent_builds", "false"),
 					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "enhanced"),
 				),
@@ -717,7 +719,10 @@ func TestAcc_ProjectImport(t *testing.T) {
 				ResourceName:      "vercel_project.test",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: getProjectImportID("vercel_project.test"),
+				// public_source is deprecated and no longer backed by the API, so
+				// its configured value cannot be recovered on import.
+				ImportStateVerifyIgnore: []string{"public_source"},
+				ImportStateIdFunc:       getProjectImportID("vercel_project.test"),
 			},
 		},
 	})
@@ -900,6 +905,7 @@ resource "vercel_project" "test" {
   enable_preview_feedback = false
   enable_production_feedback = true
   preview_deployments_disabled = false
+  protected_sourcemaps = false
 }
 `, projectSuffix)
 }
@@ -1209,6 +1215,7 @@ resource "vercel_project" "test" {
   git_lfs = true
   function_failover = true
   customer_success_code_visibility = true
+  protected_sourcemaps = true
   git_fork_protection = true
   prioritise_production_builds = true
   directory_listing = true

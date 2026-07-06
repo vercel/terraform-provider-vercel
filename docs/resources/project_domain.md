@@ -30,6 +30,13 @@ resource "vercel_project_domain" "example" {
   domain     = "i-love.vercel.app"
 }
 
+# Wait for the domain to be verified before resources that depend on it run.
+resource "vercel_project_domain" "example_wait_for_ready" {
+  project_id     = vercel_project.example.id
+  domain         = "i-wait.vercel.app"
+  wait_for_ready = true
+}
+
 # A redirect of a domain name to a second domain name.
 # The status_code can optionally be controlled.
 resource "vercel_project_domain" "example_redirect" {
@@ -56,10 +63,23 @@ resource "vercel_project_domain" "example_redirect" {
 - `redirect` (String) The domain name that serves as a target destination for redirects.
 - `redirect_status_code` (Number) The HTTP status code to use when serving as a redirect.
 - `team_id` (String) The ID of the team the project exists under. Required when configuring a team resource if a default team has not been set in the provider.
+- `wait_for_ready` (Boolean) Wait until the project domain is verified before considering it created. This is useful when another resource, such as an alias, depends on the domain being ready immediately.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `verification` (Attributes List) A list of verification challenges, one of which must be completed to verify the domain for use on the project. Once the challenge is satisfied, the domain will be verified automatically on the next refresh. Typically used to configure DNS records (e.g. a `TXT` record) for domains hosted with an external DNS provider. (see [below for nested schema](#nestedatt--verification))
+- `verified` (Boolean) Whether the domain is verified for use with the project. If `false`, the challenges in `verification` must be completed before the domain will serve traffic for the project.
+
+<a id="nestedatt--verification"></a>
+### Nested Schema for `verification`
+
+Read-Only:
+
+- `domain` (String) The domain name on which the DNS record must be created.
+- `reason` (String) A human-readable explanation of why this challenge was issued.
+- `type` (String) The type of DNS record that must be created to satisfy the challenge (e.g. `TXT`).
+- `value` (String) The value that the DNS record must contain.
 
 ## Import
 

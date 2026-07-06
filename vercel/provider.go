@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 type vercelProvider struct{}
@@ -62,6 +62,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newBlobStoreResource,
 		newCustomCertificateResource,
 		newCustomEnvironmentResource,
+		newDeploymentProtectionExceptionResource,
 		newDeploymentResource,
 		newDNSRecordResource,
 		newEdgeConfigItemResource,
@@ -92,6 +93,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newSharedEnvironmentVariableResource,
 		newTeamConfigResource,
 		newTeamMemberResource,
+		newTraceDrainResource,
 		newUserTokenResource,
 		newWebhookResource,
 		newProjectRollingReleaseResource,
@@ -133,6 +135,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newSharedEnvironmentVariableDataSource,
 		newTeamConfigDataSource,
 		newTeamMemberDataSource,
+		newTraceDrainDataSource,
 		newMicrofrontendGroupDataSource,
 		newMicrofrontendGroupMembershipDataSource,
 		newProjectRollingReleaseDataSource,

@@ -27,7 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/vercel/terraform-provider-vercel/v4/client"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 var (
@@ -488,8 +488,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "The preview deployment suffix to apply to preview deployment URLs for this project. If not set, Vercel's default suffix will be used.",
 			},
 			"public_source": schema.BoolAttribute{
-				Optional:    true,
-				Description: "By default, visitors to the `/_logs` and `/_src` paths of your Production and Preview Deployments must log in with Vercel (requires being a member of your team) to see the Source, Logs and Deployment Status of your project. Setting `public_source` to `true` disables this behaviour, meaning the Source, Logs and Deployment Status can be publicly viewed.",
+				Optional:           true,
+				DeprecationMessage: "This attribute is deprecated and no longer has any effect. The public source feature has been removed from Vercel, so this value is ignored and no longer sent to the API. It will be removed in a future major version of this provider.",
+				Description:        "Deprecated. The public source feature has been removed from Vercel; this attribute no longer has any effect.",
 			},
 			"root_directory": schema.StringAttribute{
 				Optional:    true,
@@ -617,6 +618,12 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Computed:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "Allows Vercel Customer Support to inspect all Deployments' source code in this project to assist with debugging.",
+			},
+			"protected_sourcemaps": schema.BoolAttribute{
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
+				Description:   "Specifies whether sourcemaps are protected and require authentication to access.",
 			},
 			"git_fork_protection": schema.BoolAttribute{
 				Optional:    true,
@@ -794,6 +801,7 @@ type Project struct {
 	GitLFS                            types.Bool   `tfsdk:"git_lfs"`
 	FunctionFailover                  types.Bool   `tfsdk:"function_failover"`
 	CustomerSuccessCodeVisibility     types.Bool   `tfsdk:"customer_success_code_visibility"`
+	ProtectedSourcemaps               types.Bool   `tfsdk:"protected_sourcemaps"`
 	GitForkProtection                 types.Bool   `tfsdk:"git_fork_protection"`
 	PrioritiseProductionBuilds        types.Bool   `tfsdk:"prioritise_production_builds"`
 	DirectoryListing                  types.Bool   `tfsdk:"directory_listing"`
@@ -832,6 +840,7 @@ func (p Project) RequiresUpdateAfterCreation() bool {
 		knownBool(p.GitLFS) ||
 		knownBool(p.FunctionFailover) ||
 		knownBool(p.CustomerSuccessCodeVisibility) ||
+		knownBool(p.ProtectedSourcemaps) ||
 		(knownBool(p.GitForkProtection) && !p.GitForkProtection.ValueBool()) ||
 		knownBool(p.PrioritiseProductionBuilds) ||
 		knownBool(p.DirectoryListing) ||
@@ -1059,7 +1068,6 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		OIDCTokenConfig:                   oidc.toCreateProjectRequest(),
 		OutputDirectory:                   p.OutputDirectory.ValueStringPointer(),
 		PreviewDeploymentSuffix:           p.PreviewDeploymentSuffix.ValueStringPointer(),
-		PublicSource:                      p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
 		ResourceConfig:                    resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
@@ -1158,7 +1166,6 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		Name:                                 name,
 		OutputDirectory:                      p.OutputDirectory.ValueStringPointer(),
 		PreviewDeploymentSuffix:              p.PreviewDeploymentSuffix.ValueStringPointer(),
-		PublicSource:                         p.PublicSource.ValueBoolPointer(),
 		RootDirectory:                        p.RootDirectory.ValueStringPointer(),
 		PasswordProtection:                   pp.toUpdateProjectRequest(),
 		VercelAuthentication:                 vercelAuthentication.toVercelAuthentication(),
@@ -1175,6 +1182,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		GitLFS:                               p.GitLFS.ValueBool(),
 		ServerlessFunctionZeroConfigFailover: p.FunctionFailover.ValueBool(),
 		CustomerSupportCodeVisibility:        p.CustomerSuccessCodeVisibility.ValueBool(),
+		ProtectedSourcemaps:                  p.ProtectedSourcemaps.ValueBool(),
 		GitForkProtection:                    p.GitForkProtection.ValueBool(),
 		ProductionDeploymentsFastLane:        p.PrioritiseProductionBuilds.ValueBool(),
 		DirectoryListing:                     p.DirectoryListing.ValueBool(),
@@ -2149,7 +2157,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		Name:                              types.StringValue(response.Name),
 		OutputDirectory:                   uncoerceString(fields.OutputDirectory, types.StringPointerValue(response.OutputDirectory)),
 		PreviewDeploymentSuffix:           types.StringPointerValue(response.PreviewDeploymentSuffix),
-		PublicSource:                      uncoerceBool(fields.PublicSource, types.BoolPointerValue(response.PublicSource)),
+		PublicSource:                      fields.PublicSource, // Deprecated: no longer sent to or returned by the API; echo prior value to avoid a perpetual diff.
 		RootDirectory:                     types.StringPointerValue(response.RootDirectory),
 		ServerlessFunctionRegion:          serverlessFunctionRegion,
 		TeamID:                            toTeamID(response.TeamID),
@@ -2169,6 +2177,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		GitLFS:                            types.BoolValue(response.GitLFS),
 		FunctionFailover:                  types.BoolValue(response.ServerlessFunctionZeroConfigFailover),
 		CustomerSuccessCodeVisibility:     types.BoolValue(response.CustomerSupportCodeVisibility),
+		ProtectedSourcemaps:               types.BoolValue(response.ProtectedSourcemaps),
 		GitForkProtection:                 types.BoolValue(response.GitForkProtection),
 		PrioritiseProductionBuilds:        types.BoolValue(response.ProductionDeploymentsFastLane),
 		DirectoryListing:                  types.BoolValue(response.DirectoryListing),
@@ -2451,7 +2460,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		)
 		return
 	}
-	tflog.Error(ctx, "created project", map[string]any{
+	tflog.Info(ctx, "created project", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
 		"project":    result,

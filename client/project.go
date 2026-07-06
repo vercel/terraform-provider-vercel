@@ -55,7 +55,6 @@ type CreateProjectRequest struct {
 	OIDCTokenConfig                   *OIDCTokenConfig      `json:"oidcTokenConfig,omitempty"`
 	OutputDirectory                   *string               `json:"outputDirectory"`
 	PreviewDeploymentSuffix           *string               `json:"previewDeploymentSuffix"`
-	PublicSource                      *bool                 `json:"publicSource"`
 	RootDirectory                     *string               `json:"rootDirectory"`
 	ServerlessFunctionRegion          string                `json:"serverlessFunctionRegion,omitempty"`
 	ResourceConfig                    *ResourceConfig       `json:"resourceConfig,omitempty"`
@@ -186,7 +185,6 @@ type ProjectResponse struct {
 	Name                                 string                      `json:"name"`
 	OutputDirectory                      *string                     `json:"outputDirectory"`
 	PreviewDeploymentSuffix              *string                     `json:"previewDeploymentSuffix"`
-	PublicSource                         *bool                       `json:"publicSource"`
 	RootDirectory                        *string                     `json:"rootDirectory"`
 	ServerlessFunctionRegion             *string                     `json:"serverlessFunctionRegion"`
 	VercelAuthentication                 *VercelAuthentication       `json:"ssoProtection"`
@@ -208,6 +206,7 @@ type ProjectResponse struct {
 	GitForkProtection                    bool                        `json:"gitForkProtection"`
 	ProductionDeploymentsFastLane        bool                        `json:"productionDeploymentsFastLane"`
 	DirectoryListing                     bool                        `json:"directoryListing"`
+	ProtectedSourcemaps                  bool                        `json:"protectedSourcemaps"`
 	SkewProtectionMaxAge                 int                         `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                `json:"gitComments"`
 	GitProviderOptions                   *GitProviderOptionsResponse `json:"gitProviderOptions"`
@@ -353,7 +352,6 @@ type UpdateProjectRequest struct {
 	Name                                 *string                         `json:"name,omitempty"`
 	OutputDirectory                      *string                         `json:"outputDirectory"`
 	PreviewDeploymentSuffix              *string                         `json:"previewDeploymentSuffix"`
-	PublicSource                         *bool                           `json:"publicSource"`
 	RootDirectory                        *string                         `json:"rootDirectory"`
 	ServerlessFunctionRegion             string                          `json:"serverlessFunctionRegion,omitempty"`
 	VercelAuthentication                 *VercelAuthentication           `json:"ssoProtection"`
@@ -374,6 +372,7 @@ type UpdateProjectRequest struct {
 	GitForkProtection                    bool                            `json:"gitForkProtection"`
 	ProductionDeploymentsFastLane        bool                            `json:"productionDeploymentsFastLane"`
 	DirectoryListing                     bool                            `json:"directoryListing"`
+	ProtectedSourcemaps                  bool                            `json:"protectedSourcemaps"`
 	SkewProtectionMaxAge                 int                             `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                    `json:"gitComments"`
 	GitProviderOptions                   *GitProviderOptions             `json:"gitProviderOptions,omitempty"`

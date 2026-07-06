@@ -43,7 +43,7 @@ func (c *Client) CreateProjectDomain(ctx context.Context, projectID, teamID stri
 
 // DeleteProjectDomain removes any association of a domain name with a Vercel project.
 func (c *Client) DeleteProjectDomain(ctx context.Context, projectID, domain, teamID string) error {
-	url := fmt.Sprintf("%s/v8/projects/%s/domains/%s", c.baseURL, projectID, domain)
+	url := fmt.Sprintf("%s/v9/projects/%s/domains/%s", c.baseURL, projectID, domain)
 	if c.TeamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
@@ -59,21 +59,32 @@ func (c *Client) DeleteProjectDomain(ctx context.Context, projectID, domain, tea
 	}, nil)
 }
 
+// ProjectDomainVerification describes a DNS challenge that must be satisfied to
+// verify ownership of a project domain.
+type ProjectDomainVerification struct {
+	Type   string `json:"type"`
+	Domain string `json:"domain"`
+	Value  string `json:"value"`
+	Reason string `json:"reason"`
+}
+
 // ProjectDomainResponse defines the information that Vercel exposes about a domain that is
 // associated with a vercel project.
 type ProjectDomainResponse struct {
-	Name                string  `json:"name"`
-	ProjectID           string  `json:"projectId"`
-	TeamID              string  `json:"-"`
-	Redirect            *string `json:"redirect"`
-	RedirectStatusCode  *int64  `json:"redirectStatusCode"`
-	GitBranch           *string `json:"gitBranch"`
-	CustomEnvironmentID *string `json:"customEnvironmentId"`
+	Name                string                      `json:"name"`
+	ProjectID           string                      `json:"projectId"`
+	TeamID              string                      `json:"-"`
+	Redirect            *string                     `json:"redirect"`
+	RedirectStatusCode  *int64                      `json:"redirectStatusCode"`
+	GitBranch           *string                     `json:"gitBranch"`
+	CustomEnvironmentID *string                     `json:"customEnvironmentId"`
+	Verified            bool                        `json:"verified"`
+	Verification        []ProjectDomainVerification `json:"verification"`
 }
 
 // GetProjectDomain retrieves information about a project domain from Vercel.
 func (c *Client) GetProjectDomain(ctx context.Context, projectID, domain, teamID string) (r ProjectDomainResponse, err error) {
-	url := fmt.Sprintf("%s/v8/projects/%s/domains/%s", c.baseURL, projectID, domain)
+	url := fmt.Sprintf("%s/v9/projects/%s/domains/%s", c.baseURL, projectID, domain)
 	if c.TeamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
@@ -101,7 +112,7 @@ type UpdateProjectDomainRequest struct {
 
 // UpdateProjectDomain updates an existing project domain within Vercel.
 func (c *Client) UpdateProjectDomain(ctx context.Context, projectID, domain, teamID string, request UpdateProjectDomainRequest) (r ProjectDomainResponse, err error) {
-	url := fmt.Sprintf("%s/v8/projects/%s/domains/%s", c.baseURL, projectID, domain)
+	url := fmt.Sprintf("%s/v9/projects/%s/domains/%s", c.baseURL, projectID, domain)
 	if c.TeamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
