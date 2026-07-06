@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -109,6 +110,58 @@ type TeamMember struct {
 	} `json:"accessGroups"`
 }
 
+type ListTeamMemberProjectsRequest struct {
+	TeamID string
+	UserID string
+	Limit  int
+	Until  *int64
+	Since  *int64
+}
+
+type ListTeamMemberProjectsResponse struct {
+	Projects   []ProjectRole
+	Pagination PageInfo
+}
+
+func (c *Client) ListTeamMemberProjectsPage(ctx context.Context, request ListTeamMemberProjectsRequest) (ListTeamMemberProjectsResponse, error) {
+	baseURL := fmt.Sprintf("%s/v1/teams/%s/members/%s/projects", c.baseURL, request.TeamID, request.UserID)
+	query := paginationQuery(url.Values{}, request.Limit, request.Until, request.Since)
+	url := urlWithQuery(baseURL, query)
+
+	tflog.Info(ctx, "listing team member projects page", map[string]any{
+		"url": url,
+	})
+	var response struct {
+		Projects   []ProjectRole `json:"projects"`
+		Pagination PageInfo      `json:"pagination"`
+	}
+	err := c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "GET",
+		url:    url,
+		body:   "",
+	}, &response)
+	if err != nil {
+		return ListTeamMemberProjectsResponse{}, err
+	}
+	return ListTeamMemberProjectsResponse{
+		Projects:   response.Projects,
+		Pagination: response.Pagination,
+	}, nil
+}
+
+func (c *Client) ListTeamMemberProjects(ctx context.Context, teamID, userID string) ([]ProjectRole, error) {
+	return collectPages(func(until *int64) ([]ProjectRole, PageInfo, error) {
+		response, err := c.ListTeamMemberProjectsPage(ctx, ListTeamMemberProjectsRequest{
+			TeamID: teamID,
+			UserID: userID,
+			Limit:  defaultPaginationLimit,
+			Until:  until,
+		})
+		return response.Projects, response.Pagination, err
+	})
+}
+
 func (c *Client) GetTeamMember(ctx context.Context, request GetTeamMemberRequest) (TeamMember, error) {
 	url := fmt.Sprintf("%s/v2/teams/%s/members?limit=1&filterByUserIds=%s", c.baseURL, request.TeamID, request.UserID)
 	tflog.Info(ctx, "getting team member", map[string]any{
@@ -139,19 +192,10 @@ func (c *Client) GetTeamMember(ctx context.Context, request GetTeamMemberRequest
 	if !response.Members[0].Confirmed || (response.Members[0].Role != "DEVELOPER" && response.Members[0].Role != "CONTRIBUTOR") {
 		return response.Members[0], nil
 	}
-	url = fmt.Sprintf("%s/v1/teams/%s/members/%s/projects?limit=100", c.baseURL, request.TeamID, request.UserID)
-	var response2 struct {
-		Projects []ProjectRole `json:"projects"`
-	}
-	err = c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "GET",
-		url:    url,
-		body:   "",
-	}, &response2)
+	projects, err := c.ListTeamMemberProjects(ctx, request.TeamID, request.UserID)
 	if err != nil {
 		return TeamMember{}, err
 	}
-	response.Members[0].Projects = response2.Projects
+	response.Members[0].Projects = projects
 	return response.Members[0], err
 }

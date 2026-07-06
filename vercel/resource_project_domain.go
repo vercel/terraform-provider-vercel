@@ -3,9 +3,11 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -15,6 +17,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
+)
+
+const (
+	projectDomainReadyPollInterval = 5 * time.Second
+	projectDomainReadyTimeout      = 10 * time.Minute
 )
 
 var (
@@ -113,8 +120,57 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 					),
 				},
 			},
+			"wait_for_ready": schema.BoolAttribute{
+				Description: "Wait until the project domain is verified before considering it created. This is useful when another resource, such as an alias, depends on the domain being ready immediately.",
+				Optional:    true,
+			},
+			"verified": schema.BoolAttribute{
+				Description: "Whether the domain is verified for use with the project. If `false`, the challenges in `verification` must be completed before the domain will serve traffic for the project.",
+				Computed:    true,
+			},
+			"verification": schema.ListNestedAttribute{
+				Description: "A list of verification challenges, one of which must be completed to verify the domain for use on the project. Once the challenge is satisfied, the domain will be verified automatically on the next refresh. Typically used to configure DNS records (e.g. a `TXT` record) for domains hosted with an external DNS provider.",
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"type": schema.StringAttribute{
+							Description: "The type of DNS record that must be created to satisfy the challenge (e.g. `TXT`).",
+							Computed:    true,
+						},
+						"domain": schema.StringAttribute{
+							Description: "The domain name on which the DNS record must be created.",
+							Computed:    true,
+						},
+						"value": schema.StringAttribute{
+							Description: "The value that the DNS record must contain.",
+							Computed:    true,
+						},
+						"reason": schema.StringAttribute{
+							Description: "A human-readable explanation of why this challenge was issued.",
+							Computed:    true,
+						},
+					},
+				},
+			},
 		},
 	}
+}
+
+// ProjectDomainVerification mirrors a single verification challenge returned by the Vercel API.
+type ProjectDomainVerification struct {
+	Type   types.String `tfsdk:"type"`
+	Domain types.String `tfsdk:"domain"`
+	Value  types.String `tfsdk:"value"`
+	Reason types.String `tfsdk:"reason"`
+}
+
+var projectDomainVerificationAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"type":   types.StringType,
+		"domain": types.StringType,
+		"value":  types.StringType,
+		"reason": types.StringType,
+	},
 }
 
 // ProjectDomain reflects the state terraform stores internally for a project domain.
@@ -127,9 +183,17 @@ type ProjectDomain struct {
 	Redirect            types.String `tfsdk:"redirect"`
 	RedirectStatusCode  types.Int64  `tfsdk:"redirect_status_code"`
 	TeamID              types.String `tfsdk:"team_id"`
+	WaitForReady        types.Bool   `tfsdk:"wait_for_ready"`
+	Verified            types.Bool   `tfsdk:"verified"`
+	Verification        types.List   `tfsdk:"verification"`
 }
 
 func convertResponseToProjectDomain(response client.ProjectDomainResponse) ProjectDomain {
+	verification := make([]attr.Value, 0, len(response.Verification))
+	for _, v := range response.Verification {
+		verification = append(verification, projectDomainVerificationAttrValue(v))
+	}
+
 	return ProjectDomain{
 		Domain:              types.StringValue(response.Name),
 		GitBranch:           types.StringPointerValue(response.GitBranch),
@@ -139,7 +203,18 @@ func convertResponseToProjectDomain(response client.ProjectDomainResponse) Proje
 		Redirect:            types.StringPointerValue(response.Redirect),
 		RedirectStatusCode:  types.Int64PointerValue(response.RedirectStatusCode),
 		TeamID:              toTeamID(response.TeamID),
+		Verified:            types.BoolValue(response.Verified),
+		Verification:        types.ListValueMust(projectDomainVerificationAttrType, verification),
 	}
+}
+
+func projectDomainVerificationAttrValue(v client.ProjectDomainVerification) attr.Value {
+	return types.ObjectValueMust(projectDomainVerificationAttrType.AttrTypes, map[string]attr.Value{
+		"type":   types.StringValue(v.Type),
+		"domain": types.StringValue(v.Domain),
+		"value":  types.StringValue(v.Value),
+		"reason": types.StringValue(v.Reason),
+	})
 }
 
 func (p *ProjectDomain) toCreateRequest() client.CreateProjectDomainRequest {
@@ -207,7 +282,23 @@ func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	if plan.WaitForReady.ValueBool() {
+		out, err = r.waitForProjectDomainReady(ctx, plan.ProjectID.ValueString(), plan.Domain.ValueString(), plan.TeamID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error waiting for project domain",
+				fmt.Sprintf("Could not wait for domain %s for project %s to become verified: %s",
+					plan.Domain.ValueString(),
+					plan.ProjectID.ValueString(),
+					err,
+				),
+			)
+			return
+		}
+	}
+
 	result := convertResponseToProjectDomain(out)
+	result.WaitForReady = plan.WaitForReady
 	tflog.Info(ctx, "added domain to project", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
@@ -249,6 +340,7 @@ func (r *projectDomainResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	result := convertResponseToProjectDomain(out)
+	result.WaitForReady = state.WaitForReady
 	tflog.Info(ctx, "read project domain", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
@@ -290,7 +382,23 @@ func (r *projectDomainResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
+	if plan.WaitForReady.ValueBool() {
+		out, err = r.waitForProjectDomainReady(ctx, plan.ProjectID.ValueString(), plan.Domain.ValueString(), plan.TeamID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error waiting for project domain",
+				fmt.Sprintf("Could not wait for domain %s for project %s to become verified: %s",
+					plan.Domain.ValueString(),
+					plan.ProjectID.ValueString(),
+					err,
+				),
+			)
+			return
+		}
+	}
+
 	result := convertResponseToProjectDomain(out)
+	result.WaitForReady = plan.WaitForReady
 	tflog.Info(ctx, "update project domain", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
@@ -375,5 +483,35 @@ func (r *projectDomainResource) ImportState(ctx context.Context, req resource.Im
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+}
+
+func (r *projectDomainResource) waitForProjectDomainReady(ctx context.Context, projectID, domain, teamID string) (client.ProjectDomainResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, projectDomainReadyTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(projectDomainReadyPollInterval)
+	defer ticker.Stop()
+
+	for {
+		out, err := r.client.GetProjectDomain(ctx, projectID, domain, teamID)
+		if err != nil {
+			return out, err
+		}
+		if out.Verified {
+			return out, nil
+		}
+
+		tflog.Info(ctx, "project domain is not verified yet", map[string]any{
+			"project_id": projectID,
+			"domain":     domain,
+			"team_id":    teamID,
+		})
+
+		select {
+		case <-ctx.Done():
+			return out, ctx.Err()
+		case <-ticker.C:
+		}
 	}
 }

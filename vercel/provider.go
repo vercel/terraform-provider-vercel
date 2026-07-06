@@ -51,6 +51,7 @@ Use the navigation to the left to read about the available resources.
 
 func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		newAccessGroupMemberResource,
 		newAccessGroupProjectResource,
 		newAccessGroupResource,
 		newAliasResource,
@@ -61,6 +62,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newBlobStoreResource,
 		newCustomCertificateResource,
 		newCustomEnvironmentResource,
+		newDeploymentProtectionExceptionResource,
 		newDeploymentResource,
 		newDNSRecordResource,
 		newEdgeConfigItemResource,
@@ -91,6 +93,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newSharedEnvironmentVariableResource,
 		newTeamConfigResource,
 		newTeamMemberResource,
+		newTraceDrainResource,
 		newUserTokenResource,
 		newVCRRepositoryResource,
 		newWebhookResource,
@@ -133,6 +136,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newSharedEnvironmentVariableDataSource,
 		newTeamConfigDataSource,
 		newTeamMemberDataSource,
+		newTraceDrainDataSource,
 		newVCRRepositoryDataSource,
 		newMicrofrontendGroupDataSource,
 		newMicrofrontendGroupMembershipDataSource,

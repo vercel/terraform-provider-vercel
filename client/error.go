@@ -11,6 +11,14 @@ func NotFound(err error) bool {
 	return err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404
 }
 
+// MemberNotFound detects the "member_not_found" error returned when a team
+// member cannot be located yet. This is commonly transient immediately after a
+// member is invited, while the membership propagates.
+func MemberNotFound(err error) bool {
+	var apiErr APIError
+	return err != nil && errors.As(err, &apiErr) && apiErr.Code == "member_not_found"
+}
+
 func noContent(err error) bool {
 	var apiErr APIError
 	return err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 204

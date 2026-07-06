@@ -156,9 +156,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: ubuntu-tf-1.4
+          - name: ubuntu-tf-1.11
             os: ubuntu-latest
-            terraform: "1.4.*"
+            terraform: "1.11.*"
           - name: windows-tf-1.14
             os: windows-latest
             terraform: "1.14.*"

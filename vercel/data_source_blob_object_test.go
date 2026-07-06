@@ -47,7 +47,7 @@ resource "vercel_blob_store" "test" {
 resource "vercel_blob_object" "test" {
   store_id              = vercel_blob_store.test.id
   pathname              = "terraform/data-source.txt"
-  source                = "%s"
+  source                = %s
   content_type          = "text/plain"
   cache_control_max_age = 3600
 }
@@ -59,5 +59,5 @@ data "vercel_blob_object" "test" {
     vercel_blob_object.test,
   ]
 }
-`, storeName, source)
+`, storeName, hclStringLiteral(source))
 }

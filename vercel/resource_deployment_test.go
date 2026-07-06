@@ -549,7 +549,7 @@ resource "vercel_project" "test" {
 }
 
 data "vercel_project_directory" "test" {
-  path = "%[3]s"
+  path = %[3]s
 }
 
 resource "vercel_deployment" "test" {
@@ -566,7 +566,7 @@ data "vercel_deployment" "by_id" {
 data "vercel_deployment" "by_url" {
   id = vercel_deployment.test.url
 }
-`, projectSuffix, testGithubRepo(t), filepath.Clean(repoDir))
+`, projectSuffix, testGithubRepo(t), hclStringLiteral(filepath.Clean(repoDir)))
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -607,7 +607,7 @@ resource "vercel_project" "test" {
 }
 
 data "vercel_project_directory" "test" {
-  path = "%[2]s"
+  path = %[2]s
 }
 
 resource "vercel_deployment" "test" {
@@ -615,7 +615,7 @@ resource "vercel_deployment" "test" {
   files       = data.vercel_project_directory.test.files
   path_prefix = data.vercel_project_directory.test.path
 }
-`, projectSuffix, filepath.Clean(tmpDir))
+`, projectSuffix, hclStringLiteral(filepath.Clean(tmpDir)))
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,

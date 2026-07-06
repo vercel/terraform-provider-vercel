@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -111,30 +112,54 @@ func (c *Client) UpdateProjectMembers(ctx context.Context, request UpdateProject
 type GetProjectMembersRequest struct {
 	ProjectID string `json:"-"`
 	TeamID    string `json:"-"`
+	Limit     int    `json:"-"`
+	Until     *int64 `json:"-"`
+	Since     *int64 `json:"-"`
 }
 
-func (c *Client) ListProjectMembers(ctx context.Context, request GetProjectMembersRequest) ([]ProjectMember, error) {
-	url := fmt.Sprintf("%s/v1/projects/%s/members", c.baseURL, request.ProjectID)
+type ListProjectMembersResponse struct {
+	Members    []ProjectMember
+	Pagination PageInfo
+}
+
+func (c *Client) ListProjectMembersPage(ctx context.Context, request GetProjectMembersRequest) (ListProjectMembersResponse, error) {
+	baseURL := fmt.Sprintf("%s/v1/projects/%s/members", c.baseURL, request.ProjectID)
+	query := url.Values{}
 	if c.TeamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s&limit=100", url, c.TeamID(request.TeamID))
+		query.Set("teamId", c.TeamID(request.TeamID))
 	}
-	tflog.Info(ctx, "listing project members", map[string]any{
+	url := urlWithQuery(baseURL, paginationQuery(query, request.Limit, request.Until, request.Since))
+
+	tflog.Info(ctx, "listing project members page", map[string]any{
 		"url": url,
 	})
 
 	var resp struct {
-		Members []ProjectMember `json:"members"`
+		Members    []ProjectMember `json:"members"`
+		Pagination PageInfo        `json:"pagination"`
 	}
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "GET",
 		url:    url,
-		body:   string(mustMarshal(request)),
 	}, &resp)
 	if err != nil {
 		tflog.Error(ctx, "error getting project members", map[string]any{
 			"url": url,
 		})
 	}
-	return resp.Members, err
+	return ListProjectMembersResponse{
+		Members:    resp.Members,
+		Pagination: resp.Pagination,
+	}, err
+}
+
+func (c *Client) ListProjectMembers(ctx context.Context, request GetProjectMembersRequest) ([]ProjectMember, error) {
+	return collectPages(func(until *int64) ([]ProjectMember, PageInfo, error) {
+		request.Limit = defaultPaginationLimit
+		request.Until = until
+		request.Since = nil
+		response, err := c.ListProjectMembersPage(ctx, request)
+		return response.Members, response.Pagination, err
+	})
 }

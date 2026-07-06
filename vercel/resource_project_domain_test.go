@@ -40,6 +40,8 @@ func TestAcc_ProjectDomain(t *testing.T) {
 					testAccProjectDomainExists(testClient(t), "vercel_project.test", testTeam(t), "2"+domain),
 					testTeamID,
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "domain", "2"+domain),
+					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "verified"),
+					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "verification.#"),
 				),
 			},
 			// Update testing
@@ -82,6 +84,23 @@ func TestAcc_ProjectDomainCustomEnvironment(t *testing.T) {
 			{
 				Config: cfg(testAccProjectDomainConfigWithCustomEnvironment(randomSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "custom_environment_id"),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_ProjectDomainWaitForReady(t *testing.T) {
+	randomSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectDomainConfigWaitForReady(randomSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project_domain.test", "wait_for_ready", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "custom_environment_id"),
 				),
 			},
@@ -227,6 +246,26 @@ resource "vercel_project_domain" "test" {
     domain = "test-acc-domain-%[1]s-foobar.vercel.app"
     project_id = vercel_project.test.id
     custom_environment_id = vercel_custom_environment.test.id
+}
+`, randomSuffix)
+}
+
+func testAccProjectDomainConfigWaitForReady(randomSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-domain-%[1]s"
+}
+
+resource "vercel_custom_environment" "test" {
+    name = "test-acc-custom-environment"
+    project_id = vercel_project.test.id
+}
+
+resource "vercel_project_domain" "test" {
+    domain = "test-acc-domain-%[1]s-wait.vercel.app"
+    project_id = vercel_project.test.id
+    custom_environment_id = vercel_custom_environment.test.id
+    wait_for_ready = true
 }
 `, randomSuffix)
 }
