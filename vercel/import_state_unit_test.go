@@ -48,6 +48,7 @@ func TestImportStateInvalidIDReturnsBeforeClientCall(t *testing.T) {
 			(&sharedEnvironmentVariableResource{}).ImportState(ctx, req, resp)
 		}},
 		{name: "team member", run: func(resp *resource.ImportStateResponse) { (&teamMemberResource{}).ImportState(ctx, req, resp) }},
+		{name: "trace drain", run: func(resp *resource.ImportStateResponse) { (&traceDrainResource{}).ImportState(ctx, req, resp) }},
 	}
 
 	for _, tt := range tests {
