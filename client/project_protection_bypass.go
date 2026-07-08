@@ -34,12 +34,12 @@ type CreateProtectionBypassRequest struct {
 	TeamID    string
 	ProjectID string
 	Secret    string
-	Note      string
+	Note      *string
 }
 
 type generateBypassBody struct {
-	Secret string `json:"secret,omitempty"`
-	Note   string `json:"note,omitempty"`
+	Secret string  `json:"secret,omitempty"`
+	Note   *string `json:"note,omitempty"`
 }
 
 type updateBypassBody struct {

@@ -154,6 +154,14 @@ func convertBypass(projectID, teamID, secret string, bypass client.ProtectionByp
 	}
 }
 
+func convertBypassWithPlannedNote(projectID, teamID, secret string, bypass client.ProtectionBypass, plannedNote types.String) ProjectProtectionBypass {
+	result := convertBypass(projectID, teamID, secret, bypass)
+	if bypass.Note == nil && !plannedNote.IsNull() && !plannedNote.IsUnknown() {
+		result.Note = plannedNote
+	}
+	return result
+}
+
 func (r *projectProtectionBypassResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan ProjectProtectionBypass
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -161,12 +169,17 @@ func (r *projectProtectionBypassResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	secret, bypass, err := r.client.CreateProtectionBypass(ctx, client.CreateProtectionBypassRequest{
+	createReq := client.CreateProtectionBypassRequest{
 		TeamID:    plan.TeamID.ValueString(),
 		ProjectID: plan.ProjectID.ValueString(),
 		Secret:    plan.Secret.ValueString(),
-		Note:      plan.Note.ValueString(),
-	})
+	}
+	if !plan.Note.IsNull() && !plan.Note.IsUnknown() {
+		note := plan.Note.ValueString()
+		createReq.Note = &note
+	}
+
+	secret, bypass, err := r.client.CreateProtectionBypass(ctx, createReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project protection bypass",
@@ -219,7 +232,7 @@ func (r *projectProtectionBypassResource) Create(ctx context.Context, req resour
 		bypass = updated
 	}
 
-	result := convertBypass(plan.ProjectID.ValueString(), plan.TeamID.ValueString(), secret, bypass)
+	result := convertBypassWithPlannedNote(plan.ProjectID.ValueString(), plan.TeamID.ValueString(), secret, bypass, plan.Note)
 	tflog.Info(ctx, "created project protection bypass", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
@@ -327,7 +340,7 @@ func (r *projectProtectionBypassResource) Update(ctx context.Context, req resour
 		}
 	}
 
-	result := convertBypass(plan.ProjectID.ValueString(), plan.TeamID.ValueString(), state.Secret.ValueString(), bypass)
+	result := convertBypassWithPlannedNote(plan.ProjectID.ValueString(), plan.TeamID.ValueString(), state.Secret.ValueString(), bypass, plan.Note)
 	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
 

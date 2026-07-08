@@ -189,6 +189,41 @@ resource "vercel_project_protection_bypass" "second" {
 `, projectSuffix, customSecret, secondNote, firstIsEnvVar, secondIsEnvVar)
 }
 
+func TestAcc_ProjectProtectionBypass_EmptyNote(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             noopDestroyCheck,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectProtectionBypassEmptyNote(projectSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectProtectionBypassExists(testClient(t), "vercel_project.test", "vercel_project_protection_bypass.empty_note"),
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.empty_note", "is_env_var", "true"),
+					resource.TestCheckResourceAttr("vercel_project_protection_bypass.empty_note", "note", ""),
+				),
+			},
+			{
+				Config: cfg(testAccProjectProtectionBypassEmpty(projectSuffix)),
+			},
+		},
+	})
+}
+
+func testAccProjectProtectionBypassEmptyNote(projectSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-bypass-empty-note-%[1]s"
+}
+
+resource "vercel_project_protection_bypass" "empty_note" {
+  project_id = vercel_project.test.id
+  note       = ""
+}
+`, projectSuffix)
+}
+
 func testAccProjectProtectionBypassIsEnvVarDefault(testClient *client.Client, projectResource, bypassResource string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		p, ok := s.RootModule().Resources[projectResource]
