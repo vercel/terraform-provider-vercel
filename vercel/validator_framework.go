@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
+const servicesFramework = "services"
+
 func validateFramework() validatorFramework {
 	return validatorFramework{}
 }
@@ -35,6 +37,11 @@ func (v validatorFramework) MarkdownDescription(ctx context.Context) string {
 
 func (v validatorFramework) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+
+	// Services is a project-level build mode and is not returned by the framework catalog.
+	if req.ConfigValue.ValueString() == servicesFramework {
 		return
 	}
 
