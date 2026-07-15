@@ -11,14 +11,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
-const servicesFramework = "services"
+const frameworksURL = "https://api-frameworks.vercel.sh/api/v1/frameworks?includeExperimental=true"
 
 func validateFramework() validatorFramework {
-	return validatorFramework{}
+	return validatorFramework{frameworksURL: frameworksURL}
 }
 
 type validatorFramework struct {
-	frameworks map[string]struct{}
+	frameworks    map[string]struct{}
+	frameworksURL string
 }
 
 func (v validatorFramework) Description(ctx context.Context) string {
@@ -40,12 +41,7 @@ func (v validatorFramework) ValidateString(ctx context.Context, req validator.St
 		return
 	}
 
-	// Services is a project-level build mode and is not returned by the framework catalog.
-	if req.ConfigValue.ValueString() == servicesFramework {
-		return
-	}
-
-	apires, err := http.Get("https://api-frameworks.zeit.sh/")
+	apires, err := http.Get(v.frameworksURL)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
