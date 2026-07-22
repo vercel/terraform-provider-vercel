@@ -75,7 +75,7 @@ func testAccResourceAuditLogDrain(name string) string {
 resource "vercel_audit_log_drain" "test" {
     name = "audit-%[1]s"
 
-    http {
+    http = {
         endpoint    = "https://verify-test-rouge.vercel.app/api"
         encoding    = "json"
         compression = "gzip"

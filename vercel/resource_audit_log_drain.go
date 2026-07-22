@@ -88,10 +88,9 @@ Audit Log Drains forward team activity events to an HTTP endpoint or Amazon S3. 
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-		},
-		Blocks: map[string]schema.Block{
-			"http": schema.SingleNestedBlock{
+			"http": schema.SingleNestedAttribute{
 				Description:   "Configuration for delivery to a custom HTTP endpoint. Exactly one of `http` or `s3` must be configured.",
+				Optional:      true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
 					"endpoint": schema.StringAttribute{
@@ -130,8 +129,9 @@ Audit Log Drains forward team activity events to an HTTP endpoint or Amazon S3. 
 					},
 				},
 			},
-			"s3": schema.SingleNestedBlock{
+			"s3": schema.SingleNestedAttribute{
 				Description:   "Configuration for delivery to an Amazon S3 bucket. Exactly one of `http` or `s3` must be configured.",
+				Optional:      true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
 					"endpoint": schema.StringAttribute{

@@ -5,9 +5,35 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
+
+func TestAuditLogDrainDeliverySchemaUsesOptionalNestedAttributes(t *testing.T) {
+	var response resource.SchemaResponse
+	newAuditLogDrainResource().Schema(context.Background(), resource.SchemaRequest{}, &response)
+
+	requiredAttributes := map[string][]string{
+		"http": {"endpoint", "encoding"},
+		"s3":   {"endpoint", "encoding", "role_arn", "region"},
+	}
+	for name, required := range requiredAttributes {
+		attribute, ok := response.Schema.Attributes[name].(schema.SingleNestedAttribute)
+		if !ok {
+			t.Fatalf("%s schema = %T, want schema.SingleNestedAttribute", name, response.Schema.Attributes[name])
+		}
+		if !attribute.IsOptional() {
+			t.Fatalf("%s schema must be optional", name)
+		}
+		for _, childName := range required {
+			if !attribute.Attributes[childName].IsRequired() {
+				t.Fatalf("%s.%s schema must be required", name, childName)
+			}
+		}
+	}
+}
 
 func TestAuditLogDrainFromAPIPreservesOmittedSensitiveHTTPValues(t *testing.T) {
 	prior := AuditLogDrain{

@@ -22,7 +22,7 @@ Audit Log Drains forward team activity events to an HTTP endpoint or Amazon S3. 
 resource "vercel_audit_log_drain" "example" {
   name = "security-audit-events"
 
-  http {
+  http = {
     endpoint    = "https://siem.example.com/vercel"
     encoding    = "ndjson"
     compression = "gzip"
@@ -43,15 +43,15 @@ resource "vercel_audit_log_drain" "example" {
 
 ### Optional
 
-- `http` (Block, Optional) Configuration for delivery to a custom HTTP endpoint. Exactly one of `http` or `s3` must be configured. (see [below for nested schema](#nestedblock--http))
-- `s3` (Block, Optional) Configuration for delivery to an Amazon S3 bucket. Exactly one of `http` or `s3` must be configured. (see [below for nested schema](#nestedblock--s3))
+- `http` (Attributes) Configuration for delivery to a custom HTTP endpoint. Exactly one of `http` or `s3` must be configured. (see [below for nested schema](#nestedatt--http))
+- `s3` (Attributes) Configuration for delivery to an Amazon S3 bucket. Exactly one of `http` or `s3` must be configured. (see [below for nested schema](#nestedatt--s3))
 - `team_id` (String) The ID of the team the Audit Log Drain should exist under. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
 
 - `id` (String) The ID of the Audit Log Drain.
 
-<a id="nestedblock--http"></a>
+<a id="nestedatt--http"></a>
 ### Nested Schema for `http`
 
 Required:
@@ -66,7 +66,7 @@ Optional:
 - `secret` (String, Sensitive) A custom secret used to sign Audit Log events. If omitted, Vercel generates one.
 
 
-<a id="nestedblock--s3"></a>
+<a id="nestedatt--s3"></a>
 ### Nested Schema for `s3`
 
 Required:
