@@ -2,13 +2,67 @@ package vercel
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
+
+func TestFirewallConditionNegDefaultsToFalse(t *testing.T) {
+	res := newFirewallConfigResource()
+
+	resp := &resource.SchemaResponse{}
+	res.Schema(context.Background(), resource.SchemaRequest{}, resp)
+
+	rules := resp.Schema.Blocks["rules"].(schema.SingleNestedBlock)
+	rule := rules.Blocks["rule"].(schema.ListNestedBlock)
+	conditionGroups := rule.NestedObject.Attributes["condition_group"].(schema.ListNestedAttribute)
+	conditions := conditionGroups.NestedObject.Attributes["conditions"].(schema.ListNestedAttribute)
+	neg := conditions.NestedObject.Attributes["neg"].(schema.BoolAttribute)
+
+	if neg.Default == nil {
+		t.Fatal("neg should have a default")
+	}
+	if !neg.Computed {
+		t.Fatal("neg should be computed so API values can be stored in state")
+	}
+
+	defaultResp := &defaults.BoolResponse{}
+	neg.Default.DefaultBool(context.Background(), defaults.BoolRequest{}, defaultResp)
+	if defaultResp.Diagnostics.HasError() {
+		t.Fatalf("unexpected diagnostics applying neg default: %v", defaultResp.Diagnostics)
+	}
+	if defaultResp.PlanValue.IsNull() || defaultResp.PlanValue.ValueBool() {
+		t.Fatalf("neg should default to false, got %s", defaultResp.PlanValue)
+	}
+}
+
+func TestFromConditionPreservesNegFromAPI(t *testing.T) {
+	for _, apiNeg := range []bool{false, true} {
+		t.Run(fmt.Sprintf("neg_%t", apiNeg), func(t *testing.T) {
+			condition, err := fromCondition(client.Condition{
+				Type:  "header",
+				Op:    "eq",
+				Neg:   apiNeg,
+				Key:   "x-origin-verify",
+				Value: "secret",
+			}, Condition{
+				Neg: types.BoolNull(),
+				Key: types.StringValue("x-origin-verify"),
+			})
+			if err != nil {
+				t.Fatalf("unexpected error converting condition: %v", err)
+			}
+			if condition.Neg.IsNull() || condition.Neg.ValueBool() != apiNeg {
+				t.Fatalf("expected API neg value %t, got %s", apiNeg, condition.Neg)
+			}
+		})
+	}
+}
 
 func TestFirewallConfigResourceSchemaIncludesSessionFixationRule(t *testing.T) {
 	res := newFirewallConfigResource()

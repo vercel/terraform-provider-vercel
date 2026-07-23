@@ -376,8 +376,10 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 															},
 														},
 														"neg": schema.BoolAttribute{
-															Description: "Negate the condition",
+															Description: "Negate the condition. Defaults to false.",
 															Optional:    true,
+															Computed:    true,
+															Default:     booldefault.StaticBool(false),
 														},
 														"key": schema.StringAttribute{
 															Description: "Key within type to match against",
@@ -826,11 +828,7 @@ func fromCondition(condition client.Condition, ref Condition) (Condition, error)
 		}
 	}
 
-	// Neg and Key are optional
-	if ref.Neg == types.BoolNull() {
-		c.Neg = types.BoolNull()
-	}
-	// if key is present it's possible for value to be optional
+	// If key is present it's possible for value to be optional.
 	if ref.Key == types.StringNull() {
 		c.Key = types.StringNull()
 	} else {
