@@ -97,6 +97,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newTraceDrainResource,
 		newUserTokenResource,
 		newVCRRepositoryResource,
+		newVCRRepositoryPermissionResource,
 		newWebhookResource,
 		newProjectRollingReleaseResource,
 	}
