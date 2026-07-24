@@ -15,6 +15,9 @@ description: |-
 
 Provides a resource for managing a number of Project Environment Variables.
 
+-> **Note:** Usage of this resource will overwrite any existing environment variables not declared in the `variables` attribute.
+
+
 This resource defines multiple Environment Variables on a Vercel Project.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables).
