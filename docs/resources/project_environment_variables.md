@@ -4,6 +4,7 @@ page_title: "vercel_project_environment_variables Resource - terraform-provider-
 subcategory: ""
 description: |-
   Provides a resource for managing a number of Project Environment Variables.
+  ~> Removing entries from the variables attribute deletes the corresponding Environment Variables from the Vercel Project. Destroying this resource deletes all Environment Variables it manages. Environment Variables not managed by this resource are left unchanged.
   This resource defines multiple Environment Variables on a Vercel Project.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/environment-variables.
   ~> Terraform currently provides this Project Environment Variables resource (multiple Environment Variables), a single Project Environment Variable Resource, and a Project resource with Environment Variables defined in-line via the environment field.
@@ -14,6 +15,8 @@ description: |-
 # vercel_project_environment_variables (Resource)
 
 Provides a resource for managing a number of Project Environment Variables.
+
+~> Removing entries from the `variables` attribute deletes the corresponding Environment Variables from the Vercel Project. Destroying this resource deletes all Environment Variables it manages. Environment Variables not managed by this resource are left unchanged.
 
 This resource defines multiple Environment Variables on a Vercel Project.
 
