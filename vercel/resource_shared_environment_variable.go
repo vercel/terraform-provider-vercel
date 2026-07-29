@@ -25,7 +25,6 @@ var (
 	_ resource.Resource                     = &sharedEnvironmentVariableResource{}
 	_ resource.ResourceWithConfigure        = &sharedEnvironmentVariableResource{}
 	_ resource.ResourceWithImportState      = &sharedEnvironmentVariableResource{}
-	_ resource.ResourceWithModifyPlan       = &sharedEnvironmentVariableResource{}
 	_ resource.ResourceWithConfigValidators = &sharedEnvironmentVariableResource{}
 )
 
@@ -35,71 +34,6 @@ func newSharedEnvironmentVariableResource() resource.Resource {
 
 type sharedEnvironmentVariableResource struct {
 	client *client.Client
-}
-
-func (r *sharedEnvironmentVariableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-	var config SharedEnvironmentVariable
-	diags := req.Plan.Get(ctx, &config)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	hasDevelopmentTarget, diags := config.hasTarget(ctx, "development")
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if hasDevelopmentTarget && !config.isExplicitlyNonSensitive() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("sensitive"),
-			"Shared Environment Variable Invalid",
-			"Environment variables targeting `development` must explicitly set `sensitive = false`.",
-		)
-		return
-	}
-
-	shouldValidatePolicy, diags := shouldValidateSensitiveEnvironmentVariablePolicy(
-		ctx,
-		config.Target,
-		types.SetNull(types.StringType),
-		!config.ApplyToAllCustomEnvironments.IsNull() && !config.ApplyToAllCustomEnvironments.IsUnknown() && config.ApplyToAllCustomEnvironments.ValueBool(),
-		config.isExplicitlyNonSensitive(),
-		config.ID,
-	)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	if !shouldValidatePolicy {
-		return
-	}
-
-	// if sensitive is explicitly set to `false`, then validate that an env var can be created with the given
-	// team sensitive environment variable policy.
-	team, err := r.client.Team(ctx, config.TeamID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error validating shared environment variable",
-			"Could not validate shared environment variable, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	if team.SensitiveEnvironmentVariablePolicy == nil || *team.SensitiveEnvironmentVariablePolicy != "on" {
-		// the policy isn't enabled
-		return
-	}
-
-	resp.Diagnostics.AddAttributeError(
-		path.Root("sensitive"),
-		"Shared Environment Variable Invalid",
-		"This team has a policy that forces environment variables targeting `preview`, `production`, or custom environments to be sensitive. Set `sensitive = true` in your configuration.",
-	)
 }
 
 func (r *sharedEnvironmentVariableResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -134,7 +68,7 @@ A Shared Environment Variable resource defines an Environment Variable that can 
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables/shared-environment-variables).
 
--> **Note:** Starting in provider version ` + "`4.8.0`" + `, Shared Environment Variables require an explicit ` + "`sensitive`" + ` value. Variables targeting only ` + "`development`" + ` must set ` + "`sensitive = false`" + `. If your team enforces sensitive environment variables, variables targeting ` + "`preview`" + `, ` + "`production`" + `, or custom environments must set ` + "`sensitive = true`" + `. When that team policy is enabled, a variable cannot target ` + "`development`" + ` together with ` + "`preview`" + `, ` + "`production`" + `, or custom environments.
+-> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Team sensitivity rules are enforced by the Vercel API.
 
 -> **Note:** Write-Only argument ` + "`value_wo`" + ` is available to use in place of ` + "`value`" + `. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).
 `,
@@ -201,7 +135,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:      true,
 			},
 			"sensitive": schema.BoolAttribute{
-				Description:   "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. If a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy) is active, environment variables may have to be sensitive. Variables targeting only `development` must set this to `false`. Variables targeting `preview`, `production`, or custom environments may have to set this to `true`. A variable cannot target `development` together with `preview`, `production`, or custom environments while that team policy is enabled.",
+				Description:   "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set.",
 				Required:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},

@@ -6,9 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestSharedEnvironmentVariableResourceSchemaRequiresSensitive(t *testing.T) {
@@ -265,122 +263,5 @@ func TestSharedEnvironmentVariableHasTarget(t *testing.T) {
 				t.Fatalf("hasTarget() = %t, want %t", got, tt.wantTarget)
 			}
 		})
-	}
-}
-
-func TestSharedEnvironmentVariableModifyPlanSkipsPolicyValidationForExistingResource(t *testing.T) {
-	ctx := context.Background()
-	policy := "on"
-	res := &sharedEnvironmentVariableResource{
-		client: client.New("").WithTeam(client.Team{
-			SensitiveEnvironmentVariablePolicy: &policy,
-		}),
-	}
-
-	schemaResp := &resource.SchemaResponse{}
-	res.Schema(ctx, resource.SchemaRequest{}, schemaResp)
-
-	config := SharedEnvironmentVariable{
-		Target:                       stringSet("production"),
-		Key:                          types.StringValue("EXAMPLE"),
-		Value:                        types.StringValue("value"),
-		ValueWO:                      types.StringNull(),
-		ValueWOVersion:               types.Int64Null(),
-		TeamID:                       types.StringNull(),
-		ProjectIDs:                   stringSet("prj_123"),
-		ID:                           types.StringNull(),
-		Sensitive:                    types.BoolValue(false),
-		Comment:                      types.StringNull(),
-		ApplyToAllCustomEnvironments: types.BoolNull(),
-	}
-
-	plan := config
-	plan.ID = types.StringValue("sev_123")
-
-	configPlan := tfsdk.Plan{Schema: schemaResp.Schema}
-	diags := configPlan.Set(ctx, config)
-	if diags.HasError() {
-		t.Fatalf("configPlan.Set() returned diagnostics: %v", diags)
-	}
-
-	plannedState := tfsdk.Plan{Schema: schemaResp.Schema}
-	diags = plannedState.Set(ctx, plan)
-	if diags.HasError() {
-		t.Fatalf("plannedState.Set() returned diagnostics: %v", diags)
-	}
-
-	req := resource.ModifyPlanRequest{
-		Config: tfsdk.Config{
-			Raw:    configPlan.Raw,
-			Schema: schemaResp.Schema,
-		},
-		Plan: plannedState,
-	}
-	resp := &resource.ModifyPlanResponse{
-		Plan: plannedState,
-	}
-
-	res.ModifyPlan(ctx, req, resp)
-
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("ModifyPlan() returned diagnostics: %v", resp.Diagnostics)
-	}
-}
-
-func TestSharedEnvironmentVariableModifyPlanValidatesApplyAllCustomEnvironmentsAgainstPolicy(t *testing.T) {
-	ctx := context.Background()
-	policy := "on"
-	res := &sharedEnvironmentVariableResource{
-		client: client.New("").WithTeam(client.Team{
-			SensitiveEnvironmentVariablePolicy: &policy,
-		}),
-	}
-
-	schemaResp := &resource.SchemaResponse{}
-	res.Schema(ctx, resource.SchemaRequest{}, schemaResp)
-
-	config := SharedEnvironmentVariable{
-		Target:                       stringSet("development"),
-		Key:                          types.StringValue("EXAMPLE"),
-		Value:                        types.StringValue("value"),
-		ValueWO:                      types.StringNull(),
-		ValueWOVersion:               types.Int64Null(),
-		TeamID:                       types.StringNull(),
-		ProjectIDs:                   stringSet("prj_123"),
-		ID:                           types.StringNull(),
-		Sensitive:                    types.BoolValue(false),
-		Comment:                      types.StringNull(),
-		ApplyToAllCustomEnvironments: types.BoolValue(true),
-	}
-
-	configPlan := tfsdk.Plan{Schema: schemaResp.Schema}
-	diags := configPlan.Set(ctx, config)
-	if diags.HasError() {
-		t.Fatalf("configPlan.Set() returned diagnostics: %v", diags)
-	}
-
-	req := resource.ModifyPlanRequest{
-		Config: tfsdk.Config{
-			Raw:    configPlan.Raw,
-			Schema: schemaResp.Schema,
-		},
-		Plan: configPlan,
-	}
-	resp := &resource.ModifyPlanResponse{
-		Plan: configPlan,
-	}
-
-	res.ModifyPlan(ctx, req, resp)
-
-	if !resp.Diagnostics.HasError() {
-		t.Fatal("ModifyPlan() expected diagnostics, got none")
-	}
-
-	if len(resp.Diagnostics) != 1 {
-		t.Fatalf("ModifyPlan() returned %d diagnostics, want 1", len(resp.Diagnostics))
-	}
-
-	if got := resp.Diagnostics[0].Detail(); got != "This team has a policy that forces environment variables targeting `preview`, `production`, or custom environments to be sensitive. Set `sensitive = true` in your configuration." {
-		t.Fatalf("ModifyPlan() diagnostic detail = %q", got)
 	}
 }

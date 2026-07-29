@@ -34,7 +34,6 @@ var (
 	_ resource.Resource                     = &projectResource{}
 	_ resource.ResourceWithConfigure        = &projectResource{}
 	_ resource.ResourceWithImportState      = &projectResource{}
-	_ resource.ResourceWithModifyPlan       = &projectResource{}
 	_ resource.ResourceWithConfigValidators = &projectResource{}
 )
 
@@ -81,7 +80,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 ~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and this Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 
--> **Note:** Starting in provider version ` + "`4.8.0`" + `, in-line Project Environment Variables require an explicit ` + "`sensitive`" + ` value. Variables targeting only ` + "`development`" + ` must set ` + "`sensitive = false`" + `. If your team enforces sensitive environment variables, variables targeting ` + "`preview`" + `, ` + "`production`" + `, or custom environments must set ` + "`sensitive = true`" + `. When that team policy is enabled, a variable cannot target ` + "`development`" + ` together with ` + "`preview`" + `, ` + "`production`" + `, or custom environments.
+-> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Team sensitivity rules are enforced by the Vercel API.
         `,
 		Attributes: map[string]schema.Attribute{
 			"team_id": schema.StringAttribute{
@@ -196,7 +195,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Computed:    true,
 						},
 						"sensitive": schema.BoolAttribute{
-							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. If a [team-wide environment variable policy](https://vercel.com/docs/projects/environment-variables/sensitive-environment-variables#environment-variables-policy) is active, environment variables may have to be sensitive. Variables targeting only `development` must set this to `false`. Variables targeting `preview`, `production`, or custom environments may have to set this to `true`. A variable cannot target `development` together with `preview`, `production`, or custom environments while that team policy is enabled.",
+							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set.",
 							Required:    true,
 						},
 						"comment": schema.StringAttribute{
@@ -2306,108 +2305,6 @@ func responseFunctionDefaultRegions(response client.ProjectResponse) []string {
 		return []string{*response.ServerlessFunctionRegion}
 	}
 	return nil
-}
-
-func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-	var plan Project
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	environment, err := plan.environment(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error parsing project environment variables",
-			"Could not read environment variables, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	var invalidDevelopmentEnvVars []path.Path
-	var nonSensitiveEnvVars []path.Path
-	for i, e := range environment {
-		hasDevelopmentTarget, diags := e.hasTarget(ctx, "development")
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if hasDevelopmentTarget && !e.isExplicitlyNonSensitive() {
-			invalidDevelopmentEnvVars = append(
-				invalidDevelopmentEnvVars,
-				path.Root("environment").
-					AtSetValue(plan.Environment.Elements()[i]).
-					AtName("sensitive"),
-			)
-			continue
-		}
-
-		shouldValidatePolicy, diags := shouldValidateSensitiveEnvironmentVariablePolicy(
-			ctx,
-			e.Target,
-			e.CustomEnvironmentIDs,
-			false,
-			e.isExplicitlyNonSensitive(),
-			e.ID,
-		)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if !shouldValidatePolicy {
-			continue
-		}
-
-		nonSensitiveEnvVars = append(
-			nonSensitiveEnvVars,
-			path.Root("environment").
-				AtSetValue(plan.Environment.Elements()[i]).
-				AtName("sensitive"),
-		)
-	}
-
-	if len(invalidDevelopmentEnvVars) > 0 {
-		for _, p := range invalidDevelopmentEnvVars {
-			resp.Diagnostics.AddAttributeError(
-				p,
-				"Project Invalid",
-				"Environment variables targeting `development` must explicitly set `sensitive = false`.",
-			)
-		}
-		return
-	}
-
-	if len(nonSensitiveEnvVars) == 0 {
-		return
-	}
-
-	// if sensitive is explicitly set to `false`, then validate that an env var can be created with the given
-	// team sensitive environment variable policy.
-	team, err := r.client.Team(ctx, plan.TeamID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error validating project environment variable",
-			"Could not validate project environment variable, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	if team.SensitiveEnvironmentVariablePolicy == nil || *team.SensitiveEnvironmentVariablePolicy != "on" {
-		// the policy isn't enabled
-		return
-	}
-
-	for _, p := range nonSensitiveEnvVars {
-		resp.Diagnostics.AddAttributeError(
-			p,
-			"Project Invalid",
-			"This team has a policy that forces environment variables targeting `preview`, `production`, or custom environments to be sensitive. Set `sensitive = true` in your configuration.",
-		)
-	}
 }
 
 // Create will create a project within Vercel by calling the Vercel API.
