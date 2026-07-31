@@ -25,6 +25,37 @@ func TestSharedEnvironmentVariableResourceSchemaRequiresSensitive(t *testing.T) 
 	assertBoolRequired(t, sensitiveAttr, "sensitive")
 }
 
+func TestConvertResponseDoesNotTrackProjectsWhenProjectIDsAreUnconfigured(t *testing.T) {
+	projectIDs := types.SetNull(types.StringType)
+	result := convertResponseToSharedEnvironmentVariable(client.SharedEnvironmentVariableResponse{
+		ID:         "env_123",
+		Key:        "EXAMPLE",
+		ProjectIDs: []string{"prj_123"},
+	}, types.StringValue("value"), projectIDs)
+
+	if !result.ProjectIDs.IsNull() {
+		t.Errorf("ProjectIDs = %#v, want null", result.ProjectIDs)
+	}
+}
+
+func TestConvertResponseTracksConfiguredProjectIDs(t *testing.T) {
+	projectIDs := stringSet("prj_123")
+	result := convertResponseToSharedEnvironmentVariable(client.SharedEnvironmentVariableResponse{
+		ID:         "env_123",
+		Key:        "EXAMPLE",
+		ProjectIDs: []string{"prj_456"},
+	}, types.StringValue("value"), projectIDs)
+
+	var got []string
+	diags := result.ProjectIDs.ElementsAs(context.Background(), &got, false)
+	if diags.HasError() {
+		t.Fatalf("ProjectIDs.ElementsAs() returned diagnostics: %v", diags)
+	}
+	if len(got) != 1 || got[0] != "prj_123" {
+		t.Errorf("ProjectIDs = %#v, want []string{\"prj_123\"}", got)
+	}
+}
+
 func TestSharedEnvironmentVariableSensitiveSemantics(t *testing.T) {
 	tests := []struct {
 		name                       string

@@ -176,7 +176,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				},
 			},
 			"project_ids": schema.SetAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "The ID of the Vercel project.",
 				ElementType: types.StringType,
 			},
@@ -342,10 +342,12 @@ func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx
 	}
 
 	var projectIDs []string
-	ds := e.ProjectIDs.ElementsAs(ctx, &projectIDs, false)
-	diags = append(diags, ds...)
-	if diags.HasError() {
-		return req, false
+	if !e.ProjectIDs.IsNull() && !e.ProjectIDs.IsUnknown() {
+		ds := e.ProjectIDs.ElementsAs(ctx, &projectIDs, false)
+		diags = append(diags, ds...)
+		if diags.HasError() {
+			return req, false
+		}
 	}
 
 	var envVariableType string
@@ -391,10 +393,12 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx
 	}
 
 	var projectIDs []string
-	ds := e.ProjectIDs.ElementsAs(ctx, &projectIDs, false)
-	diags = append(diags, ds...)
-	if diags.HasError() {
-		return req, false
+	if !e.ProjectIDs.IsNull() && !e.ProjectIDs.IsUnknown() {
+		ds := e.ProjectIDs.ElementsAs(ctx, &projectIDs, false)
+		diags = append(diags, ds...)
+		if diags.HasError() {
+			return req, false
+		}
 	}
 	var envVariableType string
 
@@ -422,15 +426,10 @@ func (e *SharedEnvironmentVariable) toUpdateSharedEnvironmentVariableRequest(ctx
 // convertResponseToSharedEnvironmentVariable is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
-func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmentVariableResponse, v types.String) SharedEnvironmentVariable {
+func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmentVariableResponse, v types.String, projectIDs types.Set) SharedEnvironmentVariable {
 	target := []attr.Value{}
 	for _, t := range response.Target {
 		target = append(target, types.StringValue(t))
-	}
-
-	projectIDs := []attr.Value{}
-	for _, t := range response.ProjectIDs {
-		projectIDs = append(projectIDs, types.StringValue(t))
 	}
 
 	value := types.StringNull()
@@ -448,7 +447,7 @@ func convertResponseToSharedEnvironmentVariable(response client.SharedEnvironmen
 		Key:                          types.StringValue(response.Key),
 		Value:                        value,
 		ValueWO:                      types.StringNull(),
-		ProjectIDs:                   types.SetValueMust(types.StringType, projectIDs),
+		ProjectIDs:                   projectIDs,
 		TeamID:                       toTeamID(response.TeamID),
 		ID:                           types.StringValue(response.ID),
 		Sensitive:                    types.BoolValue(response.Type == "sensitive"),
@@ -485,7 +484,7 @@ func (r *sharedEnvironmentVariableResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(response, plan.Value)
+	result := convertResponseToSharedEnvironmentVariable(response, plan.Value, plan.ProjectIDs)
 
 	tflog.Info(ctx, "created shared environment variable", map[string]any{
 		"id":      result.ID.ValueString(),
@@ -526,7 +525,7 @@ func (r *sharedEnvironmentVariableResource) Read(ctx context.Context, req resour
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(out, state.Value)
+	result := convertResponseToSharedEnvironmentVariable(out, state.Value, state.ProjectIDs)
 	tflog.Info(ctx, "read shared environment variable", map[string]any{
 		"id":      result.ID.ValueString(),
 		"team_id": result.TeamID.ValueString(),
@@ -567,7 +566,7 @@ func (r *sharedEnvironmentVariableResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(response, plan.Value)
+	result := convertResponseToSharedEnvironmentVariable(response, plan.Value, plan.ProjectIDs)
 
 	tflog.Info(ctx, "updated shared environment variable", map[string]any{
 		"id":      result.ID.ValueString(),
@@ -642,7 +641,12 @@ func (r *sharedEnvironmentVariableResource) ImportState(ctx context.Context, req
 		value = types.StringValue(out.Value)
 	}
 
-	result := convertResponseToSharedEnvironmentVariable(out, value)
+	projectIDs := make([]attr.Value, 0, len(out.ProjectIDs))
+	for _, projectID := range out.ProjectIDs {
+		projectIDs = append(projectIDs, types.StringValue(projectID))
+	}
+
+	result := convertResponseToSharedEnvironmentVariable(out, value, types.SetValueMust(types.StringType, projectIDs))
 	tflog.Info(ctx, "imported shared environment variable", map[string]any{
 		"team_id": result.TeamID.ValueString(),
 		"env_id":  result.ID.ValueString(),
