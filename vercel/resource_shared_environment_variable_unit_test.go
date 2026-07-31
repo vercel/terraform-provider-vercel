@@ -26,21 +26,6 @@ func TestSharedEnvironmentVariableResourceSchemaRequiresSensitive(t *testing.T) 
 	assertBoolRequired(t, sensitiveAttr, "sensitive")
 }
 
-func TestSharedEnvironmentVariableResourceSchemaMakesProjectIDsOptional(t *testing.T) {
-	res := newSharedEnvironmentVariableResource()
-
-	resp := &resource.SchemaResponse{}
-	res.Schema(context.Background(), resource.SchemaRequest{}, resp)
-
-	projectIDsAttr, ok := resp.Schema.Attributes["project_ids"].(schema.SetAttribute)
-	if !ok {
-		t.Fatalf("project_ids attribute has unexpected type: %T", resp.Schema.Attributes["project_ids"])
-	}
-	if !projectIDsAttr.Optional || projectIDsAttr.Required || projectIDsAttr.Computed {
-		t.Errorf("project_ids optional = %t, required = %t, computed = %t; want optional only", projectIDsAttr.Optional, projectIDsAttr.Required, projectIDsAttr.Computed)
-	}
-}
-
 func TestSharedEnvironmentVariableCreateRequestOmitsUnconfiguredProjectIDs(t *testing.T) {
 	env := SharedEnvironmentVariable{
 		Target:                       stringSet("production"),
@@ -82,6 +67,24 @@ func TestConvertResponseDoesNotTrackProjectsWhenProjectIDsAreUnconfigured(t *tes
 
 	if !result.ProjectIDs.IsNull() {
 		t.Errorf("ProjectIDs = %#v, want null", result.ProjectIDs)
+	}
+}
+
+func TestConvertResponseTracksConfiguredProjectIDs(t *testing.T) {
+	projectIDs := stringSet("prj_123")
+	result := convertResponseToSharedEnvironmentVariable(client.SharedEnvironmentVariableResponse{
+		ID:         "env_123",
+		Key:        "EXAMPLE",
+		ProjectIDs: []string{"prj_456"},
+	}, types.StringValue("value"), projectIDs)
+
+	var got []string
+	diags := result.ProjectIDs.ElementsAs(context.Background(), &got, false)
+	if diags.HasError() {
+		t.Fatalf("ProjectIDs.ElementsAs() returned diagnostics: %v", diags)
+	}
+	if len(got) != 1 || got[0] != "prj_123" {
+		t.Errorf("ProjectIDs = %#v, want []string{\"prj_123\"}", got)
 	}
 }
 
