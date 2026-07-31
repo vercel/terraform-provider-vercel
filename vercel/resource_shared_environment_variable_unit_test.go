@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -23,6 +24,76 @@ func TestSharedEnvironmentVariableResourceSchemaRequiresSensitive(t *testing.T) 
 	}
 
 	assertBoolRequired(t, sensitiveAttr, "sensitive")
+}
+
+func TestSharedEnvironmentVariableResourceSchemaMakesProjectIDsOptional(t *testing.T) {
+	res := newSharedEnvironmentVariableResource()
+
+	resp := &resource.SchemaResponse{}
+	res.Schema(context.Background(), resource.SchemaRequest{}, resp)
+
+	projectIDsAttr, ok := resp.Schema.Attributes["project_ids"].(schema.SetAttribute)
+	if !ok {
+		t.Fatalf("project_ids attribute has unexpected type: %T", resp.Schema.Attributes["project_ids"])
+	}
+	if !projectIDsAttr.Optional || projectIDsAttr.Required || projectIDsAttr.Computed {
+		t.Errorf("project_ids optional = %t, required = %t, computed = %t; want optional only", projectIDsAttr.Optional, projectIDsAttr.Required, projectIDsAttr.Computed)
+	}
+}
+
+func TestSharedEnvironmentVariableCreateRequestOmitsUnconfiguredProjectIDs(t *testing.T) {
+	env := SharedEnvironmentVariable{
+		Target:                       stringSet("production"),
+		Key:                          types.StringValue("EXAMPLE"),
+		Value:                        types.StringValue("value"),
+		ProjectIDs:                   types.SetNull(types.StringType),
+		TeamID:                       types.StringValue("team_123"),
+		Sensitive:                    types.BoolValue(true),
+		ApplyToAllCustomEnvironments: types.BoolValue(false),
+	}
+
+	req, ok := env.toCreateSharedEnvironmentVariableRequest(context.Background(), nil, types.StringNull())
+	if !ok {
+		t.Fatal("toCreateSharedEnvironmentVariableRequest() returned false")
+	}
+	if req.EnvironmentVariable.ProjectIDs != nil {
+		t.Errorf("ProjectIDs = %#v, want nil", req.EnvironmentVariable.ProjectIDs)
+	}
+
+	payload, err := json.Marshal(req.EnvironmentVariable)
+	if err != nil {
+		t.Fatalf("json.Marshal() returned an error: %v", err)
+	}
+	if string(payload) == "" {
+		t.Fatal("json.Marshal() returned an empty payload")
+	}
+	if containsJSONField(t, payload, "projectId") {
+		t.Errorf("payload %s contains projectId", payload)
+	}
+}
+
+func TestConvertResponseDoesNotTrackProjectsWhenProjectIDsAreUnconfigured(t *testing.T) {
+	projectIDs := types.SetNull(types.StringType)
+	result := convertResponseToSharedEnvironmentVariable(client.SharedEnvironmentVariableResponse{
+		ID:         "env_123",
+		Key:        "EXAMPLE",
+		ProjectIDs: []string{"prj_123"},
+	}, types.StringValue("value"), projectIDs)
+
+	if !result.ProjectIDs.IsNull() {
+		t.Errorf("ProjectIDs = %#v, want null", result.ProjectIDs)
+	}
+}
+
+func containsJSONField(t *testing.T, payload []byte, field string) bool {
+	t.Helper()
+
+	var value map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &value); err != nil {
+		t.Fatalf("json.Unmarshal() returned an error: %v", err)
+	}
+	_, ok := value[field]
+	return ok
 }
 
 func TestSharedEnvironmentVariableSensitiveSemantics(t *testing.T) {

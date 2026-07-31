@@ -28,7 +28,7 @@ type SharedEnvVarRequest struct {
 
 type SharedEnvironmentVariableRequest struct {
 	Type                         string                `json:"type"`
-	ProjectIDs                   []string              `json:"projectId"`
+	ProjectIDs                   []string              `json:"projectId,omitempty"`
 	Target                       []string              `json:"target"`
 	ApplyToAllCustomEnvironments bool                  `json:"applyToAllCustomEnvironments"`
 	EnvironmentVariables         []SharedEnvVarRequest `json:"evs"`
