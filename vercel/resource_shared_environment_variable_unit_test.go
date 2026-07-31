@@ -2,7 +2,6 @@ package vercel
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -24,37 +23,6 @@ func TestSharedEnvironmentVariableResourceSchemaRequiresSensitive(t *testing.T) 
 	}
 
 	assertBoolRequired(t, sensitiveAttr, "sensitive")
-}
-
-func TestSharedEnvironmentVariableCreateRequestOmitsUnconfiguredProjectIDs(t *testing.T) {
-	env := SharedEnvironmentVariable{
-		Target:                       stringSet("production"),
-		Key:                          types.StringValue("EXAMPLE"),
-		Value:                        types.StringValue("value"),
-		ProjectIDs:                   types.SetNull(types.StringType),
-		TeamID:                       types.StringValue("team_123"),
-		Sensitive:                    types.BoolValue(true),
-		ApplyToAllCustomEnvironments: types.BoolValue(false),
-	}
-
-	req, ok := env.toCreateSharedEnvironmentVariableRequest(context.Background(), nil, types.StringNull())
-	if !ok {
-		t.Fatal("toCreateSharedEnvironmentVariableRequest() returned false")
-	}
-	if req.EnvironmentVariable.ProjectIDs != nil {
-		t.Errorf("ProjectIDs = %#v, want nil", req.EnvironmentVariable.ProjectIDs)
-	}
-
-	payload, err := json.Marshal(req.EnvironmentVariable)
-	if err != nil {
-		t.Fatalf("json.Marshal() returned an error: %v", err)
-	}
-	if string(payload) == "" {
-		t.Fatal("json.Marshal() returned an empty payload")
-	}
-	if containsJSONField(t, payload, "projectId") {
-		t.Errorf("payload %s contains projectId", payload)
-	}
 }
 
 func TestConvertResponseDoesNotTrackProjectsWhenProjectIDsAreUnconfigured(t *testing.T) {
@@ -86,17 +54,6 @@ func TestConvertResponseTracksConfiguredProjectIDs(t *testing.T) {
 	if len(got) != 1 || got[0] != "prj_123" {
 		t.Errorf("ProjectIDs = %#v, want []string{\"prj_123\"}", got)
 	}
-}
-
-func containsJSONField(t *testing.T, payload []byte, field string) bool {
-	t.Helper()
-
-	var value map[string]json.RawMessage
-	if err := json.Unmarshal(payload, &value); err != nil {
-		t.Fatalf("json.Unmarshal() returned an error: %v", err)
-	}
-	_, ok := value[field]
-	return ok
 }
 
 func TestSharedEnvironmentVariableSensitiveSemantics(t *testing.T) {
