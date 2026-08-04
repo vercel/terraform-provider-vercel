@@ -50,6 +50,7 @@ func TestImportStateInvalidIDReturnsBeforeClientCall(t *testing.T) {
 		}},
 		{name: "team member", run: func(resp *resource.ImportStateResponse) { (&teamMemberResource{}).ImportState(ctx, req, resp) }},
 		{name: "trace drain", run: func(resp *resource.ImportStateResponse) { (&traceDrainResource{}).ImportState(ctx, req, resp) }},
+		{name: "webhook", run: func(resp *resource.ImportStateResponse) { (&webhookResource{}).ImportState(ctx, req, resp) }},
 	}
 
 	for _, tt := range tests {
