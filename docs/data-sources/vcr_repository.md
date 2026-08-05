@@ -39,4 +39,5 @@ data "vercel_vcr_repository" "example" {
 ### Read-Only
 
 - `id` (String) The ID of the VCR Repository.
+- `public` (Boolean) Whether the repository is pullable by any Vercel team.
 - `url` (String) The URL of the repository, composed of the owner slug, the project slug and the repository name (e.g. `vcr.vercel.com/team-slug/project-slug/repository-name`). Use it to push and pull images with Docker-compatible tooling.
