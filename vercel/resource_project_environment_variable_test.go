@@ -276,6 +276,7 @@ func TestAcc_ProjectEnvironmentVariable_ValueWO(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "comment", "value_wo-initial"),
 					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo"),
 					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo_version", "1"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_value_wo", "target.*", "production"),
 				),
 			},
@@ -284,9 +285,10 @@ func TestAcc_ProjectEnvironmentVariable_ValueWO(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_value_wo", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "key", "foo_wo"),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "comment", "value_wo-updated"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "comment", "value_wo-initial"),
 					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo"),
 					resource.TestCheckNoResourceAttr("vercel_project_environment_variable.example_value_wo", "value"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_value_wo", "value_wo_version", "2"),
 					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_value_wo", "target.*", "production"),
 				),
 			},
@@ -347,7 +349,8 @@ resource "vercel_project" "example" {
 resource "vercel_project_environment_variable" "example_value_wo" {
 	project_id = vercel_project.example.id
 	key        = "foo_wo"
-	value_wo   = "bar-wo"
+	value_wo         = "bar-wo"
+	value_wo_version = 1
 	target     = ["production"]
 	sensitive  = true
 	comment    = "value_wo-initial"
@@ -369,10 +372,11 @@ resource "vercel_project" "example" {
 resource "vercel_project_environment_variable" "example_value_wo" {
 	project_id = vercel_project.example.id
 	key        = "foo_wo"
-	value_wo   = "bar-wo-updated"
+	value_wo         = "bar-wo-updated"
+	value_wo_version = 2
 	target     = ["production"]
 	sensitive  = true
-	comment    = "value_wo-updated"
+	comment    = "value_wo-initial"
 }
 `, projectName, githubRepo)
 }

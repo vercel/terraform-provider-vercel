@@ -315,7 +315,7 @@ func (c *Client) CreateEnvironmentVariables(ctx context.Context, request CreateE
 // UpdateEnvironmentVariableRequest defines the information that needs to be passed to Vercel in order to
 // update an environment variable.
 type UpdateEnvironmentVariableRequest struct {
-	Value                string   `json:"value"`
+	Value                *string  `json:"value,omitempty"`
 	Target               []string `json:"target"`
 	CustomEnvironmentIDs []string `json:"customEnvironmentIds,omitempty"`
 	GitBranch            *string  `json:"gitBranch,omitempty"`
@@ -343,7 +343,9 @@ func (c *Client) UpdateEnvironmentVariable(ctx context.Context, request UpdateEn
 		body:   payload,
 	}, &e)
 	// The API response returns an encrypted environment variable, but we want to return the decrypted version.
-	e.Value = request.Value
+	if request.Value != nil {
+		e.Value = *request.Value
+	}
 	e.TeamID = c.TeamID(request.TeamID)
 	return e, err
 }

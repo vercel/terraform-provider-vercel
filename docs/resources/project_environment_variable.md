@@ -78,12 +78,13 @@ ephemeral "vault_kv_secret_v2" "example" {
   name  = "example"
 }
 resource "vercel_project_environment_variable" "example_ephemeral" {
-  project_id = vercel_project.example.id
-  key        = "foo"
-  value_wo   = ephemeral.vault_kv_secret_v2.example.data["example"]
-  target     = ["production"]
-  sensitive  = true
-  comment    = "an ephemeral secret"
+  project_id       = vercel_project.example.id
+  key              = "foo"
+  value_wo         = ephemeral.vault_kv_secret_v2.example.data["example"]
+  value_wo_version = 1
+  target           = ["production"]
+  sensitive        = true
+  comment          = "an ephemeral secret"
 }
 ```
 
@@ -107,6 +108,7 @@ resource "vercel_project_environment_variable" "example_ephemeral" {
 - `team_id` (String) The ID of the Vercel team.Required when configuring a team resource if a default team has not been set in the provider.
 - `value` (String, Sensitive) (Optional, exactly one of `value` or `value_wo` is required) The value of the Environment Variable.
 - `value_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) (Optional, Write-Only, exactly one of `value` or `value_wo` is required) The value of the Environment Variable, from an `ephemeral` resource.
+- `value_wo_version` (Number) An integer used to trigger an update to `value_wo`. Increment this value when an update to the write-only value is required.
 
 ### Read-Only
 
