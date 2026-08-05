@@ -93,7 +93,7 @@ used by Vercel Functions and Vercel Sandbox. Images are pushed to and pulled fro
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Whether the repository is pullable by any Vercel team. Private repositories are only accessible to the owning project's team and teams the repository is shared with. Defaults to `false`.",
+				Description: "Whether the repository is pullable by any Vercel team. Private repositories are only accessible within the same project. Defaults to `false`.",
 			},
 			"url": schema.StringAttribute{
 				Computed:      true,

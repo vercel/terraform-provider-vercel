@@ -41,7 +41,7 @@ resource "vercel_vcr_repository" "example" {
 
 ### Optional
 
-- `public` (Boolean) Whether the repository is pullable by any Vercel team. Private repositories are only accessible to the owning project's team and teams the repository is shared with. Defaults to `false`.
+- `public` (Boolean) Whether the repository is pullable by any Vercel team. Private repositories are only accessible within the same project. Defaults to `false`.
 - `team_id` (String) The ID of the team the repository should be created under. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
