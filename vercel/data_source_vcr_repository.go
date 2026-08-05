@@ -71,6 +71,10 @@ used by Vercel Functions and Vercel Sandbox.
 				Description: "The name of the repository.",
 				Required:    true,
 			},
+			"public": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Whether the repository is pullable by any Vercel team.",
+			},
 			"url": schema.StringAttribute{
 				Computed:    true,
 				Description: "The URL of the repository, composed of the owner slug, the project slug and the repository name (e.g. `vcr.vercel.com/team-slug/project-slug/repository-name`). Use it to push and pull images with Docker-compatible tooling.",
@@ -109,6 +113,7 @@ func (d *vcrRepositoryDataSource) Read(ctx context.Context, req datasource.ReadR
 		"team_id":    res.TeamID,
 		"project_id": res.ProjectID,
 		"name":       res.Name,
+		"public":     res.Public,
 	})
 
 	diags = resp.State.Set(ctx, convertResponseToVCRRepository(res))

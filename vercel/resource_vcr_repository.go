@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -88,6 +89,12 @@ used by Vercel Functions and Vercel Sandbox. Images are pushed to and pulled fro
 					),
 				},
 			},
+			"public": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Whether the repository is pullable by any Vercel team. Private repositories are only accessible to the owning project's team and teams the repository is shared with. Defaults to `false`.",
+			},
 			"url": schema.StringAttribute{
 				Computed:      true,
 				Description:   "The URL of the repository, composed of the owner slug, the project slug and the repository name (e.g. `vcr.vercel.com/team-slug/project-slug/repository-name`). Use it to push and pull images with Docker-compatible tooling.",
@@ -102,6 +109,7 @@ type VCRRepository struct {
 	TeamID    types.String `tfsdk:"team_id"`
 	ProjectID types.String `tfsdk:"project_id"`
 	Name      types.String `tfsdk:"name"`
+	Public    types.Bool   `tfsdk:"public"`
 	URL       types.String `tfsdk:"url"`
 }
 
@@ -117,6 +125,7 @@ func convertResponseToVCRRepository(res client.VCRRepository) VCRRepository {
 		TeamID:    types.StringValue(res.TeamID),
 		ProjectID: types.StringValue(res.ProjectID),
 		Name:      types.StringValue(res.Name),
+		Public:    types.BoolValue(res.Public),
 		URL:       types.StringValue(res.URL),
 	}
 }
@@ -141,11 +150,31 @@ func (r *vcrRepositoryResource) Create(ctx context.Context, req resource.CreateR
 		)
 		return
 	}
+	if res.Public != plan.Public.ValueBool() {
+		idOrName := res.ID
+		if idOrName == "" {
+			idOrName = res.Name
+		}
+		res, err = r.client.UpdateVCRRepository(ctx, client.UpdateVCRRepositoryRequest{
+			TeamID:    res.TeamID,
+			ProjectID: res.ProjectID,
+			IDOrName:  idOrName,
+			Public:    plan.Public.ValueBool(),
+		})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating newly created VCR Repository",
+				fmt.Sprintf("Could not set visibility for newly created VCR Repository, unexpected error: %s", err),
+			)
+			return
+		}
+	}
 
 	tflog.Info(ctx, "created vcr repository", map[string]any{
 		"team_id":    res.TeamID,
 		"project_id": res.ProjectID,
 		"name":       res.Name,
+		"public":     res.Public,
 	})
 
 	diags = resp.State.Set(ctx, convertResponseToVCRRepository(res))
@@ -186,18 +215,53 @@ func (r *vcrRepositoryResource) Read(ctx context.Context, req resource.ReadReque
 		"team_id":    res.TeamID,
 		"project_id": res.ProjectID,
 		"name":       res.Name,
+		"public":     res.Public,
 	})
 
 	diags = resp.State.Set(ctx, convertResponseToVCRRepository(res))
 	resp.Diagnostics.Append(diags...)
 }
 
-// Update is never called as all attributes force a replacement.
 func (r *vcrRepositoryResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError(
-		"Error updating VCR Repository",
-		"VCR Repositories cannot be updated. Any change requires the repository to be replaced.",
-	)
+	var plan VCRRepository
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	res, err := r.client.UpdateVCRRepository(ctx, client.UpdateVCRRepositoryRequest{
+		TeamID:    plan.TeamID.ValueString(),
+		ProjectID: plan.ProjectID.ValueString(),
+		IDOrName:  plan.ID.ValueString(),
+		Public:    plan.Public.ValueBool(),
+	})
+	if client.NotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating VCR Repository",
+			fmt.Sprintf("Could not update VCR Repository %s %s %s, unexpected error: %s",
+				plan.TeamID.ValueString(),
+				plan.ProjectID.ValueString(),
+				plan.Name.ValueString(),
+				err,
+			),
+		)
+		return
+	}
+
+	tflog.Info(ctx, "updated vcr repository", map[string]any{
+		"team_id":    res.TeamID,
+		"project_id": res.ProjectID,
+		"name":       res.Name,
+		"public":     res.Public,
+	})
+
+	diags = resp.State.Set(ctx, convertResponseToVCRRepository(res))
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r *vcrRepositoryResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

@@ -11,7 +11,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
-func testCheckVCRRepositoryExists(testClient *client.Client, teamID string, n string) resource.TestCheckFunc {
+func testCheckVCRRepositoryExists(testClient *client.Client, teamID string, expectedPublic bool, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -25,13 +25,16 @@ func testCheckVCRRepositoryExists(testClient *client.Client, teamID string, n st
 		projectID := rs.Primary.Attributes["project_id"]
 		name := rs.Primary.Attributes["name"]
 
-		_, err := testClient.GetVCRRepository(context.TODO(), client.GetVCRRepositoryRequest{
+		repository, err := testClient.GetVCRRepository(context.TODO(), client.GetVCRRepositoryRequest{
 			TeamID:    teamID,
 			ProjectID: projectID,
 			IDOrName:  name,
 		})
 		if client.NotFound(err) {
 			return fmt.Errorf("test failed because the vcr repository %s %s %s - %s could not be found", teamID, projectID, name, rs.Primary.ID)
+		}
+		if err == nil && repository.Public != expectedPublic {
+			return fmt.Errorf("vcr repository public = %t, want %t", repository.Public, expectedPublic)
 		}
 		return err
 	}
@@ -44,13 +47,21 @@ func TestAcc_VCRRepositoryResource(t *testing.T) {
 		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccVCRRepository(projectSuffix)),
+				Config: cfg(testAccVCRRepository(projectSuffix, false)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckVCRRepositoryExists(testClient(t), testTeam(t), "vercel_vcr_repository.test"),
+					testCheckVCRRepositoryExists(testClient(t), testTeam(t), false, "vercel_vcr_repository.test"),
 					resource.TestCheckResourceAttrSet("vercel_vcr_repository.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_vcr_repository.test", "project_id"),
 					resource.TestCheckResourceAttr("vercel_vcr_repository.test", "name", fmt.Sprintf("test-acc-%s", projectSuffix)),
+					resource.TestCheckResourceAttr("vercel_vcr_repository.test", "public", "false"),
 					resource.TestCheckResourceAttrSet("vercel_vcr_repository.test", "url"),
+				),
+			},
+			{
+				Config: cfg(testAccVCRRepository(projectSuffix, true)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckVCRRepositoryExists(testClient(t), testTeam(t), true, "vercel_vcr_repository.test"),
+					resource.TestCheckResourceAttr("vercel_vcr_repository.test", "public", "true"),
 				),
 			},
 			{
@@ -78,7 +89,7 @@ func getVCRRepositoryImportID(n string) resource.ImportStateIdFunc {
 	}
 }
 
-func testAccVCRRepository(projectSuffix string) string {
+func testAccVCRRepository(projectSuffix string, public bool) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
   name = "test-acc-vcr-repo-%[1]s"
@@ -87,6 +98,7 @@ resource "vercel_project" "test" {
 resource "vercel_vcr_repository" "test" {
   project_id = vercel_project.test.id
   name       = "test-acc-%[1]s"
+  public     = %[2]t
 }
-`, projectSuffix)
+`, projectSuffix, public)
 }

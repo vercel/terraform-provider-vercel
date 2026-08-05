@@ -15,6 +15,7 @@ type VCRRepository struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	ProjectID string `json:"projectId"`
+	Public    bool   `json:"public"`
 	URL       string `json:"-"`
 	TeamID    string `json:"-"`
 }
@@ -114,6 +115,48 @@ func (c *Client) GetVCRRepository(ctx context.Context, request GetVCRRepositoryR
 		ctx:    ctx,
 		method: "GET",
 		url:    url,
+	}, &out)
+	if err != nil {
+		return res, err
+	}
+	res = out.repository()
+	if res.Name == "" {
+		res.Name = request.IDOrName
+	}
+	if res.ProjectID == "" {
+		res.ProjectID = request.ProjectID
+	}
+	res.TeamID = c.TeamID(request.TeamID)
+	res.URL, err = c.vcrRepositoryURL(ctx, request.TeamID, res.ProjectID, res.Name)
+	if err != nil {
+		return res, err
+	}
+	return res, nil
+}
+
+type UpdateVCRRepositoryRequest struct {
+	TeamID    string `json:"-"`
+	ProjectID string `json:"-"`
+	IDOrName  string `json:"-"`
+	Public    bool   `json:"public"`
+}
+
+func (c *Client) UpdateVCRRepository(ctx context.Context, request UpdateVCRRepositoryRequest) (res VCRRepository, err error) {
+	url := fmt.Sprintf("%s/v1/vcr/repository/%s?projectId=%s", c.baseURL, request.IDOrName, request.ProjectID)
+	if c.TeamID(request.TeamID) != "" {
+		url = fmt.Sprintf("%s&teamId=%s", url, c.TeamID(request.TeamID))
+	}
+	payload := string(mustMarshal(request))
+	tflog.Info(ctx, "updating vcr repository", map[string]any{
+		"url":     url,
+		"payload": payload,
+	})
+	var out vcrRepositoryResponse
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PATCH",
+		url:    url,
+		body:   payload,
 	}, &out)
 	if err != nil {
 		return res, err
