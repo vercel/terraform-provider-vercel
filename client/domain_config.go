@@ -20,11 +20,13 @@ type recommendedCNAMEValue struct {
 type domainConfigAPIResponse struct {
 	RecommendedCNAME []recommendedCNAMEValue `json:"recommendedCNAME"`
 	RecommendedIPv4  []recommendedValue      `json:"recommendedIPv4"`
+	Misconfigured    bool                    `json:"misconfigured"`
 }
 
 type DomainConfigResponse struct {
 	RecommendedCNAME string
 	RecommendedIPv4s []string
+	Misconfigured    bool
 }
 
 func (c *Client) GetDomainConfig(ctx context.Context, domain, projectIdOrName, teamID string) (DomainConfigResponse, error) {
@@ -49,7 +51,9 @@ func (c *Client) GetDomainConfig(ctx context.Context, domain, projectIdOrName, t
 		return DomainConfigResponse{}, fmt.Errorf("unable to get domain config: %w", err)
 	}
 
-	response := DomainConfigResponse{}
+	response := DomainConfigResponse{
+		Misconfigured: apiResponse.Misconfigured,
+	}
 
 	for _, reccomendation := range apiResponse.RecommendedCNAME {
 		if reccomendation.Rank == 1 {

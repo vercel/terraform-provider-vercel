@@ -23,6 +23,7 @@ func TestAcc_DomainConfigDataSource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.vercel_domain_config.test", "project_id_or_name"),
 					resource.TestCheckResourceAttrSet("data.vercel_domain_config.test", "recommended_cname"),
 					resource.TestCheckResourceAttrSet("data.vercel_domain_config.test", "recommended_ipv4s.#"),
+					resource.TestCheckResourceAttrSet("data.vercel_domain_config.test", "misconfigured"),
 				),
 			},
 		},
