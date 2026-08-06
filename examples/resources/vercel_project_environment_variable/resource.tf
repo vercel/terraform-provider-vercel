@@ -46,10 +46,11 @@ ephemeral "vault_kv_secret_v2" "example" {
   name  = "example"
 }
 resource "vercel_project_environment_variable" "example_ephemeral" {
-  project_id = vercel_project.example.id
-  key        = "foo"
-  value_wo   = ephemeral.vault_kv_secret_v2.example.data["example"]
-  target     = ["production"]
-  sensitive  = true
-  comment    = "an ephemeral secret"
+  project_id       = vercel_project.example.id
+  key              = "foo"
+  value_wo         = ephemeral.vault_kv_secret_v2.example.data["example"]
+  value_wo_version = 1
+  target           = ["production"]
+  sensitive        = true
+  comment          = "an ephemeral secret"
 }

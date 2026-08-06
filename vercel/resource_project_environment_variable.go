@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -134,6 +135,14 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					),
 				},
 			},
+			"value_wo_version": schema.Int64Attribute{
+				Optional:    true,
+				Description: "An integer used to trigger an update to `value_wo`. Increment this value when an update to the write-only value is required.",
+				Validators: []validator.Int64{
+					int64validator.AtLeast(0),
+					int64validator.AlsoRequires(path.MatchRoot("value_wo")),
+				},
+			},
 			"git_branch": schema.StringAttribute{
 				Optional:    true,
 				Description: "The git branch of the Environment Variable.",
@@ -180,6 +189,7 @@ type ProjectEnvironmentVariable struct {
 	Key                  types.String `tfsdk:"key"`
 	Value                types.String `tfsdk:"value"`
 	ValueWO              types.String `tfsdk:"value_wo"`
+	ValueWOVersion       types.Int64  `tfsdk:"value_wo_version"`
 	TeamID               types.String `tfsdk:"team_id"`
 	ProjectID            types.String `tfsdk:"project_id"`
 	ID                   types.String `tfsdk:"id"`
@@ -193,6 +203,12 @@ func (e ProjectEnvironmentVariable) isExplicitlyNonSensitive() bool {
 
 func (e ProjectEnvironmentVariable) isSensitive() bool {
 	return !e.isExplicitlyNonSensitive()
+}
+
+func shouldUpdateProjectEnvironmentVariableValueWO(state, plan ProjectEnvironmentVariable) bool {
+	versionChanged := !plan.ValueWOVersion.Equal(state.ValueWOVersion)
+	switchedToValueWO := !state.Value.IsNull() && plan.Value.IsNull()
+	return versionChanged || switchedToValueWO
 }
 
 func (e ProjectEnvironmentVariable) hasTarget(ctx context.Context, target string) (bool, diag.Diagnostics) {
@@ -334,10 +350,11 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest(ctx cont
 	} else {
 		envVariableType = "encrypted"
 	}
-	var value string
-	value = e.Value.ValueString()
-	if value == "" {
-		value = valueWO.ValueString()
+	var value *string
+	if !e.Value.IsNull() {
+		value = e.Value.ValueStringPointer()
+	} else if !valueWO.IsNull() {
+		value = valueWO.ValueStringPointer()
 	}
 	return client.UpdateEnvironmentVariableRequest{
 		Value:                value,
@@ -355,7 +372,7 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest(ctx cont
 // convertResponseToProjectEnvironmentVariable is used to populate terraform state based on an API response.
 // Where possible, values from the API response are used to populate state. If not possible,
 // values from plan are used.
-func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVariable, projectID types.String, v types.String) ProjectEnvironmentVariable {
+func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVariable, projectID types.String, v types.String, valueWOVersion types.Int64) ProjectEnvironmentVariable {
 	var target []attr.Value
 	for _, t := range response.Target {
 		target = append(target, types.StringValue(t))
@@ -382,6 +399,7 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 		Key:                  types.StringValue(response.Key),
 		Value:                value,
 		ValueWO:              types.StringNull(),
+		ValueWOVersion:       valueWOVersion,
 		TeamID:               toTeamID(response.TeamID),
 		ProjectID:            projectID,
 		ID:                   types.StringValue(response.ID),
@@ -436,7 +454,7 @@ func (r *projectEnvironmentVariableResource) Create(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
+	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value, plan.ValueWOVersion)
 
 	tflog.Info(ctx, "created project environment variable", map[string]any{
 		"id":         result.ID.ValueString(),
@@ -479,7 +497,7 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, state.ProjectID, state.Value)
+	result := convertResponseToProjectEnvironmentVariable(out, state.ProjectID, state.Value, state.ValueWOVersion)
 	tflog.Info(ctx, "read project environment variable", map[string]any{
 		"id":         result.ID.ValueString(),
 		"team_id":    result.TeamID.ValueString(),
@@ -495,8 +513,14 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 
 // Update updates the project environment variable of a Vercel project state.
 func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var state ProjectEnvironmentVariable
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	var plan ProjectEnvironmentVariable
-	diags := req.Plan.Get(ctx, &plan)
+	diags = req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -508,7 +532,12 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 		return
 	}
 
-	request, diags := plan.toUpdateEnvironmentVariableRequest(ctx, config.ValueWO)
+	valueWO := types.StringNull()
+	if shouldUpdateProjectEnvironmentVariableValueWO(state, plan) {
+		valueWO = config.ValueWO
+	}
+
+	request, diags := plan.toUpdateEnvironmentVariableRequest(ctx, valueWO)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -522,7 +551,7 @@ func (r *projectEnvironmentVariableResource) Update(ctx context.Context, req res
 		return
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value)
+	result := convertResponseToProjectEnvironmentVariable(response, plan.ProjectID, plan.Value, plan.ValueWOVersion)
 
 	tflog.Info(ctx, "updated project environment variable", map[string]any{
 		"id":         result.ID.ValueString(),
@@ -600,7 +629,7 @@ func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, re
 		value = types.StringValue(out.Value)
 	}
 
-	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID), value)
+	result := convertResponseToProjectEnvironmentVariable(out, types.StringValue(projectID), value, types.Int64Null())
 	tflog.Info(ctx, "imported project environment variable", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ProjectID.ValueString(),

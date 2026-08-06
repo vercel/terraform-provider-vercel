@@ -26,6 +26,7 @@ func TestConvertResponseToProjectEnvironmentVariableKeepsWriteOnlyValueNull(t *t
 		},
 		types.StringValue("prj_123"),
 		types.StringNull(),
+		types.Int64Value(2),
 	)
 
 	if !result.Value.IsNull() {
@@ -34,6 +35,10 @@ func TestConvertResponseToProjectEnvironmentVariableKeepsWriteOnlyValueNull(t *t
 
 	if !result.ValueWO.IsNull() {
 		t.Fatalf("ValueWO = %v, want null", result.ValueWO)
+	}
+
+	if got := result.ValueWOVersion.ValueInt64(); got != 2 {
+		t.Fatalf("ValueWOVersion = %d, want 2", got)
 	}
 }
 
@@ -51,6 +56,7 @@ func TestConvertResponseToProjectEnvironmentVariableUsesProvidedSensitiveValueWh
 		},
 		types.StringValue("prj_123"),
 		types.StringValue("bar-new"),
+		types.Int64Null(),
 	)
 
 	if result.Value.IsNull() {
@@ -59,6 +65,102 @@ func TestConvertResponseToProjectEnvironmentVariableUsesProvidedSensitiveValueWh
 
 	if got := result.Value.ValueString(); got != "bar-new" {
 		t.Fatalf("Value = %q, want %q", got, "bar-new")
+	}
+}
+
+func TestProjectEnvironmentVariableUpdateRequestOmitsUnchangedWriteOnlyValue(t *testing.T) {
+	t.Parallel()
+
+	env := ProjectEnvironmentVariable{
+		Target:               stringSet("production"),
+		CustomEnvironmentIDs: types.SetNull(types.StringType),
+		Value:                types.StringNull(),
+		Sensitive:            types.BoolValue(true),
+	}
+
+	request, diags := env.toUpdateEnvironmentVariableRequest(context.Background(), types.StringNull())
+	if diags.HasError() {
+		t.Fatalf("toUpdateEnvironmentVariableRequest() returned diagnostics: %v", diags)
+	}
+
+	if request.Value != nil {
+		t.Fatalf("Value = %q, want nil", *request.Value)
+	}
+}
+
+func TestProjectEnvironmentVariableUpdateRequestIncludesChangedWriteOnlyValue(t *testing.T) {
+	t.Parallel()
+
+	env := ProjectEnvironmentVariable{
+		Target:               stringSet("production"),
+		CustomEnvironmentIDs: types.SetNull(types.StringType),
+		Value:                types.StringNull(),
+		Sensitive:            types.BoolValue(true),
+	}
+
+	request, diags := env.toUpdateEnvironmentVariableRequest(context.Background(), types.StringValue("new-secret"))
+	if diags.HasError() {
+		t.Fatalf("toUpdateEnvironmentVariableRequest() returned diagnostics: %v", diags)
+	}
+
+	if request.Value == nil || *request.Value != "new-secret" {
+		t.Fatalf("Value = %v, want new-secret", request.Value)
+	}
+}
+
+func TestShouldUpdateProjectEnvironmentVariableValueWO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		state ProjectEnvironmentVariable
+		plan  ProjectEnvironmentVariable
+		want  bool
+	}{
+		{
+			name: "unchanged version",
+			state: ProjectEnvironmentVariable{
+				Value:          types.StringNull(),
+				ValueWOVersion: types.Int64Value(1),
+			},
+			plan: ProjectEnvironmentVariable{
+				Value:          types.StringNull(),
+				ValueWOVersion: types.Int64Value(1),
+			},
+			want: false,
+		},
+		{
+			name: "changed version",
+			state: ProjectEnvironmentVariable{
+				Value:          types.StringNull(),
+				ValueWOVersion: types.Int64Value(1),
+			},
+			plan: ProjectEnvironmentVariable{
+				Value:          types.StringNull(),
+				ValueWOVersion: types.Int64Value(2),
+			},
+			want: true,
+		},
+		{
+			name: "switch from persisted value",
+			state: ProjectEnvironmentVariable{
+				Value:          types.StringValue("old-secret"),
+				ValueWOVersion: types.Int64Null(),
+			},
+			plan: ProjectEnvironmentVariable{
+				Value:          types.StringNull(),
+				ValueWOVersion: types.Int64Null(),
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := shouldUpdateProjectEnvironmentVariableValueWO(tt.state, tt.plan); got != tt.want {
+				t.Fatalf("shouldUpdateProjectEnvironmentVariableValueWO() = %t, want %t", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -187,6 +289,7 @@ func TestProjectEnvironmentVariableModifyPlanSkipsPolicyValidationForExistingRes
 		Key:                  types.StringValue("EXAMPLE"),
 		Value:                types.StringValue("value"),
 		ValueWO:              types.StringNull(),
+		ValueWOVersion:       types.Int64Null(),
 		TeamID:               types.StringNull(),
 		ProjectID:            types.StringValue("prj_123"),
 		ID:                   types.StringNull(),
@@ -241,6 +344,7 @@ func TestProjectEnvironmentVariableModifyPlanUsesPlannedDevelopmentTarget(t *tes
 		Key:                  types.StringValue("EXAMPLE"),
 		Value:                types.StringValue("value"),
 		ValueWO:              types.StringNull(),
+		ValueWOVersion:       types.Int64Null(),
 		TeamID:               types.StringNull(),
 		ProjectID:            types.StringValue("prj_123"),
 		ID:                   types.StringNull(),
