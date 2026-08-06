@@ -20,7 +20,16 @@ func GetPaths(basePath string, ignorePatterns []string) ([]string, error) {
 			if err != nil {
 				return err
 			}
-			ignored := ignore.MatchesPath(path)
+
+			relativePath, err := filepath.Rel(basePath, path)
+			if err != nil {
+				return fmt.Errorf("error finding path relative to base: %w", err)
+			}
+			if relativePath == "." {
+				return nil
+			}
+
+			ignored := ignore.MatchesPath(filepath.ToSlash(relativePath))
 
 			if d.IsDir() && ignored {
 				return filepath.SkipDir
