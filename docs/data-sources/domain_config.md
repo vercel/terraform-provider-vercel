@@ -5,7 +5,7 @@ subcategory: ""
 description: |-
   Provides domain configuration information for a Vercel project.
   This data source returns configuration details for a domain associated with a specific project,
-  including recommended CNAME and IPv4 values.
+  including its DNS configuration status and recommended CNAME and IPv4 values.
 ---
 
 # vercel_domain_config (Data Source)
@@ -13,7 +13,7 @@ description: |-
 Provides domain configuration information for a Vercel project.
 
 This data source returns configuration details for a domain associated with a specific project,
-including recommended CNAME and IPv4 values.
+including its DNS configuration status and recommended CNAME and IPv4 values.
 
 ## Example Usage
 
@@ -69,5 +69,6 @@ resource "aws_route53_record" "www_example_com_cname" {
 
 ### Read-Only
 
+- `misconfigured` (Boolean) Whether the domain has an invalid DNS configuration or Vercel cannot automatically generate a TLS certificate for it.
 - `recommended_cname` (String) The recommended CNAME value for the domain.
 - `recommended_ipv4s` (List of String) The recommended IPv4 values for the domain.

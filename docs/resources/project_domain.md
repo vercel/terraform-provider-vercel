@@ -63,13 +63,14 @@ resource "vercel_project_domain" "example_redirect" {
 - `redirect` (String) The domain name that serves as a target destination for redirects.
 - `redirect_status_code` (Number) The HTTP status code to use when serving as a redirect.
 - `team_id` (String) The ID of the team the project exists under. Required when configuring a team resource if a default team has not been set in the provider.
-- `wait_for_ready` (Boolean) Wait until the project domain is verified before considering it created. This is useful when another resource, such as an alias, depends on the domain being ready immediately.
+- `wait_for_ready` (Boolean) Wait until the project domain is verified and has a valid DNS configuration before considering it created. DNS records must be configured independently before enabling this option because dependent resources are not created until the wait completes.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `verification` (Attributes List) A list of verification challenges, one of which must be completed to verify the domain for use on the project. Once the challenge is satisfied, the domain will be verified automatically on the next refresh. Typically used to configure DNS records (e.g. a `TXT` record) for domains hosted with an external DNS provider. (see [below for nested schema](#nestedatt--verification))
-- `verified` (Boolean) Whether the domain is verified for use with the project. If `false`, the challenges in `verification` must be completed before the domain will serve traffic for the project.
+- `misconfigured` (Boolean) Whether the domain has an invalid DNS configuration or Vercel cannot automatically generate a TLS certificate for it.
+- `verification` (Attributes List) A list of ownership verification challenges, one of which must be completed to verify the domain for use with the project. These are typically `TXT` records and do not describe the `A` or `CNAME` records needed to route traffic to Vercel. (see [below for nested schema](#nestedatt--verification))
+- `verified` (Boolean) Whether ownership of the domain is verified for use with the project. This does not indicate whether the domain's DNS records point to Vercel; use `misconfigured` for that status.
 
 <a id="nestedatt--verification"></a>
 ### Nested Schema for `verification`

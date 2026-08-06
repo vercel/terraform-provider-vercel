@@ -42,6 +42,7 @@ func TestAcc_ProjectDomain(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "domain", "2"+domain),
 					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "verified"),
 					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "verification.#"),
+					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "misconfigured"),
 				),
 			},
 			// Update testing
@@ -102,6 +103,7 @@ func TestAcc_ProjectDomainWaitForReady(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("vercel_project_domain.test", "wait_for_ready", "true"),
 					resource.TestCheckResourceAttrSet("vercel_project_domain.test", "custom_environment_id"),
+					resource.TestCheckResourceAttr("vercel_project_domain.test", "misconfigured", "false"),
 				),
 			},
 		},
