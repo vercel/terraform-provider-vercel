@@ -125,6 +125,19 @@ func (c *Client) GetOAuthApp(ctx context.Context, clientID, teamID string) (OAut
 }
 
 func (c *Client) UpdateOAuthApp(ctx context.Context, request UpdateOAuthAppRequest) (a OAuthApp, err error) {
+	// The request intentionally omits `omitempty` so explicit nulls can clear
+	// nullable URL fields — but the array fields must never serialize as null
+	// (the API expects arrays; an empty array is how "none" is expressed).
+	// Normalize nil slices so no caller can send `"redirectUris": null` etc.
+	if request.RedirectURIs == nil {
+		request.RedirectURIs = []string{}
+	}
+	if request.Scopes == nil {
+		request.Scopes = []string{}
+	}
+	if request.Permissions == nil {
+		request.Permissions = []string{}
+	}
 	url := fmt.Sprintf("%s/v1/oauth-apps/%s", c.baseURL, request.ClientID)
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))

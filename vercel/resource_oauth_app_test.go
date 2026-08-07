@@ -185,10 +185,9 @@ resource "vercel_oauth_app" "test" {
 	name = "test acc %[1]s"
 	slug = "test-acc-%[1]s"
 
-	redirect_uris = ["https://example.com/api/auth/callback"]
-
-	# Exercises the create path's follow-up permissions grant (the create
-	# endpoint itself doesn't accept permissions).
+	# Deliberately NO redirect_uris: combined with permissions, this exercises
+	# the create path's follow-up grant with an unset collection (which must
+	# serialize as [] rather than null).
 	permissions = ["read:team"]
 }
 

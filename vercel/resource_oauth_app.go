@@ -283,10 +283,16 @@ func (r *oauthAppResource) Create(ctx context.Context, req resource.CreateReques
 			CodeOfConductURL:  oauthAppNullableString(plan.CodeOfConductURL),
 		})
 		if err != nil {
-			_ = r.client.DeleteOAuthApp(ctx, out.ClientID, out.TeamID)
+			rollback := "the partially-created app has been deleted"
+			if cleanupErr := r.client.DeleteOAuthApp(ctx, out.ClientID, out.TeamID); cleanupErr != nil {
+				rollback = fmt.Sprintf(
+					"additionally, rolling back the partially-created app failed (%s) — delete app %s manually",
+					cleanupErr, out.ClientID,
+				)
+			}
 			resp.Diagnostics.AddError(
 				"Error creating OAuth App",
-				"Could not grant permissions to the created OAuth App (the app has been deleted), unexpected error: "+err.Error(),
+				fmt.Sprintf("Could not grant permissions to the created OAuth App; %s. Unexpected error: %s", rollback, err),
 			)
 			return
 		}
