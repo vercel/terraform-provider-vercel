@@ -61,6 +61,11 @@ The secret value is only ever returned by the API at creation time and is stored
 -> This resource cannot be imported, as the API never re-exposes the secret value.
 `,
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description:   "The unique identifier of the client secret.",
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+			},
 			"oauth_app_id": schema.StringAttribute{
 				Description:   "The client ID of the OAuth App (`cl_...`) to generate a secret for.",
 				Required:      true,
@@ -88,6 +93,7 @@ The secret value is only ever returned by the API at creation time and is stored
 }
 
 type OAuthAppClientSecret struct {
+	ID            types.String `tfsdk:"id"`
 	OAuthAppID    types.String `tfsdk:"oauth_app_id"`
 	TeamID        types.String `tfsdk:"team_id"`
 	ClientSecret  types.String `tfsdk:"client_secret"`
@@ -129,11 +135,24 @@ func (r *oauthAppClientSecretResource) Create(ctx context.Context, req resource.
 		return
 	}
 
+	lastFourChars := out.ClientSecret[len(out.ClientSecret)-4:]
+	// The API's secret metadata carries a stable id; resolve it from the app's
+	// secret list (matched by the last four characters, which is also how the
+	// delete endpoint addresses secrets). Fall back to a synthetic composite if
+	// the metadata omits it.
+	secretID := fmt.Sprintf("%s/%s", plan.OAuthAppID.ValueString(), lastFourChars)
+	for _, secret := range app.ClientSecrets {
+		if secret.LastFourChars == lastFourChars && secret.ID != "" {
+			secretID = secret.ID
+		}
+	}
+
 	result := OAuthAppClientSecret{
+		ID:            types.StringValue(secretID),
 		OAuthAppID:    plan.OAuthAppID,
 		TeamID:        types.StringValue(app.TeamID),
 		ClientSecret:  types.StringValue(out.ClientSecret),
-		LastFourChars: types.StringValue(out.ClientSecret[len(out.ClientSecret)-4:]),
+		LastFourChars: types.StringValue(lastFourChars),
 	}
 	tflog.Info(ctx, "created oauth app client secret", map[string]any{
 		"team_id":         result.TeamID.ValueString(),

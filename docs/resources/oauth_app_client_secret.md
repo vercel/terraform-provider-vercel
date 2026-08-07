@@ -76,4 +76,5 @@ resource "vercel_project" "example" {
 ### Read-Only
 
 - `client_secret` (String, Sensitive) The generated client secret. Only available at creation time; stored in the Terraform state.
+- `id` (String) The unique identifier of the client secret.
 - `last_four_chars` (String) The last four characters of the client secret — the identifier the Vercel API and dashboard use to reference this secret.

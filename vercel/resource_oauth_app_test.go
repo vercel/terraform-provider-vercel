@@ -67,14 +67,15 @@ func TestAcc_OAuthAppResource(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
+				// Minimal config: neither redirect_uris nor scopes set, covering
+				// the null-set handling in Create.
 				Config: cfg(testAccResourceOAuthApp(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckOAuthAppExists(testClient(t), testTeam(t), "vercel_oauth_app.test"),
 					resource.TestCheckResourceAttrSet("vercel_oauth_app.test", "id"),
 					resource.TestCheckResourceAttr("vercel_oauth_app.test", "name", fmt.Sprintf("test acc %s", name)),
 					resource.TestCheckResourceAttr("vercel_oauth_app.test", "slug", fmt.Sprintf("test-acc-%s", name)),
-					resource.TestCheckResourceAttr("vercel_oauth_app.test", "redirect_uris.#", "1"),
-					resource.TestCheckTypeSetElemAttr("vercel_oauth_app.test", "redirect_uris.*", "https://example.com/api/auth/callback"),
+					resource.TestCheckNoResourceAttr("vercel_oauth_app.test", "redirect_uris"),
 					// The API force-includes openid even when scopes are unset.
 					resource.TestCheckTypeSetElemAttr("vercel_oauth_app.test", "scopes.*", "openid"),
 				),
@@ -113,6 +114,7 @@ func TestAcc_OAuthAppClientSecretResource(t *testing.T) {
 				Config: cfg(testAccResourceOAuthAppClientSecret(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckOAuthAppExists(testClient(t), testTeam(t), "vercel_oauth_app.test"),
+					resource.TestCheckResourceAttrSet("vercel_oauth_app_client_secret.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_oauth_app_client_secret.test", "client_secret"),
 					resource.TestCheckResourceAttrSet("vercel_oauth_app_client_secret.test", "last_four_chars"),
 					testCheckOAuthAppClientSecretExists(testClient(t), testTeam(t), "vercel_oauth_app_client_secret.test"),
@@ -148,8 +150,6 @@ func testAccResourceOAuthApp(name string) string {
 resource "vercel_oauth_app" "test" {
 	name = "test acc %[1]s"
 	slug = "test-acc-%[1]s"
-
-	redirect_uris = ["https://example.com/api/auth/callback"]
 }
 `, name)
 }

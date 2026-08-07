@@ -205,13 +205,15 @@ func (r *oauthAppResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	var redirectURIs []string
-	diags = plan.RedirectURIs.ElementsAs(ctx, &redirectURIs, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !plan.RedirectURIs.IsNull() && !plan.RedirectURIs.IsUnknown() {
+		diags = plan.RedirectURIs.ElementsAs(ctx, &redirectURIs, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 	var scopes []string
-	if !plan.Scopes.IsUnknown() {
+	if !plan.Scopes.IsNull() && !plan.Scopes.IsUnknown() {
 		diags = plan.Scopes.ElementsAs(ctx, &scopes, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -322,17 +324,23 @@ func (r *oauthAppResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
+	// The update endpoint treats these as authoritative: an empty list clears
+	// redirect URIs, and scopes always includes at least "openid".
 	redirectURIs := []string{}
-	diags = plan.RedirectURIs.ElementsAs(ctx, &redirectURIs, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !plan.RedirectURIs.IsNull() && !plan.RedirectURIs.IsUnknown() {
+		diags = plan.RedirectURIs.ElementsAs(ctx, &redirectURIs, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 	var scopes []string
-	diags = plan.Scopes.ElementsAs(ctx, &scopes, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !plan.Scopes.IsNull() && !plan.Scopes.IsUnknown() {
+		diags = plan.Scopes.ElementsAs(ctx, &scopes, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 	if len(scopes) == 0 {
 		scopes = []string{"openid"}
