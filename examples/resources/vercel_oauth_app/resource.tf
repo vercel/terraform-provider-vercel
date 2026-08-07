@@ -13,6 +13,16 @@ resource "vercel_oauth_app" "example" {
   # "openid" is always required; "offline_access" issues refresh tokens.
   scopes = ["openid", "email", "profile", "offline_access"]
 
+  # Vercel REST API permissions the app's tokens may exercise (consented by
+  # the user at sign-in).
+  permissions = [
+    "read:team",
+    "read:project",
+    "read-write:project",
+    "read:deployment",
+    "read-write:deployment",
+  ]
+
   privacy_policy_url   = "https://example.com/privacy"
   terms_of_service_url = "https://example.com/terms"
 }

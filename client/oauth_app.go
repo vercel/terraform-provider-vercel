@@ -35,6 +35,7 @@ type OAuthApp struct {
 	HomePageURI       string                         `json:"homePageUri"`
 	RedirectURIs      []string                       `json:"redirectUris"`
 	Scopes            []string                       `json:"scopes"`
+	Permissions       []string                       `json:"permissions"`
 	PrivacyPolicyURL  string                         `json:"privacyPolicyUrl"`
 	TermsOfServiceURL string                         `json:"termsOfServiceUrl"`
 	CodeOfConductURL  string                         `json:"codeOfConductUrl"`
@@ -58,14 +59,19 @@ type CreateOAuthAppRequest struct {
 // WITHOUT omitempty: an explicit JSON null is how the API clears a previously
 // set value, so unset (nil) pointers are serialized as null deliberately.
 type UpdateOAuthAppRequest struct {
-	TeamID            string   `json:"-"`
-	ClientID          string   `json:"-"`
-	Name              string   `json:"name"`
-	Slug              string   `json:"slug"`
-	Description       string   `json:"description"`
-	HomePageURI       *string  `json:"homePageUri"`
-	RedirectURIs      []string `json:"redirectUris"`
-	Scopes            []string `json:"scopes"`
+	TeamID       string   `json:"-"`
+	ClientID     string   `json:"-"`
+	Name         string   `json:"name"`
+	Slug         string   `json:"slug"`
+	Description  string   `json:"description"`
+	HomePageURI  *string  `json:"homePageUri"`
+	RedirectURIs []string `json:"redirectUris"`
+	Scopes       []string `json:"scopes"`
+	// Permissions are the Vercel REST API grants consented tokens can exercise
+	// (e.g. "read:team", "read-write:deployment"). Only part of the UPDATE
+	// endpoint — the create endpoint does not accept them, so newly created
+	// apps with permissions are patched right after creation.
+	Permissions       []string `json:"permissions"`
 	PrivacyPolicyURL  *string  `json:"privacyPolicyUrl"`
 	TermsOfServiceURL *string  `json:"termsOfServiceUrl"`
 	CodeOfConductURL  *string  `json:"codeOfConductUrl"`

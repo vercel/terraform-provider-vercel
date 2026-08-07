@@ -127,6 +127,11 @@ An OAuth App lets people use their Vercel account to log in to your application 
 				},
 				PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 			},
+			"permissions": schema.SetAttribute{
+				Description: "Vercel REST API permissions granted to the app's tokens (e.g. `read:team`, `read:project`, `read-write:project`, `read:deployment`, `read-write:deployment`). Shown on the consent page for users to approve. Defaults to none.",
+				Optional:    true,
+				ElementType: types.StringType,
+			},
 			"privacy_policy_url": schema.StringAttribute{
 				Description: "The URL of the application's privacy policy, shown on the consent page.",
 				Optional:    true,
@@ -152,6 +157,7 @@ type OAuthApp struct {
 	HomePageURI       types.String `tfsdk:"home_page_uri"`
 	RedirectURIs      types.Set    `tfsdk:"redirect_uris"`
 	Scopes            types.Set    `tfsdk:"scopes"`
+	Permissions       types.Set    `tfsdk:"permissions"`
 	PrivacyPolicyURL  types.String `tfsdk:"privacy_policy_url"`
 	TermsOfServiceURL types.String `tfsdk:"terms_of_service_url"`
 	CodeOfConductURL  types.String `tfsdk:"code_of_conduct_url"`
@@ -176,6 +182,14 @@ func responseToOAuthApp(ctx context.Context, out client.OAuthApp, prior OAuthApp
 			return OAuthApp{}, diags
 		}
 	}
+	permissions := types.SetNull(types.StringType)
+	if len(out.Permissions) > 0 || !prior.Permissions.IsNull() {
+		var diags diag.Diagnostics
+		permissions, diags = types.SetValueFrom(ctx, types.StringType, out.Permissions)
+		if diags.HasError() {
+			return OAuthApp{}, diags
+		}
+	}
 	scopes, diags := types.SetValueFrom(ctx, types.StringType, out.Scopes)
 	if diags.HasError() {
 		return OAuthApp{}, diags
@@ -190,6 +204,7 @@ func responseToOAuthApp(ctx context.Context, out client.OAuthApp, prior OAuthApp
 		HomePageURI:       oauthAppStringOrNull(out.HomePageURI),
 		RedirectURIs:      redirectURIs,
 		Scopes:            scopes,
+		Permissions:       permissions,
 		PrivacyPolicyURL:  oauthAppStringOrNull(out.PrivacyPolicyURL),
 		TermsOfServiceURL: oauthAppStringOrNull(out.TermsOfServiceURL),
 		CodeOfConductURL:  oauthAppStringOrNull(out.CodeOfConductURL),
@@ -220,6 +235,14 @@ func (r *oauthAppResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 	}
+	var permissions []string
+	if !plan.Permissions.IsNull() && !plan.Permissions.IsUnknown() {
+		diags = plan.Permissions.ElementsAs(ctx, &permissions, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
 	out, err := r.client.CreateOAuthApp(ctx, client.CreateOAuthAppRequest{
 		TeamID:            plan.TeamID.ValueString(),
@@ -239,6 +262,34 @@ func (r *oauthAppResource) Create(ctx context.Context, req resource.CreateReques
 			"Could not create OAuth App, unexpected error: "+err.Error(),
 		)
 		return
+	}
+
+	// The create endpoint does not accept permissions — grant them with an
+	// immediate follow-up update. On failure the half-configured app is deleted
+	// so a failed create never leaves an unmanaged app behind.
+	if len(permissions) > 0 {
+		out, err = r.client.UpdateOAuthApp(ctx, client.UpdateOAuthAppRequest{
+			TeamID:            out.TeamID,
+			ClientID:          out.ClientID,
+			Name:              out.Name,
+			Slug:              out.Slug,
+			Description:       out.Description,
+			HomePageURI:       oauthAppNullableString(plan.HomePageURI),
+			RedirectURIs:      redirectURIs,
+			Scopes:            out.Scopes,
+			Permissions:       permissions,
+			PrivacyPolicyURL:  oauthAppNullableString(plan.PrivacyPolicyURL),
+			TermsOfServiceURL: oauthAppNullableString(plan.TermsOfServiceURL),
+			CodeOfConductURL:  oauthAppNullableString(plan.CodeOfConductURL),
+		})
+		if err != nil {
+			_ = r.client.DeleteOAuthApp(ctx, out.ClientID, out.TeamID)
+			resp.Diagnostics.AddError(
+				"Error creating OAuth App",
+				"Could not grant permissions to the created OAuth App (the app has been deleted), unexpected error: "+err.Error(),
+			)
+			return
+		}
 	}
 
 	result, diags := responseToOAuthApp(ctx, out, plan)
@@ -345,6 +396,14 @@ func (r *oauthAppResource) Update(ctx context.Context, req resource.UpdateReques
 	if len(scopes) == 0 {
 		scopes = []string{"openid"}
 	}
+	permissions := []string{}
+	if !plan.Permissions.IsNull() && !plan.Permissions.IsUnknown() {
+		diags = plan.Permissions.ElementsAs(ctx, &permissions, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
 	out, err := r.client.UpdateOAuthApp(ctx, client.UpdateOAuthAppRequest{
 		TeamID:            state.TeamID.ValueString(),
@@ -355,6 +414,7 @@ func (r *oauthAppResource) Update(ctx context.Context, req resource.UpdateReques
 		HomePageURI:       oauthAppNullableString(plan.HomePageURI),
 		RedirectURIs:      redirectURIs,
 		Scopes:            scopes,
+		Permissions:       permissions,
 		PrivacyPolicyURL:  oauthAppNullableString(plan.PrivacyPolicyURL),
 		TermsOfServiceURL: oauthAppNullableString(plan.TermsOfServiceURL),
 		CodeOfConductURL:  oauthAppNullableString(plan.CodeOfConductURL),
@@ -444,6 +504,7 @@ func (r *oauthAppResource) ImportState(ctx context.Context, req resource.ImportS
 
 	result, diags := responseToOAuthApp(ctx, out, OAuthApp{
 		RedirectURIs: types.SetNull(types.StringType),
+		Permissions:  types.SetNull(types.StringType),
 	})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

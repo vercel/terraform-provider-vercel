@@ -34,6 +34,16 @@ resource "vercel_oauth_app" "example" {
   # "openid" is always required; "offline_access" issues refresh tokens.
   scopes = ["openid", "email", "profile", "offline_access"]
 
+  # Vercel REST API permissions the app's tokens may exercise (consented by
+  # the user at sign-in).
+  permissions = [
+    "read:team",
+    "read:project",
+    "read-write:project",
+    "read:deployment",
+    "read-write:deployment",
+  ]
+
   privacy_policy_url   = "https://example.com/privacy"
   terms_of_service_url = "https://example.com/terms"
 }
@@ -52,6 +62,7 @@ resource "vercel_oauth_app" "example" {
 - `code_of_conduct_url` (String) The URL of the application's code of conduct.
 - `description` (String) A description of the OAuth App, shown on the consent page.
 - `home_page_uri` (String) The URL of the application's home page.
+- `permissions` (Set of String) Vercel REST API permissions granted to the app's tokens (e.g. `read:team`, `read:project`, `read-write:project`, `read:deployment`, `read-write:deployment`). Shown on the consent page for users to approve. Defaults to none.
 - `privacy_policy_url` (String) The URL of the application's privacy policy, shown on the consent page.
 - `redirect_uris` (Set of String) The authorization callback URLs of the OAuth App. Must be absolute `https` URLs (`http` is allowed for loopback addresses only).
 - `scopes` (Set of String) The scopes the OAuth App may request: `openid` (always required), `email`, `profile`, and `offline_access` (issues refresh tokens). Defaults to `["openid"]`.

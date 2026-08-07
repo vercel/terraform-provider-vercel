@@ -96,6 +96,8 @@ func TestAcc_OAuthAppResource(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr("vercel_oauth_app.test", "redirect_uris.*", "https://example.com/other/callback"),
 					resource.TestCheckResourceAttr("vercel_oauth_app.test", "scopes.#", "4"),
 					resource.TestCheckTypeSetElemAttr("vercel_oauth_app.test", "scopes.*", "offline_access"),
+					resource.TestCheckResourceAttr("vercel_oauth_app.test", "permissions.#", "3"),
+					resource.TestCheckTypeSetElemAttr("vercel_oauth_app.test", "permissions.*", "read-write:deployment"),
 				),
 			},
 		},
@@ -115,6 +117,8 @@ func TestAcc_OAuthAppClientSecretResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckOAuthAppExists(testClient(t), testTeam(t), "vercel_oauth_app.test"),
 					resource.TestCheckResourceAttrSet("vercel_oauth_app_client_secret.test", "id"),
+					resource.TestCheckResourceAttr("vercel_oauth_app.test", "permissions.#", "1"),
+					resource.TestCheckTypeSetElemAttr("vercel_oauth_app.test", "permissions.*", "read:team"),
 					resource.TestCheckResourceAttrSet("vercel_oauth_app_client_secret.test", "client_secret"),
 					resource.TestCheckResourceAttrSet("vercel_oauth_app_client_secret.test", "last_four_chars"),
 					testCheckOAuthAppClientSecretExists(testClient(t), testTeam(t), "vercel_oauth_app_client_secret.test"),
@@ -169,6 +173,8 @@ resource "vercel_oauth_app" "test" {
 	]
 
 	scopes = ["openid", "email", "profile", "offline_access"]
+
+	permissions = ["read:team", "read:deployment", "read-write:deployment"]
 }
 `, name)
 }
@@ -180,6 +186,10 @@ resource "vercel_oauth_app" "test" {
 	slug = "test-acc-%[1]s"
 
 	redirect_uris = ["https://example.com/api/auth/callback"]
+
+	# Exercises the create path's follow-up permissions grant (the create
+	# endpoint itself doesn't accept permissions).
+	permissions = ["read:team"]
 }
 
 resource "vercel_oauth_app_client_secret" "test" {
