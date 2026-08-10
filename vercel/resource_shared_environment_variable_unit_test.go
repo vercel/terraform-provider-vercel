@@ -31,7 +31,7 @@ func TestConvertResponseDoesNotTrackProjectsWhenProjectIDsAreUnconfigured(t *tes
 		ID:         "env_123",
 		Key:        "EXAMPLE",
 		ProjectIDs: []string{"prj_123"},
-	}, types.StringValue("value"), projectIDs)
+	}, types.StringValue("value"), types.Int64Null(), projectIDs)
 
 	if !result.ProjectIDs.IsNull() {
 		t.Errorf("ProjectIDs = %#v, want null", result.ProjectIDs)
@@ -44,7 +44,7 @@ func TestConvertResponseTracksConfiguredProjectIDs(t *testing.T) {
 		ID:         "env_123",
 		Key:        "EXAMPLE",
 		ProjectIDs: []string{"prj_456"},
-	}, types.StringValue("value"), projectIDs)
+	}, types.StringValue("value"), types.Int64Null(), projectIDs)
 
 	var got []string
 	diags := result.ProjectIDs.ElementsAs(context.Background(), &got, false)
@@ -53,6 +53,126 @@ func TestConvertResponseTracksConfiguredProjectIDs(t *testing.T) {
 	}
 	if len(got) != 1 || got[0] != "prj_123" {
 		t.Errorf("ProjectIDs = %#v, want []string{\"prj_123\"}", got)
+	}
+}
+
+func TestConvertResponseToSharedEnvironmentVariableKeepsWriteOnlyValueNull(t *testing.T) {
+	t.Parallel()
+
+	result := convertResponseToSharedEnvironmentVariable(
+		client.SharedEnvironmentVariableResponse{
+			ID:      "env_123",
+			Key:     "SECRET",
+			Value:   "bar-wo",
+			Target:  []string{"production"},
+			Type:    "sensitive",
+			Comment: "test comment",
+		},
+		types.StringNull(),
+		types.Int64Value(2),
+		types.SetNull(types.StringType),
+	)
+
+	if !result.Value.IsNull() {
+		t.Fatalf("Value = %v, want null", result.Value)
+	}
+	if !result.ValueWO.IsNull() {
+		t.Fatalf("ValueWO = %v, want null", result.ValueWO)
+	}
+	if got := result.ValueWOVersion.ValueInt64(); got != 2 {
+		t.Fatalf("ValueWOVersion = %d, want 2", got)
+	}
+}
+
+func TestSharedEnvironmentVariableUpdateRequestOmitsUnchangedWriteOnlyValue(t *testing.T) {
+	t.Parallel()
+
+	env := SharedEnvironmentVariable{
+		Target:    stringSet("production"),
+		Value:     types.StringNull(),
+		Sensitive: types.BoolValue(true),
+	}
+
+	request, ok := env.toUpdateSharedEnvironmentVariableRequest(context.Background(), nil, types.StringNull())
+	if !ok {
+		t.Fatal("toUpdateSharedEnvironmentVariableRequest() returned !ok")
+	}
+	if request.Value != nil {
+		t.Fatalf("Value = %q, want nil", *request.Value)
+	}
+}
+
+func TestSharedEnvironmentVariableUpdateRequestIncludesChangedWriteOnlyValue(t *testing.T) {
+	t.Parallel()
+
+	env := SharedEnvironmentVariable{
+		Target:    stringSet("production"),
+		Value:     types.StringNull(),
+		Sensitive: types.BoolValue(true),
+	}
+
+	request, ok := env.toUpdateSharedEnvironmentVariableRequest(context.Background(), nil, types.StringValue("new-secret"))
+	if !ok {
+		t.Fatal("toUpdateSharedEnvironmentVariableRequest() returned !ok")
+	}
+	if request.Value == nil || *request.Value != "new-secret" {
+		t.Fatalf("Value = %v, want new-secret", request.Value)
+	}
+}
+
+func TestShouldUpdateSharedEnvironmentVariableValueWO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		state SharedEnvironmentVariable
+		plan  SharedEnvironmentVariable
+		want  bool
+	}{
+		{
+			name: "unchanged version",
+			state: SharedEnvironmentVariable{
+				Value:          types.StringNull(),
+				ValueWOVersion: types.Int64Value(1),
+			},
+			plan: SharedEnvironmentVariable{
+				Value:          types.StringNull(),
+				ValueWOVersion: types.Int64Value(1),
+			},
+			want: false,
+		},
+		{
+			name: "changed version",
+			state: SharedEnvironmentVariable{
+				Value:          types.StringNull(),
+				ValueWOVersion: types.Int64Value(1),
+			},
+			plan: SharedEnvironmentVariable{
+				Value:          types.StringNull(),
+				ValueWOVersion: types.Int64Value(2),
+			},
+			want: true,
+		},
+		{
+			name: "switch from persisted value",
+			state: SharedEnvironmentVariable{
+				Value:          types.StringValue("old-secret"),
+				ValueWOVersion: types.Int64Null(),
+			},
+			plan: SharedEnvironmentVariable{
+				Value:          types.StringNull(),
+				ValueWOVersion: types.Int64Null(),
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := shouldUpdateSharedEnvironmentVariableValueWO(tt.state, tt.plan); got != tt.want {
+				t.Fatalf("shouldUpdateSharedEnvironmentVariableValueWO() = %t, want %t", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -165,6 +285,7 @@ func TestSharedEnvironmentVariableModifyPlanSkipsPolicyValidationForExistingReso
 		Key:                          types.StringValue("EXAMPLE"),
 		Value:                        types.StringValue("value"),
 		ValueWO:                      types.StringNull(),
+		ValueWOVersion:               types.Int64Null(),
 		TeamID:                       types.StringNull(),
 		ProjectIDs:                   stringSet("prj_123"),
 		ID:                           types.StringNull(),
@@ -223,6 +344,7 @@ func TestSharedEnvironmentVariableModifyPlanValidatesApplyAllCustomEnvironmentsA
 		Key:                          types.StringValue("EXAMPLE"),
 		Value:                        types.StringValue("value"),
 		ValueWO:                      types.StringNull(),
+		ValueWOVersion:               types.Int64Null(),
 		TeamID:                       types.StringNull(),
 		ProjectIDs:                   stringSet("prj_123"),
 		ID:                           types.StringNull(),

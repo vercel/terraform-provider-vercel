@@ -241,6 +241,7 @@ func TestAcc_SharedEnvironmentVariables_ValueWO(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example_value_wo", "key", fmt.Sprintf("test_acc_foo_wo_%s", nameSuffix)),
 					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value_wo"),
 					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example_value_wo", "value_wo_version", "1"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example_value_wo", "target.*", "production"),
 				),
 			},
@@ -251,6 +252,7 @@ func TestAcc_SharedEnvironmentVariables_ValueWO(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example_value_wo", "key", fmt.Sprintf("test_acc_foo_wo_%s", nameSuffix)),
 					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value_wo"),
 					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value"),
+					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example_value_wo", "value_wo_version", "2"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example_value_wo", "target.*", "production"),
 				),
 			},
@@ -291,10 +293,11 @@ resource "vercel_project" "example" {
 }
 
 resource "vercel_shared_environment_variable" "example_value_wo" {
-	key         = "test_acc_foo_wo_%[1]s"
-	value_wo    = "bar-wo"
-	target      = ["production"]
-	sensitive   = true
+	key              = "test_acc_foo_wo_%[1]s"
+	value_wo         = "bar-wo"
+	value_wo_version = 1
+	target           = ["production"]
+	sensitive        = true
 	project_ids = [
 		vercel_project.example.id
 	]
@@ -309,10 +312,11 @@ resource "vercel_project" "example" {
 }
 
 resource "vercel_shared_environment_variable" "example_value_wo" {
-	key         = "test_acc_foo_wo_%[1]s"
-	value_wo    = "bar-wo-updated"
-	target      = ["production"]
-	sensitive   = true
+	key              = "test_acc_foo_wo_%[1]s"
+	value_wo         = "bar-wo-updated"
+	value_wo_version = 2
+	target           = ["production"]
+	sensitive        = true
 	project_ids = [
 		vercel_project.example.id
 	]
