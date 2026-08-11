@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -185,9 +186,14 @@ resource "vercel_alert_rule" "scoped" {
 }
 
 // TestAcc_AlertRuleResourceCustomAlert covers custom Observability metric
-// alerts, which need a team with custom alerts enabled on its Observability
-// Plus plan.
+// alerts. The API rejects these unless the team has an Observability Plus
+// subscription with a non-zero custom alert allowance, which the shared testing
+// team does not, so this test is opt-in.
 func TestAcc_AlertRuleResourceCustomAlert(t *testing.T) {
+	if os.Getenv("VERCEL_TERRAFORM_TESTING_OBSERVABILITY_PLUS") == "" {
+		t.Skip("skipping: custom alert rules require VERCEL_TERRAFORM_TESTING_OBSERVABILITY_PLUS to be set, for a team with an Observability Plus subscription")
+	}
+
 	name := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
