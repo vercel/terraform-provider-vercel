@@ -54,6 +54,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newAccessGroupMemberResource,
 		newAccessGroupProjectResource,
 		newAccessGroupResource,
+		newAlertRuleResource,
 		newAliasResource,
 		newAttackChallengeModeResource,
 		newAuditLogDrainResource,
@@ -109,6 +110,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 	return []func() datasource.DataSource{
 		newAccessGroupDataSource,
 		newAccessGroupProjectDataSource,
+		newAlertRuleDataSource,
 		newAliasDataSource,
 		newAttackChallengeModeDataSource,
 		newBulkRedirectsDataSource,

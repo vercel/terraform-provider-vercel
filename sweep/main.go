@@ -52,6 +52,34 @@ func main() {
 		//lintignore:R009
 		panic(err)
 	}
+	err = deleteAllAlertRules(ctx, c, teamID)
+	if err != nil {
+		//lintignore:R009
+		panic(err)
+	}
+}
+
+// deleteAllAlertRules removes alert rules left behind by failed test runs. Alert
+// rules are not tied to a project, so deleting projects does not remove them.
+// The team's Vercel-managed default rule cannot be deleted, so it is skipped.
+func deleteAllAlertRules(ctx context.Context, c *client.Client, teamID string) error {
+	alertRules, err := c.ListAlertRules(ctx, teamID, "")
+	if err != nil {
+		return fmt.Errorf("error listing alert rules: %w", err)
+	}
+
+	for _, alertRule := range alertRules {
+		if alertRule.IsDefault {
+			continue
+		}
+		err = c.DeleteAlertRule(ctx, alertRule.ID, teamID)
+		if err != nil {
+			return fmt.Errorf("error deleting alert rule: %w", err)
+		}
+		log.Printf("Deleted alert rule %s", alertRule.ID)
+	}
+
+	return nil
 }
 
 func deleteAllSharedEnvironmentVariables(ctx context.Context, c *client.Client, teamID string) error {

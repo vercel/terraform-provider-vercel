@@ -208,6 +208,22 @@ func optionalString(value types.String) *string {
 	return &result
 }
 
+func optionalInt64(value types.Int64) *int64 {
+	if value.IsNull() || value.IsUnknown() {
+		return nil
+	}
+	result := value.ValueInt64()
+	return &result
+}
+
+func optionalBool(value types.Bool) *bool {
+	if value.IsNull() || value.IsUnknown() {
+		return nil
+	}
+	result := value.ValueBool()
+	return &result
+}
+
 func stringFromAPI(value *string, prior types.String) types.String {
 	if value != nil {
 		return types.StringValue(*value)
