@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -291,7 +292,7 @@ func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 func (r *webhookResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, id, ok := splitInto1Or2(req.ID)
-	if !ok {
+	if !ok || id == "" || (strings.Contains(req.ID, "/") && teamID == "") {
 		resp.Diagnostics.AddError(
 			"Error importing Webhook",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/webhook_id\" or \"webhook_id\"", req.ID),

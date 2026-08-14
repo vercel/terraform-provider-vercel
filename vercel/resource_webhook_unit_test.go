@@ -122,6 +122,33 @@ func TestWebhookImportStateAPIErrors(t *testing.T) {
 	}
 }
 
+func TestWebhookImportStateRejectsMalformedIDs(t *testing.T) {
+	t.Parallel()
+
+	for _, importID := range []string{
+		"",
+		"/",
+		"/hook_123",
+		"team_123/",
+		"team_123/hook_123/extra",
+	} {
+		t.Run(importID, func(t *testing.T) {
+			t.Parallel()
+
+			resp := &resource.ImportStateResponse{}
+			(&webhookResource{}).ImportState(
+				context.Background(),
+				resource.ImportStateRequest{ID: importID},
+				resp,
+			)
+
+			if !resp.Diagnostics.HasError() {
+				t.Fatal("ImportState() returned no diagnostics for malformed ID")
+			}
+		})
+	}
+}
+
 func importWebhookState(t *testing.T, baseURL string, team client.Team, importID string) Webhook {
 	t.Helper()
 
