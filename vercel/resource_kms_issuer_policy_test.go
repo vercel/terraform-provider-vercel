@@ -10,7 +10,6 @@ import (
 )
 
 func TestAcc_KMSIssuerPolicyResource(t *testing.T) {
-	testAccKMSPreCheck(t)
 	nameSuffix := acctest.RandString(8)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,

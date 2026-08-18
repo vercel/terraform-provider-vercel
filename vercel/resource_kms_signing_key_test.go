@@ -10,7 +10,6 @@ import (
 )
 
 func TestAcc_KMSSigningKeyResource(t *testing.T) {
-	testAccKMSPreCheck(t)
 	nameSuffix := acctest.RandString(8)
 
 	var firstKeyID string

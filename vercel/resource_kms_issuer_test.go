@@ -3,7 +3,6 @@ package vercel_test
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -11,15 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
-
-// testAccKMSPreCheck skips KMS acceptance tests unless the testing team has the
-// KMS feature enabled. KMS endpoints intentionally return 404 when the feature
-// flag is off, so these tests require an opted-in team.
-func testAccKMSPreCheck(t *testing.T) {
-	if os.Getenv("VERCEL_TERRAFORM_TESTING_KMS") != "true" {
-		t.Skip("Skipping KMS acceptance test: set VERCEL_TERRAFORM_TESTING_KMS=true on a KMS-enabled team to run")
-	}
-}
 
 func testCheckKMSIssuerExists(testClient *client.Client, teamID, n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
@@ -58,7 +48,6 @@ func testAccKMSIssuerDestroy(testClient *client.Client, n, teamID string) resour
 }
 
 func TestAcc_KMSIssuerResource(t *testing.T) {
-	testAccKMSPreCheck(t)
 	nameSuffix := acctest.RandString(8)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -95,7 +84,6 @@ func TestAcc_KMSIssuerResource(t *testing.T) {
 }
 
 func TestAcc_KMSIssuerDataSource(t *testing.T) {
-	testAccKMSPreCheck(t)
 	nameSuffix := acctest.RandString(8)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
