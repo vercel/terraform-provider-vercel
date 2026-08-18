@@ -99,6 +99,7 @@ func (c *Client) GetFirewallConfig(ctx context.Context, projectId string, teamId
 		method: "GET",
 		url:    url,
 	}, &res)
+	res.ProjectID = projectId
 	res.TeamID = teamId
 	return res, err
 }
@@ -124,6 +125,7 @@ func (c *Client) PutFirewallConfig(ctx context.Context, cfg FirewallConfig) (Fir
 		url:    url,
 		body:   string(payload),
 	}, &res)
+	res.Active.ProjectID = cfg.ProjectID
 	res.Active.TeamID = teamId
 	return res.Active, err
 }
