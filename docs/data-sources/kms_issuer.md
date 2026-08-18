@@ -67,11 +67,13 @@ Read-Only:
 Read-Only:
 
 - `algorithm` (String) The signing algorithm of the key.
+- `certificate_pem` (String) The key's self-signed X.509 certificate in PEM form.
 - `created_at` (String) The time the key was created.
 - `issuer_id` (String) The ID of the issuer the key belongs to.
 - `key_id` (String) The ID of the signing key. Used as the JWT/JWKS `kid`.
-- `public_key` (String) The public key as a JSON-encoded JWK.
 - `public_key_fingerprint` (String) The fingerprint of the public key.
+- `public_key_jwk` (String) The public key as a JSON-encoded JWK.
+- `public_key_pem` (String) The public key in SPKI PEM form.
 - `revoke_at` (String) The time at which the key is scheduled to be revoked, if any.
 - `status` (String) The status of the key, either `active` or `revoking`.
 - `updated_at` (String) The time the key was last updated.

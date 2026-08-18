@@ -19,8 +19,10 @@ type kmsSigningKeyModel struct {
 	IssuerID             types.String `tfsdk:"issuer_id"`
 	Algorithm            types.String `tfsdk:"algorithm"`
 	Status               types.String `tfsdk:"status"`
-	PublicKey            types.String `tfsdk:"public_key"`
+	PublicKeyJWK         types.String `tfsdk:"public_key_jwk"`
 	PublicKeyFingerprint types.String `tfsdk:"public_key_fingerprint"`
+	PublicKeyPem         types.String `tfsdk:"public_key_pem"`
+	CertificatePem       types.String `tfsdk:"certificate_pem"`
 	CreatedAt            types.String `tfsdk:"created_at"`
 	UpdatedAt            types.String `tfsdk:"updated_at"`
 	RevokeAt             types.String `tfsdk:"revoke_at"`
@@ -32,8 +34,10 @@ func kmsSigningKeyAttrTypes() map[string]attr.Type {
 		"issuer_id":              types.StringType,
 		"algorithm":              types.StringType,
 		"status":                 types.StringType,
-		"public_key":             types.StringType,
+		"public_key_jwk":         types.StringType,
 		"public_key_fingerprint": types.StringType,
+		"public_key_pem":         types.StringType,
+		"certificate_pem":        types.StringType,
 		"created_at":             types.StringType,
 		"updated_at":             types.StringType,
 		"revoke_at":              types.StringType,
@@ -46,8 +50,10 @@ func kmsSigningKeyValue(key client.KMSSigningKey) kmsSigningKeyModel {
 		IssuerID:             types.StringValue(key.IssuerID),
 		Algorithm:            types.StringValue(key.Algorithm),
 		Status:               types.StringValue(key.Status),
-		PublicKey:            jsonRawToStringValue(key.PublicKey),
+		PublicKeyJWK:         jsonRawToStringValue(key.PublicKeyJWK),
 		PublicKeyFingerprint: emptyToNull(key.PublicKeyFingerprint),
+		PublicKeyPem:         emptyToNull(key.PublicKeyPem),
+		CertificatePem:       emptyToNull(key.CertificatePem),
 		CreatedAt:            types.StringValue(key.CreatedAt),
 		UpdatedAt:            types.StringValue(key.UpdatedAt),
 		RevokeAt:             emptyToNull(key.RevokeAt),

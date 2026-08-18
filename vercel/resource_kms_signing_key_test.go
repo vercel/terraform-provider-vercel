@@ -21,7 +21,7 @@ func TestAcc_KMSSigningKeyResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("vercel_kms_signing_key.test", "id"),
 					resource.TestCheckResourceAttrPair("vercel_kms_signing_key.test", "issuer_id", "vercel_kms_issuer.test", "id"),
-					resource.TestCheckResourceAttrSet("vercel_kms_signing_key.test", "public_key"),
+					resource.TestCheckResourceAttrSet("vercel_kms_signing_key.test", "public_key_jwk"),
 					resource.TestCheckResourceAttr("vercel_kms_signing_key.test", "status", "active"),
 					captureKMSSigningKeyID("vercel_kms_signing_key.test", &firstKeyID),
 				),

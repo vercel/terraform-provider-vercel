@@ -42,7 +42,7 @@ type kmsSigningKeyResourceModel struct {
 	RevokePreviousAt     types.String `tfsdk:"revoke_previous_at"`
 	Algorithm            types.String `tfsdk:"algorithm"`
 	Status               types.String `tfsdk:"status"`
-	PublicKey            types.String `tfsdk:"public_key"`
+	PublicKeyJWK         types.String `tfsdk:"public_key_jwk"`
 	PublicKeyFingerprint types.String `tfsdk:"public_key_fingerprint"`
 	CreatedAt            types.String `tfsdk:"created_at"`
 	UpdatedAt            types.String `tfsdk:"updated_at"`
@@ -133,7 +133,7 @@ next time the issuer's key is rotated).
 				Computed:    true,
 				Description: "The status of the key, either `active` or `revoking`.",
 			},
-			"public_key": schema.StringAttribute{
+			"public_key_jwk": schema.StringAttribute{
 				Computed:      true,
 				Description:   "The public key as a JSON-encoded JWK.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -171,7 +171,7 @@ func (r *kmsSigningKeyResource) modelFromResponse(key client.KMSSigningKey, team
 		RevokePreviousAt:     revokePreviousAt,
 		Algorithm:            types.StringValue(key.Algorithm),
 		Status:               types.StringValue(key.Status),
-		PublicKey:            jsonRawToStringValue(key.PublicKey),
+		PublicKeyJWK:         jsonRawToStringValue(key.PublicKeyJWK),
 		PublicKeyFingerprint: emptyToNull(key.PublicKeyFingerprint),
 		CreatedAt:            types.StringValue(key.CreatedAt),
 		UpdatedAt:            types.StringValue(key.UpdatedAt),

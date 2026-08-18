@@ -60,8 +60,8 @@ resource "vercel_kms_signing_key" "example" {
 - `algorithm` (String) The signing algorithm of the key.
 - `created_at` (String) The time the key was created.
 - `id` (String) The ID (`kid`) of the signing key.
-- `public_key` (String) The public key as a JSON-encoded JWK.
 - `public_key_fingerprint` (String) The fingerprint of the public key.
+- `public_key_jwk` (String) The public key as a JSON-encoded JWK.
 - `revoke_at` (String) The time at which the key is scheduled to be revoked, if any.
 - `status` (String) The status of the key, either `active` or `revoking`.
 - `updated_at` (String) The time the key was last updated.

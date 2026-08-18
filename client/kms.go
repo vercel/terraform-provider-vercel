@@ -27,14 +27,19 @@ type KMSIssuer struct {
 }
 
 // KMSSigningKey is a signing key belonging to an issuer. Private key material is
-// never returned by the API. `publicKey` is a free-form JWK object.
+// never returned by the API. `publicKey` is a free-form JWK object;
+// `publicKeyPem` is the same key in SPKI PEM form and `certificatePem` is the
+// key's stored X.509 certificate in PEM form (both omitted for keys created
+// before certificates were stored).
 type KMSSigningKey struct {
 	KeyID                string          `json:"keyId"`
 	IssuerID             string          `json:"issuerId"`
 	Algorithm            string          `json:"algorithm"`
 	Status               string          `json:"status"`
-	PublicKey            json.RawMessage `json:"publicKey,omitempty"`
+	PublicKeyJWK         json.RawMessage `json:"publicKey,omitempty"`
 	PublicKeyFingerprint string          `json:"publicKeyFingerprint,omitempty"`
+	PublicKeyPem         string          `json:"publicKeyPem,omitempty"`
+	CertificatePem       string          `json:"certificatePem,omitempty"`
 	CreatedAt            string          `json:"createdAt"`
 	UpdatedAt            string          `json:"updatedAt"`
 	RevokeAt             string          `json:"revokeAt,omitempty"`
