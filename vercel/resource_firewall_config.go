@@ -27,6 +27,7 @@ var (
 	_ resource.Resource                = &firewallConfigResource{}
 	_ resource.ResourceWithConfigure   = &firewallConfigResource{}
 	_ resource.ResourceWithImportState = &firewallConfigResource{}
+	_ resource.ResourceWithModifyPlan  = &firewallConfigResource{}
 )
 
 func newFirewallConfigResource() resource.Resource { return &firewallConfigResource{} }
@@ -473,6 +474,28 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 			},
 		},
 	}
+}
+
+func (r *firewallConfigResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
+		return
+	}
+
+	var plan, state FirewallConfig
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if err := propagateFirewallRuleIDs(state.Rules, plan.Rules); err != nil {
+		// Unknown nested values can make rule comparison impossible during planning.
+		// Terraform will plan again once dependencies resolve.
+		tflog.Debug(ctx, "Unable to correlate firewall rule IDs in the current plan", map[string]any{"error": err.Error()})
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 }
 
 func (r *firewallConfigResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -1317,6 +1340,39 @@ func matchFirewallRules(current, desired []client.FirewallRule) ([]firewallRuleM
 	}
 
 	return matches, removals, inserts, nil
+}
+
+func propagateFirewallRuleIDs(state, plan *FirewallRules) error {
+	current, err := firewallRulesToClient(state)
+	if err != nil {
+		return err
+	}
+	desired, err := firewallRulesToClient(plan)
+	if err != nil {
+		return err
+	}
+
+	matches, remainingCurrent, remainingDesired, err := matchFirewallRules(current, desired)
+	if err != nil {
+		return err
+	}
+
+	// When both the name and body changed, there is no configured identity left to
+	// match. Preserve list order for the remaining rules so edits remain updates.
+	for i := 0; i < min(len(remainingCurrent), len(remainingDesired)); i++ {
+		matches = append(matches, firewallRuleMatch{
+			currentIndex: remainingCurrent[i],
+			desiredIndex: remainingDesired[i],
+		})
+	}
+
+	for _, match := range matches {
+		if current[match.currentIndex].ID != "" {
+			plan.Rules[match.desiredIndex].ID = types.StringValue(current[match.currentIndex].ID)
+		}
+	}
+
+	return nil
 }
 
 func onlyFirewallRulesChanged(state, plan FirewallConfig) (bool, error) {

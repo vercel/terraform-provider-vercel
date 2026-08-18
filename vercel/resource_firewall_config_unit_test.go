@@ -108,6 +108,13 @@ func TestFirewallConfigResourceSchemaIncludesSessionFixationRule(t *testing.T) {
 	}
 }
 
+func TestFirewallConfigUsesModifyPlanForRuleIdentityCorrelation(t *testing.T) {
+	res := newFirewallConfigResource()
+	if _, ok := res.(resource.ResourceWithModifyPlan); !ok {
+		t.Fatal("firewall config must implement ResourceWithModifyPlan to preserve rule IDs before apply")
+	}
+}
+
 func TestFirewallConfigToClientIncludesSessionFixationRule(t *testing.T) {
 	cfg := FirewallConfig{
 		ProjectID: types.StringValue("prj_123"),
@@ -292,6 +299,51 @@ func TestMatchFirewallRulesMatchesByNameWhenRuleBodyChanges(t *testing.T) {
 	}
 	if len(inserts) != 0 {
 		t.Fatalf("expected no inserts, got %v", inserts)
+	}
+}
+
+func TestPropagateFirewallRuleIDsTreatsCompleteEditAsUpdate(t *testing.T) {
+	state := &FirewallRules{Rules: []FirewallRule{
+		testResourceFirewallRule("rule_a", "alpha", "/alpha", "deny"),
+	}}
+	plan := &FirewallRules{Rules: []FirewallRule{
+		testResourceFirewallRule("", "renamed", "/changed", "challenge"),
+	}}
+	plan.Rules[0].ID = types.StringUnknown()
+
+	if err := propagateFirewallRuleIDs(state, plan); err != nil {
+		t.Fatalf("propagateFirewallRuleIDs() returned an error: %v", err)
+	}
+	if got := plan.Rules[0].ID.ValueString(); got != "rule_a" {
+		t.Fatalf("planned rule ID = %q, want rule_a", got)
+	}
+}
+
+func TestPropagateFirewallRuleIDsFollowsRulesAcrossReorderAndInsertion(t *testing.T) {
+	state := &FirewallRules{Rules: []FirewallRule{
+		testResourceFirewallRule("rule_a", "alpha", "/alpha", "deny"),
+		testResourceFirewallRule("rule_b", "beta", "/beta", "deny"),
+	}}
+	plan := &FirewallRules{Rules: []FirewallRule{
+		testResourceFirewallRule("", "new-rule", "/new", "deny"),
+		testResourceFirewallRule("", "beta", "/beta", "deny"),
+		testResourceFirewallRule("", "alpha", "/alpha", "deny"),
+	}}
+	for i := range plan.Rules {
+		plan.Rules[i].ID = types.StringUnknown()
+	}
+
+	if err := propagateFirewallRuleIDs(state, plan); err != nil {
+		t.Fatalf("propagateFirewallRuleIDs() returned an error: %v", err)
+	}
+	if !plan.Rules[0].ID.IsUnknown() {
+		t.Fatalf("new planned rule ID = %v, want unknown", plan.Rules[0].ID)
+	}
+	if got := plan.Rules[1].ID.ValueString(); got != "rule_b" {
+		t.Fatalf("beta planned rule ID = %q, want rule_b", got)
+	}
+	if got := plan.Rules[2].ID.ValueString(); got != "rule_a" {
+		t.Fatalf("alpha planned rule ID = %q, want rule_a", got)
 	}
 }
 
