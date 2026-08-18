@@ -77,7 +77,6 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newFeatureFlagSegmentResource,
 		newFeatureFlagConfigResource,
 		newIntegrationProjectAccessResource,
-		newKMSCertificateResource,
 		newKMSIssuerPolicyResource,
 		newKMSIssuerResource,
 		newKMSSigningKeyResource,

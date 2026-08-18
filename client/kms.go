@@ -55,19 +55,6 @@ type KMSIssuerPolicy struct {
 	UpdatedAt    string          `json:"updatedAt"`
 }
 
-// KMSCertificate is a self-signed X509 certificate minted for an issuer's
-// active signing key. It is ephemeral and not persisted server-side.
-type KMSCertificate struct {
-	Certificate  string `json:"certificate"`
-	IssuerID     string `json:"issuerId"`
-	KeyID        string `json:"keyId"`
-	SerialNumber string `json:"serialNumber"`
-	NotBefore    string `json:"notBefore"`
-	NotAfter     string `json:"notAfter"`
-	KMSIssuerURL string `json:"kmsIssuerUrl"`
-	TeamID       string `json:"-"`
-}
-
 func (c *Client) kmsIssuersURL(teamID string) string {
 	url := fmt.Sprintf("%s/v1/kms/issuers", c.baseURL)
 	if c.TeamID(teamID) != "" {
@@ -318,42 +305,4 @@ func (c *Client) DeleteKMSIssuerPolicy(ctx context.Context, issuerID, projectID,
 		method: "DELETE",
 		url:    url,
 	}, nil)
-}
-
-type KMSCertificateSubject struct {
-	OU string `json:"OU,omitempty"`
-	C  string `json:"C,omitempty"`
-	ST string `json:"ST,omitempty"`
-	L  string `json:"L,omitempty"`
-}
-
-type CreateKMSCertificateRequest struct {
-	IssuerID  string                 `json:"-"`
-	TeamID    string                 `json:"-"`
-	NotBefore string                 `json:"notBefore,omitempty"`
-	NotAfter  string                 `json:"notAfter,omitempty"`
-	Subject   *KMSCertificateSubject `json:"subject,omitempty"`
-}
-
-func (c *Client) CreateKMSCertificate(ctx context.Context, request CreateKMSCertificateRequest) (cert KMSCertificate, err error) {
-	url := fmt.Sprintf("%s/v1/kms/issuers/%s/certificates", c.baseURL, request.IssuerID)
-	if c.TeamID(request.TeamID) != "" {
-		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
-	}
-	body := string(mustMarshal(request))
-	tflog.Info(ctx, "creating kms certificate", map[string]any{
-		"url":  url,
-		"body": body,
-	})
-	err = c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "POST",
-		url:    url,
-		body:   body,
-	}, &cert)
-	if err != nil {
-		return cert, err
-	}
-	cert.TeamID = c.TeamID(request.TeamID)
-	return cert, nil
 }
