@@ -74,8 +74,38 @@ func TestAcc_WebhookResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_webhook.without_project_ids", "secret"),
 				),
 			},
+			{
+				ResourceName:            "vercel_webhook.with_project_ids",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"secret"},
+				ImportStateIdFunc:       getWebhookImportID("vercel_webhook.with_project_ids", true),
+			},
+			{
+				ResourceName:            "vercel_webhook.without_project_ids",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"secret"},
+				ImportStateIdFunc:       getWebhookImportID("vercel_webhook.without_project_ids", false),
+			},
 		},
 	})
+}
+
+func getWebhookImportID(n string, includeTeamID bool) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", n)
+		}
+		if rs.Primary.ID == "" {
+			return "", fmt.Errorf("no ID is set")
+		}
+		if includeTeamID {
+			return fmt.Sprintf("%s/%s", rs.Primary.Attributes["team_id"], rs.Primary.ID), nil
+		}
+		return rs.Primary.ID, nil
+	}
 }
 
 func testAccResourceWebhook(name string) string {

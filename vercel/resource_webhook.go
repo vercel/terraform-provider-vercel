@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -20,8 +21,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &webhookResource{}
-	_ resource.ResourceWithConfigure = &webhookResource{}
+	_ resource.Resource                = &webhookResource{}
+	_ resource.ResourceWithConfigure   = &webhookResource{}
+	_ resource.ResourceWithImportState = &webhookResource{}
 )
 
 func newWebhookResource() resource.Resource {
@@ -171,7 +173,7 @@ type Webhook struct {
 	Events     types.Set    `tfsdk:"events"`
 }
 
-func responseToWebhook(ctx context.Context, out client.Webhook) (Webhook, diag.Diagnostics) {
+func responseToWebhook(ctx context.Context, out client.Webhook, secret types.String) (Webhook, diag.Diagnostics) {
 	projectIDs, diags := types.SetValueFrom(ctx, types.StringType, out.ProjectIDs)
 	if diags.HasError() {
 		return Webhook{}, diags
@@ -185,7 +187,7 @@ func responseToWebhook(ctx context.Context, out client.Webhook) (Webhook, diag.D
 		ID:         types.StringValue(out.ID),
 		TeamID:     types.StringValue(out.TeamID),
 		Endpoint:   types.StringValue(out.Endpoint),
-		Secret:     types.StringValue(out.Secret),
+		Secret:     secret,
 		ProjectIDs: projectIDs,
 		Events:     events,
 	}, diags
@@ -226,7 +228,7 @@ func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	result, diags := responseToWebhook(ctx, out)
+	result, diags := responseToWebhook(ctx, out, types.StringValue(out.Secret))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -270,9 +272,8 @@ func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	// Override the secret with state as this is not returned by the 'GET' endpoint.
-	out.Secret = state.Secret.ValueString()
-	result, diags := responseToWebhook(ctx, out)
+	// Preserve the secret from state as this is not returned by the 'GET' endpoint.
+	result, diags := responseToWebhook(ctx, out, state.Secret)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -287,6 +288,43 @@ func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+func (r *webhookResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	teamID, id, ok := splitInto1Or2(req.ID)
+	if !ok || id == "" || (strings.Contains(req.ID, "/") && teamID == "") {
+		resp.Diagnostics.AddError(
+			"Error importing Webhook",
+			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/webhook_id\" or \"webhook_id\"", req.ID),
+		)
+		return
+	}
+
+	out, err := r.client.GetWebhook(ctx, id, teamID)
+	if client.NotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error importing Webhook",
+			fmt.Sprintf("Could not get Webhook %s %s, unexpected error: %s", teamID, id, err),
+		)
+		return
+	}
+
+	result, diags := responseToWebhook(ctx, out, types.StringNull())
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "import webhook", map[string]any{
+		"team_id":    result.TeamID.ValueString(),
+		"webhook_id": result.ID.ValueString(),
+	})
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
 }
 
 // Update does nothing.
