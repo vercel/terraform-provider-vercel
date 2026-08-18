@@ -539,7 +539,7 @@ Required:
 Optional:
 
 - `key` (String) Key within type to match against
-- `neg` (Boolean) Negate the condition
+- `neg` (Boolean) Negate the condition. Defaults to false.
 - `value` (String) Value to match against. Not required for existence operators (`ex`, `nex`). Use `values` instead for `inc` and `ninc` operators.
 - `values` (List of String) Values to match against if op is inc, ninc
 

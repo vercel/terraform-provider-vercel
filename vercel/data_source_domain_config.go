@@ -55,7 +55,7 @@ func (d *domainConfigDataSource) Schema(_ context.Context, req datasource.Schema
 Provides domain configuration information for a Vercel project.
 
 This data source returns configuration details for a domain associated with a specific project,
-including recommended CNAME and IPv4 values.
+including its DNS configuration status and recommended CNAME and IPv4 values.
 		`,
 		Attributes: map[string]schema.Attribute{
 			"domain": schema.StringAttribute{
@@ -80,6 +80,10 @@ including recommended CNAME and IPv4 values.
 				Computed:    true,
 				Description: "The recommended IPv4 values for the domain.",
 			},
+			"misconfigured": schema.BoolAttribute{
+				Computed:    true,
+				Description: "Whether the domain has an invalid DNS configuration or Vercel cannot automatically generate a TLS certificate for it.",
+			},
 		},
 	}
 }
@@ -91,6 +95,7 @@ type DomainConfigDataSource struct {
 	TeamID           types.String `tfsdk:"team_id"`
 	RecommendedCNAME types.String `tfsdk:"recommended_cname"`
 	RecommendedIPv4s types.List   `tfsdk:"recommended_ipv4s"`
+	Misconfigured    types.Bool   `tfsdk:"misconfigured"`
 }
 
 // Read will read domain config information by requesting it from the Vercel API, and will update terraform
@@ -128,6 +133,7 @@ func (d *domainConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 		TeamID:           config.TeamID,
 		RecommendedCNAME: types.StringValue(out.RecommendedCNAME),
 		RecommendedIPv4s: types.ListValueMust(types.StringType, ipv4Values),
+		Misconfigured:    types.BoolValue(out.Misconfigured),
 	}
 
 	tflog.Info(ctx, "read domain config", map[string]any{
@@ -136,6 +142,7 @@ func (d *domainConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 		"teamId":           result.TeamID.ValueString(),
 		"recommendedCNAME": result.RecommendedCNAME.ValueString(),
 		"recommendedIPv4s": result.RecommendedIPv4s.Elements(),
+		"misconfigured":    result.Misconfigured.ValueBool(),
 	})
 
 	diags = resp.State.Set(ctx, result)

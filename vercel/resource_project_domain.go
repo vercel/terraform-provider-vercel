@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -121,15 +122,15 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 				},
 			},
 			"wait_for_ready": schema.BoolAttribute{
-				Description: "Wait until the project domain is verified before considering it created. This is useful when another resource, such as an alias, depends on the domain being ready immediately.",
+				Description: "Wait until the project domain is verified and has a valid DNS configuration before considering it created. DNS records must be configured independently before enabling this option because dependent resources are not created until the wait completes.",
 				Optional:    true,
 			},
 			"verified": schema.BoolAttribute{
-				Description: "Whether the domain is verified for use with the project. If `false`, the challenges in `verification` must be completed before the domain will serve traffic for the project.",
+				Description: "Whether ownership of the domain is verified for use with the project. This does not indicate whether the domain's DNS records point to Vercel; use `misconfigured` for that status.",
 				Computed:    true,
 			},
 			"verification": schema.ListNestedAttribute{
-				Description: "A list of verification challenges, one of which must be completed to verify the domain for use on the project. Once the challenge is satisfied, the domain will be verified automatically on the next refresh. Typically used to configure DNS records (e.g. a `TXT` record) for domains hosted with an external DNS provider.",
+				Description: "A list of ownership verification challenges, one of which must be completed to verify the domain for use with the project. These are typically `TXT` records and do not describe the `A` or `CNAME` records needed to route traffic to Vercel.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -151,6 +152,10 @@ By default, Project Domains will be automatically applied to any ` + "`productio
 						},
 					},
 				},
+			},
+			"misconfigured": schema.BoolAttribute{
+				Description: "Whether the domain has an invalid DNS configuration or Vercel cannot automatically generate a TLS certificate for it.",
+				Computed:    true,
 			},
 		},
 	}
@@ -186,9 +191,10 @@ type ProjectDomain struct {
 	WaitForReady        types.Bool   `tfsdk:"wait_for_ready"`
 	Verified            types.Bool   `tfsdk:"verified"`
 	Verification        types.List   `tfsdk:"verification"`
+	Misconfigured       types.Bool   `tfsdk:"misconfigured"`
 }
 
-func convertResponseToProjectDomain(response client.ProjectDomainResponse) ProjectDomain {
+func convertResponseToProjectDomain(response client.ProjectDomainResponse, domainConfig client.DomainConfigResponse) ProjectDomain {
 	verification := make([]attr.Value, 0, len(response.Verification))
 	for _, v := range response.Verification {
 		verification = append(verification, projectDomainVerificationAttrValue(v))
@@ -205,6 +211,7 @@ func convertResponseToProjectDomain(response client.ProjectDomainResponse) Proje
 		TeamID:              toTeamID(response.TeamID),
 		Verified:            types.BoolValue(response.Verified),
 		Verification:        types.ListValueMust(projectDomainVerificationAttrType, verification),
+		Misconfigured:       types.BoolValue(domainConfig.Misconfigured),
 	}
 }
 
@@ -282,12 +289,26 @@ func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	var domainConfig client.DomainConfigResponse
 	if plan.WaitForReady.ValueBool() {
-		out, err = r.waitForProjectDomainReady(ctx, plan.ProjectID.ValueString(), plan.Domain.ValueString(), plan.TeamID.ValueString())
+		out, domainConfig, err = r.waitForProjectDomainReady(ctx, plan.ProjectID.ValueString(), plan.Domain.ValueString(), plan.TeamID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for project domain",
-				fmt.Sprintf("Could not wait for domain %s for project %s to become verified: %s",
+				fmt.Sprintf("Could not wait for domain %s for project %s to become ready: %s",
+					plan.Domain.ValueString(),
+					plan.ProjectID.ValueString(),
+					err,
+				),
+			)
+			return
+		}
+	} else {
+		domainConfig, err = r.client.GetDomainConfig(ctx, plan.Domain.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error reading project domain configuration",
+				fmt.Sprintf("Could not get DNS configuration for domain %s and project %s, unexpected error: %s",
 					plan.Domain.ValueString(),
 					plan.ProjectID.ValueString(),
 					err,
@@ -297,7 +318,7 @@ func (r *projectDomainResource) Create(ctx context.Context, req resource.CreateR
 		}
 	}
 
-	result := convertResponseToProjectDomain(out)
+	result := convertResponseToProjectDomain(out, domainConfig)
 	result.WaitForReady = plan.WaitForReady
 	tflog.Info(ctx, "added domain to project", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
@@ -339,7 +360,20 @@ func (r *projectDomainResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	result := convertResponseToProjectDomain(out)
+	domainConfig, err := r.client.GetDomainConfig(ctx, state.Domain.ValueString(), state.ProjectID.ValueString(), state.TeamID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project domain configuration",
+			fmt.Sprintf("Could not get DNS configuration for domain %s and project %s, unexpected error: %s",
+				state.Domain.ValueString(),
+				state.ProjectID.ValueString(),
+				err,
+			),
+		)
+		return
+	}
+
+	result := convertResponseToProjectDomain(out, domainConfig)
 	result.WaitForReady = state.WaitForReady
 	tflog.Info(ctx, "read project domain", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
@@ -382,12 +416,26 @@ func (r *projectDomainResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
+	var domainConfig client.DomainConfigResponse
 	if plan.WaitForReady.ValueBool() {
-		out, err = r.waitForProjectDomainReady(ctx, plan.ProjectID.ValueString(), plan.Domain.ValueString(), plan.TeamID.ValueString())
+		out, domainConfig, err = r.waitForProjectDomainReady(ctx, plan.ProjectID.ValueString(), plan.Domain.ValueString(), plan.TeamID.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for project domain",
-				fmt.Sprintf("Could not wait for domain %s for project %s to become verified: %s",
+				fmt.Sprintf("Could not wait for domain %s for project %s to become ready: %s",
+					plan.Domain.ValueString(),
+					plan.ProjectID.ValueString(),
+					err,
+				),
+			)
+			return
+		}
+	} else {
+		domainConfig, err = r.client.GetDomainConfig(ctx, plan.Domain.ValueString(), plan.ProjectID.ValueString(), plan.TeamID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error reading project domain configuration",
+				fmt.Sprintf("Could not get DNS configuration for domain %s and project %s, unexpected error: %s",
 					plan.Domain.ValueString(),
 					plan.ProjectID.ValueString(),
 					err,
@@ -397,7 +445,7 @@ func (r *projectDomainResource) Update(ctx context.Context, req resource.UpdateR
 		}
 	}
 
-	result := convertResponseToProjectDomain(out)
+	result := convertResponseToProjectDomain(out, domainConfig)
 	result.WaitForReady = plan.WaitForReady
 	tflog.Info(ctx, "update project domain", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
@@ -472,7 +520,20 @@ func (r *projectDomainResource) ImportState(ctx context.Context, req resource.Im
 		return
 	}
 
-	result := convertResponseToProjectDomain(out)
+	domainConfig, err := r.client.GetDomainConfig(ctx, domain, projectID, teamID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading project domain configuration",
+			fmt.Sprintf("Could not get DNS configuration for domain %s and project %s, unexpected error: %s",
+				domain,
+				projectID,
+				err,
+			),
+		)
+		return
+	}
+
+	result := convertResponseToProjectDomain(out, domainConfig)
 	tflog.Info(ctx, "imported project domain", map[string]any{
 		"project_id": result.ProjectID.ValueString(),
 		"domain":     result.Domain.ValueString(),
@@ -486,7 +547,7 @@ func (r *projectDomainResource) ImportState(ctx context.Context, req resource.Im
 	}
 }
 
-func (r *projectDomainResource) waitForProjectDomainReady(ctx context.Context, projectID, domain, teamID string) (client.ProjectDomainResponse, error) {
+func (r *projectDomainResource) waitForProjectDomainReady(ctx context.Context, projectID, domain, teamID string) (client.ProjectDomainResponse, client.DomainConfigResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, projectDomainReadyTimeout)
 	defer cancel()
 
@@ -496,22 +557,55 @@ func (r *projectDomainResource) waitForProjectDomainReady(ctx context.Context, p
 	for {
 		out, err := r.client.GetProjectDomain(ctx, projectID, domain, teamID)
 		if err != nil {
-			return out, err
-		}
-		if out.Verified {
-			return out, nil
+			return out, client.DomainConfigResponse{}, err
 		}
 
-		tflog.Info(ctx, "project domain is not verified yet", map[string]any{
-			"project_id": projectID,
-			"domain":     domain,
-			"team_id":    teamID,
+		domainConfig, err := r.client.GetDomainConfig(ctx, domain, projectID, teamID)
+		if err != nil {
+			return out, domainConfig, err
+		}
+		if projectDomainReady(out, domainConfig) {
+			return out, domainConfig, nil
+		}
+
+		tflog.Info(ctx, "project domain is not ready yet", map[string]any{
+			"project_id":    projectID,
+			"domain":        domain,
+			"team_id":       teamID,
+			"verified":      out.Verified,
+			"misconfigured": domainConfig.Misconfigured,
 		})
 
 		select {
 		case <-ctx.Done():
-			return out, ctx.Err()
+			return out, domainConfig, fmt.Errorf("%w: %s", ctx.Err(), projectDomainNotReadyReason(out, domainConfig))
 		case <-ticker.C:
 		}
 	}
+}
+
+func projectDomainReady(projectDomain client.ProjectDomainResponse, domainConfig client.DomainConfigResponse) bool {
+	return projectDomain.Verified && !domainConfig.Misconfigured
+}
+
+func projectDomainNotReadyReason(projectDomain client.ProjectDomainResponse, domainConfig client.DomainConfigResponse) string {
+	reasons := make([]string, 0, 2)
+	if !projectDomain.Verified {
+		reasons = append(reasons, "domain ownership verification is still pending")
+	}
+	if domainConfig.Misconfigured {
+		reason := "DNS configuration is still invalid"
+		recommendations := make([]string, 0, 2)
+		if domainConfig.RecommendedCNAME != "" {
+			recommendations = append(recommendations, fmt.Sprintf("CNAME %q", domainConfig.RecommendedCNAME))
+		}
+		if len(domainConfig.RecommendedIPv4s) > 0 {
+			recommendations = append(recommendations, fmt.Sprintf("IPv4 addresses %s", strings.Join(domainConfig.RecommendedIPv4s, ", ")))
+		}
+		if len(recommendations) > 0 {
+			reason += "; recommended values: " + strings.Join(recommendations, ", ")
+		}
+		reasons = append(reasons, reason)
+	}
+	return strings.Join(reasons, "; ")
 }

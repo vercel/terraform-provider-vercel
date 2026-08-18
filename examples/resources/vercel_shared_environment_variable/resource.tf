@@ -30,3 +30,20 @@ resource "vercel_shared_environment_variable" "example_development" {
     vercel_project.example.id
   ]
 }
+
+# A shared environment variable referencing an ephemeral source whose value won't save to state.
+ephemeral "vault_kv_secret_v2" "example" {
+  mount = "kv"
+  name  = "example"
+}
+resource "vercel_shared_environment_variable" "example_ephemeral" {
+  key              = "EXAMPLE_EPHEMERAL"
+  value_wo         = ephemeral.vault_kv_secret_v2.example.data["example"]
+  value_wo_version = 1
+  target           = ["production"]
+  sensitive        = true
+  comment          = "an ephemeral shared secret"
+  project_ids = [
+    vercel_project.example.id
+  ]
+}

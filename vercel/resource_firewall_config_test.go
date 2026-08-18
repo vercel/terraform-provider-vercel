@@ -1,14 +1,70 @@
 package vercel_test
 
 import (
+	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
+
+func TestAcc_FirewallConfigIDIncludesProjectID(t *testing.T) {
+	name := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccFirewallConfigIDResource(name)),
+				Check: func(state *terraform.State) error {
+					firewall := state.RootModule().Resources["vercel_firewall_config.test"]
+					if firewall == nil {
+						return fmt.Errorf("vercel_firewall_config.test not found in state")
+					}
+
+					want := fmt.Sprintf("%s/%s", firewall.Primary.Attributes["team_id"], firewall.Primary.Attributes["project_id"])
+					if firewall.Primary.ID != want {
+						return fmt.Errorf("expected complete firewall config ID %q, got %q", want, firewall.Primary.ID)
+					}
+					return nil
+				},
+			},
+		},
+	})
+}
+
+func testAccFirewallConfigIDResource(name string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+    name = "test-acc-%[1]s-firewall-id"
+}
+
+resource "vercel_firewall_config" "test" {
+    project_id = vercel_project.test.id
+
+    rules {
+        rule {
+            name = "test-rule"
+            action = {
+                action = "deny"
+            }
+            condition_group = [{
+                conditions = [{
+                    type  = "path"
+                    op    = "re"
+                    value = "^/foo$"
+                }]
+            }]
+        }
+    }
+}
+`, name)
+}
 
 func getFirewallImportID(n string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
@@ -67,6 +123,80 @@ func checkResourceAttrEquals(n, key string, expected *string) resource.TestCheck
 
 		return nil
 	}
+}
+
+func testAccCheckFirewallRuleUnchanged(t *testing.T, apiClient *client.Client, projectID, ruleID *string) func() {
+	return func() {
+		config, err := apiClient.GetFirewallConfig(context.Background(), *projectID, testTeam(t))
+		if err != nil {
+			t.Fatalf("failed to read firewall config: %v", err)
+		}
+		if len(config.Rules) != 1 {
+			t.Fatalf("firewall has %d custom rules after rejected update, want 1", len(config.Rules))
+		}
+		if config.Rules[0].ID != *ruleID {
+			t.Fatalf("firewall rule ID after rejected update = %q, want %q", config.Rules[0].ID, *ruleID)
+		}
+		if config.Rules[0].Name != "valid-rule" {
+			t.Fatalf("firewall rule name after rejected update = %q, want valid-rule", config.Rules[0].Name)
+		}
+	}
+}
+
+func TestAcc_FirewallConfigRuleIDPreservedInPlan(t *testing.T) {
+	name := acctest.RandString(16)
+	var projectID, ruleID string
+	apiClient := testClient(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccFirewallRuleIdentityConfig(name, "valid-rule", "^/foo$")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					captureResourceAttr("vercel_firewall_config.test", "project_id", &projectID),
+					captureResourceAttr("vercel_firewall_config.test", "rules.rule.0.id", &ruleID),
+				),
+			},
+			{
+				Config:      cfg(testAccFirewallRuleIdentityConfig(name, "invalid-rule", "(?i)^/bar$")),
+				ExpectError: regexp.MustCompile("Invalid rule"),
+			},
+			{
+				PreConfig: testAccCheckFirewallRuleUnchanged(t, apiClient, &projectID, &ruleID),
+				Config:    cfg(testAccFirewallRuleIdentityConfig(name, "valid-rule", "^/foo$")),
+				PlanOnly:  true,
+			},
+		},
+	})
+}
+
+func testAccFirewallRuleIdentityConfig(name, ruleName, regex string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-%[1]s-rule-identity"
+}
+
+resource "vercel_firewall_config" "test" {
+  project_id = vercel_project.test.id
+
+  rules {
+    rule {
+      name = %[2]q
+      action = {
+        action = "deny"
+      }
+      condition_group = [{
+        conditions = [{
+          type  = "path"
+          op    = "re"
+          value = %[3]q
+        }]
+      }]
+    }
+  }
+}
+`, name, ruleName, regex)
 }
 
 func TestAcc_FirewallConfigResource(t *testing.T) {

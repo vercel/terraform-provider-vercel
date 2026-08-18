@@ -28,7 +28,7 @@ type SharedEnvVarRequest struct {
 
 type SharedEnvironmentVariableRequest struct {
 	Type                         string                `json:"type"`
-	ProjectIDs                   []string              `json:"projectId"`
+	ProjectIDs                   []string              `json:"projectId,omitempty"`
 	Target                       []string              `json:"target"`
 	ApplyToAllCustomEnvironments bool                  `json:"applyToAllCustomEnvironments"`
 	EnvironmentVariables         []SharedEnvVarRequest `json:"evs"`
@@ -200,7 +200,7 @@ type UpdateSharedEnvironmentVariableRequestProjectIDUpdates struct {
 }
 
 type UpdateSharedEnvironmentVariableRequest struct {
-	Value                        string                                                 `json:"value,omitempty"`
+	Value                        *string                                                `json:"value,omitempty"`
 	Type                         string                                                 `json:"type,omitempty"`
 	ProjectIDs                   []string                                               `json:"projectId,omitempty"`
 	ProjectIDUpdates             UpdateSharedEnvironmentVariableRequestProjectIDUpdates `json:"projectIdUpdates,omitempty"`
@@ -243,6 +243,8 @@ func (c *Client) UpdateSharedEnvironmentVariable(ctx context.Context, request Up
 		return e, fmt.Errorf("expected 1 environment variable to be created, got %d", len(response.Updated))
 	}
 	// Override the value, as it returns the encrypted value.
-	response.Updated[0].Value = request.Value
+	if request.Value != nil {
+		response.Updated[0].Value = *request.Value
+	}
 	return response.Updated[0], err
 }

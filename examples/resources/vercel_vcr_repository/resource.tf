@@ -5,4 +5,5 @@ resource "vercel_project" "example" {
 resource "vercel_vcr_repository" "example" {
   project_id = vercel_project.example.id
   name       = "my-repository"
+  public     = true
 }

@@ -18,6 +18,7 @@ func TestImportStateInvalidIDReturnsBeforeClientCall(t *testing.T) {
 		{name: "access group", run: func(resp *resource.ImportStateResponse) { (&accessGroupResource{}).ImportState(ctx, req, resp) }},
 		{name: "access group project", run: func(resp *resource.ImportStateResponse) { (&accessGroupProjectResource{}).ImportState(ctx, req, resp) }},
 		{name: "attack challenge mode", run: func(resp *resource.ImportStateResponse) { (&attackChallengeModeResource{}).ImportState(ctx, req, resp) }},
+		{name: "audit log drain", run: func(resp *resource.ImportStateResponse) { (&auditLogDrainResource{}).ImportState(ctx, req, resp) }},
 		{name: "custom environment", run: func(resp *resource.ImportStateResponse) { (&customEnvironmentResource{}).ImportState(ctx, req, resp) }},
 		{name: "deployment protection exception", run: func(resp *resource.ImportStateResponse) {
 			(&deploymentProtectionExceptionResource{}).ImportState(ctx, req, resp)
@@ -49,6 +50,7 @@ func TestImportStateInvalidIDReturnsBeforeClientCall(t *testing.T) {
 		}},
 		{name: "team member", run: func(resp *resource.ImportStateResponse) { (&teamMemberResource{}).ImportState(ctx, req, resp) }},
 		{name: "trace drain", run: func(resp *resource.ImportStateResponse) { (&traceDrainResource{}).ImportState(ctx, req, resp) }},
+		{name: "webhook", run: func(resp *resource.ImportStateResponse) { (&webhookResource{}).ImportState(ctx, req, resp) }},
 	}
 
 	for _, tt := range tests {
