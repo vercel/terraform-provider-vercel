@@ -56,3 +56,20 @@ resource "vercel_webhook" "without_project_ids" {
 
 - `id` (String) The ID of the Webhook.
 - `secret` (String, Sensitive) A secret value which will be provided in the `x-vercel-signature` header and can be used to verify the authenticity of the webhook. See https://vercel.com/docs/observability/webhooks-overview/webhooks-api#securing-webhooks for further details.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# If a team is configured on the provider, use the webhook ID.
+terraform import vercel_webhook.example hook_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Alternatively, import using the team ID and webhook ID.
+terraform import vercel_webhook.example team_xxxxxxxxxxxxxxxxxxxxxxxx/hook_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Vercel does not return an existing webhook's signing secret, so the imported
+# secret value will be null.
+```
