@@ -10,6 +10,59 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
+func TestAcc_FirewallConfigIDIncludesProjectID(t *testing.T) {
+	name := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccFirewallConfigIDResource(name)),
+				Check: func(state *terraform.State) error {
+					firewall := state.RootModule().Resources["vercel_firewall_config.test"]
+					if firewall == nil {
+						return fmt.Errorf("vercel_firewall_config.test not found in state")
+					}
+
+					want := fmt.Sprintf("%s/%s", firewall.Primary.Attributes["team_id"], firewall.Primary.Attributes["project_id"])
+					if firewall.Primary.ID != want {
+						return fmt.Errorf("expected complete firewall config ID %q, got %q", want, firewall.Primary.ID)
+					}
+					return nil
+				},
+			},
+		},
+	})
+}
+
+func testAccFirewallConfigIDResource(name string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+    name = "test-acc-%[1]s-firewall-id"
+}
+
+resource "vercel_firewall_config" "test" {
+    project_id = vercel_project.test.id
+
+    rules {
+        rule {
+            name = "test-rule"
+            action = {
+                action = "deny"
+            }
+            condition_group = [{
+                conditions = [{
+                    type  = "path"
+                    op    = "re"
+                    value = "^/foo$"
+                }]
+            }]
+        }
+    }
+}
+`, name)
+}
+
 func getFirewallImportID(n string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[n]
