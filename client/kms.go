@@ -216,7 +216,7 @@ func (c *Client) RotateKMSIssuerKey(ctx context.Context, request RotateKMSIssuer
 	return k, nil
 }
 
-type CreateKMSIssuerPolicyRequest struct {
+type CreateKMSProjectGrantRequest struct {
 	IssuerID     string          `json:"-"`
 	TeamID       string          `json:"-"`
 	ProjectID    string          `json:"-"`
@@ -224,7 +224,7 @@ type CreateKMSIssuerPolicyRequest struct {
 	TokenClaims  json.RawMessage `json:"-"`
 }
 
-func (c *Client) CreateKMSIssuerPolicy(ctx context.Context, request CreateKMSIssuerPolicyRequest) (p KMSIssuerPolicy, err error) {
+func (c *Client) CreateKMSProjectGrant(ctx context.Context, request CreateKMSProjectGrantRequest) (p KMSIssuerPolicy, err error) {
 	url := fmt.Sprintf("%s/v1/kms/issuers/%s/policies", c.baseURL, request.IssuerID)
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
@@ -240,7 +240,7 @@ func (c *Client) CreateKMSIssuerPolicy(ctx context.Context, request CreateKMSIss
 		Environments: request.Environments,
 		TokenClaims:  request.TokenClaims,
 	}))
-	tflog.Info(ctx, "creating kms issuer policy", map[string]any{
+	tflog.Info(ctx, "creating kms project grant", map[string]any{
 		"url":  url,
 		"body": body,
 	})
@@ -256,7 +256,7 @@ func (c *Client) CreateKMSIssuerPolicy(ctx context.Context, request CreateKMSIss
 	return p, nil
 }
 
-type UpdateKMSIssuerPolicyRequest struct {
+type UpdateKMSProjectGrantRequest struct {
 	IssuerID     string          `json:"-"`
 	TeamID       string          `json:"-"`
 	ProjectID    string          `json:"-"`
@@ -264,7 +264,7 @@ type UpdateKMSIssuerPolicyRequest struct {
 	TokenClaims  json.RawMessage `json:"tokenClaims,omitempty"`
 }
 
-func (c *Client) UpdateKMSIssuerPolicy(ctx context.Context, request UpdateKMSIssuerPolicyRequest) (p KMSIssuerPolicy, err error) {
+func (c *Client) UpdateKMSProjectGrant(ctx context.Context, request UpdateKMSProjectGrantRequest) (p KMSIssuerPolicy, err error) {
 	url := fmt.Sprintf("%s/v1/kms/issuers/%s/policies/project-grant/%s", c.baseURL, request.IssuerID, request.ProjectID)
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
@@ -276,7 +276,7 @@ func (c *Client) UpdateKMSIssuerPolicy(ctx context.Context, request UpdateKMSIss
 		Environments: request.Environments,
 		TokenClaims:  request.TokenClaims,
 	}))
-	tflog.Info(ctx, "updating kms issuer policy", map[string]any{
+	tflog.Info(ctx, "updating kms project grant", map[string]any{
 		"url":  url,
 		"body": body,
 	})
@@ -292,12 +292,12 @@ func (c *Client) UpdateKMSIssuerPolicy(ctx context.Context, request UpdateKMSIss
 	return p, nil
 }
 
-func (c *Client) DeleteKMSIssuerPolicy(ctx context.Context, issuerID, projectID, teamID string) error {
+func (c *Client) DeleteKMSProjectGrant(ctx context.Context, issuerID, projectID, teamID string) error {
 	url := fmt.Sprintf("%s/v1/kms/issuers/%s/policies/project-grant/%s", c.baseURL, issuerID, projectID)
 	if c.TeamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
 	}
-	tflog.Info(ctx, "deleting kms issuer policy", map[string]any{
+	tflog.Info(ctx, "deleting kms project grant", map[string]any{
 		"url": url,
 	})
 	return c.doRequest(clientRequest{

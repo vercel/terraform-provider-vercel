@@ -7,7 +7,7 @@ description: |-
   A KMS Issuer signs JSON Web Tokens (JWTs) and exposes a JWKS endpoint at
   https://kms.vercel.com/{id}/jwks.json. An initial signing key is created
   automatically; use vercel_kms_signing_key to rotate keys and
-  vercel_kms_issuer_policy to grant projects the ability to sign tokens.
+  vercel_kms_project_grant to grant projects the ability to sign tokens.
 ---
 
 # vercel_kms_issuer (Resource)
@@ -17,7 +17,7 @@ Provides a Vercel KMS Issuer resource.
 A KMS Issuer signs JSON Web Tokens (JWTs) and exposes a JWKS endpoint at
 `https://kms.vercel.com/{id}/jwks.json`. An initial signing key is created
 automatically; use `vercel_kms_signing_key` to rotate keys and
-`vercel_kms_issuer_policy` to grant projects the ability to sign tokens.
+`vercel_kms_project_grant` to grant projects the ability to sign tokens.
 
 ## Example Usage
 

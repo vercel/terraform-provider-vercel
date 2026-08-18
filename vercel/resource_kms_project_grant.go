@@ -21,20 +21,20 @@ import (
 const kmsProjectGrantKind = "project-grant"
 
 var (
-	_ resource.Resource                = &kmsIssuerPolicyResource{}
-	_ resource.ResourceWithConfigure   = &kmsIssuerPolicyResource{}
-	_ resource.ResourceWithImportState = &kmsIssuerPolicyResource{}
+	_ resource.Resource                = &kmsProjectGrantResource{}
+	_ resource.ResourceWithConfigure   = &kmsProjectGrantResource{}
+	_ resource.ResourceWithImportState = &kmsProjectGrantResource{}
 )
 
-func newKMSIssuerPolicyResource() resource.Resource {
-	return &kmsIssuerPolicyResource{}
+func newKMSProjectGrantResource() resource.Resource {
+	return &kmsProjectGrantResource{}
 }
 
-type kmsIssuerPolicyResource struct {
+type kmsProjectGrantResource struct {
 	client *client.Client
 }
 
-type kmsIssuerPolicyResourceModel struct {
+type kmsProjectGrantResourceModel struct {
 	ID           types.String `tfsdk:"id"`
 	TeamID       types.String `tfsdk:"team_id"`
 	IssuerID     types.String `tfsdk:"issuer_id"`
@@ -45,11 +45,11 @@ type kmsIssuerPolicyResourceModel struct {
 	UpdatedAt    types.String `tfsdk:"updated_at"`
 }
 
-func (r *kmsIssuerPolicyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_kms_issuer_policy"
+func (r *kmsProjectGrantResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_kms_project_grant"
 }
 
-func (r *kmsIssuerPolicyResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *kmsProjectGrantResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -66,13 +66,13 @@ func (r *kmsIssuerPolicyResource) Configure(_ context.Context, req resource.Conf
 	r.client = client
 }
 
-func (r *kmsIssuerPolicyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *kmsProjectGrantResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: `
-Provides a Vercel KMS Issuer project-grant policy.
+Provides a Vercel KMS project grant.
 
-A project-grant policy authorizes a Vercel project to request signed JWTs from a
-KMS issuer in the listed environments, optionally with additional token claims.
+A project grant authorizes a Vercel project to request signed JWTs from a KMS
+issuer in the listed environments, optionally with additional token claims.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -130,9 +130,9 @@ func kmsFindProjectGrantPolicy(policies []client.KMSIssuerPolicy, projectID stri
 	return client.KMSIssuerPolicy{}, false
 }
 
-func (r *kmsIssuerPolicyResource) modelFromResponse(ctx context.Context, issuerID, projectID string, teamID types.String, policy client.KMSIssuerPolicy, prior kmsIssuerPolicyResourceModel) (kmsIssuerPolicyResourceModel, diag.Diagnostics) {
+func (r *kmsProjectGrantResource) modelFromResponse(ctx context.Context, issuerID, projectID string, teamID types.String, policy client.KMSIssuerPolicy, prior kmsProjectGrantResourceModel) (kmsProjectGrantResourceModel, diag.Diagnostics) {
 	environments, diags := kmsEnvironmentsValue(ctx, policy.Environments, prior.Environments)
-	model := kmsIssuerPolicyResourceModel{
+	model := kmsProjectGrantResourceModel{
 		ID:           types.StringValue(fmt.Sprintf("%s/%s", issuerID, projectID)),
 		TeamID:       teamID,
 		IssuerID:     types.StringValue(issuerID),
@@ -152,8 +152,8 @@ func kmsTokenClaimsRaw(value types.String) json.RawMessage {
 	return json.RawMessage(value.ValueString())
 }
 
-func (r *kmsIssuerPolicyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan kmsIssuerPolicyResourceModel
+func (r *kmsProjectGrantResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan kmsProjectGrantResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -167,7 +167,7 @@ func (r *kmsIssuerPolicyResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	out, err := r.client.CreateKMSIssuerPolicy(ctx, client.CreateKMSIssuerPolicyRequest{
+	out, err := r.client.CreateKMSProjectGrant(ctx, client.CreateKMSProjectGrantRequest{
 		IssuerID:     plan.IssuerID.ValueString(),
 		TeamID:       plan.TeamID.ValueString(),
 		ProjectID:    plan.ProjectID.ValueString(),
@@ -176,8 +176,8 @@ func (r *kmsIssuerPolicyResource) Create(ctx context.Context, req resource.Creat
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error creating KMS Issuer Policy",
-			"Could not create KMS Issuer Policy, unexpected error: "+err.Error(),
+			"Error creating KMS Project Grant",
+			"Could not create KMS Project Grant, unexpected error: "+err.Error(),
 		)
 		return
 	}
@@ -189,7 +189,7 @@ func (r *kmsIssuerPolicyResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	tflog.Info(ctx, "created kms issuer policy", map[string]any{
+	tflog.Info(ctx, "created kms project grant", map[string]any{
 		"issuer_id":  plan.IssuerID.ValueString(),
 		"project_id": plan.ProjectID.ValueString(),
 	})
@@ -198,8 +198,8 @@ func (r *kmsIssuerPolicyResource) Create(ctx context.Context, req resource.Creat
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r *kmsIssuerPolicyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state kmsIssuerPolicyResourceModel
+func (r *kmsProjectGrantResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state kmsProjectGrantResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -213,7 +213,7 @@ func (r *kmsIssuerPolicyResource) Read(ctx context.Context, req resource.ReadReq
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error reading KMS Issuer Policy",
+			"Error reading KMS Project Grant",
 			fmt.Sprintf("Could not read KMS Issuer %s, unexpected error: %s", state.IssuerID.ValueString(), err),
 		)
 		return
@@ -235,8 +235,8 @@ func (r *kmsIssuerPolicyResource) Read(ctx context.Context, req resource.ReadReq
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r *kmsIssuerPolicyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan kmsIssuerPolicyResourceModel
+func (r *kmsProjectGrantResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan kmsProjectGrantResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -250,7 +250,7 @@ func (r *kmsIssuerPolicyResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	out, err := r.client.UpdateKMSIssuerPolicy(ctx, client.UpdateKMSIssuerPolicyRequest{
+	out, err := r.client.UpdateKMSProjectGrant(ctx, client.UpdateKMSProjectGrantRequest{
 		IssuerID:     plan.IssuerID.ValueString(),
 		TeamID:       plan.TeamID.ValueString(),
 		ProjectID:    plan.ProjectID.ValueString(),
@@ -263,8 +263,8 @@ func (r *kmsIssuerPolicyResource) Update(ctx context.Context, req resource.Updat
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error updating KMS Issuer Policy",
-			fmt.Sprintf("Could not update KMS Issuer Policy %s/%s, unexpected error: %s", plan.IssuerID.ValueString(), plan.ProjectID.ValueString(), err),
+			"Error updating KMS Project Grant",
+			fmt.Sprintf("Could not update KMS Project Grant %s/%s, unexpected error: %s", plan.IssuerID.ValueString(), plan.ProjectID.ValueString(), err),
 		)
 		return
 	}
@@ -280,37 +280,37 @@ func (r *kmsIssuerPolicyResource) Update(ctx context.Context, req resource.Updat
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r *kmsIssuerPolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state kmsIssuerPolicyResourceModel
+func (r *kmsProjectGrantResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state kmsProjectGrantResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.client.DeleteKMSIssuerPolicy(ctx, state.IssuerID.ValueString(), state.ProjectID.ValueString(), state.TeamID.ValueString())
+	err := r.client.DeleteKMSProjectGrant(ctx, state.IssuerID.ValueString(), state.ProjectID.ValueString(), state.TeamID.ValueString())
 	if client.NotFound(err) {
 		return
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error deleting KMS Issuer Policy",
-			fmt.Sprintf("Could not delete KMS Issuer Policy %s/%s, unexpected error: %s", state.IssuerID.ValueString(), state.ProjectID.ValueString(), err),
+			"Error deleting KMS Project Grant",
+			fmt.Sprintf("Could not delete KMS Project Grant %s/%s, unexpected error: %s", state.IssuerID.ValueString(), state.ProjectID.ValueString(), err),
 		)
 		return
 	}
 
-	tflog.Info(ctx, "deleted kms issuer policy", map[string]any{
+	tflog.Info(ctx, "deleted kms project grant", map[string]any{
 		"issuer_id":  state.IssuerID.ValueString(),
 		"project_id": state.ProjectID.ValueString(),
 	})
 }
 
-func (r *kmsIssuerPolicyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *kmsProjectGrantResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	teamID, issuerID, projectID, ok := splitInto2Or3(req.ID)
 	if !ok {
 		resp.Diagnostics.AddError(
-			"Error importing KMS Issuer Policy",
+			"Error importing KMS Project Grant",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/issuer_id/project_id\" or \"issuer_id/project_id\"", req.ID),
 		)
 		return
@@ -323,8 +323,8 @@ func (r *kmsIssuerPolicyResource) ImportState(ctx context.Context, req resource.
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error importing KMS Issuer Policy",
-			fmt.Sprintf("Could not import KMS Issuer Policy %s %s/%s, unexpected error: %s", teamID, issuerID, projectID, err),
+			"Error importing KMS Project Grant",
+			fmt.Sprintf("Could not import KMS Project Grant %s %s/%s, unexpected error: %s", teamID, issuerID, projectID, err),
 		)
 		return
 	}
@@ -332,13 +332,13 @@ func (r *kmsIssuerPolicyResource) ImportState(ctx context.Context, req resource.
 	policy, ok := kmsFindProjectGrantPolicy(out.Policies, projectID)
 	if !ok {
 		resp.Diagnostics.AddError(
-			"Error importing KMS Issuer Policy",
+			"Error importing KMS Project Grant",
 			fmt.Sprintf("No project-grant policy for project %s found on issuer %s", projectID, issuerID),
 		)
 		return
 	}
 
-	result, diags := r.modelFromResponse(ctx, issuerID, projectID, toTeamID(r.client.TeamID(teamID)), policy, kmsIssuerPolicyResourceModel{})
+	result, diags := r.modelFromResponse(ctx, issuerID, projectID, toTeamID(r.client.TeamID(teamID)), policy, kmsProjectGrantResourceModel{})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
