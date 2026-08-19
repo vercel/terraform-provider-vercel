@@ -3,7 +3,6 @@ package vercel
 import (
 	"context"
 	"encoding/json"
-	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -135,26 +134,11 @@ func normalizeJSON(s string) (string, error) {
 	return string(b), nil
 }
 
-func kmsSameStringSet(left, right []string) bool {
-	leftCopy := slices.Clone(left)
-	rightCopy := slices.Clone(right)
-	slices.Sort(leftCopy)
-	slices.Sort(rightCopy)
-	return slices.Equal(leftCopy, rightCopy)
-}
-
-// kmsEnvironmentsValue keeps the prior (configured) environments list when it
-// contains the same set of values returned by the API, so that ordering
-// differences do not produce a perpetual diff.
-func kmsEnvironmentsValue(ctx context.Context, server []string, prior types.List) (types.List, diag.Diagnostics) {
-	if !prior.IsNull() && !prior.IsUnknown() {
-		var priorEnvs []string
-		diags := prior.ElementsAs(ctx, &priorEnvs, false)
-		if !diags.HasError() && kmsSameStringSet(priorEnvs, server) {
-			return prior, diags
-		}
-	}
-	return types.ListValueFrom(ctx, types.StringType, server)
+// kmsEnvironmentsValue builds the environments set from the API response.
+// Environments are unordered, so a set avoids the ordering-dependent diffs a
+// list would produce on refresh and import.
+func kmsEnvironmentsValue(ctx context.Context, server []string) (types.Set, diag.Diagnostics) {
+	return types.SetValueFrom(ctx, types.StringType, server)
 }
 
 // kmsTokenClaimsValue keeps the prior (configured) token_claims string when it

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -39,7 +39,7 @@ type kmsProjectGrantResourceModel struct {
 	TeamID       types.String `tfsdk:"team_id"`
 	IssuerID     types.String `tfsdk:"issuer_id"`
 	ProjectID    types.String `tfsdk:"project_id"`
-	Environments types.List   `tfsdk:"environments"`
+	Environments types.Set    `tfsdk:"environments"`
 	TokenClaims  types.String `tfsdk:"token_claims"`
 	CreatedAt    types.String `tfsdk:"created_at"`
 	UpdatedAt    types.String `tfsdk:"updated_at"`
@@ -96,12 +96,12 @@ issuer in the listed environments, optionally with additional token claims.
 				Description:   "The ID of the Vercel project being granted access.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"environments": schema.ListAttribute{
+			"environments": schema.SetAttribute{
 				Required:    true,
 				ElementType: types.StringType,
 				Description: "The environments in which the project may request signed tokens (for example `production`, `preview`).",
-				Validators: []validator.List{
-					listvalidator.SizeAtLeast(1),
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
 				},
 			},
 			"token_claims": schema.StringAttribute{
@@ -131,7 +131,7 @@ func kmsFindProjectGrantPolicy(policies []client.KMSIssuerPolicy, projectID stri
 }
 
 func (r *kmsProjectGrantResource) modelFromResponse(ctx context.Context, issuerID, projectID string, teamID types.String, policy client.KMSIssuerPolicy, prior kmsProjectGrantResourceModel) (kmsProjectGrantResourceModel, diag.Diagnostics) {
-	environments, diags := kmsEnvironmentsValue(ctx, policy.Environments, prior.Environments)
+	environments, diags := kmsEnvironmentsValue(ctx, policy.Environments)
 	model := kmsProjectGrantResourceModel{
 		ID:           types.StringValue(fmt.Sprintf("%s/%s", issuerID, projectID)),
 		TeamID:       teamID,

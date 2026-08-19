@@ -21,7 +21,7 @@ func TestAcc_KMSProjectGrantResource(t *testing.T) {
 					resource.TestCheckResourceAttrPair("vercel_kms_project_grant.test", "issuer_id", "vercel_kms_issuer.test", "id"),
 					resource.TestCheckResourceAttrPair("vercel_kms_project_grant.test", "project_id", "vercel_project.test", "id"),
 					resource.TestCheckResourceAttr("vercel_kms_project_grant.test", "environments.#", "1"),
-					resource.TestCheckResourceAttr("vercel_kms_project_grant.test", "environments.0", "production"),
+					resource.TestCheckTypeSetElemAttr("vercel_kms_project_grant.test", "environments.*", "production"),
 				),
 			},
 			{

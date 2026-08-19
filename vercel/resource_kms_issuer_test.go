@@ -63,7 +63,7 @@ func TestAcc_KMSIssuerResource(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_kms_issuer.test", "origin", "vercel"),
 					resource.TestCheckResourceAttrSet("vercel_kms_issuer.test", "owner_id"),
 					resource.TestCheckResourceAttrSet("vercel_kms_issuer.test", "signing_keys.0.key_id"),
-					resource.TestCheckResourceAttrSet("vercel_kms_issuer.test", "signing_keys.0.public_key"),
+					resource.TestCheckResourceAttrSet("vercel_kms_issuer.test", "signing_keys.0.public_key_jwk"),
 				),
 			},
 			{

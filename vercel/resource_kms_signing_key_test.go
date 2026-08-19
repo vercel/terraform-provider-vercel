@@ -22,7 +22,9 @@ func TestAcc_KMSSigningKeyResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_kms_signing_key.test", "id"),
 					resource.TestCheckResourceAttrPair("vercel_kms_signing_key.test", "issuer_id", "vercel_kms_issuer.test", "id"),
 					resource.TestCheckResourceAttrSet("vercel_kms_signing_key.test", "public_key_jwk"),
-					resource.TestCheckResourceAttr("vercel_kms_signing_key.test", "status", "active"),
+					// A freshly rotated key is `pending` until its public key
+					// propagates and it is activated, so only assert it is set.
+					resource.TestCheckResourceAttrSet("vercel_kms_signing_key.test", "status"),
 					captureKMSSigningKeyID("vercel_kms_signing_key.test", &firstKeyID),
 				),
 			},

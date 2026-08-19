@@ -42,7 +42,7 @@ resource "vercel_kms_project_grant" "example" {
 
 ### Required
 
-- `environments` (List of String) The environments in which the project may request signed tokens (for example `production`, `preview`).
+- `environments` (Set of String) The environments in which the project may request signed tokens (for example `production`, `preview`).
 - `issuer_id` (String) The ID of the issuer this policy is attached to.
 - `project_id` (String) The ID of the Vercel project being granted access.
 
