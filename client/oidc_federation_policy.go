@@ -27,7 +27,6 @@ type OIDCResources struct {
 type OIDCFederationPolicy struct {
 	PolicyID    string         `json:"policyId"`
 	ClientID    string         `json:"clientId"`
-	AppID       string         `json:"appId"`
 	IssuerURL   string         `json:"issuerUrl"`
 	TeamID      string         `json:"teamId"`
 	Name        *string        `json:"name"`
@@ -35,8 +34,6 @@ type OIDCFederationPolicy struct {
 	Permissions []string       `json:"permissions"`
 	Commands    []string       `json:"commands"`
 	Resources   *OIDCResources `json:"resources"`
-	CreatedAt   int64          `json:"createdAt"`
-	UpdatedAt   int64          `json:"updatedAt"`
 }
 
 type CreateOIDCFederationPolicyRequest struct {

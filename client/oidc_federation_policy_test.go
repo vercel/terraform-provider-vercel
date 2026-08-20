@@ -18,9 +18,7 @@ const oidcFederationPolicyResponse = `{
 	"claims":[{"name":"repository","values":[{"value":"vercel/functions","wildcards":false}]}],
 	"permissions":["*"],
 	"commands":null,
-	"resources":{"projectIds":["prj_123"]},
-	"createdAt":123,
-	"updatedAt":456
+	"resources":{"projectIds":["prj_123"]}
 }`
 
 func TestCreateOIDCFederationPolicy(t *testing.T) {
@@ -160,7 +158,7 @@ func TestDeleteOIDCFederationPolicy(t *testing.T) {
 
 func assertOIDCFederationPolicyResponse(t *testing.T, policy OIDCFederationPolicy) {
 	t.Helper()
-	if policy.PolicyID != "pol_123" || policy.ClientID != "cli_123" || policy.AppID != "cli_123" {
+	if policy.PolicyID != "pol_123" || policy.ClientID != "cli_123" {
 		t.Fatalf("policy identifiers = %#v", policy)
 	}
 	if policy.Name == nil || *policy.Name != "GitHub Actions" || policy.TeamID != "team_123" {
@@ -171,8 +169,5 @@ func assertOIDCFederationPolicyResponse(t *testing.T, policy OIDCFederationPolic
 	}
 	if policy.Commands != nil || policy.Resources == nil || policy.Resources.ProjectIDs[0] != "prj_123" {
 		t.Fatalf("policy boundaries = commands %#v, resources %#v", policy.Commands, policy.Resources)
-	}
-	if policy.CreatedAt != 123 || policy.UpdatedAt != 456 {
-		t.Fatalf("policy timestamps = %d, %d", policy.CreatedAt, policy.UpdatedAt)
 	}
 }

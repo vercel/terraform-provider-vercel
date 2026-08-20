@@ -4,7 +4,7 @@ page_title: "vercel_oidc_federation_policy Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
   Provides an OIDC Federation Policy resource.
-  OIDC federation policies allow trusted external workloads to exchange an OIDC token for a short-lived Vercel access token. The client ID selects the Vercel application receiving access, while claims constrain the external workload identity.
+  OIDC federation policies allow trusted external workloads to exchange an OIDC token for a short-lived Vercel access token. The client selects the Vercel CLI receiving access, while claims constrain the external workload identity.
   ~> This API currently supports first-party CLI clients enabled for the team, including the Vercel CLI and Turborepo CLI. The API token used by the provider must have permission to manage OIDC federation policies for the team.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 Provides an OIDC Federation Policy resource.
 
-OIDC federation policies allow trusted external workloads to exchange an OIDC token for a short-lived Vercel access token. The client ID selects the Vercel application receiving access, while claims constrain the external workload identity.
+OIDC federation policies allow trusted external workloads to exchange an OIDC token for a short-lived Vercel access token. The client selects the Vercel CLI receiving access, while claims constrain the external workload identity.
 
 ~> This API currently supports first-party CLI clients enabled for the team, including the Vercel CLI and Turborepo CLI. The API token used by the provider must have permission to manage OIDC federation policies for the team.
 
@@ -21,7 +21,7 @@ OIDC federation policies allow trusted external workloads to exchange an OIDC to
 ```terraform
 resource "vercel_oidc_federation_policy" "turborepo_github_actions" {
   name       = "Turborepo for acme/widgets GitHub Workflows"
-  client_id  = "cl_kyUx2zVvA4MGptBohkmtYHJly2XltXzD"
+  client     = "turborepo"
   issuer_url = "https://token.actions.githubusercontent.com"
 
   claims = [
@@ -57,7 +57,7 @@ resource "vercel_oidc_federation_policy" "turborepo_github_actions" {
 ### Required
 
 - `claims` (Attributes List) OIDC claims that must all match for a token to be exchanged. (see [below for nested schema](#nestedatt--claims))
-- `client_id` (String) The ID of the Vercel application whose access tokens this policy permits the workload to obtain.
+- `client` (String) The CLI whose access tokens this policy permits the workload to obtain. Valid values are `turborepo` and `vercel`.
 - `issuer_url` (String) The HTTPS issuer URL in OIDC tokens recognized by this policy.
 
 ### Optional
@@ -70,9 +70,7 @@ resource "vercel_oidc_federation_policy" "turborepo_github_actions" {
 
 ### Read-Only
 
-- `created_at` (Number) The policy creation time as a Unix timestamp in milliseconds.
 - `id` (String) The ID of the OIDC federation policy.
-- `updated_at` (Number) The last policy update time as a Unix timestamp in milliseconds.
 
 <a id="nestedatt--claims"></a>
 ### Nested Schema for `claims`

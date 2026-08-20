@@ -40,18 +40,23 @@ type oidcFederationPolicyResource struct {
 	client *client.Client
 }
 
+const (
+	oidcFederationClientTurborepo = "turborepo"
+	oidcFederationClientVercel    = "vercel"
+	turborepoCLIClientID          = "cl_kyUx2zVvA4MGptBohkmtYHJly2XltXzD"
+	vercelCLIClientID             = "cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp"
+)
+
 type oidcFederationPolicyModel struct {
 	ID          types.String                  `tfsdk:"id"`
 	TeamID      types.String                  `tfsdk:"team_id"`
-	ClientID    types.String                  `tfsdk:"client_id"`
+	Client      types.String                  `tfsdk:"client"`
 	IssuerURL   types.String                  `tfsdk:"issuer_url"`
 	Name        types.String                  `tfsdk:"name"`
 	Claims      []oidcFederationClaimModel    `tfsdk:"claims"`
 	Permissions types.Set                     `tfsdk:"permissions"`
 	Commands    types.Set                     `tfsdk:"commands"`
 	Resources   *oidcFederationResourcesModel `tfsdk:"resources"`
-	CreatedAt   types.Int64                   `tfsdk:"created_at"`
-	UpdatedAt   types.Int64                   `tfsdk:"updated_at"`
 }
 
 type oidcFederationClaimModel struct {
@@ -103,7 +108,7 @@ func (r *oidcFederationPolicyResource) Schema(_ context.Context, _ resource.Sche
 		Description: `
 Provides an OIDC Federation Policy resource.
 
-OIDC federation policies allow trusted external workloads to exchange an OIDC token for a short-lived Vercel access token. The client ID selects the Vercel application receiving access, while claims constrain the external workload identity.
+OIDC federation policies allow trusted external workloads to exchange an OIDC token for a short-lived Vercel access token. The client selects the Vercel CLI receiving access, while claims constrain the external workload identity.
 
 ~> This API currently supports first-party CLI clients enabled for the team, including the Vercel CLI and Turborepo CLI. The API token used by the provider must have permission to manage OIDC federation policies for the team.`,
 		Attributes: map[string]schema.Attribute{
@@ -118,12 +123,12 @@ OIDC federation policies allow trusted external workloads to exchange an OIDC to
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
-			"client_id": schema.StringAttribute{
-				Description:   "The ID of the Vercel application whose access tokens this policy permits the workload to obtain.",
+			"client": schema.StringAttribute{
+				Description:   "The CLI whose access tokens this policy permits the workload to obtain. Valid values are `turborepo` and `vercel`.",
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(1, 256),
+					stringvalidator.OneOf(oidcFederationClientTurborepo, oidcFederationClientVercel),
 				},
 			},
 			"issuer_url": schema.StringAttribute{
@@ -213,15 +218,29 @@ OIDC federation policies allow trusted external workloads to exchange an OIDC to
 					},
 				},
 			},
-			"created_at": schema.Int64Attribute{
-				Description: "The policy creation time as a Unix timestamp in milliseconds.",
-				Computed:    true,
-			},
-			"updated_at": schema.Int64Attribute{
-				Description: "The last policy update time as a Unix timestamp in milliseconds.",
-				Computed:    true,
-			},
 		},
+	}
+}
+
+func oidcFederationClientID(clientName string) string {
+	switch clientName {
+	case oidcFederationClientTurborepo:
+		return turborepoCLIClientID
+	case oidcFederationClientVercel:
+		return vercelCLIClientID
+	default:
+		return ""
+	}
+}
+
+func oidcFederationClientName(clientID string) (string, bool) {
+	switch clientID {
+	case turborepoCLIClientID:
+		return oidcFederationClientTurborepo, true
+	case vercelCLIClientID:
+		return oidcFederationClientVercel, true
+	default:
+		return "", false
 	}
 }
 
@@ -254,6 +273,11 @@ func oidcFederationStringSet(ctx context.Context, value types.Set) ([]string, di
 
 func oidcFederationPolicyFromClient(ctx context.Context, out client.OIDCFederationPolicy) (oidcFederationPolicyModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
+	clientName, ok := oidcFederationClientName(out.ClientID)
+	if !ok {
+		diags.AddError("Unsupported OIDC federation policy client", fmt.Sprintf("The policy uses unsupported client ID %q.", out.ClientID))
+	}
+
 	permissions, permissionDiags := types.SetValueFrom(ctx, types.StringType, out.Permissions)
 	diags.Append(permissionDiags...)
 
@@ -294,15 +318,13 @@ func oidcFederationPolicyFromClient(ctx context.Context, out client.OIDCFederati
 	return oidcFederationPolicyModel{
 		ID:          types.StringValue(out.PolicyID),
 		TeamID:      toTeamID(out.TeamID),
-		ClientID:    types.StringValue(out.ClientID),
+		Client:      types.StringValue(clientName),
 		IssuerURL:   types.StringValue(out.IssuerURL),
 		Name:        name,
 		Claims:      claims,
 		Permissions: permissions,
 		Commands:    commands,
 		Resources:   resources,
-		CreatedAt:   types.Int64Value(out.CreatedAt),
-		UpdatedAt:   types.Int64Value(out.UpdatedAt),
 	}, diags
 }
 
@@ -323,7 +345,7 @@ func (r *oidcFederationPolicyResource) Create(ctx context.Context, req resource.
 
 	request := client.CreateOIDCFederationPolicyRequest{
 		TeamID:      plan.TeamID.ValueString(),
-		ClientID:    plan.ClientID.ValueString(),
+		ClientID:    oidcFederationClientID(plan.Client.ValueString()),
 		IssuerURL:   plan.IssuerURL.ValueString(),
 		Claims:      oidcFederationClaimsToClient(plan.Claims),
 		Permissions: permissions,

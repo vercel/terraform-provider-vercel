@@ -14,9 +14,9 @@ import (
 )
 
 func TestAcc_OIDCFederationPolicyResource(t *testing.T) {
-	clientID := os.Getenv("VERCEL_TERRAFORM_TESTING_OIDC_CLIENT_ID")
-	if clientID == "" {
-		t.Skip("VERCEL_TERRAFORM_TESTING_OIDC_CLIENT_ID must identify an OIDC-federation-enabled CLI client")
+	clientName := os.Getenv("VERCEL_TERRAFORM_TESTING_OIDC_CLIENT")
+	if clientName == "" {
+		t.Skip("VERCEL_TERRAFORM_TESTING_OIDC_CLIENT must identify an OIDC-federation-enabled CLI client")
 	}
 
 	name := acctest.RandString(16)
@@ -26,7 +26,7 @@ func TestAcc_OIDCFederationPolicyResource(t *testing.T) {
 		CheckDestroy:             testCheckOIDCFederationPolicyDeleted(testClient(t), resourceName),
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccOIDCFederationPolicyConfig(clientID, name, false)),
+				Config: cfg(testAccOIDCFederationPolicyConfig(clientName, name, false)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckOIDCFederationPolicyExists(testClient(t), resourceName),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -44,7 +44,7 @@ func TestAcc_OIDCFederationPolicyResource(t *testing.T) {
 				ImportStateIdFunc: oidcFederationPolicyImportID(resourceName),
 			},
 			{
-				Config: cfg(testAccOIDCFederationPolicyConfig(clientID, name, true)),
+				Config: cfg(testAccOIDCFederationPolicyConfig(clientName, name, true)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckOIDCFederationPolicyExists(testClient(t), resourceName),
 					resource.TestCheckResourceAttr(resourceName, "name", "test-acc-"+name+"-updated"),
@@ -95,7 +95,7 @@ func testCheckOIDCFederationPolicyDeleted(testClient *client.Client, resourceNam
 	}
 }
 
-func testAccOIDCFederationPolicyConfig(clientID, name string, updated bool) string {
+func testAccOIDCFederationPolicyConfig(clientName, name string, updated bool) string {
 	policyName := "test-acc-" + name
 	if updated {
 		policyName += "-updated"
@@ -103,7 +103,7 @@ func testAccOIDCFederationPolicyConfig(clientID, name string, updated bool) stri
 	return fmt.Sprintf(`
 resource "vercel_oidc_federation_policy" "test" {
   name       = %[1]q
-  client_id  = %[2]q
+  client     = %[2]q
   issuer_url = "https://token.actions.githubusercontent.com"
 
   claims = [
@@ -122,5 +122,5 @@ resource "vercel_oidc_federation_policy" "test" {
     project_ids = ["*"]
   }
 }
-`, policyName, clientID, name)
+`, policyName, clientName, name)
 }
