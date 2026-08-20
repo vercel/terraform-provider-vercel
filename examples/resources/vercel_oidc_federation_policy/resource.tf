@@ -22,7 +22,7 @@ resource "vercel_oidc_federation_policy" "turborepo_github_actions" {
     }
   ]
 
-  permissions = ["*"]
+  permissions = ["read-write:remote-cache"]
 
   resources = {
     project_ids = ["*"]

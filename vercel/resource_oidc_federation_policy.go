@@ -190,7 +190,7 @@ OIDC federation policies allow trusted external workloads to exchange an OIDC to
 				},
 			},
 			"permissions": schema.SetAttribute{
-				Description: "Permissions granted to exchanged tokens. Use `[\"*\"]` for every permission authorized for the selected client. Exactly one of `permissions` or `commands` must be configured.",
+				Description: "Permissions granted to exchanged tokens. For Turborepo remote caching, use `read:remote-cache` for read-only access or `read-write:remote-cache` for read and write access. Use `[\"*\"]` only when the policy should inherit every permission authorized for the selected client. Exactly one of `permissions` or `commands` must be configured.",
 				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,

@@ -43,7 +43,7 @@ resource "vercel_oidc_federation_policy" "turborepo_github_actions" {
     }
   ]
 
-  permissions = ["*"]
+  permissions = ["read-write:remote-cache"]
 
   resources = {
     project_ids = ["*"]
@@ -64,7 +64,7 @@ resource "vercel_oidc_federation_policy" "turborepo_github_actions" {
 
 - `commands` (Set of String) Vercel CLI command IDs allowed for exchanged tokens. Only supported for the Vercel CLI client. Exactly one of `commands` or `permissions` must be configured.
 - `name` (String) A human-readable name describing the policy.
-- `permissions` (Set of String) Permissions granted to exchanged tokens. Use `["*"]` for every permission authorized for the selected client. Exactly one of `permissions` or `commands` must be configured.
+- `permissions` (Set of String) Permissions granted to exchanged tokens. For Turborepo remote caching, use `read:remote-cache` for read-only access or `read-write:remote-cache` for read and write access. Use `["*"]` only when the policy should inherit every permission authorized for the selected client. Exactly one of `permissions` or `commands` must be configured.
 - `resources` (Attributes) Optional project boundary for exchanged tokens. Omitting this block leaves access unbounded within the permissions authorized for the client. (see [below for nested schema](#nestedatt--resources))
 - `team_id` (String) The ID of the team the policy should exist under. Required when a default team has not been set in the provider.
 

@@ -34,7 +34,7 @@ func TestAcc_OIDCFederationPolicyResource(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", "test-acc-"+name),
 					resource.TestCheckResourceAttr(resourceName, "issuer_url", "https://token.actions.githubusercontent.com"),
 					resource.TestCheckResourceAttr(resourceName, "claims.#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, "permissions.*", "*"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "permissions.*", "read-write:remote-cache"),
 				),
 			},
 			{
@@ -117,7 +117,7 @@ resource "vercel_oidc_federation_policy" "test" {
     }
   ]
 
-  permissions = ["*"]
+  permissions = ["read-write:remote-cache"]
   resources = {
     project_ids = ["*"]
   }
