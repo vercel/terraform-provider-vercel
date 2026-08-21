@@ -4,6 +4,7 @@ page_title: "vercel_kms_issuer Data Source - terraform-provider-vercel"
 subcategory: ""
 description: |-
   Provides information about an existing Vercel KMS Issuer.
+  ~> Note: Vercel KMS is currently in beta. Its resources, data sources, and the underlying API may change in backwards-incompatible ways in future releases of the provider.
   A KMS Issuer signs JSON Web Tokens (JWTs) and exposes a JWKS endpoint at
   https://kms.vercel.com/{id}/jwks.json.
 ---
@@ -11,6 +12,8 @@ description: |-
 # vercel_kms_issuer (Data Source)
 
 Provides information about an existing Vercel KMS Issuer.
+
+~> **Note:** Vercel KMS is currently in beta. Its resources, data sources, and the underlying API may change in backwards-incompatible ways in future releases of the provider.
 
 A KMS Issuer signs JSON Web Tokens (JWTs) and exposes a JWKS endpoint at
 `https://kms.vercel.com/{id}/jwks.json`.

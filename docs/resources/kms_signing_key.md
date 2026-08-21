@@ -4,6 +4,7 @@ page_title: "vercel_kms_signing_key Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
   Provides a Vercel KMS signing key created by rotating an issuer's key.
+  ~> Note: Vercel KMS is currently in beta. Its resources, data sources, and the underlying API may change in backwards-incompatible ways in future releases of the provider.
   Rotating a key is an imperative operation. This resource creates a new signing
   key when it is first applied, and creates a replacement key whenever a
   RequiresReplace input changes. Use the keepers map to force a
@@ -15,6 +16,8 @@ description: |-
 # vercel_kms_signing_key (Resource)
 
 Provides a Vercel KMS signing key created by rotating an issuer's key.
+
+~> **Note:** Vercel KMS is currently in beta. Its resources, data sources, and the underlying API may change in backwards-incompatible ways in future releases of the provider.
 
 Rotating a key is an imperative operation. This resource creates a new signing
 key when it is first applied, and creates a replacement key whenever a

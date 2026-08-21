@@ -71,6 +71,8 @@ func (r *kmsProjectGrantResource) Schema(_ context.Context, _ resource.SchemaReq
 		Description: `
 Provides a Vercel KMS project grant.
 
+~> **Note:** Vercel KMS is currently in beta. Its resources, data sources, and the underlying API may change in backwards-incompatible ways in future releases of the provider.
+
 A project grant authorizes a Vercel project to request signed JWTs from a KMS
 issuer in the listed environments, optionally with additional token claims.
 `,

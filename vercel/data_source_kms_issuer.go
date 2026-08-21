@@ -110,6 +110,8 @@ func (d *kmsIssuerDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 		Description: `
 Provides information about an existing Vercel KMS Issuer.
 
+~> **Note:** Vercel KMS is currently in beta. Its resources, data sources, and the underlying API may change in backwards-incompatible ways in future releases of the provider.
+
 A KMS Issuer signs JSON Web Tokens (JWTs) and exposes a JWKS endpoint at
 ` + "`https://kms.vercel.com/{id}/jwks.json`" + `.
 `,

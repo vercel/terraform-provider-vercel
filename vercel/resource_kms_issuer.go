@@ -105,6 +105,8 @@ func (r *kmsIssuerResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 		Description: `
 Provides a Vercel KMS Issuer resource.
 
+~> **Note:** Vercel KMS is currently in beta. Its resources, data sources, and the underlying API may change in backwards-incompatible ways in future releases of the provider.
+
 A KMS Issuer signs JSON Web Tokens (JWTs) and exposes a JWKS endpoint at
 ` + "`https://kms.vercel.com/{id}/jwks.json`" + `. An initial signing key is created
 automatically; use ` + "`vercel_kms_signing_key`" + ` to rotate keys and
