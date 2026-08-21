@@ -80,16 +80,17 @@ type CreateKMSIssuerRequest struct {
 	Name      string `json:"name"`
 	Algorithm string `json:"algorithm,omitempty"`
 	ImportKey string `json:"importKey,omitempty"`
-	KeyID     string `json:"keyId,omitempty"`
+	KeyID     string `json:"importKeyId,omitempty"`
 	TeamID    string `json:"-"`
 }
 
 func (c *Client) CreateKMSIssuer(ctx context.Context, request CreateKMSIssuerRequest) (i KMSIssuer, err error) {
 	url := c.kmsIssuersURL(request.TeamID)
 	body := string(mustMarshal(request))
+	// The request body can contain imported private key material, so the body
+	// is deliberately not logged.
 	tflog.Info(ctx, "creating kms issuer", map[string]any{
-		"url":  url,
-		"body": body,
+		"url": url,
 	})
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
@@ -194,7 +195,7 @@ func (c *Client) DeleteKMSIssuer(ctx context.Context, issuerID, teamID string) e
 type RotateKMSIssuerKeyRequest struct {
 	RevokePreviousAt string `json:"revokePreviousAt,omitempty"`
 	ImportKey        string `json:"importKey,omitempty"`
-	KeyID            string `json:"keyId,omitempty"`
+	KeyID            string `json:"importKeyId,omitempty"`
 	IssuerID         string `json:"-"`
 	TeamID           string `json:"-"`
 }
@@ -205,9 +206,10 @@ func (c *Client) RotateKMSIssuerKey(ctx context.Context, request RotateKMSIssuer
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
 	body := string(mustMarshal(request))
+	// The request body can contain imported private key material, so the body
+	// is deliberately not logged.
 	tflog.Info(ctx, "rotating kms issuer key", map[string]any{
-		"url":  url,
-		"body": body,
+		"url": url,
 	})
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
@@ -274,9 +276,12 @@ func (c *Client) UpdateKMSProjectGrant(ctx context.Context, request UpdateKMSPro
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
+	// TokenClaims is sent without omitempty so that a nil value marshals to an
+	// explicit `null`. The API treats an omitted `tokenClaims` as "leave
+	// unchanged" and only clears the stored claims when it is explicitly null.
 	body := string(mustMarshal(struct {
 		Environments []string        `json:"environments,omitempty"`
-		TokenClaims  json.RawMessage `json:"tokenClaims,omitempty"`
+		TokenClaims  json.RawMessage `json:"tokenClaims"`
 	}{
 		Environments: request.Environments,
 		TokenClaims:  request.TokenClaims,

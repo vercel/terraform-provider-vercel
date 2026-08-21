@@ -107,6 +107,9 @@ issuer in the listed environments, optionally with additional token claims.
 			"token_claims": schema.StringAttribute{
 				Optional:    true,
 				Description: "Additional claims KMS should include in signed JWTs for this policy, as a JSON-encoded object.",
+				Validators: []validator.String{
+					validateJSONObject(),
+				},
 			},
 			"created_at": schema.StringAttribute{
 				Computed:      true,
