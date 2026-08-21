@@ -77,10 +77,6 @@ Deleting this resource disables tracing for the project.`,
 				Description:   "The ID of the team the Project exists under. Required when configuring a team resource if a default team has not been set in the provider.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
-			"enabled": schema.BoolAttribute{
-				Required:    true,
-				Description: "Whether tracing is enabled for the Project.",
-			},
 			"sampling_rules": schema.ListNestedAttribute{
 				Optional:    true,
 				Description: "Ordered head-sampling rules for traces. If omitted, all traces are retained.",
@@ -118,7 +114,6 @@ type ProjectTracing struct {
 	ID            types.String `tfsdk:"id"`
 	ProjectID     types.String `tfsdk:"project_id"`
 	TeamID        types.String `tfsdk:"team_id"`
-	Enabled       types.Bool   `tfsdk:"enabled"`
 	SamplingRules types.List   `tfsdk:"sampling_rules"`
 }
 
@@ -131,7 +126,6 @@ func responseToProjectTracing(ctx context.Context, out client.ProjectTracing, pr
 		ID:            types.StringValue(out.ProjectID),
 		ProjectID:     types.StringValue(out.ProjectID),
 		TeamID:        toTeamID(out.TeamID),
-		Enabled:       types.BoolValue(out.Enabled),
 		SamplingRules: samplingRules,
 	}, diags
 }
@@ -146,7 +140,7 @@ func (r *projectTracingResource) apply(ctx context.Context, plan ProjectTracing,
 	out, err := r.client.UpdateProjectTracing(ctx, client.ProjectTracing{
 		TeamID:        plan.TeamID.ValueString(),
 		ProjectID:     plan.ProjectID.ValueString(),
-		Enabled:       plan.Enabled.ValueBool(),
+		Enabled:       true,
 		SamplingRules: samplingRules,
 	})
 	if err != nil {
@@ -197,6 +191,11 @@ func (r *projectTracingResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
+	if !out.Enabled {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	result, diags := responseToProjectTracing(ctx, out, state.SamplingRules)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -228,7 +227,11 @@ func (r *projectTracingResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	err := r.client.DeleteProjectTracing(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString())
+	_, err := r.client.UpdateProjectTracing(ctx, client.ProjectTracing{
+		TeamID:    state.TeamID.ValueString(),
+		ProjectID: state.ProjectID.ValueString(),
+		Enabled:   false,
+	})
 	if client.NotFound(err) {
 		return
 	}
@@ -257,6 +260,13 @@ func (r *projectTracingResource) ImportState(ctx context.Context, req resource.I
 		resp.Diagnostics.AddError(
 			"Error reading Project Tracing",
 			fmt.Sprintf("Could not get Project Tracing %s %s, unexpected error: %s", teamID, projectID, err),
+		)
+		return
+	}
+	if !out.Enabled {
+		resp.Diagnostics.AddError(
+			"Cannot import disabled Project Tracing",
+			fmt.Sprintf("Project Tracing is not enabled for project %s", projectID),
 		)
 		return
 	}

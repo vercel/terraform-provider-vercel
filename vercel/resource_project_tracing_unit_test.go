@@ -21,7 +21,7 @@ func TestResponseToProjectTracing(t *testing.T) {
 	if diags.HasError() {
 		t.Fatalf("responseToProjectTracing() diagnostics = %v", diags)
 	}
-	if result.ID.ValueString() != "prj_123" || result.ProjectID.ValueString() != "prj_123" || result.TeamID.ValueString() != "team_123" || !result.Enabled.ValueBool() {
+	if result.ID.ValueString() != "prj_123" || result.ProjectID.ValueString() != "prj_123" || result.TeamID.ValueString() != "team_123" {
 		t.Fatalf("result = %#v", result)
 	}
 
@@ -45,8 +45,8 @@ func TestProjectTracingResourceSchema(t *testing.T) {
 	if !response.Schema.Attributes["project_id"].IsRequired() {
 		t.Fatal("project_id must be required")
 	}
-	if !response.Schema.Attributes["enabled"].IsRequired() {
-		t.Fatal("enabled must be required")
+	if _, ok := response.Schema.Attributes["enabled"]; ok {
+		t.Fatal("enabled must not be exposed")
 	}
 	if !response.Schema.Attributes["sampling_rules"].IsOptional() {
 		t.Fatal("sampling_rules must be optional")

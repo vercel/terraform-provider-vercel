@@ -21,7 +21,6 @@ Deleting this resource disables tracing for the project.
 ```terraform
 resource "vercel_project_tracing" "example" {
   project_id = vercel_project.example.id
-  enabled    = true
 
   sampling_rules = [{
     rate         = 0.2
@@ -36,7 +35,6 @@ resource "vercel_project_tracing" "example" {
 
 ### Required
 
-- `enabled` (Boolean) Whether tracing is enabled for the Project.
 - `project_id` (String) The ID of the Project to configure tracing for.
 
 ### Optional

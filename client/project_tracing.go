@@ -95,14 +95,3 @@ func (c *Client) UpdateProjectTracing(ctx context.Context, tracing ProjectTracin
 	}, &response)
 	return response.toProjectTracing(c.TeamID(tracing.TeamID), tracing.ProjectID), err
 }
-
-// DeleteProjectTracing disables tracing for a project.
-func (c *Client) DeleteProjectTracing(ctx context.Context, projectID, teamID string) error {
-	requestURL := c.projectTracingURL(projectID, teamID)
-	tflog.Info(ctx, "deleting project tracing configuration", map[string]any{"url": requestURL})
-	return c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "DELETE",
-		url:    requestURL,
-	}, nil)
-}

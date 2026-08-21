@@ -92,19 +92,25 @@ func TestUpdateProjectTracingClearsSamplingRules(t *testing.T) {
 	}
 }
 
-func TestDeleteProjectTracing(t *testing.T) {
+func TestUpdateProjectTracingDisablesTracing(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodDelete || r.URL.Path != "/v1/drains/tracing/config" {
-			t.Fatalf("request = %s %s, want DELETE /v1/drains/tracing/config", r.Method, r.URL.Path)
+		var payload updateProjectTracingPayload
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("Decode() error = %v", err)
 		}
-		if got := r.URL.Query().Get("projectId"); got != "prj_123" {
-			t.Fatalf("projectId = %q, want prj_123", got)
+		if payload.Enabled {
+			t.Fatal("enabled = true, want false")
 		}
-		w.WriteHeader(http.StatusNoContent)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"enabled":false,"sampling":[]}`))
 	}))
 	t.Cleanup(server.Close)
 
-	if err := New("TOKEN").WithBaseURL(server.URL).DeleteProjectTracing(context.Background(), "prj_123", ""); err != nil {
-		t.Fatalf("DeleteProjectTracing() error = %v", err)
+	_, err := New("TOKEN").WithBaseURL(server.URL).UpdateProjectTracing(context.Background(), ProjectTracing{
+		ProjectID: "prj_123",
+		Enabled:   false,
+	})
+	if err != nil {
+		t.Fatalf("UpdateProjectTracing() error = %v", err)
 	}
 }

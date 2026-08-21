@@ -18,7 +18,6 @@ func TestAcc_ProjectTracing(t *testing.T) {
 			{
 				Config: cfg(testAccProjectTracingConfig(name, 0.25, "production")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("vercel_project_tracing.example", "enabled", "true"),
 					resource.TestCheckResourceAttr("vercel_project_tracing.example", "sampling_rules.#", "1"),
 					resource.TestCheckResourceAttr("vercel_project_tracing.example", "sampling_rules.0.rate", "0.25"),
 					resource.TestCheckResourceAttr("vercel_project_tracing.example", "sampling_rules.0.environment", "production"),
@@ -40,7 +39,6 @@ func TestAcc_ProjectTracing(t *testing.T) {
 			{
 				Config: cfg(testAccProjectTracingConfig(name, 0.5, "preview")),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("vercel_project_tracing.example", "enabled", "true"),
 					resource.TestCheckResourceAttr("vercel_project_tracing.example", "sampling_rules.0.rate", "0.5"),
 					resource.TestCheckResourceAttr("vercel_project_tracing.example", "sampling_rules.0.environment", "preview"),
 				),
@@ -57,7 +55,6 @@ resource "vercel_project" "example" {
 
 resource "vercel_project_tracing" "example" {
   project_id = vercel_project.example.id
-  enabled    = true
 
   sampling_rules = [{
     rate         = %[2]g
