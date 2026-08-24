@@ -1,0 +1,85 @@
+[settings]
+lockfile = true
+
+[tools]
+go = "1.26"
+terraform = "1.14.9"
+goreleaser = "2.14"
+staticcheck = "2026.1"
+"go:github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs" = { version = "v0.25.0", depends = [
+  "go",
+] }
+"go:github.com/bflad/tfproviderlint/cmd/tfproviderlint" = { version = "v0.31.0", depends = [
+  "go",
+] }
+
+[tasks.build]
+description = "Build the provider binary"
+run = "goreleaser build --single-target --skip=validate --clean --snapshot"
+
+[tasks."build:dev"]
+description = "Build a local provider binary for Terraform development overrides"
+run = "go build -o dist/dev/terraform-provider-vercel ."
+sources = ["**/*.go", "go.mod", "go.sum"]
+outputs = ["dist/dev/terraform-provider-vercel"]
+
+[tasks.docs]
+description = "Update the docs generated from description fields"
+run = [
+  "tfplugindocs generate --provider-name terraform-provider-vercel --tf-version 1.14.9",
+  "sed -i.bak 's/vercel Provider/Vercel Provider/g' docs/index.md",
+  "rm docs/index.md.bak",
+]
+
+[tasks.lint]
+description = "Run linters against the provider"
+run = ["staticcheck -tags it ./...", "tfproviderlint -R018=false ./...", '''
+  badfmt="$(gofmt -s -l .)"
+  if [ -n "$badfmt" ]; then
+    printf 'invalid gofmt:\n%s\n' "$badfmt"
+    exit 1
+  fi
+  ''', "go vet ./..."]
+
+[tasks."test:unit"]
+description = "Run unit tests without acceptance mode"
+raw_args = true
+run = "go test ./... -skip '^TestAcc_'"
+
+[tasks."test:acceptance"]
+description = "Run acceptance tests against the provider"
+confirm = { message = "Acceptance tests create and delete real Vercel resources. Continue?", default = "no" }
+raw_args = true
+env = { TF_ACC = "true" }
+run = "go test ./..."
+
+[tasks.terraform]
+description = "Run Terraform with the locally built Vercel provider"
+depends = ["build:dev"]
+raw_args = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+tmp="$(mktemp "${TMPDIR:-/tmp}/terraform-provider-vercel.XXXXXX")"
+config="${tmp}.tfrc"
+mv "$tmp" "$config"
+trap 'rm -f "$config"' EXIT
+
+cat >"$config" <<EOF
+provider_installation {
+  dev_overrides {
+    "vercel/vercel" = "{{ config_root }}/dist/dev"
+  }
+  direct {}
+}
+EOF
+
+TF_CLI_CONFIG_FILE="$config" terraform "$@"
+'''
+
+[tasks.sweep]
+description = "Remove leftover resources from failed test runs"
+dir = "sweep"
+confirm = { message = "Remove leftover resources from failed acceptance tests?", default = "no" }
+run = "go run ."

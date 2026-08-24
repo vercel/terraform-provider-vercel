@@ -1,11 +1,14 @@
 # Agent Guidelines for Vercel Terraform Provider
 
 ## Build/Test Commands
-- Build: `task build` (uses goreleaser)
-- Test all: `task test` (runs acceptance tests with TF_ACC=true)
-- Test specific: `task test -- -run 'TestAcc_Project*'` (regex pattern matching)
-- Lint: `task lint` (runs staticcheck, tfproviderlint, gofmt, go vet)
-- Docs: `task docs` (generates terraform docs)
+- Install tools: `mise install`
+- Build: `mise run build` (uses GoReleaser)
+- Unit tests: `mise run test:unit`
+- Acceptance tests: `mise run test:acceptance` (sets `TF_ACC=true` and creates real resources)
+- Specific acceptance tests: `mise run test:acceptance -run 'TestAcc_Project*'`
+- Lint: `mise run lint` (runs staticcheck, tfproviderlint, gofmt, go vet)
+- Docs: `mise run docs` (generates Terraform docs)
+- Local Terraform on macOS/Linux: `mise run terraform -- <args>` (uses the locally built provider without modifying `~/.terraformrc`)
 
 ## Code Style
 - Package naming: `package vercel` for main code, `package vercel_test` for tests
