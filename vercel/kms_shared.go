@@ -15,6 +15,7 @@ import (
 // read-only nested attribute on the issuer resource and data source.
 type kmsSigningKeyModel struct {
 	KeyID                types.String `tfsdk:"key_id"`
+	ImportKeyID          types.String `tfsdk:"import_key_id"`
 	IssuerID             types.String `tfsdk:"issuer_id"`
 	Algorithm            types.String `tfsdk:"algorithm"`
 	Status               types.String `tfsdk:"status"`
@@ -30,6 +31,7 @@ type kmsSigningKeyModel struct {
 func kmsSigningKeyAttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"key_id":                 types.StringType,
+		"import_key_id":          types.StringType,
 		"issuer_id":              types.StringType,
 		"algorithm":              types.StringType,
 		"status":                 types.StringType,
@@ -46,6 +48,7 @@ func kmsSigningKeyAttrTypes() map[string]attr.Type {
 func kmsSigningKeyValue(key client.KMSSigningKey) kmsSigningKeyModel {
 	return kmsSigningKeyModel{
 		KeyID:                types.StringValue(key.KeyID),
+		ImportKeyID:          emptyToNull(key.ImportKeyID),
 		IssuerID:             types.StringValue(key.IssuerID),
 		Algorithm:            types.StringValue(key.Algorithm),
 		Status:               types.StringValue(key.Status),
