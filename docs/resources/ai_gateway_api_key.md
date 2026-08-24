@@ -6,6 +6,7 @@ description: |-
   Provides an AI Gateway API Key resource.
   An AI Gateway API Key can be used to authenticate with the Vercel AI Gateway https://vercel.com/docs/ai-gateway.
   The api_key_string value is only returned during creation and is stored (marked sensitive) in Terraform state. It cannot be retrieved again later, so imported resources will not populate api_key_string.
+  -> Managing ai_gateway_quota requires the AI Gateway API key quotas feature to be enabled for the team.
 ---
 
 # vercel_ai_gateway_api_key (Resource)
@@ -16,11 +17,25 @@ An AI Gateway API Key can be used to authenticate with the [Vercel AI Gateway](h
 
 The `api_key_string` value is only returned during creation and is stored (marked sensitive) in Terraform state. It cannot be retrieved again later, so imported resources will not populate `api_key_string`.
 
+-> Managing `ai_gateway_quota` requires the AI Gateway API key quotas feature to be enabled for the team.
+
 ## Example Usage
 
 ```terraform
 resource "vercel_ai_gateway_api_key" "example" {
   name = "workflow-github-actions"
+}
+
+# An API key with an expiration and a monthly spend quota.
+resource "vercel_ai_gateway_api_key" "with_quota" {
+  name       = "production"
+  expires_at = 1767225600000 # January 1, 2026
+
+  ai_gateway_quota = {
+    limit_amount     = 500
+    refresh_period   = "monthly"
+    alert_thresholds = [50, 75, 100]
+  }
 }
 
 output "ai_gateway_api_key" {
@@ -38,6 +53,9 @@ output "ai_gateway_api_key" {
 
 ### Optional
 
+- `ai_gateway_quota` (Attributes) A spend quota (budget) for the API key. Removing this attribute archives the quota; the API key itself is unaffected. (see [below for nested schema](#nestedatt--ai_gateway_quota))
+- `expires_at` (Number) The Unix timestamp in milliseconds when the API key should expire. Must not be in the past or more than two years in the future. Cannot be changed after creation.
+- `project_id` (String) The ID of a project to restrict the API key to. When unset, the API key grants access to all projects in the team. Cannot be changed after creation.
 - `team_id` (String) The ID of the Vercel team scope for this API key. Required if a default team has not been set in the provider.
 
 ### Read-Only
@@ -45,6 +63,18 @@ output "ai_gateway_api_key" {
 - `api_key_string` (String, Sensitive) The API key value. This is only returned during creation and then preserved in Terraform state.
 - `id` (String) The unique identifier of the API key.
 - `partial_key` (String) The final characters of the API key, used for identification.
+
+<a id="nestedatt--ai_gateway_quota"></a>
+### Nested Schema for `ai_gateway_quota`
+
+Required:
+
+- `limit_amount` (Number) The quota limit amount in US dollars.
+
+Optional:
+
+- `alert_thresholds` (Set of Number) Spend percentages (a subset of `[50, 75, 100]`) at which to send a spend alert.
+- `refresh_period` (String) How often the quota refreshes. Must be one of `daily`, `weekly`, `monthly` or `none`. Defaults to `none`.
 
 ## Import
 
