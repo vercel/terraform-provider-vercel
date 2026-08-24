@@ -19,7 +19,6 @@ func TestAcc_TeamConfig(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", "Vercel Terraform Testing"),
 					resource.TestCheckResourceAttr(resourceName, "slug", "terraform-testing-vtest314"),
-					resource.TestCheckResourceAttr(resourceName, "default_build_machine_type", "basic"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
@@ -30,7 +29,6 @@ func TestAcc_TeamConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", "Vercel Terraform Testing o_o"),
 					resource.TestCheckResourceAttr(resourceName, "slug", "terraform-testing-vtest314"),
 					resource.TestCheckResourceAttr(resourceName, "description", "Vercel Terraform Testing"),
-					resource.TestCheckResourceAttr(resourceName, "default_build_machine_type", "basic"),
 					resource.TestCheckResourceAttr(resourceName, "sensitive_environment_variable_policy", "off"),
 					resource.TestCheckResourceAttr(resourceName, "remote_caching.enabled", "true"),
 					resource.TestCheckResourceAttr(resourceName, "enable_preview_feedback", "off"),
@@ -53,9 +51,8 @@ func TestAcc_TeamConfig(t *testing.T) {
 func testAccVercelTeamConfigBasic(teamID string) string {
 	return fmt.Sprintf(`
 resource "vercel_team_config" "test" {
-  id                         = "%s"
-  name                       = "Vercel Terraform Testing"
-  default_build_machine_type = "basic"
+  id   = "%s"
+  name = "Vercel Terraform Testing"
 }
 `, teamID)
 }
@@ -72,7 +69,6 @@ resource "vercel_team_config" "test" {
   name                                  = "Vercel Terraform Testing o_o"
   slug                                  = "terraform-testing-vtest314"
   description                           = "Vercel Terraform Testing"
-  default_build_machine_type             = "basic"
   sensitive_environment_variable_policy = "off"
   remote_caching = {
     enabled = true

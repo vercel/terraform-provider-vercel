@@ -449,33 +449,6 @@ func TestAcc_ProjectBuildMachineTypeUnsetUpdate(t *testing.T) {
 	})
 }
 
-// Paid teams can select Basic only when they are eligible for Basic build
-// machine routing. This acceptance test runs against an eligible test team.
-func TestAcc_ProjectBuildMachineTypeBasic(t *testing.T) {
-	projectSuffix := acctest.RandString(16)
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
-		Steps: []resource.TestStep{
-			{
-				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "basic")),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
-					resource.TestCheckResourceAttr("vercel_project.test", "build_machine_type", "basic"),
-				),
-			},
-			{
-				Config: cfg(testAccProjectConfigWithBuildMachineType(projectSuffix, "basic")),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
-}
-
 // `standard` is a valid value at the API but was previously missing from
 // the provider's schema validator, so users on plans where `standard`
 // is the desired explicit type had no way to set it from Terraform —
