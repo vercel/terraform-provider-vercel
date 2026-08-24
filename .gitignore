@@ -5,7 +5,6 @@
 *.dylib
 *.test
 terraform-provider-vercel
-.task/
 Dist/
 dist/
 .DS_Store
