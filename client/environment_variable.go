@@ -20,6 +20,7 @@ type EnvironmentVariableRequest struct {
 	CustomEnvironmentIDs []string `json:"customEnvironmentIds,omitempty"`
 	GitBranch            *string  `json:"gitBranch,omitempty"`
 	Type                 string   `json:"type"`
+	Visibility           *string  `json:"visibility,omitempty"`
 	Comment              string   `json:"comment"`
 }
 
@@ -320,6 +321,7 @@ type UpdateEnvironmentVariableRequest struct {
 	CustomEnvironmentIDs []string `json:"customEnvironmentIds,omitempty"`
 	GitBranch            *string  `json:"gitBranch,omitempty"`
 	Type                 string   `json:"type"`
+	Visibility           *string  `json:"visibility,omitempty"`
 	Comment              string   `json:"comment"`
 	ProjectID            string   `json:"-"`
 	TeamID               string   `json:"-"`

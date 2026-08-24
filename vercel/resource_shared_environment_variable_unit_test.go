@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestSharedEnvironmentVariableResourceSchemaRequiresSensitive(t *testing.T) {

@@ -168,6 +168,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Validators:    []validator.Bool{},
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
+			"visibility": environmentVariableVisibilitySchemaAttribute(),
 			"comment": schema.StringAttribute{
 				Description: "A comment explaining what the environment variable is for.",
 				Optional:    true,
@@ -193,6 +194,7 @@ type ProjectEnvironmentVariable struct {
 	ProjectID            types.String `tfsdk:"project_id"`
 	ID                   types.String `tfsdk:"id"`
 	Sensitive            types.Bool   `tfsdk:"sensitive"`
+	Visibility           types.String `tfsdk:"visibility"`
 	Comment              types.String `tfsdk:"comment"`
 }
 
@@ -241,11 +243,9 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx cont
 	if diags.HasError() {
 		return req, diags
 	}
-	var envVariableType string
-	if e.isSensitive() {
-		envVariableType = "sensitive"
-	} else {
-		envVariableType = "encrypted"
+	envVariableType, visibility, diags := resolveEnvVarTypeAndVisibility(e.Sensitive, e.Visibility)
+	if diags.HasError() {
+		return req, diags
 	}
 	var value string
 	value = e.Value.ValueString()
@@ -260,6 +260,7 @@ func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx cont
 			CustomEnvironmentIDs: customEnvironmentIDs,
 			GitBranch:            e.GitBranch.ValueStringPointer(),
 			Type:                 envVariableType,
+			Visibility:           visibility,
 			Comment:              e.Comment.ValueString(),
 		},
 		ProjectID: e.ProjectID.ValueString(),
@@ -278,11 +279,9 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest(ctx cont
 	if diags.HasError() {
 		return r, diags
 	}
-	var envVariableType string
-	if e.isSensitive() {
-		envVariableType = "sensitive"
-	} else {
-		envVariableType = "encrypted"
+	envVariableType, visibility, diags := resolveEnvVarTypeAndVisibility(e.Sensitive, e.Visibility)
+	if diags.HasError() {
+		return r, diags
 	}
 	var value *string
 	if !e.Value.IsNull() {
@@ -296,6 +295,7 @@ func (e *ProjectEnvironmentVariable) toUpdateEnvironmentVariableRequest(ctx cont
 		CustomEnvironmentIDs: customEnvironmentIDs,
 		GitBranch:            e.GitBranch.ValueStringPointer(),
 		Type:                 envVariableType,
+		Visibility:           visibility,
 		ProjectID:            e.ProjectID.ValueString(),
 		TeamID:               e.TeamID.ValueString(),
 		EnvID:                e.ID.ValueString(),
@@ -338,6 +338,7 @@ func convertResponseToProjectEnvironmentVariable(response client.EnvironmentVari
 		ProjectID:            projectID,
 		ID:                   types.StringValue(response.ID),
 		Sensitive:            types.BoolValue(response.Type == "sensitive"),
+		Visibility:           envVarVisibilityFromResponse(response.Type, response.Visibility),
 		Comment:              types.StringValue(response.Comment),
 	}
 }

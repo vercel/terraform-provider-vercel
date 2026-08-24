@@ -107,12 +107,22 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "A description of the team.",
 			},
 			"sensitive_environment_variable_policy": schema.StringAttribute{
-				Description:   "Ensures that all environment variables created by members of this team will be created as Sensitive Environment Variables which can only be decrypted by Vercel's deployment system.: one of on, off or default.",
+				Description:        "Ensures that all environment variables created by members of this team will be created as Sensitive Environment Variables which can only be decrypted by Vercel's deployment system. One of `on`, `off`, or `default`.",
+				DeprecationMessage: "This attribute is deprecated. Use `disjunctive_production_secret_policy` instead.",
+				Optional:           true,
+				Computed:           true,
+				PlanModifiers:      []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+				Validators: []validator.String{
+					stringvalidator.OneOf("on", "off", "default"),
+				},
+			},
+			"disjunctive_production_secret_policy": schema.StringAttribute{
+				Description:   "When enabled, secrets cannot be scoped to both Production and non-Production targets on the same environment variable. One of `on`, `off`, or `default`.",
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 				Validators: []validator.String{
-					stringvalidator.OneOf("on", "off"),
+					stringvalidator.OneOf("on", "off", "default"),
 				},
 			},
 			"email_domain": schema.StringAttribute{
@@ -285,6 +295,7 @@ type TeamConfig struct {
 	Description                        types.String `tfsdk:"description"`
 	InviteCode                         types.String `tfsdk:"invite_code"`
 	SensitiveEnvironmentVariablePolicy types.String `tfsdk:"sensitive_environment_variable_policy"`
+	DisjunctiveProductionSecretPolicy  types.String `tfsdk:"disjunctive_production_secret_policy"`
 	EmailDomain                        types.String `tfsdk:"email_domain"`
 	PreviewDeploymentSuffix            types.String `tfsdk:"preview_deployment_suffix"`
 	DefaultBuildMachineType            types.String `tfsdk:"default_build_machine_type"`
@@ -394,6 +405,7 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		EnablePreviewFeedback:              t.EnablePreviewFeedback.ValueString(),
 		EnableProductionFeedback:           t.EnableProductionFeedback.ValueString(),
 		SensitiveEnvironmentVariablePolicy: t.SensitiveEnvironmentVariablePolicy.ValueString(),
+		DisjunctiveProductionSecretPolicy:  t.DisjunctiveProductionSecretPolicy.ValueString(),
 		RemoteCaching:                      rc.toUpdateTeamRequest(),
 		HideIPAddresses:                    hideIPAddressses,
 		HideIPAddressesInLogDrains:         hideIPAddresssesInLogDrains,
@@ -451,6 +463,7 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 		Description:                        types.StringPointerValue(response.Description),
 		InviteCode:                         types.StringPointerValue(response.InviteCode),
 		SensitiveEnvironmentVariablePolicy: types.StringPointerValue(response.SensitiveEnvironmentVariablePolicy),
+		DisjunctiveProductionSecretPolicy:  types.StringPointerValue(response.DisjunctiveProductionSecretPolicy),
 		EmailDomain:                        types.StringPointerValue(response.EmailDomain),
 		PreviewDeploymentSuffix:            types.StringPointerValue(response.PreviewDeploymentSuffix),
 		DefaultBuildMachineType:            defaultBuildMachineType,
@@ -702,7 +715,16 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 						Computed:      true,
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 						Validators: []validator.String{
-							stringvalidator.OneOf("on", "off"),
+							stringvalidator.OneOf("on", "off", "default"),
+						},
+					},
+					"disjunctive_production_secret_policy": schema.StringAttribute{
+						Description:   "When enabled, secrets cannot be scoped to both Production and non-Production targets on the same environment variable. One of `on`, `off`, or `default`.",
+						Optional:      true,
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+						Validators: []validator.String{
+							stringvalidator.OneOf("on", "off", "default"),
 						},
 					},
 					"email_domain": schema.StringAttribute{
@@ -823,6 +845,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 					Description:                        priorStateData.Description,
 					InviteCode:                         priorStateData.InviteCode,
 					SensitiveEnvironmentVariablePolicy: priorStateData.SensitiveEnvironmentVariablePolicy,
+					DisjunctiveProductionSecretPolicy:  types.StringNull(),
 					EmailDomain:                        priorStateData.EmailDomain,
 					PreviewDeploymentSuffix:            priorStateData.PreviewDeploymentSuffix,
 					RemoteCaching:                      priorStateData.RemoteCaching,

@@ -198,6 +198,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set.",
 							Required:    true,
 						},
+						"visibility": environmentVariableVisibilitySchemaAttribute(),
 						"comment": schema.StringAttribute{
 							Description: "A comment explaining what the environment variable is for.",
 							Optional:    true,
@@ -883,11 +884,9 @@ func parseEnvironment(ctx context.Context, vars []EnvironmentItem) (out []client
 			return out, diags
 		}
 
-		var envVariableType string
-		if e.isSensitive() {
-			envVariableType = "sensitive"
-		} else {
-			envVariableType = "encrypted"
+		envVariableType, visibility, diags := resolveEnvVarTypeAndVisibility(e.Sensitive, e.Visibility)
+		if diags.HasError() {
+			return out, diags
 		}
 
 		out = append(out, client.EnvironmentVariable{
@@ -897,6 +896,7 @@ func parseEnvironment(ctx context.Context, vars []EnvironmentItem) (out []client
 			CustomEnvironmentIDs: customEnvironmentIDs,
 			GitBranch:            e.GitBranch.ValueStringPointer(),
 			Type:                 envVariableType,
+			Visibility:           visibility,
 			ID:                   e.ID.ValueString(),
 			Comment:              e.Comment.ValueString(),
 		})
@@ -1202,6 +1202,7 @@ type EnvironmentItem struct {
 	Value                types.String `tfsdk:"value"`
 	ID                   types.String `tfsdk:"id"`
 	Sensitive            types.Bool   `tfsdk:"sensitive"`
+	Visibility           types.String `tfsdk:"visibility"`
 	Comment              types.String `tfsdk:"comment"`
 }
 
@@ -1240,6 +1241,7 @@ func (e *EnvironmentItem) equal(other *EnvironmentItem) bool {
 		e.CustomEnvironmentIDs.Equal(other.CustomEnvironmentIDs) &&
 		e.GitBranch.ValueString() == other.GitBranch.ValueString() &&
 		e.isSensitive() == other.isSensitive() &&
+		e.Visibility.Equal(other.Visibility) &&
 		e.Comment.ValueString() == other.Comment.ValueString()
 }
 
@@ -1252,6 +1254,7 @@ func (e *EnvironmentItem) toAttrValue() attr.Value {
 		"custom_environment_ids": e.CustomEnvironmentIDs,
 		"git_branch":             e.GitBranch,
 		"sensitive":              types.BoolValue(e.isSensitive()),
+		"visibility":             e.Visibility,
 		"comment":                e.Comment,
 	})
 }
@@ -1268,11 +1271,9 @@ func (e *EnvironmentItem) toEnvironmentVariableRequest(ctx context.Context) (req
 		return req, diags
 	}
 
-	var envVariableType string
-	if e.isSensitive() {
-		envVariableType = "sensitive"
-	} else {
-		envVariableType = "encrypted"
+	envVariableType, visibility, diags := resolveEnvVarTypeAndVisibility(e.Sensitive, e.Visibility)
+	if diags.HasError() {
+		return req, diags
 	}
 
 	return client.EnvironmentVariableRequest{
@@ -1282,6 +1283,7 @@ func (e *EnvironmentItem) toEnvironmentVariableRequest(ctx context.Context) (req
 		CustomEnvironmentIDs: customEnvironmentIDs,
 		GitBranch:            e.GitBranch.ValueStringPointer(),
 		Type:                 envVariableType,
+		Visibility:           visibility,
 		Comment:              e.Comment.ValueString(),
 	}, nil
 }
@@ -1858,6 +1860,7 @@ var envVariableElemType = types.ObjectType{
 		"git_branch": types.StringType,
 		"id":         types.StringType,
 		"sensitive":  types.BoolType,
+		"visibility": types.StringType,
 		"comment":    types.StringType,
 	},
 }
@@ -2085,6 +2088,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 			"git_branch":             types.StringPointerValue(e.GitBranch),
 			"id":                     types.StringValue(e.ID),
 			"sensitive":              types.BoolValue(e.Type == "sensitive"),
+			"visibility":             envVarVisibilityFromResponse(e.Type, e.Visibility),
 			"comment":                types.StringValue(e.Comment),
 		}))
 	}

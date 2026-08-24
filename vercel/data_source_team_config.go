@@ -69,8 +69,13 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Description: "A description of the team.",
 			},
 			"sensitive_environment_variable_policy": schema.StringAttribute{
+				Computed:           true,
+				Description:        "The legacy policy for sensitive environment variables.",
+				DeprecationMessage: "This attribute is deprecated. Use `disjunctive_production_secret_policy` instead.",
+			},
+			"disjunctive_production_secret_policy": schema.StringAttribute{
 				Computed:    true,
-				Description: "The policy for sensitive environment variables.",
+				Description: "When enabled, secrets cannot be scoped to both Production and non-Production targets on the same environment variable.",
 			},
 			"email_domain": schema.StringAttribute{
 				Computed:    true,
@@ -147,6 +152,7 @@ type TeamConfigData struct {
 	Description                        types.String `tfsdk:"description"`
 	InviteCode                         types.String `tfsdk:"invite_code"`
 	SensitiveEnvironmentVariablePolicy types.String `tfsdk:"sensitive_environment_variable_policy"`
+	DisjunctiveProductionSecretPolicy  types.String `tfsdk:"disjunctive_production_secret_policy"`
 	EmailDomain                        types.String `tfsdk:"email_domain"`
 	PreviewDeploymentSuffix            types.String `tfsdk:"preview_deployment_suffix"`
 	DefaultBuildMachineType            types.String `tfsdk:"default_build_machine_type"`
@@ -189,6 +195,7 @@ func (d *teamConfigDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		Description:                        out.Description,
 		InviteCode:                         out.InviteCode,
 		SensitiveEnvironmentVariablePolicy: out.SensitiveEnvironmentVariablePolicy,
+		DisjunctiveProductionSecretPolicy:  out.DisjunctiveProductionSecretPolicy,
 		EmailDomain:                        out.EmailDomain,
 		PreviewDeploymentSuffix:            out.PreviewDeploymentSuffix,
 		DefaultBuildMachineType:            out.DefaultBuildMachineType,

@@ -151,6 +151,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set.",
 							Required:    true,
 						},
+						"visibility": environmentVariableVisibilitySchemaAttribute(),
 						"comment": schema.StringAttribute{
 							Description: "A comment explaining what the environment variable is for.",
 							Optional:    true,
@@ -199,11 +200,9 @@ func (e *EnvironmentItems) toCreateEnvironmentVariablesRequest(ctx context.Conte
 		if diags.HasError() {
 			return r, diags
 		}
-		var envVariableType string
-		if env.isSensitive() {
-			envVariableType = "sensitive"
-		} else {
-			envVariableType = "encrypted"
+		envVariableType, visibility, diags := resolveEnvVarTypeAndVisibility(env.Sensitive, env.Visibility)
+		if diags.HasError() {
+			return r, diags
 		}
 		variables = append(variables, client.EnvironmentVariableRequest{
 			Key:                  env.Key.ValueString(),
@@ -211,6 +210,7 @@ func (e *EnvironmentItems) toCreateEnvironmentVariablesRequest(ctx context.Conte
 			Target:               target,
 			CustomEnvironmentIDs: customEnvironmentIDs,
 			Type:                 envVariableType,
+			Visibility:           visibility,
 			GitBranch:            env.GitBranch.ValueStringPointer(),
 			Comment:              env.Comment.ValueString(),
 		})
@@ -300,6 +300,7 @@ func convertResponseToProjectEnvironmentVariables(
 				"git_branch":             types.StringPointerValue(e.GitBranch),
 				"id":                     types.StringValue(e.ID),
 				"sensitive":              types.BoolValue(e.Type == "sensitive"),
+				"visibility":             envVarVisibilityFromResponse(e.Type, e.Visibility),
 				"comment":                types.StringValue(e.Comment),
 			},
 		))
@@ -595,6 +596,7 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 						GitBranch:            types.StringPointerValue(e.GitBranch),
 						ID:                   types.StringValue(e.ID),
 						Sensitive:            types.BoolValue(e.Type == "sensitive"),
+						Visibility:           envVarVisibilityFromResponse(e.Type, e.Visibility),
 						Comment:              types.StringValue(e.Comment),
 					})
 					skipAdding[i] = true
