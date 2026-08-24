@@ -23,6 +23,8 @@ resource "vercel_team_config" "example" {
   name                                  = "Vercel terraform example"
   slug                                  = "vercel-terraform-example"
   description                           = "Vercel Terraform Example"
+  # Paid teams must be eligible for Basic build machine routing.
+  default_build_machine_type            = "basic"
   sensitive_environment_variable_policy = "off"
   remote_caching = {
     enabled = true
@@ -44,6 +46,7 @@ resource "vercel_team_config" "example" {
 ### Optional
 
 - `avatar` (Map of String) The `avatar` should be a the 'file' attribute from a vercel_file data source.
+- `default_build_machine_type` (String) The default build machine type for new projects. Must be one of "basic", "standard", "enhanced", "turbo", or "elastic".
 - `description` (String) A description of the team.
 - `email_domain` (String) Hostname that'll be matched with emails on sign-up to automatically join the Team.
 - `enable_preview_feedback` (String) Enables the Vercel Toolbar on your preview deployments: one of on, off or default.

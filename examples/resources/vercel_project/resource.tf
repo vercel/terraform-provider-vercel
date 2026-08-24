@@ -18,6 +18,8 @@ resource "vercel_project" "example" {
   name                 = "example-project"
   framework            = "nextjs"
   protected_sourcemaps = true
+  # Paid teams must be eligible for Basic build machine routing.
+  build_machine_type = "basic"
 }
 
 locals {

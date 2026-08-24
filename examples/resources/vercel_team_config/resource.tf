@@ -8,6 +8,8 @@ resource "vercel_team_config" "example" {
   name                                  = "Vercel terraform example"
   slug                                  = "vercel-terraform-example"
   description                           = "Vercel Terraform Example"
+  # Paid teams must be eligible for Basic build machine routing.
+  default_build_machine_type            = "basic"
   sensitive_environment_variable_policy = "off"
   remote_caching = {
     enabled = true

@@ -705,11 +705,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"build_machine_type": schema.StringAttribute{
-				Description: "The build machine type to use for this project. Must be one of \"standard\", \"enhanced\", \"turbo\", or \"elastic\". When set to \"elastic\", Vercel automatically adjusts the underlying machine type based on build duration.",
+				Description: "The build machine type to use for this project. Must be one of \"basic\", \"standard\", \"enhanced\", \"turbo\", or \"elastic\". When set to \"elastic\", Vercel automatically adjusts the underlying machine type based on build duration.",
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
-					stringvalidator.OneOf("standard", "enhanced", "turbo", "elastic"),
+					stringvalidator.OneOf("basic", "standard", "enhanced", "turbo", "elastic"),
 				},
 			},
 		},
