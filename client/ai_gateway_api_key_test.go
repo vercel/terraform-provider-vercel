@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-const apiKeyResponse = `{
+const aiGatewayAPIKeyResponse = `{
 	"apiKey": {
 		"id": "key_123",
 		"name": "workflow-github-actions",
@@ -19,8 +19,8 @@ const apiKeyResponse = `{
 	}
 }`
 
-func TestCreateAPIKey(t *testing.T) {
-	var got CreateAPIKeyRequest
+func TestCreateAIGatewayAPIKey(t *testing.T) {
+	var got CreateAIGatewayAPIKeyRequest
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || r.URL.Path != "/v1/api-keys" {
 			t.Fatalf("request = %s %s, want POST /v1/api-keys", r.Method, r.URL.Path)
@@ -45,24 +45,24 @@ func TestCreateAPIKey(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	key, err := New("TOKEN").WithBaseURL(server.URL).CreateAPIKey(context.Background(), CreateAPIKeyRequest{
+	key, err := New("TOKEN").WithBaseURL(server.URL).CreateAIGatewayAPIKey(context.Background(), CreateAIGatewayAPIKeyRequest{
 		Name:    "workflow-github-actions",
 		Purpose: "ai-gateway",
 		TeamID:  "team_123",
 	})
 	if err != nil {
-		t.Fatalf("CreateAPIKey() error = %v", err)
+		t.Fatalf("CreateAIGatewayAPIKey() error = %v", err)
 	}
 	if got.TeamID != "" || got.Name != "workflow-github-actions" || got.Purpose != "ai-gateway" {
 		t.Fatalf("create request = %#v", got)
 	}
-	assertAPIKeyResponse(t, key)
+	assertAIGatewayAPIKeyResponse(t, key)
 	if key.APIKeyString == nil || *key.APIKeyString != "vck_secret" {
 		t.Fatalf("APIKeyString = %#v, want vck_secret", key.APIKeyString)
 	}
 }
 
-func TestGetAPIKey(t *testing.T) {
+func TestGetAIGatewayAPIKey(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/v1/api-keys/key_123" {
 			t.Fatalf("request = %s %s, want GET /v1/api-keys/key_123", r.Method, r.URL.Path)
@@ -70,21 +70,21 @@ func TestGetAPIKey(t *testing.T) {
 		if teamID := r.URL.Query().Get("teamId"); teamID != "team_123" {
 			t.Fatalf("teamId = %q, want team_123", teamID)
 		}
-		_, _ = w.Write([]byte(apiKeyResponse))
+		_, _ = w.Write([]byte(aiGatewayAPIKeyResponse))
 	}))
 	t.Cleanup(server.Close)
 
-	key, err := New("TOKEN").WithBaseURL(server.URL).GetAPIKey(context.Background(), "key_123", "team_123")
+	key, err := New("TOKEN").WithBaseURL(server.URL).GetAIGatewayAPIKey(context.Background(), "key_123", "team_123")
 	if err != nil {
-		t.Fatalf("GetAPIKey() error = %v", err)
+		t.Fatalf("GetAIGatewayAPIKey() error = %v", err)
 	}
-	assertAPIKeyResponse(t, key)
+	assertAIGatewayAPIKeyResponse(t, key)
 	if key.APIKeyString != nil {
 		t.Fatalf("APIKeyString = %#v, want nil", key.APIKeyString)
 	}
 }
 
-func TestDeleteAPIKey(t *testing.T) {
+func TestDeleteAIGatewayAPIKey(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/v1/api-keys/key_123" {
 			t.Fatalf("request = %s %s, want DELETE /v1/api-keys/key_123", r.Method, r.URL.Path)
@@ -96,17 +96,17 @@ func TestDeleteAPIKey(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	if err := New("TOKEN").WithBaseURL(server.URL).DeleteAPIKey(context.Background(), "key_123", "team_123"); err != nil {
-		t.Fatalf("DeleteAPIKey() error = %v", err)
+	if err := New("TOKEN").WithBaseURL(server.URL).DeleteAIGatewayAPIKey(context.Background(), "key_123", "team_123"); err != nil {
+		t.Fatalf("DeleteAIGatewayAPIKey() error = %v", err)
 	}
 }
 
-func assertAPIKeyResponse(t *testing.T, key APIKey) {
+func assertAIGatewayAPIKeyResponse(t *testing.T, key AIGatewayAPIKey) {
 	t.Helper()
 	if key.ID != "key_123" || key.Name != "workflow-github-actions" || key.PartialKey != "abc" {
 		t.Fatalf("API key = %#v", key)
 	}
-	if key.TeamID != "team_123" || key.Purpose != "ai-gateway" || key.CreatedAt != 1700000000000 {
+	if key.TeamID != "team_123" {
 		t.Fatalf("API key metadata = %#v", key)
 	}
 }

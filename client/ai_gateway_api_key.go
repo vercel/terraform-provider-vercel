@@ -8,33 +8,31 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type APIKey struct {
+type AIGatewayAPIKey struct {
 	ID           string  `json:"id"`
 	Name         string  `json:"name"`
 	PartialKey   string  `json:"partialKey"`
 	TeamID       string  `json:"teamId"`
-	Purpose      string  `json:"purpose"`
-	CreatedAt    int64   `json:"createdAt"`
 	APIKeyString *string `json:"-"`
 }
 
-type CreateAPIKeyRequest struct {
+type CreateAIGatewayAPIKeyRequest struct {
 	Name    string `json:"name"`
 	Purpose string `json:"purpose"`
 	TeamID  string `json:"-"`
 }
 
-func (c *Client) CreateAPIKey(ctx context.Context, request CreateAPIKeyRequest) (k APIKey, err error) {
+func (c *Client) CreateAIGatewayAPIKey(ctx context.Context, request CreateAIGatewayAPIKeyRequest) (k AIGatewayAPIKey, err error) {
 	requestURL := c.apiKeyURL("", request.TeamID)
 	payload := string(mustMarshal(request))
-	tflog.Info(ctx, "creating API key", map[string]any{
+	tflog.Info(ctx, "creating AI Gateway API key", map[string]any{
 		"url":     requestURL,
 		"payload": payload,
 	})
 
 	var response struct {
-		APIKeyString string `json:"apiKeyString"`
-		APIKey       APIKey `json:"apiKey"`
+		APIKeyString string          `json:"apiKeyString"`
+		APIKey       AIGatewayAPIKey `json:"apiKey"`
 	}
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
@@ -48,14 +46,14 @@ func (c *Client) CreateAPIKey(ctx context.Context, request CreateAPIKeyRequest) 
 	return response.APIKey, err
 }
 
-func (c *Client) GetAPIKey(ctx context.Context, keyID, teamID string) (k APIKey, err error) {
+func (c *Client) GetAIGatewayAPIKey(ctx context.Context, keyID, teamID string) (k AIGatewayAPIKey, err error) {
 	requestURL := c.apiKeyURL(keyID, teamID)
-	tflog.Info(ctx, "getting API key", map[string]any{
+	tflog.Info(ctx, "getting AI Gateway API key", map[string]any{
 		"url": requestURL,
 	})
 
 	var response struct {
-		APIKey APIKey `json:"apiKey"`
+		APIKey AIGatewayAPIKey `json:"apiKey"`
 	}
 	err = c.doRequest(clientRequest{
 		ctx:    ctx,
@@ -65,9 +63,9 @@ func (c *Client) GetAPIKey(ctx context.Context, keyID, teamID string) (k APIKey,
 	return response.APIKey, err
 }
 
-func (c *Client) DeleteAPIKey(ctx context.Context, keyID, teamID string) error {
+func (c *Client) DeleteAIGatewayAPIKey(ctx context.Context, keyID, teamID string) error {
 	requestURL := c.apiKeyURL(keyID, teamID)
-	tflog.Info(ctx, "deleting API key", map[string]any{
+	tflog.Info(ctx, "deleting AI Gateway API key", map[string]any{
 		"url": requestURL,
 	})
 
