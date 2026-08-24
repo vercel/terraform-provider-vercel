@@ -3,7 +3,9 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/float64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -226,6 +228,47 @@ func quotasEqual(a, b *AIGatewayAPIKeyQuota) bool {
 		a.AlertThresholds.Equal(b.AlertThresholds)
 }
 
+func clientQuotasEqual(a, b *client.AIGatewayAPIKeyQuota) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	if a.LimitAmount != b.LimitAmount || a.RefreshPeriod != b.RefreshPeriod {
+		return false
+	}
+	aThresholds := append([]int64(nil), a.AlertThresholds...)
+	bThresholds := append([]int64(nil), b.AlertThresholds...)
+	slices.Sort(aThresholds)
+	slices.Sort(bThresholds)
+	return slices.Equal(aThresholds, bThresholds)
+}
+
+// waitForQuota polls the list endpoint until it reflects a quota write. Quota
+// reads are eventually consistent with writes, so without this a refresh
+// immediately after an apply can observe stale quota values. A timeout is
+// reported as a warning rather than an error: the write itself succeeded, and
+// any phantom drift resolves once the change propagates.
+func (r *aiGatewayAPIKeyResource) waitForQuota(ctx context.Context, keyID, teamID string, want *client.AIGatewayAPIKeyQuota, diags *diag.Diagnostics) {
+	deadline := time.Now().Add(90 * time.Second)
+	for {
+		got, err := r.client.GetAIGatewayAPIKeyQuota(ctx, keyID, teamID)
+		if err == nil && clientQuotasEqual(got, want) {
+			return
+		}
+		if time.Now().After(deadline) {
+			diags.AddWarning(
+				"AI Gateway API Key quota change is still propagating",
+				fmt.Sprintf("The quota change for AI Gateway API Key %s was applied, but is not yet reflected by the Vercel API. A subsequent plan may show a difference until the change propagates.", keyID),
+			)
+			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(2 * time.Second):
+		}
+	}
+}
+
 func (r *aiGatewayAPIKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan AIGatewayAPIKey
 	diags := req.Plan.Get(ctx, &plan)
@@ -286,6 +329,9 @@ func (r *aiGatewayAPIKeyResource) Create(ctx context.Context, req resource.Creat
 	// The create response does not include quota information; it reflects
 	// what was just requested.
 	result.Quota = plan.Quota
+	if quota != nil {
+		r.waitForQuota(ctx, result.ID.ValueString(), result.TeamID.ValueString(), quota, &resp.Diagnostics)
+	}
 	tflog.Info(ctx, "created AI Gateway API key", map[string]any{
 		"key_id":  result.ID.ValueString(),
 		"team_id": result.TeamID.ValueString(),
@@ -384,6 +430,7 @@ func (r *aiGatewayAPIKeyResource) Update(ctx context.Context, req resource.Updat
 
 	if !quotasEqual(plan.Quota, state.Quota) {
 		var request client.UpdateAIGatewayAPIKeyQuotaRequest
+		var want *client.AIGatewayAPIKeyQuota
 		if plan.Quota != nil {
 			thresholds, diags := plan.Quota.alertThresholds(ctx)
 			resp.Diagnostics.Append(diags...)
@@ -400,6 +447,11 @@ func (r *aiGatewayAPIKeyResource) Update(ctx context.Context, req resource.Updat
 				LimitAmount:     plan.Quota.LimitAmount.ValueFloat64Pointer(),
 				RefreshPeriod:   plan.Quota.RefreshPeriod.ValueString(),
 				AlertThresholds: &thresholds,
+			}
+			want = &client.AIGatewayAPIKeyQuota{
+				LimitAmount:     plan.Quota.LimitAmount.ValueFloat64(),
+				RefreshPeriod:   plan.Quota.RefreshPeriod.ValueString(),
+				AlertThresholds: thresholds,
 			}
 		} else {
 			archived := true
@@ -421,6 +473,7 @@ func (r *aiGatewayAPIKeyResource) Update(ctx context.Context, req resource.Updat
 		if plan.Quota != nil {
 			result.Quota = quotaFromResponse(quota, plan.Quota)
 		}
+		r.waitForQuota(ctx, state.ID.ValueString(), state.TeamID.ValueString(), want, &resp.Diagnostics)
 	}
 
 	tflog.Info(ctx, "updated AI Gateway API key", map[string]any{
