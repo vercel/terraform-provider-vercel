@@ -39,3 +39,54 @@ func (v validatorJSON) ValidateString(ctx context.Context, req validator.StringR
 		return
 	}
 }
+
+var _ validator.String = validatorJSONObject{}
+
+func validateJSONObject() validatorJSONObject {
+	return validatorJSONObject{}
+}
+
+type validatorJSONObject struct {
+}
+
+func (v validatorJSONObject) Description(ctx context.Context) string {
+	return "Value must be a JSON object"
+}
+func (v validatorJSONObject) MarkdownDescription(ctx context.Context) string {
+	return "Value must be a JSON object"
+}
+
+func (v validatorJSONObject) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+
+	value := req.ConfigValue.ValueString()
+	if value == "" {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid value provided",
+			"Value must be a JSON object, but an empty string was provided.",
+		)
+		return
+	}
+
+	var parsed any
+	if err := json.Unmarshal([]byte(value), &parsed); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid value provided",
+			fmt.Sprintf("Value must be a JSON object, but it could not be parsed: %s.", err),
+		)
+		return
+	}
+
+	if _, ok := parsed.(map[string]any); !ok {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid value provided",
+			"Value must be a JSON object (for example `{\"aud\":\"https://example.com\"}`).",
+		)
+		return
+	}
+}
