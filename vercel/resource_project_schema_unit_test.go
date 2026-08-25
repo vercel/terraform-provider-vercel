@@ -5,7 +5,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
@@ -21,6 +24,24 @@ func TestProjectResourceSchemaOmitsDeprecatedAutomationBypassAttributes(t *testi
 	}
 	if _, ok := resp.Schema.Attributes["protection_bypass_for_automation_secret"]; ok {
 		t.Fatal("protection_bypass_for_automation_secret should not be present in vercel_project schema")
+	}
+}
+
+func TestProjectBuildMachineTypeAcceptsBasic(t *testing.T) {
+	res := newProjectResource()
+	resp := &resource.SchemaResponse{}
+	res.Schema(context.Background(), resource.SchemaRequest{}, resp)
+
+	attribute := resp.Schema.Attributes["build_machine_type"].(resourceschema.StringAttribute)
+	for _, v := range attribute.Validators {
+		validationResp := &validator.StringResponse{}
+		v.ValidateString(context.Background(), validator.StringRequest{
+			Path:        path.Root("build_machine_type"),
+			ConfigValue: types.StringValue("basic"),
+		}, validationResp)
+		if validationResp.Diagnostics.HasError() {
+			t.Fatalf("basic should be valid: %s", validationResp.Diagnostics)
+		}
 	}
 }
 

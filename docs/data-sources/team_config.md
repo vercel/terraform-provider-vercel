@@ -27,6 +27,7 @@ data "vercel_team_config" "example" {
 
 ### Read-Only
 
+- `default_build_machine_type` (String) The default build machine type for new projects.
 - `description` (String) A description of the team.
 - `email_domain` (String) Hostname that'll be matched with emails on sign-up to automatically join the Team.
 - `enable_preview_feedback` (String) Preview feedback configuration.

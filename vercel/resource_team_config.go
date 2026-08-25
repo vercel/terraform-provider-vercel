@@ -172,6 +172,15 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Computed:      true,
 				Description:   "The hostname that is used as the preview deployment suffix.",
 			},
+			"default_build_machine_type": schema.StringAttribute{
+				Description:   "The default build machine type for new projects. Must be one of \"basic\", \"standard\", \"enhanced\", \"turbo\", or \"elastic\".",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+				Validators: []validator.String{
+					stringvalidator.OneOf("basic", "standard", "enhanced", "turbo", "elastic"),
+				},
+			},
 			"remote_caching": schema.SingleNestedAttribute{
 				Description:   "Configuration for Remote Caching.",
 				Optional:      true,
@@ -278,6 +287,7 @@ type TeamConfig struct {
 	SensitiveEnvironmentVariablePolicy types.String `tfsdk:"sensitive_environment_variable_policy"`
 	EmailDomain                        types.String `tfsdk:"email_domain"`
 	PreviewDeploymentSuffix            types.String `tfsdk:"preview_deployment_suffix"`
+	DefaultBuildMachineType            types.String `tfsdk:"default_build_machine_type"`
 	RemoteCaching                      types.Object `tfsdk:"remote_caching"`
 	EnablePreviewFeedback              types.String `tfsdk:"enable_preview_feedback"`
 	EnableProductionFeedback           types.String `tfsdk:"enable_production_feedback"`
@@ -365,6 +375,14 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		v := t.HideIPAddressesInLogDrains.ValueBool()
 		hideIPAddresssesInLogDrains = &v
 	}
+	var resourceConfig *client.TeamResourceConfig
+	if !t.DefaultBuildMachineType.IsUnknown() && !t.DefaultBuildMachineType.IsNull() {
+		resourceConfig = &client.TeamResourceConfig{
+			BuildMachine: &client.TeamBuildMachine{
+				Default: t.DefaultBuildMachineType.ValueStringPointer(),
+			},
+		}
+	}
 	return client.UpdateTeamRequest{
 		TeamID:                             t.ID.ValueString(),
 		Avatar:                             avatar,
@@ -379,11 +397,17 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		RemoteCaching:                      rc.toUpdateTeamRequest(),
 		HideIPAddresses:                    hideIPAddressses,
 		HideIPAddressesInLogDrains:         hideIPAddresssesInLogDrains,
+		ResourceConfig:                     resourceConfig,
 		Saml:                               saml.toUpdateTeamRequest(),
 	}, nil
 }
 
 func convertResponseToTeamConfig(ctx context.Context, response client.Team, avatar types.Map) (TeamConfig, diag.Diagnostics) {
+	defaultBuildMachineType := types.StringNull()
+	if response.ResourceConfig != nil && response.ResourceConfig.BuildMachine != nil {
+		defaultBuildMachineType = types.StringPointerValue(response.ResourceConfig.BuildMachine.Default)
+	}
+
 	remoteCaching := types.ObjectNull(remoteCachingAttrTypes)
 	if response.RemoteCaching != nil {
 		var diags diag.Diagnostics
@@ -429,6 +453,7 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 		SensitiveEnvironmentVariablePolicy: types.StringPointerValue(response.SensitiveEnvironmentVariablePolicy),
 		EmailDomain:                        types.StringPointerValue(response.EmailDomain),
 		PreviewDeploymentSuffix:            types.StringPointerValue(response.PreviewDeploymentSuffix),
+		DefaultBuildMachineType:            defaultBuildMachineType,
 		EnablePreviewFeedback:              types.StringPointerValue(response.EnablePreviewFeedback),
 		EnableProductionFeedback:           types.StringPointerValue(response.EnableProductionFeedback),
 		HideIPAddresses:                    types.BoolPointerValue(response.HideIPAddresses),

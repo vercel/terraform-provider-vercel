@@ -80,6 +80,10 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Computed:    true,
 				Description: "The hostname that is used as the preview deployment suffix.",
 			},
+			"default_build_machine_type": schema.StringAttribute{
+				Computed:    true,
+				Description: "The default build machine type for new projects.",
+			},
 			"remote_caching": schema.SingleNestedAttribute{
 				Computed:    true,
 				Description: "Configuration for Remote Caching.",
@@ -145,6 +149,7 @@ type TeamConfigData struct {
 	SensitiveEnvironmentVariablePolicy types.String `tfsdk:"sensitive_environment_variable_policy"`
 	EmailDomain                        types.String `tfsdk:"email_domain"`
 	PreviewDeploymentSuffix            types.String `tfsdk:"preview_deployment_suffix"`
+	DefaultBuildMachineType            types.String `tfsdk:"default_build_machine_type"`
 	RemoteCaching                      types.Object `tfsdk:"remote_caching"`
 	EnablePreviewFeedback              types.String `tfsdk:"enable_preview_feedback"`
 	EnableProductionFeedback           types.String `tfsdk:"enable_production_feedback"`
@@ -186,6 +191,7 @@ func (d *teamConfigDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		SensitiveEnvironmentVariablePolicy: out.SensitiveEnvironmentVariablePolicy,
 		EmailDomain:                        out.EmailDomain,
 		PreviewDeploymentSuffix:            out.PreviewDeploymentSuffix,
+		DefaultBuildMachineType:            out.DefaultBuildMachineType,
 		EnablePreviewFeedback:              out.EnablePreviewFeedback,
 		EnableProductionFeedback:           out.EnableProductionFeedback,
 		HideIPAddresses:                    out.HideIPAddresses,

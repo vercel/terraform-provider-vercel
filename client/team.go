@@ -98,24 +98,33 @@ type SpacesConfig struct {
 	Enabled bool `json:"enabled"`
 }
 
+type TeamBuildMachine struct {
+	Default *string `json:"default"`
+}
+
+type TeamResourceConfig struct {
+	BuildMachine *TeamBuildMachine `json:"buildMachine"`
+}
+
 // Team is the information returned by the vercel api when a team is created.
 type Team struct {
-	ID                                 string         `json:"id"`
-	Name                               string         `json:"name"`
-	Avatar                             *string        `json:"avatar"` // hash of uploaded image
-	Description                        *string        `json:"description"`
-	Slug                               string         `json:"slug"`
-	SensitiveEnvironmentVariablePolicy *string        `json:"sensitiveEnvironmentVariablePolicy"`
-	EmailDomain                        *string        `json:"emailDomain"`
-	Saml                               *SamlConfig    `json:"saml"`
-	InviteCode                         *string        `json:"inviteCode"`
-	PreviewDeploymentSuffix            *string        `json:"previewDeploymentSuffix"`
-	RemoteCaching                      *RemoteCaching `json:"remoteCaching"`
-	EnablePreviewFeedback              *string        `json:"enablePreviewFeedback"`
-	EnableProductionFeedback           *string        `json:"enableProductionFeedback"`
-	Spaces                             *SpacesConfig  `json:"spaces"`
-	HideIPAddresses                    *bool          `json:"hideIpAddresses"`
-	HideIPAddressesInLogDrains         *bool          `json:"hideIpAddressesInLogDrains,omitempty"`
+	ID                                 string              `json:"id"`
+	Name                               string              `json:"name"`
+	Avatar                             *string             `json:"avatar"` // hash of uploaded image
+	Description                        *string             `json:"description"`
+	Slug                               string              `json:"slug"`
+	SensitiveEnvironmentVariablePolicy *string             `json:"sensitiveEnvironmentVariablePolicy"`
+	EmailDomain                        *string             `json:"emailDomain"`
+	Saml                               *SamlConfig         `json:"saml"`
+	InviteCode                         *string             `json:"inviteCode"`
+	PreviewDeploymentSuffix            *string             `json:"previewDeploymentSuffix"`
+	RemoteCaching                      *RemoteCaching      `json:"remoteCaching"`
+	EnablePreviewFeedback              *string             `json:"enablePreviewFeedback"`
+	EnableProductionFeedback           *string             `json:"enableProductionFeedback"`
+	Spaces                             *SpacesConfig       `json:"spaces"`
+	HideIPAddresses                    *bool               `json:"hideIpAddresses"`
+	HideIPAddressesInLogDrains         *bool               `json:"hideIpAddressesInLogDrains,omitempty"`
+	ResourceConfig                     *TeamResourceConfig `json:"resourceConfig"`
 }
 
 // GetTeam returns information about an existing team within vercel.
@@ -167,20 +176,21 @@ func (r *UpdateSamlConfig) MarshalJSON() ([]byte, error) {
 }
 
 type UpdateTeamRequest struct {
-	TeamID                             string            `json:"-"`
-	Avatar                             string            `json:"avatar,omitempty"`
-	Description                        string            `json:"description,omitempty"`
-	EmailDomain                        string            `json:"emailDomain,omitempty"`
-	Name                               string            `json:"name,omitempty"`
-	PreviewDeploymentSuffix            string            `json:"previewDeploymentSuffix,omitempty"`
-	Saml                               *UpdateSamlConfig `json:"saml,omitempty"`
-	Slug                               string            `json:"slug,omitempty"`
-	EnablePreviewFeedback              string            `json:"enablePreviewFeedback,omitempty"`
-	EnableProductionFeedback           string            `json:"enableProductionFeedback,omitempty"`
-	SensitiveEnvironmentVariablePolicy string            `json:"sensitiveEnvironmentVariablePolicy,omitempty"`
-	RemoteCaching                      *RemoteCaching    `json:"remoteCaching,omitempty"`
-	HideIPAddresses                    *bool             `json:"hideIpAddresses,omitempty"`
-	HideIPAddressesInLogDrains         *bool             `json:"hideIpAddressesInLogDrains,omitempty"`
+	TeamID                             string              `json:"-"`
+	Avatar                             string              `json:"avatar,omitempty"`
+	Description                        string              `json:"description,omitempty"`
+	EmailDomain                        string              `json:"emailDomain,omitempty"`
+	Name                               string              `json:"name,omitempty"`
+	PreviewDeploymentSuffix            string              `json:"previewDeploymentSuffix,omitempty"`
+	Saml                               *UpdateSamlConfig   `json:"saml,omitempty"`
+	Slug                               string              `json:"slug,omitempty"`
+	EnablePreviewFeedback              string              `json:"enablePreviewFeedback,omitempty"`
+	EnableProductionFeedback           string              `json:"enableProductionFeedback,omitempty"`
+	SensitiveEnvironmentVariablePolicy string              `json:"sensitiveEnvironmentVariablePolicy,omitempty"`
+	RemoteCaching                      *RemoteCaching      `json:"remoteCaching,omitempty"`
+	HideIPAddresses                    *bool               `json:"hideIpAddresses,omitempty"`
+	HideIPAddressesInLogDrains         *bool               `json:"hideIpAddressesInLogDrains,omitempty"`
+	ResourceConfig                     *TeamResourceConfig `json:"resourceConfig,omitempty"`
 }
 
 func (c *Client) UpdateTeam(ctx context.Context, request UpdateTeamRequest) (t Team, err error) {
