@@ -108,7 +108,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 			},
 			"sensitive_environment_variable_policy": schema.StringAttribute{
 				Description:        "Ensures that all environment variables created by members of this team will be created as Sensitive Environment Variables which can only be decrypted by Vercel's deployment system. One of `on`, `off`, or `default`.",
-				DeprecationMessage: "This attribute is deprecated. Use `disjunctive_production_secret_policy` instead.",
+				DeprecationMessage: "This attribute is deprecated and will be removed in a future major version. It is not replaced by `disjunctive_production_secret_policy`, which enforces a different rule.",
 				Optional:           true,
 				Computed:           true,
 				PlanModifiers:      []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},

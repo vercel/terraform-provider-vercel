@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
@@ -266,6 +267,72 @@ func TestProjectEnvironmentVariableHasTarget(t *testing.T) {
 				t.Fatalf("hasTarget() = %t, want %t", got, tt.wantTarget)
 			}
 		})
+	}
+}
+
+func TestProjectEnvironmentVariableModifyPlanUsesPlannedDevelopmentTarget(t *testing.T) {
+	ctx := context.Background()
+	res := &projectEnvironmentVariableResource{}
+
+	schemaResp := &resource.SchemaResponse{}
+	res.Schema(ctx, resource.SchemaRequest{}, schemaResp)
+
+	config := ProjectEnvironmentVariable{
+		Target:               types.SetNull(types.StringType),
+		CustomEnvironmentIDs: types.SetNull(types.StringType),
+		GitBranch:            types.StringNull(),
+		Key:                  types.StringValue("EXAMPLE"),
+		Value:                types.StringValue("value"),
+		ValueWO:              types.StringNull(),
+		ValueWOVersion:       types.Int64Null(),
+		TeamID:               types.StringNull(),
+		ProjectID:            types.StringValue("prj_123"),
+		ID:                   types.StringNull(),
+		Sensitive:            types.BoolValue(true),
+		Visibility:           types.StringNull(),
+		Comment:              types.StringNull(),
+	}
+
+	plan := config
+	plan.Target = stringSet("development")
+	plan.ID = types.StringValue("env_123")
+	plan.Sensitive = types.BoolValue(true)
+
+	configPlan := tfsdk.Plan{Schema: schemaResp.Schema}
+	diags := configPlan.Set(ctx, config)
+	if diags.HasError() {
+		t.Fatalf("configPlan.Set() returned diagnostics: %v", diags)
+	}
+
+	plannedState := tfsdk.Plan{Schema: schemaResp.Schema}
+	diags = plannedState.Set(ctx, plan)
+	if diags.HasError() {
+		t.Fatalf("plannedState.Set() returned diagnostics: %v", diags)
+	}
+
+	req := resource.ModifyPlanRequest{
+		Config: tfsdk.Config{
+			Raw:    configPlan.Raw,
+			Schema: schemaResp.Schema,
+		},
+		Plan: plannedState,
+	}
+	resp := &resource.ModifyPlanResponse{
+		Plan: plannedState,
+	}
+
+	res.ModifyPlan(ctx, req, resp)
+
+	if !resp.Diagnostics.HasError() {
+		t.Fatal("ModifyPlan() expected diagnostics, got none")
+	}
+
+	if len(resp.Diagnostics) != 1 {
+		t.Fatalf("ModifyPlan() returned %d diagnostics, want 1", len(resp.Diagnostics))
+	}
+
+	if got := resp.Diagnostics[0].Detail(); got != "Environment variables targeting `development` must explicitly set `sensitive = false`." {
+		t.Fatalf("ModifyPlan() diagnostic detail = %q, want %q", got, "Environment variables targeting `development` must explicitly set `sensitive = false`.")
 	}
 }
 

@@ -31,8 +31,9 @@ func strPtrEqual(a, b *string) bool {
 }
 
 var (
-	_ resource.Resource              = &projectEnvironmentVariablesResource{}
-	_ resource.ResourceWithConfigure = &projectEnvironmentVariablesResource{}
+	_ resource.Resource               = &projectEnvironmentVariablesResource{}
+	_ resource.ResourceWithConfigure  = &projectEnvironmentVariablesResource{}
+	_ resource.ResourceWithModifyPlan = &projectEnvironmentVariablesResource{}
 )
 
 func newProjectEnvironmentVariablesResource() resource.Resource {
@@ -80,7 +81,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 ~> Terraform currently provides this Project Environment Variables resource (multiple Environment Variables), a single Project Environment Variable Resource, and a Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 
--> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Team sensitivity rules are enforced by the Vercel API.
+-> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Variables targeting ` + "`development`" + ` must set ` + "`sensitive = false`" + `. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -148,7 +149,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Description: "The git branch of the Environment Variable.",
 						},
 						"sensitive": schema.BoolAttribute{
-							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set.",
+							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Variables targeting `development` must set this to `false`.",
 							Required:    true,
 						},
 						"visibility": environmentVariableVisibilitySchemaAttribute(),
@@ -183,6 +184,45 @@ func (p *ProjectEnvironmentVariables) environment(ctx context.Context) (Environm
 	var vars []EnvironmentItem
 	diags := p.Variables.ElementsAs(ctx, &vars, true)
 	return vars, diags
+}
+
+func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	var plan ProjectEnvironmentVariables
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	environment, diags := plan.environment(ctx)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
+	if len(environment) == 0 {
+		return
+	}
+
+	for i, e := range environment {
+		hasDevelopmentTarget, diags := e.hasTarget(ctx, "development")
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if hasDevelopmentTarget && !e.isExplicitlyNonSensitive() {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("variables").
+					AtSetValue(plan.Variables.Elements()[i]).
+					AtName("sensitive"),
+				"Project Environment Variables Invalid",
+				"Environment variables targeting `development` must explicitly set `sensitive = false`.",
+			)
+		}
+	}
 }
 
 type EnvironmentItems []EnvironmentItem

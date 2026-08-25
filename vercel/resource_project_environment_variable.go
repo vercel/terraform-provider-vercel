@@ -26,6 +26,7 @@ var (
 	_ resource.Resource                = &projectEnvironmentVariableResource{}
 	_ resource.ResourceWithConfigure   = &projectEnvironmentVariableResource{}
 	_ resource.ResourceWithImportState = &projectEnvironmentVariableResource{}
+	_ resource.ResourceWithModifyPlan  = &projectEnvironmentVariableResource{}
 )
 
 func newProjectEnvironmentVariableResource() resource.Resource {
@@ -71,7 +72,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 ~> Terraform currently provides this Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and a Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 
--> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Team sensitivity rules are enforced by the Vercel API.
+-> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Variables targeting ` + "`development`" + ` must set ` + "`sensitive = false`" + `. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
 
 -> **Note:** Write-Only argument ` + "`value_wo`" + ` is available to use in place of ` + "`value`" + `. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).
 `,
@@ -163,7 +164,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Computed:      true,
 			},
 			"sensitive": schema.BoolAttribute{
-				Description:   "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set.",
+				Description:   "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Variables targeting `development` must set this to `false`.",
 				Required:      true,
 				Validators:    []validator.Bool{},
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
@@ -230,6 +231,32 @@ func (e ProjectEnvironmentVariable) hasTarget(ctx context.Context, target string
 	}
 
 	return false, nil
+}
+
+func (r *projectEnvironmentVariableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	var plan ProjectEnvironmentVariable
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	hasDevelopmentTarget, diags := plan.hasTarget(ctx, "development")
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if hasDevelopmentTarget && !plan.isExplicitlyNonSensitive() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("sensitive"),
+			"Project Environment Variable Invalid",
+			"Environment variables targeting `development` must explicitly set `sensitive = false`.",
+		)
+	}
 }
 
 func (e *ProjectEnvironmentVariable) toCreateEnvironmentVariableRequest(ctx context.Context, valueWO types.String) (req client.CreateEnvironmentVariableRequest, diags diag.Diagnostics) {

@@ -71,7 +71,7 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"sensitive_environment_variable_policy": schema.StringAttribute{
 				Computed:           true,
 				Description:        "The legacy policy for sensitive environment variables.",
-				DeprecationMessage: "This attribute is deprecated. Use `disjunctive_production_secret_policy` instead.",
+				DeprecationMessage: "This attribute is deprecated and will be removed in a future major version. It is not replaced by `disjunctive_production_secret_policy`, which enforces a different rule.",
 			},
 			"disjunctive_production_secret_policy": schema.StringAttribute{
 				Computed:    true,
