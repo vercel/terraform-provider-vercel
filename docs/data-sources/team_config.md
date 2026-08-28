@@ -29,6 +29,7 @@ data "vercel_team_config" "example" {
 
 - `default_build_machine_type` (String) The default build machine type for new projects.
 - `description` (String) A description of the team.
+- `disjunctive_production_secret_policy` (String) When enabled, secrets cannot be scoped to both Production and non-Production targets on the same environment variable.
 - `email_domain` (String) Hostname that'll be matched with emails on sign-up to automatically join the Team.
 - `enable_preview_feedback` (String) Preview feedback configuration.
 - `enable_production_feedback` (String) Production feedback configuration.
@@ -39,7 +40,7 @@ data "vercel_team_config" "example" {
 - `preview_deployment_suffix` (String) The hostname that is used as the preview deployment suffix.
 - `remote_caching` (Attributes) Configuration for Remote Caching. (see [below for nested schema](#nestedatt--remote_caching))
 - `saml` (Attributes) Configuration for SAML authentication. (see [below for nested schema](#nestedatt--saml))
-- `sensitive_environment_variable_policy` (String) The policy for sensitive environment variables.
+- `sensitive_environment_variable_policy` (String, Deprecated) The legacy policy for sensitive environment variables.
 - `slug` (String) The slug of the team. Used in the URL of the team's dashboard.
 
 <a id="nestedatt--remote_caching"></a>
