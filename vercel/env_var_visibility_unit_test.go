@@ -95,8 +95,8 @@ func TestEnvVarVisibilityFromResponse(t *testing.T) {
 	if got := envVarVisibilityFromResponse("sensitive", nil); got.ValueString() != "secret" {
 		t.Fatalf("got %q, want secret", got.ValueString())
 	}
-	if got := envVarVisibilityFromResponse("encrypted", nil); got.ValueString() != "config" {
-		t.Fatalf("got %q, want config", got.ValueString())
+	if got := envVarVisibilityFromResponse("encrypted", nil); !got.IsNull() {
+		t.Fatalf("got %q, want null", got.ValueString())
 	}
 	if got := envVarVisibilityFromResponse("encrypted", strPtr("secret")); got.ValueString() != "secret" {
 		t.Fatalf("got %q, want secret", got.ValueString())

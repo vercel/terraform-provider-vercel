@@ -62,7 +62,7 @@ func envVarVisibilityFromResponse(envType string, apiVisibility *string) types.S
 	if envType == "sensitive" {
 		return types.StringValue("secret")
 	}
-	return types.StringValue("config")
+	return types.StringNull()
 }
 
 func isExplicitlyNonSensitive(sensitive types.Bool) bool {
