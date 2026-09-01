@@ -81,7 +81,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 ~> Terraform currently provides this Project Environment Variables resource (multiple Environment Variables), a single Project Environment Variable Resource, and a Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 
--> **Note:** Starting in provider version ` + "`4.8.0`" + `, Project Environment Variables require an explicit ` + "`sensitive`" + ` value. Variables targeting only ` + "`development`" + ` must set ` + "`sensitive = false`" + `. If your team enforces sensitive environment variables, variables targeting ` + "`preview`" + `, ` + "`production`" + `, or custom environments must set ` + "`sensitive = true`" + `. When that team policy is enabled, a variable cannot target ` + "`development`" + ` together with ` + "`preview`" + `, ` + "`production`" + `, or custom environments.
+-> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Variables targeting ` + "`development`" + ` must set ` + "`sensitive = false`" + `. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -149,9 +149,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Description: "The git branch of the Environment Variable.",
 						},
 						"sensitive": schema.BoolAttribute{
-							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. If a team-wide environment variable policy is active, environment variables may have to be sensitive. Variables targeting only `development` must set this to `false`. Variables targeting `preview`, `production`, or custom environments may have to set this to `true`. A variable cannot target `development` together with `preview`, `production`, or custom environments while that team policy is enabled.",
+							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Variables targeting `development` must set this to `false`.",
 							Required:    true,
 						},
+						"visibility": environmentVariableVisibilitySchemaAttribute(),
 						"comment": schema.StringAttribute{
 							Description: "A comment explaining what the environment variable is for.",
 							Optional:    true,
@@ -202,13 +203,10 @@ func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, re
 		return
 	}
 
-	// Should be at least one variable
 	if len(environment) == 0 {
 		return
 	}
 
-	var invalidDevelopmentEnvVars []path.Path
-	var nonSensitiveEnvVars []path.Path
 	for i, e := range environment {
 		hasDevelopmentTarget, diags := e.hasTarget(ctx, "development")
 		resp.Diagnostics.Append(diags...)
@@ -216,76 +214,14 @@ func (r *projectEnvironmentVariablesResource) ModifyPlan(ctx context.Context, re
 			return
 		}
 		if hasDevelopmentTarget && !e.isExplicitlyNonSensitive() {
-			invalidDevelopmentEnvVars = append(
-				invalidDevelopmentEnvVars,
+			resp.Diagnostics.AddAttributeError(
 				path.Root("variables").
 					AtSetValue(plan.Variables.Elements()[i]).
 					AtName("sensitive"),
-			)
-			continue
-		}
-
-		shouldValidatePolicy, diags := shouldValidateSensitiveEnvironmentVariablePolicy(
-			ctx,
-			e.Target,
-			e.CustomEnvironmentIDs,
-			false,
-			e.isExplicitlyNonSensitive(),
-			e.ID,
-		)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if !shouldValidatePolicy {
-			continue
-		}
-
-		nonSensitiveEnvVars = append(
-			nonSensitiveEnvVars,
-			path.Root("variables").
-				AtSetValue(plan.Variables.Elements()[i]).
-				AtName("sensitive"),
-		)
-	}
-
-	if len(invalidDevelopmentEnvVars) > 0 {
-		for _, p := range invalidDevelopmentEnvVars {
-			resp.Diagnostics.AddAttributeError(
-				p,
 				"Project Environment Variables Invalid",
 				"Environment variables targeting `development` must explicitly set `sensitive = false`.",
 			)
 		}
-		return
-	}
-
-	if len(nonSensitiveEnvVars) == 0 {
-		return
-	}
-
-	// if sensitive is explicitly set to `false`, then validate that an env var can be created with the given
-	// team sensitive environment variable policy.
-	team, err := r.client.Team(ctx, plan.TeamID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error validating project environment variables",
-			"Could not validate project environment variable, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	if team.SensitiveEnvironmentVariablePolicy == nil || *team.SensitiveEnvironmentVariablePolicy != "on" {
-		// the policy isn't enabled
-		return
-	}
-
-	for _, p := range nonSensitiveEnvVars {
-		resp.Diagnostics.AddAttributeError(
-			p,
-			"Project Environment Variables Invalid",
-			"This team has a policy that forces environment variables targeting `preview`, `production`, or custom environments to be sensitive. Set `sensitive = true` in your configuration.",
-		)
 	}
 }
 
@@ -304,11 +240,9 @@ func (e *EnvironmentItems) toCreateEnvironmentVariablesRequest(ctx context.Conte
 		if diags.HasError() {
 			return r, diags
 		}
-		var envVariableType string
-		if env.isSensitive() {
-			envVariableType = "sensitive"
-		} else {
-			envVariableType = "encrypted"
+		envVariableType, visibility, diags := resolveEnvVarTypeAndVisibility(env.Sensitive, env.Visibility)
+		if diags.HasError() {
+			return r, diags
 		}
 		variables = append(variables, client.EnvironmentVariableRequest{
 			Key:                  env.Key.ValueString(),
@@ -316,6 +250,7 @@ func (e *EnvironmentItems) toCreateEnvironmentVariablesRequest(ctx context.Conte
 			Target:               target,
 			CustomEnvironmentIDs: customEnvironmentIDs,
 			Type:                 envVariableType,
+			Visibility:           visibility,
 			GitBranch:            env.GitBranch.ValueStringPointer(),
 			Comment:              env.Comment.ValueString(),
 		})
@@ -405,6 +340,7 @@ func convertResponseToProjectEnvironmentVariables(
 				"git_branch":             types.StringPointerValue(e.GitBranch),
 				"id":                     types.StringValue(e.ID),
 				"sensitive":              types.BoolValue(e.Type == "sensitive"),
+				"visibility":             envVarVisibilityFromResponse(e.Type, e.Visibility),
 				"comment":                types.StringValue(e.Comment),
 			},
 		))
@@ -700,6 +636,7 @@ func (r *projectEnvironmentVariablesResource) Update(ctx context.Context, req re
 						GitBranch:            types.StringPointerValue(e.GitBranch),
 						ID:                   types.StringValue(e.ID),
 						Sensitive:            types.BoolValue(e.Type == "sensitive"),
+						Visibility:           envVarVisibilityFromResponse(e.Type, e.Visibility),
 						Comment:              types.StringValue(e.Comment),
 					})
 					skipAdding[i] = true

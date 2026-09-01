@@ -48,6 +48,7 @@ resource "vercel_team_config" "example" {
 - `avatar` (Map of String) The `avatar` should be a the 'file' attribute from a vercel_file data source.
 - `default_build_machine_type` (String) The default build machine type for new projects. Must be one of "basic", "standard", "enhanced", "turbo", or "elastic".
 - `description` (String) A description of the team.
+- `disjunctive_production_secret_policy` (String) When enabled, secrets cannot be scoped to both Production and non-Production targets on the same environment variable. One of `on`, `off`, or `default`.
 - `email_domain` (String) Hostname that'll be matched with emails on sign-up to automatically join the Team.
 - `enable_preview_feedback` (String) Enables the Vercel Toolbar on your preview deployments: one of on, off or default.
 - `enable_production_feedback` (String) Enables the Vercel Toolbar on your production deployments: one of on, off or default.
@@ -57,7 +58,7 @@ resource "vercel_team_config" "example" {
 - `preview_deployment_suffix` (String) The hostname that is used as the preview deployment suffix.
 - `remote_caching` (Attributes) Configuration for Remote Caching. (see [below for nested schema](#nestedatt--remote_caching))
 - `saml` (Attributes) Configuration for SAML authentication. (see [below for nested schema](#nestedatt--saml))
-- `sensitive_environment_variable_policy` (String) Ensures that all environment variables created by members of this team will be created as Sensitive Environment Variables which can only be decrypted by Vercel's deployment system.: one of on, off or default.
+- `sensitive_environment_variable_policy` (String, Deprecated) Ensures that all environment variables created by members of this team will be created as Sensitive Environment Variables which can only be decrypted by Vercel's deployment system. One of `on`, `off`, or `default`.
 - `slug` (String) The slug of the team. Will be used in the URL of the team's dashboard.
 
 ### Read-Only

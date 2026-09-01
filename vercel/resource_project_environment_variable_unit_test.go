@@ -270,66 +270,6 @@ func TestProjectEnvironmentVariableHasTarget(t *testing.T) {
 	}
 }
 
-func TestProjectEnvironmentVariableModifyPlanSkipsPolicyValidationForExistingResource(t *testing.T) {
-	ctx := context.Background()
-	policy := "on"
-	res := &projectEnvironmentVariableResource{
-		client: client.New("").WithTeam(client.Team{
-			SensitiveEnvironmentVariablePolicy: &policy,
-		}),
-	}
-
-	schemaResp := &resource.SchemaResponse{}
-	res.Schema(ctx, resource.SchemaRequest{}, schemaResp)
-
-	config := ProjectEnvironmentVariable{
-		Target:               stringSet("production"),
-		CustomEnvironmentIDs: types.SetNull(types.StringType),
-		GitBranch:            types.StringNull(),
-		Key:                  types.StringValue("EXAMPLE"),
-		Value:                types.StringValue("value"),
-		ValueWO:              types.StringNull(),
-		ValueWOVersion:       types.Int64Null(),
-		TeamID:               types.StringNull(),
-		ProjectID:            types.StringValue("prj_123"),
-		ID:                   types.StringNull(),
-		Sensitive:            types.BoolValue(false),
-		Comment:              types.StringNull(),
-	}
-
-	plan := config
-	plan.ID = types.StringValue("env_123")
-
-	configPlan := tfsdk.Plan{Schema: schemaResp.Schema}
-	diags := configPlan.Set(ctx, config)
-	if diags.HasError() {
-		t.Fatalf("configPlan.Set() returned diagnostics: %v", diags)
-	}
-
-	plannedState := tfsdk.Plan{Schema: schemaResp.Schema}
-	diags = plannedState.Set(ctx, plan)
-	if diags.HasError() {
-		t.Fatalf("plannedState.Set() returned diagnostics: %v", diags)
-	}
-
-	req := resource.ModifyPlanRequest{
-		Config: tfsdk.Config{
-			Raw:    configPlan.Raw,
-			Schema: schemaResp.Schema,
-		},
-		Plan: plannedState,
-	}
-	resp := &resource.ModifyPlanResponse{
-		Plan: plannedState,
-	}
-
-	res.ModifyPlan(ctx, req, resp)
-
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("ModifyPlan() returned diagnostics: %v", resp.Diagnostics)
-	}
-}
-
 func TestProjectEnvironmentVariableModifyPlanUsesPlannedDevelopmentTarget(t *testing.T) {
 	ctx := context.Background()
 	res := &projectEnvironmentVariableResource{}
@@ -349,6 +289,7 @@ func TestProjectEnvironmentVariableModifyPlanUsesPlannedDevelopmentTarget(t *tes
 		ProjectID:            types.StringValue("prj_123"),
 		ID:                   types.StringNull(),
 		Sensitive:            types.BoolValue(true),
+		Visibility:           types.StringNull(),
 		Comment:              types.StringNull(),
 	}
 

@@ -28,6 +28,7 @@ type EnvironmentVariable struct {
 	CustomEnvironmentIDs []string `json:"customEnvironmentIds"`
 	GitBranch            *string  `json:"gitBranch,omitempty"`
 	Type                 string   `json:"type"`
+	Visibility           *string  `json:"visibility,omitempty"`
 	ID                   string   `json:"id,omitempty"`
 	TeamID               string   `json:"-"`
 	Comment              string   `json:"comment"`

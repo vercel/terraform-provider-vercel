@@ -4,12 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestProjectEnvironmentVariablesResourceSchemaRequiresSensitive(t *testing.T) {
@@ -162,77 +159,6 @@ func TestEnvironmentItemToEnvironmentVariableRequestTreatsUnsetSensitiveAsSensit
 
 	if len(req.CustomEnvironmentIDs) != 1 || req.CustomEnvironmentIDs[0] != "ce_123" {
 		t.Fatalf("toEnvironmentVariableRequest().CustomEnvironmentIDs = %v, want [ce_123]", req.CustomEnvironmentIDs)
-	}
-}
-
-func TestProjectResourceModifyPlanSkipsPolicyValidationForExistingInlineEnvironmentVariable(t *testing.T) {
-	ctx := context.Background()
-	policy := "on"
-	res := &projectResource{
-		client: client.New("").WithTeam(client.Team{
-			SensitiveEnvironmentVariablePolicy: &policy,
-		}),
-	}
-
-	schemaResp := &resource.SchemaResponse{}
-	res.Schema(ctx, resource.SchemaRequest{}, schemaResp)
-
-	configEnv := EnvironmentItem{
-		Target:               stringSet("production"),
-		CustomEnvironmentIDs: types.SetNull(types.StringType),
-		Key:                  types.StringValue("EXAMPLE"),
-		Value:                types.StringValue("value"),
-		ID:                   types.StringNull(),
-		Sensitive:            types.BoolValue(false),
-	}
-	planEnv := configEnv
-	planEnv.ID = types.StringValue("env_123")
-
-	config := Project{
-		Name:                 types.StringValue("example"),
-		TeamID:               types.StringNull(),
-		Environment:          types.SetValueMust(envVariableElemType, []attr.Value{configEnv.toAttrValue()}),
-		GitRepository:        types.ObjectNull(gitRepositoryAttrType.AttrTypes),
-		VercelAuthentication: types.ObjectNull(vercelAuthenticationAttrType.AttrTypes),
-		PasswordProtection:   types.ObjectNull(passwordProtectionWithPasswordAttrType.AttrTypes),
-		TrustedIps:           types.ObjectNull(trustedIpsAttrType.AttrTypes),
-		TrustedSources:       types.ObjectNull(trustedSourcesAttrType.AttrTypes),
-		OIDCTokenConfig:      types.ObjectNull(oidcTokenConfigAttrType.AttrTypes),
-		OptionsAllowlist:     types.ObjectNull(optionsAllowlistAttrType.AttrTypes),
-		GitComments:          types.ObjectNull(gitCommentsAttrTypes),
-		GitProviderOptions:   types.ObjectNull(gitProviderOptionsAttrType.AttrTypes),
-		ResourceConfig:       types.ObjectNull(resourceConfigAttrType.AttrTypes),
-	}
-	plan := config
-	plan.Environment = types.SetValueMust(envVariableElemType, []attr.Value{planEnv.toAttrValue()})
-
-	configPlan := tfsdk.Plan{Schema: schemaResp.Schema}
-	diags := configPlan.Set(ctx, config)
-	if diags.HasError() {
-		t.Fatalf("configPlan.Set() returned diagnostics: %v", diags)
-	}
-
-	plannedState := tfsdk.Plan{Schema: schemaResp.Schema}
-	diags = plannedState.Set(ctx, plan)
-	if diags.HasError() {
-		t.Fatalf("plannedState.Set() returned diagnostics: %v", diags)
-	}
-
-	req := resource.ModifyPlanRequest{
-		Config: tfsdk.Config{
-			Raw:    configPlan.Raw,
-			Schema: schemaResp.Schema,
-		},
-		Plan: plannedState,
-	}
-	resp := &resource.ModifyPlanResponse{
-		Plan: plannedState,
-	}
-
-	res.ModifyPlan(ctx, req, resp)
-
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("ModifyPlan() returned diagnostics: %v", resp.Diagnostics)
 	}
 }
 

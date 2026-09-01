@@ -114,6 +114,7 @@ type Team struct {
 	Description                        *string             `json:"description"`
 	Slug                               string              `json:"slug"`
 	SensitiveEnvironmentVariablePolicy *string             `json:"sensitiveEnvironmentVariablePolicy"`
+	DisjunctiveProductionSecretPolicy  *string             `json:"disjunctiveProductionSecretPolicy"`
 	EmailDomain                        *string             `json:"emailDomain"`
 	Saml                               *SamlConfig         `json:"saml"`
 	InviteCode                         *string             `json:"inviteCode"`
@@ -187,6 +188,7 @@ type UpdateTeamRequest struct {
 	EnablePreviewFeedback              string              `json:"enablePreviewFeedback,omitempty"`
 	EnableProductionFeedback           string              `json:"enableProductionFeedback,omitempty"`
 	SensitiveEnvironmentVariablePolicy string              `json:"sensitiveEnvironmentVariablePolicy,omitempty"`
+	DisjunctiveProductionSecretPolicy  string              `json:"disjunctiveProductionSecretPolicy,omitempty"`
 	RemoteCaching                      *RemoteCaching      `json:"remoteCaching,omitempty"`
 	HideIPAddresses                    *bool               `json:"hideIpAddresses,omitempty"`
 	HideIPAddressesInLogDrains         *bool               `json:"hideIpAddressesInLogDrains,omitempty"`
