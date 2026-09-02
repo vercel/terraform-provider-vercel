@@ -679,7 +679,14 @@ func (r *FirewallRule) Mitigate() (client.Mitigate, error) {
 	return mit, nil
 }
 
-func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) (FirewallRule, error) {
+type firewallFlattenMode uint8
+
+const (
+	preserveConfiguredShape firewallFlattenMode = iota
+	canonicalImportShape
+)
+
+func fromFirewallRule(rule client.FirewallRule, ref FirewallRule, mode firewallFlattenMode) (FirewallRule, error) {
 	var err error
 	r := FirewallRule{
 		ID:          types.StringValue(rule.ID),
@@ -687,11 +694,11 @@ func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) (FirewallRule,
 		Description: types.StringValue(rule.Description),
 		Active:      types.BoolValue(rule.Active),
 	}
-	if rule.Active && ref.Active == types.BoolNull() {
+	if mode == preserveConfiguredShape && rule.Active && ref.Active == types.BoolNull() {
 		r.Active = ref.Active
 	}
 
-	r.Action, err = fromMitigate(rule.Action.Mitigate, ref.Action)
+	r.Action, err = fromMitigate(rule.Action.Mitigate, ref.Action, mode)
 	if err != nil {
 		return r, err
 	}
@@ -703,7 +710,7 @@ func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) (FirewallRule,
 			if len(ref.ConditionGroup) > j && len(ref.ConditionGroup[j].Conditions) > k {
 				cond = ref.ConditionGroup[j].Conditions[k]
 			}
-			conditions[k], err = fromCondition(condition, cond)
+			conditions[k], err = fromCondition(condition, cond, mode)
 			if err != nil {
 				return r, err
 			}
@@ -714,10 +721,10 @@ func fromFirewallRule(rule client.FirewallRule, ref FirewallRule) (FirewallRule,
 	}
 	r.ConditionGroup = conditionGroups
 	// Description and active can be optional
-	if rule.Description == "" && ref.Description == types.StringNull() {
-		r.Description = ref.Description
+	if rule.Description == "" && (mode == canonicalImportShape || ref.Description == types.StringNull()) {
+		r.Description = types.StringNull()
 	}
-	if rule.Active && ref.Active == types.BoolNull() {
+	if mode == preserveConfiguredShape && rule.Active && ref.Active == types.BoolNull() {
 		r.Active = ref.Active
 	}
 
@@ -750,7 +757,7 @@ type Mitigate struct {
 	ActionDuration types.String `tfsdk:"action_duration"`
 }
 
-func fromMitigate(mitigate client.Mitigate, ref Mitigate) (Mitigate, error) {
+func fromMitigate(mitigate client.Mitigate, ref Mitigate, mode firewallFlattenMode) (Mitigate, error) {
 	m := Mitigate{
 		Action:         types.StringValue(mitigate.Action),
 		ActionDuration: types.StringValue(mitigate.ActionDuration),
@@ -758,8 +765,8 @@ func fromMitigate(mitigate client.Mitigate, ref Mitigate) (Mitigate, error) {
 		RateLimit:      types.ObjectNull(ratelimitType.AttrTypes),
 	}
 
-	if mitigate.ActionDuration == "" && ref.ActionDuration == types.StringNull() {
-		m.ActionDuration = ref.ActionDuration
+	if mitigate.ActionDuration == "" && (mode == canonicalImportShape || ref.ActionDuration == types.StringNull()) {
+		m.ActionDuration = types.StringNull()
 	}
 
 	if mitigate.RateLimit != nil {
@@ -816,7 +823,7 @@ type Condition struct {
 	Values types.List   `tfsdk:"values"`
 }
 
-func fromCondition(condition client.Condition, ref Condition) (Condition, error) {
+func fromCondition(condition client.Condition, ref Condition, mode firewallFlattenMode) (Condition, error) {
 	c := Condition{
 		Type:   types.StringValue(condition.Type),
 		Op:     types.StringValue(condition.Op),
@@ -852,7 +859,11 @@ func fromCondition(condition client.Condition, ref Condition) (Condition, error)
 	}
 
 	// If key is present it's possible for value to be optional.
-	if ref.Key == types.StringNull() {
+	if mode == canonicalImportShape {
+		if condition.Key == "" {
+			c.Key = types.StringNull()
+		}
+	} else if ref.Key == types.StringNull() {
 		c.Key = types.StringNull()
 	} else {
 		if ref.Value == types.StringNull() {
@@ -874,30 +885,40 @@ type IPRule struct {
 	Action   types.String `tfsdk:"action"`
 }
 
-func fromCRS(conf map[string]client.CoreRuleSet, refMr *FirewallManagedRulesets) *CRSRule {
+func fromCRS(conf map[string]client.CoreRuleSet, refMr *FirewallManagedRulesets, mode firewallFlattenMode) *CRSRule {
 	var ref = &CRSRule{}
 	if refMr != nil && refMr.OWASP != nil {
 		ref = refMr.OWASP
 	}
-	if conf == nil || ref == nil || refMr.OWASP == nil {
+	if conf == nil || (mode == preserveConfiguredShape && (refMr == nil || refMr.OWASP == nil)) {
 		return nil
 	}
-	return &CRSRule{
-		XSS:  fromCoreRuleset(conf["xss"], ref.XSS),
-		SQLI: fromCoreRuleset(conf["sqli"], ref.SQLI),
-		SF:   fromCoreRuleset(conf["sf"], ref.SF),
-		LFI:  fromCoreRuleset(conf["lfi"], ref.LFI),
-		RFI:  fromCoreRuleset(conf["rfi"], ref.RFI),
-		RCE:  fromCoreRuleset(conf["rce"], ref.RCE),
-		SD:   fromCoreRuleset(conf["sd"], ref.SD),
-		MA:   fromCoreRuleset(conf["ma"], ref.MA),
-		PHP:  fromCoreRuleset(conf["php"], ref.PHP),
-		GEN:  fromCoreRuleset(conf["gen"], ref.GEN),
-		JAVA: fromCoreRuleset(conf["java"], ref.JAVA),
+	rules := &CRSRule{}
+	set := func(key string, ref *CRSRuleConfig, target **CRSRuleConfig) {
+		crsRule, ok := conf[key]
+		if mode == canonicalImportShape && !ok {
+			return
+		}
+		*target = fromCoreRuleset(crsRule, ref, mode)
 	}
+	set("xss", ref.XSS, &rules.XSS)
+	set("sqli", ref.SQLI, &rules.SQLI)
+	set("sf", ref.SF, &rules.SF)
+	set("lfi", ref.LFI, &rules.LFI)
+	set("rfi", ref.RFI, &rules.RFI)
+	set("rce", ref.RCE, &rules.RCE)
+	set("sd", ref.SD, &rules.SD)
+	set("ma", ref.MA, &rules.MA)
+	set("php", ref.PHP, &rules.PHP)
+	set("gen", ref.GEN, &rules.GEN)
+	set("java", ref.JAVA, &rules.JAVA)
+	if mode == canonicalImportShape && rules.XSS == nil && rules.SQLI == nil && rules.SF == nil && rules.LFI == nil && rules.RFI == nil && rules.RCE == nil && rules.SD == nil && rules.MA == nil && rules.PHP == nil && rules.GEN == nil && rules.JAVA == nil {
+		return nil
+	}
+	return rules
 }
 
-func fromCoreRuleset(crsRule client.CoreRuleSet, ref *CRSRuleConfig) *CRSRuleConfig {
+func fromCoreRuleset(crsRule client.CoreRuleSet, ref *CRSRuleConfig, mode firewallFlattenMode) *CRSRuleConfig {
 	if ref == nil && !crsRule.Active && crsRule.Action == "log" {
 		return nil
 	}
@@ -905,38 +926,35 @@ func fromCoreRuleset(crsRule client.CoreRuleSet, ref *CRSRuleConfig) *CRSRuleCon
 		Active: types.BoolValue(crsRule.Active),
 		Action: types.StringValue(crsRule.Action),
 	}
-	if (ref == nil && crsRule.Active) ||
-		ref != nil && ref.Active == types.BoolNull() {
+	if mode == preserveConfiguredShape && ((ref == nil && crsRule.Active) ||
+		ref != nil && ref.Active == types.BoolNull()) {
 		c.Active = types.BoolNull()
 	}
 	return c
 }
 
-func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfig, error) {
+func fromClient(conf client.FirewallConfig, state FirewallConfig, mode firewallFlattenMode) (FirewallConfig, error) {
 	var err error
 	cfg := FirewallConfig{
 		ID:        types.StringValue(conf.TeamID + "/" + conf.ProjectID),
 		ProjectID: state.ProjectID,
-		// Take the teamID from the response/provider if it wasn't provided in resource
-		TeamID:  types.StringValue(conf.TeamID),
-		Enabled: state.Enabled,
+		TeamID:    types.StringValue(conf.TeamID),
+		Enabled:   state.Enabled,
 	}
-	// Enabled can be null
-	if conf.Enabled && state.Enabled.IsNull() {
+	if mode == canonicalImportShape {
+		cfg.Enabled = types.BoolValue(conf.Enabled)
+	} else if conf.Enabled && state.Enabled.IsNull() {
 		cfg.Enabled = state.Enabled
 	}
 
 	if len(conf.Rules) > 0 {
 		rules := make([]FirewallRule, len(conf.Rules))
 		for i, rule := range conf.Rules {
-			// Set empty optional types
-			var stateRule = FirewallRule{
-				Active: types.BoolNull(),
-			}
+			stateRule := FirewallRule{Active: types.BoolNull()}
 			if state.Rules != nil && len(state.Rules.Rules) > i {
 				stateRule = state.Rules.Rules[i]
 			}
-			rules[i], err = fromFirewallRule(rule, stateRule)
+			rules[i], err = fromFirewallRule(rule, stateRule, mode)
 			if err != nil {
 				return cfg, err
 			}
@@ -954,47 +972,48 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig) (FirewallConfi
 				Notes:    types.StringValue(iprule.Notes),
 				Action:   types.StringValue(iprule.Action),
 			}
-			// notes don't have to be set
-			if iprule.Notes == "" && state.IPRules != nil && len(state.IPRules.Rules) > i && state.IPRules.Rules[i].Notes.IsNull() {
-				ipRules[i].Notes = state.IPRules.Rules[i].Notes
+			if iprule.Notes == "" && (mode == canonicalImportShape || state.IPRules != nil && len(state.IPRules.Rules) > i && state.IPRules.Rules[i].Notes.IsNull()) {
+				ipRules[i].Notes = types.StringNull()
 			}
 		}
-
 		cfg.IPRules = &IPRules{Rules: ipRules}
 	}
 
-	if len(conf.ManagedRulesets) > 0 {
+	if mode == canonicalImportShape {
 		managedRulesets := &FirewallManagedRulesets{}
-		cfg.ManagedRulesets = managedRulesets
-		if conf.CRS != nil && state.ManagedRulesets != nil {
-			cfg.ManagedRulesets.OWASP = fromCRS(conf.CRS, state.ManagedRulesets)
+		if rule, ok := conf.ManagedRulesets["bot_protection"]; ok {
+			managedRulesets.BotProtection = &BotProtectionConfig{Active: types.BoolValue(rule.Active), Action: types.StringValue(rule.Action)}
 		}
-
+		if rule, ok := conf.ManagedRulesets["ai_bots"]; ok {
+			managedRulesets.AiBots = &AiBotsConfig{Active: types.BoolValue(rule.Active), Action: types.StringValue(rule.Action)}
+		}
+		managedRulesets.OWASP = fromCRS(conf.CRS, nil, mode)
+		if owasp, ok := conf.ManagedRulesets["owasp"]; ok {
+			if owasp.Active && managedRulesets.OWASP == nil {
+				managedRulesets.OWASP = &CRSRule{}
+			} else if !owasp.Active {
+				managedRulesets.OWASP = nil
+			}
+		}
+		if managedRulesets.BotProtection != nil || managedRulesets.AiBots != nil || managedRulesets.OWASP != nil {
+			cfg.ManagedRulesets = managedRulesets
+		}
+	} else if len(conf.ManagedRulesets) > 0 {
+		cfg.ManagedRulesets = &FirewallManagedRulesets{}
+		if conf.CRS != nil && state.ManagedRulesets != nil {
+			cfg.ManagedRulesets.OWASP = fromCRS(conf.CRS, state.ManagedRulesets, mode)
+		}
 		if state.ManagedRulesets != nil && state.ManagedRulesets.BotProtection != nil {
-			botFilter, botFilterExist := conf.ManagedRulesets["bot_protection"]
-			if botFilterExist {
-				cfg.ManagedRulesets.BotProtection = &BotProtectionConfig{
-					Active: types.BoolValue(botFilter.Active),
-					Action: types.StringValue(botFilter.Action),
-				}
+			if rule, ok := conf.ManagedRulesets["bot_protection"]; ok {
+				cfg.ManagedRulesets.BotProtection = &BotProtectionConfig{Active: types.BoolValue(rule.Active), Action: types.StringValue(rule.Action)}
 			}
 		} else if state.ManagedRulesets != nil && state.ManagedRulesets.BotFilter != nil {
-			botFilter, botFilterExist := conf.ManagedRulesets["bot_protection"]
-			if botFilterExist {
-				cfg.ManagedRulesets.BotFilter = &BotFilterConfig{
-					Active: types.BoolValue(botFilter.Active),
-					Action: types.StringValue(botFilter.Action),
-				}
+			if rule, ok := conf.ManagedRulesets["bot_protection"]; ok {
+				cfg.ManagedRulesets.BotFilter = &BotFilterConfig{Active: types.BoolValue(rule.Active), Action: types.StringValue(rule.Action)}
 			}
 		}
-
-		aiBots, aiBotsExist := conf.ManagedRulesets["ai_bots"]
-		if aiBotsExist {
-			aiBotsConf := &AiBotsConfig{
-				Active: types.BoolValue(aiBots.Active),
-				Action: types.StringValue(aiBots.Action),
-			}
-			cfg.ManagedRulesets.AiBots = aiBotsConf
+		if rule, ok := conf.ManagedRulesets["ai_bots"]; ok {
+			cfg.ManagedRulesets.AiBots = &AiBotsConfig{Active: types.BoolValue(rule.Active), Action: types.StringValue(rule.Action)}
 		}
 	}
 
@@ -1602,7 +1621,7 @@ func (r *firewallConfigResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	cfg, err := fromClient(out, plan)
+	cfg, err := fromClient(out, plan, preserveConfiguredShape)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to read created firewall config", err.Error())
 		return
@@ -1628,7 +1647,7 @@ func (r *firewallConfigResource) Read(ctx context.Context, req resource.ReadRequ
 		resp.Diagnostics.AddError("failed to read firewall config", err.Error())
 		return
 	}
-	cfg, err := fromClient(out, state)
+	cfg, err := fromClient(out, state, preserveConfiguredShape)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to read firewall config", err.Error())
 		return
@@ -1671,7 +1690,7 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 			return
 		}
 
-		cfg, err := fromClient(out, plan)
+		cfg, err := fromClient(out, plan, preserveConfiguredShape)
 		if err != nil {
 			diags.AddError("failed to read updated firewall config", err.Error())
 			resp.Diagnostics.Append(diags...)
@@ -1695,7 +1714,7 @@ func (r *firewallConfigResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	cfg, err := fromClient(out, plan)
+	cfg, err := fromClient(out, plan, preserveConfiguredShape)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to read updated firewall config", err.Error())
 		return
@@ -1744,8 +1763,8 @@ func (r *firewallConfigResource) ImportState(ctx context.Context, req resource.I
 	}
 	conf, err := fromClient(out, FirewallConfig{
 		ProjectID: types.StringValue(projectID),
-		TeamID:    types.StringValue(out.TeamID), // use output teamID if not provided on import
-	})
+		TeamID:    types.StringValue(out.TeamID),
+	}, canonicalImportShape)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to read firewall config", err.Error())
 		return
