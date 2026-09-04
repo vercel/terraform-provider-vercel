@@ -53,7 +53,7 @@ func TestFromConditionPreservesNegFromAPI(t *testing.T) {
 			}, Condition{
 				Neg: types.BoolNull(),
 				Key: types.StringValue("x-origin-verify"),
-			})
+			}, preserveConfiguredShape)
 			if err != nil {
 				t.Fatalf("unexpected error converting condition: %v", err)
 			}
@@ -167,7 +167,7 @@ func TestFromCRSIncludesSessionFixationRule(t *testing.T) {
 				Action: types.StringValue("deny"),
 			},
 		},
-	})
+	}, preserveConfiguredShape)
 
 	if crs == nil {
 		t.Fatalf("expected CRS value")
@@ -183,6 +183,222 @@ func TestFromCRSIncludesSessionFixationRule(t *testing.T) {
 
 	if crs.SF.Active.ValueBool() {
 		t.Fatalf("expected sf active to be false")
+	}
+}
+
+func importFirewallConfig(t *testing.T, apiConfig client.FirewallConfig) FirewallConfig {
+	t.Helper()
+	got, err := fromClient(apiConfig, FirewallConfig{
+		ProjectID: types.StringValue(apiConfig.ProjectID),
+		TeamID:    types.StringValue(apiConfig.TeamID),
+	}, canonicalImportShape)
+	if err != nil {
+		t.Fatalf("unexpected error converting imported config: %v", err)
+	}
+	return got
+}
+
+func TestCanonicalImportEnabled(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		t.Run(fmt.Sprintf("enabled_%t", enabled), func(t *testing.T) {
+			got := importFirewallConfig(t, client.FirewallConfig{ProjectID: "prj_123", TeamID: "team_123", Enabled: enabled})
+			if got.Enabled.IsNull() || got.Enabled.ValueBool() != enabled {
+				t.Fatalf("enabled = %s, want %t", got.Enabled, enabled)
+			}
+		})
+	}
+}
+
+func TestCanonicalImportRuleOptionalStringsAndActive(t *testing.T) {
+	tests := []struct {
+		name, description, duration           string
+		active                                bool
+		wantDescriptionNull, wantDurationNull bool
+	}{
+		{name: "empty enabled", active: true, wantDescriptionNull: true, wantDurationNull: true},
+		{name: "nonempty disabled", description: "description", duration: "1h", active: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := importFirewallConfig(t, client.FirewallConfig{Rules: []client.FirewallRule{{
+				Active: tc.active, Description: tc.description,
+				Action: client.Action{Mitigate: client.Mitigate{Action: "deny", ActionDuration: tc.duration}},
+			}}})
+			rule := got.Rules.Rules[0]
+			if rule.Active.IsNull() || rule.Active.ValueBool() != tc.active {
+				t.Fatalf("active = %s, want %t", rule.Active, tc.active)
+			}
+			if rule.Description.IsNull() != tc.wantDescriptionNull || !rule.Description.IsNull() && rule.Description.ValueString() != tc.description {
+				t.Fatalf("description = %s", rule.Description)
+			}
+			if rule.Action.ActionDuration.IsNull() != tc.wantDurationNull || !rule.Action.ActionDuration.IsNull() && rule.Action.ActionDuration.ValueString() != tc.duration {
+				t.Fatalf("action_duration = %s", rule.Action.ActionDuration)
+			}
+		})
+	}
+}
+
+func TestCanonicalImportConditions(t *testing.T) {
+	tests := []struct {
+		name                       string
+		condition                  client.Condition
+		wantKeyNull, wantValueNull bool
+		wantValue                  string
+		wantValues                 []string
+	}{
+		{name: "keyed scalar", condition: client.Condition{Type: "query", Op: "eq", Key: "campaign", Value: "spring"}, wantValue: "spring"},
+		{name: "keyed empty scalar", condition: client.Condition{Type: "query", Op: "eq", Key: "campaign", Value: ""}, wantValue: ""},
+		{name: "keyless scalar", condition: client.Condition{Type: "path", Op: "eq", Value: "/sale"}, wantKeyNull: true, wantValue: "/sale"},
+		{name: "keyed list", condition: client.Condition{Type: "query", Op: "inc", Key: "campaign", Value: []any{"spring", "summer"}}, wantValues: []string{"spring", "summer"}, wantValueNull: true},
+		{name: "keyless list", condition: client.Condition{Type: "path", Op: "inc", Value: []any{"/a", "/b"}}, wantKeyNull: true, wantValues: []string{"/a", "/b"}, wantValueNull: true},
+		{name: "keyed existence", condition: client.Condition{Type: "header", Op: "ex", Key: "x-test", Value: ""}, wantValueNull: true},
+		{name: "keyless existence", condition: client.Condition{Type: "path", Op: "nex", Value: nil}, wantKeyNull: true, wantValueNull: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := fromCondition(tc.condition, Condition{}, canonicalImportShape)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got.Key.IsNull() != tc.wantKeyNull {
+				t.Fatalf("key = %s", got.Key)
+			}
+			if !got.Key.IsNull() && got.Key.ValueString() != tc.condition.Key {
+				t.Fatalf("key = %q", got.Key.ValueString())
+			}
+			if got.Value.IsNull() != tc.wantValueNull {
+				t.Fatalf("value = %s", got.Value)
+			}
+			if !got.Value.IsNull() && got.Value.ValueString() != tc.wantValue {
+				t.Fatalf("value = %q", got.Value.ValueString())
+			}
+			if tc.wantValues != nil {
+				var values []string
+				diags := got.Values.ElementsAs(context.Background(), &values, false)
+				if diags.HasError() || fmt.Sprint(values) != fmt.Sprint(tc.wantValues) {
+					t.Fatalf("values = %v, diagnostics = %v", values, diags)
+				}
+			}
+		})
+	}
+}
+
+func TestCanonicalImportManagedRulesets(t *testing.T) {
+	got := importFirewallConfig(t, client.FirewallConfig{ManagedRulesets: map[string]client.ManagedRule{
+		"bot_protection": {Active: true, Action: "challenge"},
+		"ai_bots":        {Active: false, Action: "deny"},
+		"future_rule":    {Active: true, Action: "deny"},
+	}})
+	if got.ManagedRulesets == nil || got.ManagedRulesets.BotProtection == nil || got.ManagedRulesets.AiBots == nil {
+		t.Fatalf("recognized managed rules missing: %+v", got.ManagedRulesets)
+	}
+	if got.ManagedRulesets.BotFilter != nil {
+		t.Fatal("import invented deprecated bot_filter")
+	}
+	if !got.ManagedRulesets.BotProtection.Active.ValueBool() || got.ManagedRulesets.BotProtection.Action.ValueString() != "challenge" {
+		t.Fatalf("bot protection = %+v", got.ManagedRulesets.BotProtection)
+	}
+	if got.ManagedRulesets.AiBots.Active.ValueBool() || got.ManagedRulesets.AiBots.Action.ValueString() != "deny" {
+		t.Fatalf("ai bots = %+v", got.ManagedRulesets.AiBots)
+	}
+
+	unknownOnly := importFirewallConfig(t, client.FirewallConfig{ManagedRulesets: map[string]client.ManagedRule{"future_rule": {Active: true, Action: "deny"}}})
+	if unknownOnly.ManagedRulesets != nil {
+		t.Fatalf("unknown managed rule materialized state: %+v", unknownOnly.ManagedRulesets)
+	}
+}
+
+func TestCanonicalImportCRS(t *testing.T) {
+	tests := []struct {
+		name                       string
+		managed                    map[string]client.ManagedRule
+		crs                        map[string]client.CoreRuleSet
+		wantOWASP, wantSF, wantXSS bool
+	}{
+		{name: "default only", crs: defaultCRSMap()},
+		{name: "partial", managed: map[string]client.ManagedRule{"owasp": {Active: true}}, crs: map[string]client.CoreRuleSet{"sf": {Active: false, Action: "deny"}}, wantOWASP: true, wantSF: true},
+		{name: "partial active", managed: map[string]client.ManagedRule{"owasp": {Active: true}}, crs: map[string]client.CoreRuleSet{"xss": {Active: true, Action: "log"}}, wantOWASP: true, wantXSS: true},
+		{name: "unknown only", crs: map[string]client.CoreRuleSet{"future": {Active: true, Action: "deny"}}},
+		{name: "active marker without details", managed: map[string]client.ManagedRule{"owasp": {Active: true}}, wantOWASP: true},
+		{name: "active marker with defaults", managed: map[string]client.ManagedRule{"owasp": {Active: true}}, crs: defaultCRSMap(), wantOWASP: true},
+		{name: "active marker with unknown category", managed: map[string]client.ManagedRule{"owasp": {Active: true}}, crs: map[string]client.CoreRuleSet{"future": {Active: true, Action: "deny"}}, wantOWASP: true},
+		{name: "active marker with partial category", managed: map[string]client.ManagedRule{"owasp": {Active: true}}, crs: map[string]client.CoreRuleSet{"sf": {Active: false, Action: "deny"}}, wantOWASP: true, wantSF: true},
+		{name: "inactive marker overrides category", managed: map[string]client.ManagedRule{"owasp": {Active: false}}, crs: map[string]client.CoreRuleSet{"sf": {Active: false, Action: "deny"}}},
+		{name: "crs only response", crs: map[string]client.CoreRuleSet{"sf": {Active: false, Action: "deny"}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := importFirewallConfig(t, client.FirewallConfig{ManagedRulesets: tc.managed, CRS: tc.crs})
+			owasp := (*CRSRule)(nil)
+			if got.ManagedRulesets != nil {
+				owasp = got.ManagedRulesets.OWASP
+			}
+			if (owasp != nil) != tc.wantOWASP {
+				t.Fatalf("OWASP = %+v", owasp)
+			}
+			if owasp != nil && (owasp.SF != nil) != tc.wantSF {
+				t.Fatalf("SF = %+v", owasp.SF)
+			}
+			if owasp != nil && (owasp.XSS != nil) != tc.wantXSS {
+				t.Fatalf("XSS = %+v", owasp.XSS)
+			}
+			if owasp != nil && owasp.SF != nil && (owasp.SF.Active.IsNull() || owasp.SF.Action.ValueString() != "deny") {
+				t.Fatalf("SF = %+v", owasp.SF)
+			}
+			roundTrip, err := got.toClient()
+			if err != nil {
+				t.Fatalf("round trip failed: %v", err)
+			}
+			_, hasOWASPMarker := roundTrip.ManagedRulesets["owasp"]
+			if hasOWASPMarker != tc.wantOWASP {
+				t.Fatalf("round-trip OWASP marker = %t", hasOWASPMarker)
+			}
+		})
+	}
+}
+
+func TestCanonicalImportIPRuleNotes(t *testing.T) {
+	got := importFirewallConfig(t, client.FirewallConfig{IPRules: []client.IPRule{
+		{ID: "empty", Notes: "", Action: "deny"},
+		{ID: "noted", Notes: "keep me", Action: "deny"},
+	}})
+	if !got.IPRules.Rules[0].Notes.IsNull() {
+		t.Fatalf("empty notes = %s", got.IPRules.Rules[0].Notes)
+	}
+	if got.IPRules.Rules[1].Notes.IsNull() || got.IPRules.Rules[1].Notes.ValueString() != "keep me" {
+		t.Fatalf("nonempty notes = %s", got.IPRules.Rules[1].Notes)
+	}
+}
+
+func TestPreserveConfiguredShapeMode(t *testing.T) {
+	apiConfig := client.FirewallConfig{
+		Enabled:         true,
+		Rules:           []client.FirewallRule{{Active: true, Description: "", Action: client.Action{Mitigate: client.Mitigate{Action: "deny"}}, ConditionGroup: []client.ConditionGroup{{Conditions: []client.Condition{{Type: "query", Op: "eq", Key: "api-key", Value: "api-value"}}}}}},
+		IPRules:         []client.IPRule{{Notes: "", Action: "deny"}},
+		ManagedRulesets: map[string]client.ManagedRule{"bot_protection": {Active: true, Action: "challenge"}, "ai_bots": {Active: true, Action: "deny"}},
+	}
+	state := FirewallConfig{
+		Enabled:         types.BoolNull(),
+		Rules:           &FirewallRules{Rules: []FirewallRule{{Active: types.BoolNull(), Description: types.StringNull(), Action: Mitigate{ActionDuration: types.StringNull()}, ConditionGroup: []ConditionGroup{{Conditions: []Condition{{Key: types.StringNull(), Value: types.StringNull()}}}}}}},
+		IPRules:         &IPRules{Rules: []IPRule{{Notes: types.StringNull()}}},
+		ManagedRulesets: &FirewallManagedRulesets{BotFilter: &BotFilterConfig{}, AiBots: &AiBotsConfig{}},
+	}
+	got, err := fromClient(apiConfig, state, preserveConfiguredShape)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !got.Enabled.IsNull() || !got.Rules.Rules[0].Active.IsNull() || !got.Rules.Rules[0].Description.IsNull() || !got.Rules.Rules[0].Action.ActionDuration.IsNull() {
+		t.Fatalf("optional configured shape changed: %+v", got.Rules.Rules[0])
+	}
+	condition := got.Rules.Rules[0].ConditionGroup[0].Conditions[0]
+	if !condition.Key.IsNull() || condition.Value.IsNull() || condition.Value.ValueString() != "api-value" {
+		t.Fatalf("condition shape changed: %+v", condition)
+	}
+	if !got.IPRules.Rules[0].Notes.IsNull() {
+		t.Fatalf("notes shape changed: %s", got.IPRules.Rules[0].Notes)
+	}
+	if got.ManagedRulesets.BotFilter == nil || got.ManagedRulesets.BotProtection != nil || got.ManagedRulesets.AiBots == nil {
+		t.Fatalf("managed rules shape changed: %+v", got.ManagedRulesets)
 	}
 }
 
@@ -468,5 +684,38 @@ func testResourceFirewallRule(id, name, path, action string) FirewallRule {
 			Redirect:       types.ObjectNull(redirectType.AttrTypes),
 			ActionDuration: types.StringNull(),
 		},
+	}
+}
+
+func TestFirewallReadEnabledDrift(t *testing.T) {
+	for _, prior := range []types.Bool{types.BoolNull(), types.BoolValue(false), types.BoolValue(true)} {
+		for _, enabled := range []bool{false, true} {
+			got, err := fromClient(client.FirewallConfig{Enabled: enabled}, FirewallConfig{Enabled: prior}, preserveConfiguredShape)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := types.BoolValue(enabled)
+			if enabled && prior.IsNull() {
+				want = types.BoolNull()
+			}
+			if !got.Enabled.Equal(want) {
+				t.Fatalf("prior=%s API=%t: enabled=%s, want %s", prior, enabled, got.Enabled, want)
+			}
+		}
+	}
+}
+
+func TestFirewallReadOWASPDisabled(t *testing.T) {
+	for _, managed := range []map[string]client.ManagedRule{nil, {"owasp": {Active: false}}} {
+		got, err := fromClient(client.FirewallConfig{
+			ManagedRulesets: managed,
+			CRS:             map[string]client.CoreRuleSet{"xss": {Active: true, Action: "deny"}},
+		}, FirewallConfig{ManagedRulesets: &FirewallManagedRulesets{OWASP: &CRSRule{}}}, preserveConfiguredShape)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.ManagedRulesets != nil && got.ManagedRulesets.OWASP != nil {
+			t.Fatal("refresh retained disabled OWASP")
+		}
 	}
 }
