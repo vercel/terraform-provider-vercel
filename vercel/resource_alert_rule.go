@@ -13,6 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -120,6 +123,7 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"trigger_mode": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The API trigger selection mode. `all` and an empty `selected` set are response-only legacy states; omit `triggers` to preserve either state after import.",
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"triggers": schema.SetNestedAttribute{
 				Optional:            true,
@@ -155,14 +159,14 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Optional:            true,
 				Computed:            true,
 				MarkdownDescription: "Notification delivery settings stored on the rule. Notification channel links are managed separately.",
+				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"enable_team_owner_notifications": schema.BoolAttribute{
 						Optional: true,
 						Computed: true,
 					},
 					"incident_io_routing_key": schema.StringAttribute{
-						Optional:  true,
-						Sensitive: true,
+						Optional: true,
 						Validators: []validator.String{
 							stringvalidator.LengthBetween(1, 256),
 							validateStringIsTrimmed(),
@@ -173,10 +177,12 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"is_default": schema.BoolAttribute{
 				Computed:            true,
 				MarkdownDescription: "Whether this is the immutable team default rule. Default rules cannot be managed by this resource.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"created_at": schema.Int64Attribute{
 				Computed:            true,
 				MarkdownDescription: "Creation time as a Unix epoch timestamp in milliseconds.",
+				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseNonNullStateForUnknown()},
 			},
 			"updated_at": schema.Int64Attribute{
 				Computed:            true,
@@ -538,7 +544,7 @@ func int64Value(value *int64) types.Int64 {
 }
 
 func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() || !req.State.Raw.IsNull() {
+	if req.Plan.Raw.IsNull() {
 		return
 	}
 
@@ -550,12 +556,20 @@ func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 	// The API can return legacy `all` and empty `selected` states, so triggers
 	// must be Optional+Computed for existing/imported resources. Current creates,
 	// however, support only an explicitly selected, nonempty trigger set.
-	if config.Triggers.IsNull() {
+	if req.State.Raw.IsNull() && config.Triggers.IsNull() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("triggers"),
 			"Missing built-in alert rule triggers",
 			"A nonempty `triggers` set is required when creating a built-in alert rule.",
 		)
+		return
+	}
+
+	if !config.Triggers.IsNull() {
+		// Every writable trigger configuration uses selected mode. Derive this
+		// instead of blindly retaining state: an imported legacy `all` rule must
+		// plan a mode change when the user starts managing its trigger set.
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("trigger_mode"), types.StringValue("selected"))...)
 	}
 }
 

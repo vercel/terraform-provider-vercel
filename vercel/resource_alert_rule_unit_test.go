@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
@@ -32,6 +34,74 @@ func TestAlertRuleSchemaUsesBuiltInShape(t *testing.T) {
 	}
 	if !rule.Attributes["notification_settings"].IsOptional() || !rule.Attributes["notification_settings"].IsComputed() || !rule.Attributes["is_default"].IsComputed() {
 		t.Fatal("notification settings must be optional and computed, and default metadata must be computed")
+	}
+
+	triggerMode := rule.Attributes["trigger_mode"].(schema.StringAttribute)
+	notificationSettings := rule.Attributes["notification_settings"].(schema.SingleNestedAttribute)
+	isDefault := rule.Attributes["is_default"].(schema.BoolAttribute)
+	createdAt := rule.Attributes["created_at"].(schema.Int64Attribute)
+	if len(triggerMode.PlanModifiers) == 0 || len(notificationSettings.PlanModifiers) == 0 || len(isDefault.PlanModifiers) == 0 || len(createdAt.PlanModifiers) == 0 {
+		t.Fatal("stable computed alert rule attributes must retain known state during updates")
+	}
+}
+
+func TestAlertRuleConfiguredTriggersPlanSelectedMode(t *testing.T) {
+	ctx := context.Background()
+	ruleSchema := alertRuleSchema(t)
+	configuredTriggers := alertRuleTriggerSet(t, "statusGroup:5xx")
+	scope := &AlertRuleScope{Type: types.StringValue("all"), ProjectIDs: types.SetNull(types.StringType)}
+	notificationSettings := types.ObjectValueMust(alertRuleNotificationSettingsAttrType.AttrTypes, map[string]attr.Value{
+		"enable_team_owner_notifications": types.BoolValue(true),
+		"incident_io_routing_key":         types.StringNull(),
+	})
+
+	config := AlertRule{
+		ID: types.StringNull(), TeamID: types.StringNull(), Type: types.StringValue(client.AlertRuleTypeBuiltIn), Name: types.StringValue("Errors"),
+		RuleScope: scope, TriggerMode: types.StringNull(), Triggers: configuredTriggers, MatchMinimumSeverityLevel: types.StringValue("high"),
+		NotificationSettings: types.ObjectNull(alertRuleNotificationSettingsAttrType.AttrTypes), IsDefault: types.BoolNull(), CreatedAt: types.Int64Null(), UpdatedAt: types.Int64Null(),
+	}
+	state := config
+	state.ID = types.StringValue("ar_123")
+	state.TeamID = types.StringValue("team_123")
+	state.TriggerMode = types.StringValue("all")
+	state.Triggers = types.SetNull(alertRuleTriggerAttrType)
+	state.NotificationSettings = notificationSettings
+	state.IsDefault = types.BoolValue(false)
+	state.CreatedAt = types.Int64Value(1)
+	state.UpdatedAt = types.Int64Value(1)
+	plan := state
+	plan.TriggerMode = types.StringUnknown()
+	plan.Triggers = configuredTriggers
+
+	configPlan := tfsdk.Plan{Schema: ruleSchema}
+	if diags := configPlan.Set(ctx, config); diags.HasError() {
+		t.Fatalf("config Plan.Set() diagnostics = %v", diags)
+	}
+	plannedState := tfsdk.Plan{Schema: ruleSchema}
+	if diags := plannedState.Set(ctx, plan); diags.HasError() {
+		t.Fatalf("plan Set() diagnostics = %v", diags)
+	}
+	priorState := tfsdk.State{Schema: ruleSchema}
+	if diags := priorState.Set(ctx, state); diags.HasError() {
+		t.Fatalf("state Set() diagnostics = %v", diags)
+	}
+
+	response := &resource.ModifyPlanResponse{Plan: plannedState}
+	(&alertRuleResource{}).ModifyPlan(ctx, resource.ModifyPlanRequest{
+		Config: tfsdk.Config{Raw: configPlan.Raw, Schema: ruleSchema},
+		Plan:   plannedState,
+		State:  priorState,
+	}, response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("ModifyPlan() diagnostics = %v", response.Diagnostics)
+	}
+
+	var modified AlertRule
+	if diags := response.Plan.Get(ctx, &modified); diags.HasError() {
+		t.Fatalf("modified Plan.Get() diagnostics = %v", diags)
+	}
+	if got := modified.TriggerMode.ValueString(); got != "selected" {
+		t.Fatalf("trigger_mode = %q, want selected", got)
 	}
 }
 

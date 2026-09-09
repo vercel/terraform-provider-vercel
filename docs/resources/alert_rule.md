@@ -77,7 +77,7 @@ Optional:
 Optional:
 
 - `enable_team_owner_notifications` (Boolean)
-- `incident_io_routing_key` (String, Sensitive)
+- `incident_io_routing_key` (String)
 
 
 <a id="nestedatt--triggers"></a>
