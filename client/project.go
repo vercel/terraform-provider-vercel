@@ -85,7 +85,7 @@ func (c *Client) CreateProject(ctx context.Context, teamID string, request Creat
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.TeamID(teamID)
+	r.resolveTeamID(c.TeamID(teamID))
 	r.normalizeBuildMachineType()
 	return r, err
 }
@@ -160,6 +160,7 @@ func (r *ProjectResponse) Repository() *Repository {
 
 // ProjectResponse defines the information Vercel returns about a project.
 type ProjectResponse struct {
+	AccountID                   string  `json:"accountId"`
 	BuildCommand                *string `json:"buildCommand"`
 	CommandForIgnoringBuildStep *string `json:"commandForIgnoringBuildStep"`
 	DevCommand                  *string `json:"devCommand"`
@@ -274,6 +275,19 @@ type ResourceConfig struct {
 	BuildMachineSelection     *string  `json:"buildMachineSelection,omitempty"`
 }
 
+// The API owner is authoritative: an unscoped request can return a team project.
+// Personal account IDs must not be used as team IDs in subsequent requests.
+func (r *ProjectResponse) resolveTeamID(fallback string) {
+	switch {
+	case strings.HasPrefix(r.AccountID, "team_"):
+		r.TeamID = r.AccountID
+	case r.AccountID != "":
+		r.TeamID = ""
+	default:
+		r.TeamID = fallback
+	}
+}
+
 // normalizeBuildMachineType collapses the API's (buildMachineType, buildMachineSelection)
 // pair into a single value for the provider: when selection is "elastic", the effective
 // type is "elastic" regardless of the concrete buildMachineType returned by the API (which
@@ -307,7 +321,7 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r Pr
 		return r, fmt.Errorf("unable to get project: %w", err)
 	}
 
-	r.TeamID = c.TeamID(teamID)
+	r.resolveTeamID(c.TeamID(teamID))
 	r.normalizeBuildMachineType()
 	return r, err
 }
@@ -332,7 +346,7 @@ func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectRe
 		body:   "",
 	}, &pr)
 	for i := range pr.Projects {
-		pr.Projects[i].TeamID = c.TeamID(teamID)
+		pr.Projects[i].resolveTeamID(c.TeamID(teamID))
 		pr.Projects[i].normalizeBuildMachineType()
 	}
 	return pr.Projects, err
@@ -401,7 +415,7 @@ func (c *Client) UpdateProject(ctx context.Context, projectID, teamID string, re
 		return r, err
 	}
 
-	r.TeamID = c.TeamID(teamID)
+	r.resolveTeamID(c.TeamID(teamID))
 	r.normalizeBuildMachineType()
 	return r, err
 }
@@ -431,7 +445,7 @@ func (c *Client) UpdateProductionBranch(ctx context.Context, request UpdateProdu
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.TeamID(c.TeamID(request.TeamID))
+	r.resolveTeamID(c.TeamID(request.TeamID))
 	r.normalizeBuildMachineType()
 	return r, err
 }
@@ -452,7 +466,7 @@ func (c *Client) UnlinkGitRepoFromProject(ctx context.Context, projectID, teamID
 	if err != nil {
 		return r, fmt.Errorf("error unlinking git repo: %w", err)
 	}
-	r.TeamID = c.TeamID(teamID)
+	r.resolveTeamID(c.TeamID(teamID))
 	r.normalizeBuildMachineType()
 	return r, err
 }
@@ -482,7 +496,7 @@ func (c *Client) LinkGitRepoToProject(ctx context.Context, request LinkGitRepoTo
 	if err != nil {
 		return r, fmt.Errorf("error linking git repo: %w", err)
 	}
-	r.TeamID = c.TeamID(c.TeamID(request.TeamID))
+	r.resolveTeamID(c.TeamID(request.TeamID))
 	r.normalizeBuildMachineType()
 	return r, err
 }

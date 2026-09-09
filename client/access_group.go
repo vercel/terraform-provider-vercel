@@ -36,7 +36,9 @@ func (c *Client) GetAccessGroup(ctx context.Context, req GetAccessGroupRequest) 
 		return r, fmt.Errorf("unable to get access group: %w", err)
 	}
 
-	r.TeamID = c.TeamID(req.TeamID)
+	if r.TeamID == "" {
+		r.TeamID = c.TeamID(req.TeamID)
+	}
 	return r, err
 }
 
@@ -70,7 +72,9 @@ func (c *Client) CreateAccessGroup(ctx context.Context, req CreateAccessGroupReq
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.TeamID(req.TeamID)
+	if r.TeamID == "" {
+		r.TeamID = c.TeamID(req.TeamID)
+	}
 	return r, err
 }
 
@@ -105,7 +109,9 @@ func (c *Client) UpdateAccessGroup(ctx context.Context, req UpdateAccessGroupReq
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.TeamID(req.TeamID)
+	if r.TeamID == "" {
+		r.TeamID = c.TeamID(req.TeamID)
+	}
 	return r, err
 }
 

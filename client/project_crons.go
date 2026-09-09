@@ -20,7 +20,7 @@ func (c *Client) GetProjectCrons(ctx context.Context, projectID, teamID string) 
 
 	return ProjectCrons{
 		ProjectID: projectID,
-		TeamID:    teamID,
+		TeamID:    r.TeamID,
 		Enabled:   r.Crons == nil || r.Crons.DisabledAt == nil,
 	}, err
 }
@@ -43,9 +43,10 @@ func (c *Client) UpdateProjectCrons(ctx context.Context, request ProjectCrons) (
 		body:   string(mustMarshal(request)),
 	}, &r)
 
+	r.resolveTeamID(c.TeamID(request.TeamID))
 	return ProjectCrons{
 		ProjectID: request.ProjectID,
-		TeamID:    request.TeamID,
+		TeamID:    r.TeamID,
 		Enabled:   r.Crons == nil || r.Crons.DisabledAt == nil,
 	}, err
 }

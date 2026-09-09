@@ -48,7 +48,9 @@ func (c *Client) CreateAccessGroupProject(ctx context.Context, req CreateAccessG
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.TeamID(req.TeamID)
+	if r.TeamID == "" {
+		r.TeamID = c.TeamID(req.TeamID)
+	}
 	return r, err
 }
 
@@ -111,7 +113,9 @@ func (c *Client) UpdateAccessGroupProject(ctx context.Context, req UpdateAccessG
 	if err != nil {
 		return r, err
 	}
-	r.TeamID = c.TeamID(req.TeamID)
+	if r.TeamID == "" {
+		r.TeamID = c.TeamID(req.TeamID)
+	}
 	return r, err
 }
 

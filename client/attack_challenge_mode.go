@@ -25,7 +25,7 @@ func (c *Client) GetAttackChallengeMode(ctx context.Context, projectID, teamID s
 	}
 	return AttackChallengeMode{
 		ProjectID:             projectID,
-		TeamID:                teamID,
+		TeamID:                project.TeamID,
 		Enabled:               enabled,
 		AttackModeActiveUntil: activeUntil,
 	}, err

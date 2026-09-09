@@ -137,7 +137,9 @@ func (c *Client) GetSharedEnvironmentVariable(ctx context.Context, teamID, envID
 		url:    url,
 		body:   "",
 	}, &e)
-	e.TeamID = c.TeamID(teamID)
+	if e.TeamID == "" {
+		e.TeamID = c.TeamID(teamID)
+	}
 	return e, err
 }
 
@@ -175,7 +177,9 @@ func (c *Client) ListSharedEnvironmentVariablesPage(ctx context.Context, request
 		body:   "",
 	}, &res)
 	for i := 0; i < len(res.Data); i++ {
-		res.Data[i].TeamID = c.TeamID(request.TeamID)
+		if res.Data[i].TeamID == "" {
+			res.Data[i].TeamID = c.TeamID(request.TeamID)
+		}
 	}
 	return ListSharedEnvironmentVariablesResponse{
 		EnvironmentVariables: res.Data,

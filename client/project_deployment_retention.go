@@ -111,6 +111,10 @@ func (c *Client) GetDeploymentRetention(ctx context.Context, projectID, teamID s
 		url:    url,
 		body:   "",
 	}, &p)
+	if err != nil {
+		return DeploymentExpirationResponse{}, err
+	}
+	p.resolveTeamID(c.TeamID(teamID))
 	if p.DeploymentExpiration == nil {
 		return DeploymentExpirationResponse{
 			DeploymentExpiration: DeploymentExpiration{
@@ -119,11 +123,11 @@ func (c *Client) GetDeploymentRetention(ctx context.Context, projectID, teamID s
 				ExpirationCanceled:   36500,
 				ExpirationErrored:    36500,
 			},
-			TeamID: c.TeamID(teamID),
+			TeamID: p.TeamID,
 		}, nil
 	}
 	return DeploymentExpirationResponse{
 		DeploymentExpiration: *p.DeploymentExpiration,
-		TeamID:               c.TeamID(teamID),
+		TeamID:               p.TeamID,
 	}, err
 }

@@ -154,7 +154,7 @@ func convertResponseToProjectDeploymentRetention(response client.DeploymentExpir
 		ExpirationProduction: types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationProduction]),
 		ExpirationCanceled:   types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationCanceled]),
 		ExpirationErrored:    types.StringValue(client.DeploymentRetentionDaysToString[response.ExpirationErrored]),
-		TeamID:               types.StringValue(response.TeamID),
+		TeamID:               toTeamID(response.TeamID),
 		ProjectID:            projectID,
 	}
 }
