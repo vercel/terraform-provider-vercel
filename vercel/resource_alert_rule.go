@@ -134,12 +134,13 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"type": schema.StringAttribute{
-							Required:   true,
-							Validators: []validator.String{stringvalidator.OneOf(client.AlertRuleBuiltInTriggerTypes...)},
+							Required:            true,
+							MarkdownDescription: "The built-in anomaly trigger type.",
+							Validators:          []validator.String{stringvalidator.OneOf(client.AlertRuleBuiltInTriggerTypes...)},
 						},
 						"filter": schema.StringAttribute{
 							Optional:            true,
-							MarkdownDescription: "A KQL filter. It is required for `error_anomaly`, optional for `usage_anomaly`, and unavailable for other trigger types.",
+							MarkdownDescription: "A KQL filter for `error_anomaly` or `usage_anomaly`. See the trigger filter documentation above for supported fields and values.",
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 2048),
 								validateStringIsTrimmed(),
