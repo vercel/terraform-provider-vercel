@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
@@ -197,6 +198,62 @@ func TestAlertRuleUpdateOmitsUnchangedLegacyTriggers(t *testing.T) {
 	}
 	if request.Type != nil || request.RuleScope != nil || request.Triggers != nil || request.MatchMinimumSeverityLevel != nil || request.NotificationSettings != nil {
 		t.Fatalf("unchanged fields were included in request: %#v", request)
+	}
+}
+
+func TestAlertRuleUpdatePreservesUnconfiguredOwnerNotifications(t *testing.T) {
+	ctx := context.Background()
+	notificationSettings := alertRuleSchema(t).Attributes["notification_settings"].(schema.SingleNestedAttribute)
+	enableOwners := notificationSettings.Attributes["enable_team_owner_notifications"].(schema.BoolAttribute)
+	if len(enableOwners.PlanModifiers) != 1 {
+		t.Fatalf("enable_team_owner_notifications plan modifiers = %d, want 1", len(enableOwners.PlanModifiers))
+	}
+
+	modifierResponse := &planmodifier.BoolResponse{PlanValue: types.BoolUnknown()}
+	enableOwners.PlanModifiers[0].PlanModifyBool(ctx, planmodifier.BoolRequest{
+		ConfigValue: types.BoolNull(),
+		PlanValue:   types.BoolUnknown(),
+		StateValue:  types.BoolValue(false),
+	}, modifierResponse)
+	if modifierResponse.Diagnostics.HasError() {
+		t.Fatalf("PlanModifyBool() diagnostics = %v", modifierResponse.Diagnostics)
+	}
+	if modifierResponse.PlanValue.IsUnknown() || modifierResponse.PlanValue.ValueBool() {
+		t.Fatalf("planned enable_team_owner_notifications = %v, want false", modifierResponse.PlanValue)
+	}
+
+	filter := "statusGroup:5xx"
+	severity := "high"
+	routingKey := "checkout"
+	state, diags := alertRuleFromAPI(ctx, client.AlertRule{
+		ID: "ar_123", Type: client.AlertRuleTypeBuiltIn, Name: "Errors",
+		RuleScope:                 client.AlertRuleScope{Type: "all"},
+		Triggers:                  &client.AlertRuleTriggers{Mode: "selected", Items: []client.AlertRuleTrigger{{Type: "error_anomaly", Filter: &filter}}},
+		MatchMinimumSeverityLevel: &severity,
+		NotificationSettings: client.AlertRuleNotificationSettings{
+			EnableTeamOwnerNotifications: false,
+			IncidentIORoutingKey:         &routingKey,
+		},
+	}, types.StringValue("team_123"))
+	if diags.HasError() {
+		t.Fatalf("alertRuleFromAPI() diagnostics = %v", diags)
+	}
+	plan := state
+	plan.Name = types.StringValue("Renamed")
+	plan.NotificationSettings = types.ObjectValueMust(alertRuleNotificationSettingsAttrType.AttrTypes, map[string]attr.Value{
+		"enable_team_owner_notifications": modifierResponse.PlanValue,
+		"incident_io_routing_key":         types.StringValue(routingKey),
+	})
+
+	request, diags := plan.toUpdateRequest(ctx, state)
+	if diags.HasError() {
+		t.Fatalf("toUpdateRequest() diagnostics = %v", diags)
+	}
+	if request.Name == nil || *request.Name != "Renamed" {
+		t.Fatalf("request.Name = %#v, want Renamed", request.Name)
+	}
+	if request.NotificationSettings != nil {
+		t.Fatalf("request.NotificationSettings = %#v, want omitted", request.NotificationSettings)
 	}
 }
 

@@ -164,6 +164,9 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 					"enable_team_owner_notifications": schema.BoolAttribute{
 						Optional: true,
 						Computed: true,
+						// The parent object can be known while this omitted computed
+						// child is unknown, so preserve the API-resolved value here too.
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
 					},
 					"incident_io_routing_key": schema.StringAttribute{
 						Optional: true,
