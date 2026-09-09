@@ -27,8 +27,21 @@ func TestAlertRuleSchemaUsesBuiltInShape(t *testing.T) {
 			t.Fatalf("%s must be required", name)
 		}
 	}
-	if !rule.Attributes["notification_settings"].IsOptional() || !rule.Attributes["is_default"].IsComputed() {
-		t.Fatal("notification settings must be optional and default metadata must be computed")
+	if !rule.Attributes["notification_settings"].IsOptional() || !rule.Attributes["notification_settings"].IsComputed() || !rule.Attributes["is_default"].IsComputed() {
+		t.Fatal("notification settings must be optional and computed, and default metadata must be computed")
+	}
+}
+
+func TestAlertRuleUnknownNotificationSettingsAreOmitted(t *testing.T) {
+	settings, diags := alertRuleNotificationSettingsToClient(
+		context.Background(),
+		types.ObjectUnknown(alertRuleNotificationSettingsAttrType.AttrTypes),
+	)
+	if diags.HasError() {
+		t.Fatalf("alertRuleNotificationSettingsToClient() diagnostics = %v", diags)
+	}
+	if settings != nil {
+		t.Fatalf("settings = %#v, want nil", settings)
 	}
 }
 
@@ -73,4 +86,99 @@ func TestAlertRuleAllTriggersAreExpandedForTerraformState(t *testing.T) {
 	if len(triggers.Elements()) != len(client.AlertRuleBuiltInTriggerTypes) {
 		t.Fatalf("trigger count = %d, want %d", len(triggers.Elements()), len(client.AlertRuleBuiltInTriggerTypes))
 	}
+}
+
+func TestAlertRuleTriggerFiltersPreserveConfiguredRepresentation(t *testing.T) {
+	configured := alertRuleTriggerSet(t, "NOT statusGroup:4xx")
+	canonical := alertRuleTriggerSet(t, "statusGroup:5xx")
+	canonicalFilter := "statusGroup:5xx"
+
+	created, diags := alertRuleTriggersPreservingFilters(
+		context.Background(),
+		canonical,
+		configured,
+		nil,
+		alertRuleCanonicalFilters{"error_anomaly": &canonicalFilter},
+		alertRuleFilterReconcileApply,
+	)
+	if diags.HasError() {
+		t.Fatalf("alertRuleTriggersPreservingFilters() diagnostics = %v", diags)
+	}
+	if got := alertRuleTriggerFilter(t, created); got != "NOT statusGroup:4xx" {
+		t.Fatalf("created filter = %q, want configured representation", got)
+	}
+
+	refreshed, diags := alertRuleTriggersPreservingFilters(
+		context.Background(),
+		canonical,
+		created,
+		alertRuleCanonicalFilters{"error_anomaly": &canonicalFilter},
+		alertRuleCanonicalFilters{"error_anomaly": &canonicalFilter},
+		alertRuleFilterReconcileRefresh,
+	)
+	if diags.HasError() {
+		t.Fatalf("alertRuleTriggersPreservingFilters() diagnostics = %v", diags)
+	}
+	if got := alertRuleTriggerFilter(t, refreshed); got != "NOT statusGroup:4xx" {
+		t.Fatalf("refreshed filter = %q, want configured representation", got)
+	}
+}
+
+func TestAlertRuleTriggerFiltersExposeRemoteDrift(t *testing.T) {
+	configured := alertRuleTriggerSet(t, "NOT statusGroup:4xx")
+	remote := alertRuleTriggerSet(t, "statusGroup:4xx")
+	previousCanonicalFilter := "statusGroup:5xx"
+	currentCanonicalFilter := "statusGroup:4xx"
+
+	refreshed, diags := alertRuleTriggersPreservingFilters(
+		context.Background(),
+		remote,
+		configured,
+		alertRuleCanonicalFilters{"error_anomaly": &previousCanonicalFilter},
+		alertRuleCanonicalFilters{"error_anomaly": &currentCanonicalFilter},
+		alertRuleFilterReconcileRefresh,
+	)
+	if diags.HasError() {
+		t.Fatalf("alertRuleTriggersPreservingFilters() diagnostics = %v", diags)
+	}
+	if got := alertRuleTriggerFilter(t, refreshed); got != "statusGroup:4xx" {
+		t.Fatalf("refreshed filter = %q, want remote value", got)
+	}
+}
+
+func TestAlertRuleImportRequiresTeam(t *testing.T) {
+	response := &resource.ImportStateResponse{}
+	(&alertRuleResource{client: client.New("TOKEN")}).ImportState(
+		context.Background(),
+		resource.ImportStateRequest{ID: "ar_123"},
+		response,
+	)
+	if !response.Diagnostics.HasError() {
+		t.Fatal("ImportState() returned no diagnostics without team context")
+	}
+}
+
+func alertRuleTriggerSet(t *testing.T, filter string) types.Set {
+	t.Helper()
+	value, diags := types.SetValueFrom(context.Background(), alertRuleTriggerAttrType, []AlertRuleTrigger{{
+		Type:   types.StringValue("error_anomaly"),
+		Filter: types.StringValue(filter),
+	}})
+	if diags.HasError() {
+		t.Fatalf("types.SetValueFrom() diagnostics = %v", diags)
+	}
+	return value
+}
+
+func alertRuleTriggerFilter(t *testing.T, value types.Set) string {
+	t.Helper()
+	var triggers []AlertRuleTrigger
+	diags := value.ElementsAs(context.Background(), &triggers, false)
+	if diags.HasError() {
+		t.Fatalf("ElementsAs() diagnostics = %v", diags)
+	}
+	if len(triggers) != 1 {
+		t.Fatalf("trigger count = %d, want 1", len(triggers))
+	}
+	return triggers[0].Filter.ValueString()
 }

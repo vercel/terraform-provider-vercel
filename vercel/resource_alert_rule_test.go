@@ -41,25 +41,30 @@ func testCheckAlertRuleDeleted(testClient *client.Client, name, teamID string) r
 
 func TestAcc_AlertRuleResource(t *testing.T) {
 	name := acctest.RandString(16)
+	notifyOwners := false
 	const resourceName = "vercel_alert_rule.example"
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckAlertRuleDeleted(testClient(t), resourceName, testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccResourceAlertRule(name, "high", false)),
+				Config: cfg(testAccResourceAlertRule(name, "high", "NOT statusGroup:4xx", nil)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckAlertRuleExists(testClient(t), testTeam(t), resourceName),
 					resource.TestCheckResourceAttr(resourceName, "type", "built-in"),
-					resource.TestCheckResourceAttr(resourceName, "name", "errors-"+name),
+					resource.TestCheckResourceAttr(resourceName, "name", "test-acc-alert-rule-"+name),
 					resource.TestCheckResourceAttr(resourceName, "rule_scope.type", "include"),
 					resource.TestCheckResourceAttr(resourceName, "rule_scope.project_ids.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "triggers.#", "1"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "triggers.*", map[string]string{"type": "error_anomaly", "filter": "statusGroup:5xx"}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "triggers.*", map[string]string{"type": "error_anomaly", "filter": "NOT statusGroup:4xx"}),
 					resource.TestCheckResourceAttr(resourceName, "match_minimum_severity_level", "high"),
-					resource.TestCheckResourceAttr(resourceName, "notification_settings.enable_team_owner_notifications", "false"),
+					resource.TestCheckResourceAttr(resourceName, "notification_settings.enable_team_owner_notifications", "true"),
 					resource.TestCheckResourceAttr(resourceName, "is_default", "false"),
 				),
+			},
+			{
+				Config:   cfg(testAccResourceAlertRule(name, "high", "NOT statusGroup:4xx", nil)),
+				PlanOnly: true,
 			},
 			{
 				ResourceName:      resourceName,
@@ -68,10 +73,11 @@ func TestAcc_AlertRuleResource(t *testing.T) {
 				ImportStateIdFunc: getAlertRuleImportID(resourceName),
 			},
 			{
-				Config: cfg(testAccResourceAlertRule(name, "medium", true)),
+				Config: cfg(testAccResourceAlertRule(name, "medium", "NOT statusGroup:4xx", &notifyOwners)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "match_minimum_severity_level", "medium"),
-					resource.TestCheckResourceAttr(resourceName, "notification_settings.enable_team_owner_notifications", "true"),
+					resource.TestCheckResourceAttr(resourceName, "notification_settings.enable_team_owner_notifications", "false"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "triggers.*", map[string]string{"type": "error_anomaly", "filter": "NOT statusGroup:4xx"}),
 				),
 			},
 		},
@@ -88,7 +94,15 @@ func getAlertRuleImportID(name string) resource.ImportStateIdFunc {
 	}
 }
 
-func testAccResourceAlertRule(name, severity string, notifyOwners bool) string {
+func testAccResourceAlertRule(name, severity, filter string, notifyOwners *bool) string {
+	notificationSettings := ""
+	if notifyOwners != nil {
+		notificationSettings = fmt.Sprintf(`
+  notification_settings = {
+    enable_team_owner_notifications = %t
+  }
+`, *notifyOwners)
+	}
 	return fmt.Sprintf(`
 resource "vercel_project" "alert_rule" {
   name = "test-acc-alert-rule-%[1]s"
@@ -96,19 +110,17 @@ resource "vercel_project" "alert_rule" {
 
 resource "vercel_alert_rule" "example" {
   type = "built-in"
-  name = "errors-%[1]s"
+  name = "test-acc-alert-rule-%[1]s"
   rule_scope = {
     type        = "include"
     project_ids = [vercel_project.alert_rule.id]
   }
   triggers = [{
     type   = "error_anomaly"
-    filter = "statusGroup:5xx"
+    filter = "%[3]s"
   }]
   match_minimum_severity_level = "%[2]s"
-  notification_settings = {
-    enable_team_owner_notifications = %[3]t
-  }
+%[4]s
 }
-`, name, severity, notifyOwners)
+`, name, severity, filter, notificationSettings)
 }

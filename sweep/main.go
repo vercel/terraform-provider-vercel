@@ -61,7 +61,9 @@ func main() {
 
 // deleteAllAlertRules removes alert rules left behind by failed test runs. Alert
 // rules are not tied to a project, so deleting projects does not remove them.
-// The team's Vercel-managed default rule cannot be deleted, so it is skipped.
+// The team's Vercel-managed default rule cannot be deleted, and shared testing
+// teams may contain manually managed rules. Only the distinctive acceptance-test
+// prefix identifies rules this sweeper owns.
 func deleteAllAlertRules(ctx context.Context, c *client.Client, teamID string) error {
 	alertRules, err := c.ListAlertRules(ctx, teamID)
 	if err != nil {
@@ -69,7 +71,7 @@ func deleteAllAlertRules(ctx context.Context, c *client.Client, teamID string) e
 	}
 
 	for _, alertRule := range alertRules {
-		if alertRule.IsDefault || alertRule.Type != client.AlertRuleTypeBuiltIn {
+		if alertRule.IsDefault || alertRule.Type != client.AlertRuleTypeBuiltIn || !strings.HasPrefix(alertRule.Name, "test-acc-alert-rule-") {
 			continue
 		}
 		err = c.DeleteAlertRule(ctx, alertRule.ID, teamID)

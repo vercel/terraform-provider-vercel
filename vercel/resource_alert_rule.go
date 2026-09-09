@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
@@ -165,17 +167,20 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 }
 
 type AlertRule struct {
-	ID                        types.String                   `tfsdk:"id"`
-	TeamID                    types.String                   `tfsdk:"team_id"`
-	Type                      types.String                   `tfsdk:"type"`
-	Name                      types.String                   `tfsdk:"name"`
-	RuleScope                 *AlertRuleScope                `tfsdk:"rule_scope"`
-	Triggers                  types.Set                      `tfsdk:"triggers"`
-	MatchMinimumSeverityLevel types.String                   `tfsdk:"match_minimum_severity_level"`
-	NotificationSettings      *AlertRuleNotificationSettings `tfsdk:"notification_settings"`
-	IsDefault                 types.Bool                     `tfsdk:"is_default"`
-	CreatedAt                 types.Int64                    `tfsdk:"created_at"`
-	UpdatedAt                 types.Int64                    `tfsdk:"updated_at"`
+	ID                        types.String    `tfsdk:"id"`
+	TeamID                    types.String    `tfsdk:"team_id"`
+	Type                      types.String    `tfsdk:"type"`
+	Name                      types.String    `tfsdk:"name"`
+	RuleScope                 *AlertRuleScope `tfsdk:"rule_scope"`
+	Triggers                  types.Set       `tfsdk:"triggers"`
+	MatchMinimumSeverityLevel types.String    `tfsdk:"match_minimum_severity_level"`
+	// A framework object is necessary here because an omitted Optional+Computed
+	// nested attribute is unknown in the create plan, which a struct pointer
+	// cannot represent.
+	NotificationSettings types.Object `tfsdk:"notification_settings"`
+	IsDefault            types.Bool   `tfsdk:"is_default"`
+	CreatedAt            types.Int64  `tfsdk:"created_at"`
+	UpdatedAt            types.Int64  `tfsdk:"updated_at"`
 }
 
 type AlertRuleScope struct {
@@ -196,6 +201,34 @@ type AlertRuleNotificationSettings struct {
 var alertRuleTriggerAttrType = types.ObjectType{AttrTypes: map[string]attr.Type{
 	"type": types.StringType, "filter": types.StringType,
 }}
+
+var alertRuleNotificationSettingsAttrType = types.ObjectType{AttrTypes: map[string]attr.Type{
+	"enable_team_owner_notifications": types.BoolType,
+	"incident_io_routing_key":         types.StringType,
+}}
+
+const alertRuleCanonicalFiltersPrivateKey = "alert_rule_canonical_filters"
+
+type alertRulePrivateState interface {
+	GetKey(context.Context, string) ([]byte, diag.Diagnostics)
+	SetKey(context.Context, string, []byte) diag.Diagnostics
+}
+
+// alertRuleCanonicalFilters stores the API representation separately from the
+// user-authored representation in Terraform state. A nil value means the
+// trigger has no filter; a missing key means the trigger was not returned.
+type alertRuleCanonicalFilters map[string]*string
+
+type alertRuleFilterReconciliationMode int
+
+const (
+	// An apply response describes the configuration just accepted by the API, so
+	// Terraform state must retain that configuration's representation.
+	alertRuleFilterReconcileApply alertRuleFilterReconciliationMode = iota
+	// A refresh retains the state representation only while the API's canonical
+	// representation is unchanged. Otherwise the API value exposes remote drift.
+	alertRuleFilterReconcileRefresh
+)
 
 func alertRuleScopeToClient(ctx context.Context, scope *AlertRuleScope) (client.AlertRuleScope, diag.Diagnostics) {
 	var diags diag.Diagnostics
@@ -232,10 +265,19 @@ func alertRuleTriggersToClient(ctx context.Context, value types.Set) (*client.Al
 	return &client.AlertRuleTriggers{Mode: "selected", Items: items}, diags
 }
 
-func alertRuleNotificationSettingsToClient(settings *AlertRuleNotificationSettings) *client.AlertRuleNotificationSettings {
-	if settings == nil {
-		return nil
+func alertRuleNotificationSettingsToClient(ctx context.Context, value types.Object) (*client.AlertRuleNotificationSettings, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if value.IsNull() || value.IsUnknown() {
+		// The API owns the default when the Optional+Computed block is omitted.
+		return nil, diags
 	}
+
+	var settings AlertRuleNotificationSettings
+	diags.Append(value.As(ctx, &settings, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return nil, diags
+	}
+
 	enableTeamOwnerNotifications := true
 	if !settings.EnableTeamOwnerNotifications.IsNull() && !settings.EnableTeamOwnerNotifications.IsUnknown() {
 		enableTeamOwnerNotifications = settings.EnableTeamOwnerNotifications.ValueBool()
@@ -243,13 +285,15 @@ func alertRuleNotificationSettingsToClient(settings *AlertRuleNotificationSettin
 	return &client.AlertRuleNotificationSettings{
 		EnableTeamOwnerNotifications: enableTeamOwnerNotifications,
 		IncidentIORoutingKey:         optionalString(settings.IncidentIORoutingKey),
-	}
+	}, diags
 }
 
 func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCreate, diag.Diagnostics) {
 	scope, diags := alertRuleScopeToClient(ctx, model.RuleScope)
 	triggers, triggerDiags := alertRuleTriggersToClient(ctx, model.Triggers)
 	diags.Append(triggerDiags...)
+	notificationSettings, notificationSettingsDiags := alertRuleNotificationSettingsToClient(ctx, model.NotificationSettings)
+	diags.Append(notificationSettingsDiags...)
 	if diags.HasError() {
 		return client.AlertRuleCreate{}, diags
 	}
@@ -260,7 +304,7 @@ func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCre
 		RuleScope:                 scope,
 		Triggers:                  triggers,
 		MatchMinimumSeverityLevel: optionalString(model.MatchMinimumSeverityLevel),
-		NotificationSettings:      alertRuleNotificationSettingsToClient(model.NotificationSettings),
+		NotificationSettings:      notificationSettings,
 	}, diags
 }
 
@@ -299,17 +343,122 @@ func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.St
 	scope, diags := alertRuleScopeFromClient(ctx, out.RuleScope)
 	triggers, triggerDiags := alertRuleTriggersFromClient(ctx, out.Triggers)
 	diags.Append(triggerDiags...)
+	notificationSettings, notificationSettingsDiags := types.ObjectValueFrom(ctx, alertRuleNotificationSettingsAttrType.AttrTypes, AlertRuleNotificationSettings{
+		EnableTeamOwnerNotifications: types.BoolValue(out.NotificationSettings.EnableTeamOwnerNotifications),
+		IncidentIORoutingKey:         stringValue(out.NotificationSettings.IncidentIORoutingKey),
+	})
+	diags.Append(notificationSettingsDiags...)
 
 	return AlertRule{
 		ID: types.StringValue(out.ID), TeamID: teamID, Type: types.StringValue(out.Type), Name: types.StringValue(out.Name),
 		RuleScope: scope, Triggers: triggers, MatchMinimumSeverityLevel: stringValue(out.MatchMinimumSeverityLevel),
-		NotificationSettings: &AlertRuleNotificationSettings{
-			EnableTeamOwnerNotifications: types.BoolValue(out.NotificationSettings.EnableTeamOwnerNotifications),
-			IncidentIORoutingKey:         stringValue(out.NotificationSettings.IncidentIORoutingKey),
-		},
-		IsDefault: types.BoolValue(out.IsDefault),
-		CreatedAt: int64Value(out.CreatedAt), UpdatedAt: int64Value(out.UpdatedAt),
+		NotificationSettings: notificationSettings,
+		IsDefault:            types.BoolValue(out.IsDefault),
+		CreatedAt:            int64Value(out.CreatedAt), UpdatedAt: int64Value(out.UpdatedAt),
 	}, diags
+}
+
+func alertRuleCanonicalFiltersFromClient(triggers *client.AlertRuleTriggers) alertRuleCanonicalFilters {
+	filters := alertRuleCanonicalFilters{}
+	if triggers == nil {
+		return filters
+	}
+	if triggers.Mode == "all" {
+		for _, triggerType := range client.AlertRuleBuiltInTriggerTypes {
+			filters[triggerType] = nil
+		}
+		return filters
+	}
+	for _, trigger := range triggers.Items {
+		filters[trigger.Type] = trigger.Filter
+	}
+	return filters
+}
+
+func alertRuleFiltersEqual(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
+}
+
+// alertRuleTriggersPreservingFilters chooses which filter representation is
+// served into Terraform state. The Alerts API parses KQL into its OData storage
+// form and serializes it back to canonical KQL, so a semantically unchanged
+// filter can have different text (for example, NOT statusGroup:4xx becomes
+// statusGroup:5xx). Preserving the configured text after apply avoids changing
+// a set element's hash. During refresh, the private canonical baseline lets us
+// preserve that text only when the remote value is unchanged, so actual drift
+// is still visible without duplicating the API's KQL parser in this provider.
+func alertRuleTriggersPreservingFilters(
+	ctx context.Context,
+	apiTriggers types.Set,
+	priorTriggers types.Set,
+	previousCanonical alertRuleCanonicalFilters,
+	currentCanonical alertRuleCanonicalFilters,
+	mode alertRuleFilterReconciliationMode,
+) (types.Set, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if apiTriggers.IsNull() || apiTriggers.IsUnknown() || priorTriggers.IsNull() || priorTriggers.IsUnknown() {
+		return apiTriggers, diags
+	}
+
+	var apiModels []AlertRuleTrigger
+	var priorModels []AlertRuleTrigger
+	diags.Append(apiTriggers.ElementsAs(ctx, &apiModels, false)...)
+	diags.Append(priorTriggers.ElementsAs(ctx, &priorModels, false)...)
+	if diags.HasError() {
+		return apiTriggers, diags
+	}
+
+	priorFilters := make(map[string]types.String, len(priorModels))
+	for _, trigger := range priorModels {
+		if !trigger.Type.IsNull() && !trigger.Type.IsUnknown() {
+			priorFilters[trigger.Type.ValueString()] = trigger.Filter
+		}
+	}
+	for i, trigger := range apiModels {
+		if trigger.Type.IsNull() || trigger.Type.IsUnknown() {
+			continue
+		}
+		triggerType := trigger.Type.ValueString()
+		priorFilter, hasPriorFilter := priorFilters[triggerType]
+		if !hasPriorFilter {
+			continue
+		}
+		previousFilter, hadPreviousCanonical := previousCanonical[triggerType]
+		currentFilter, hasCurrentCanonical := currentCanonical[triggerType]
+		if mode == alertRuleFilterReconcileApply || (hadPreviousCanonical && hasCurrentCanonical && alertRuleFiltersEqual(previousFilter, currentFilter)) {
+			apiModels[i].Filter = priorFilter
+		}
+	}
+
+	preserved, convertedDiags := types.SetValueFrom(ctx, alertRuleTriggerAttrType, apiModels)
+	diags.Append(convertedDiags...)
+	return preserved, diags
+}
+
+func getAlertRuleCanonicalFilters(ctx context.Context, private alertRulePrivateState) (alertRuleCanonicalFilters, diag.Diagnostics) {
+	encoded, diags := private.GetKey(ctx, alertRuleCanonicalFiltersPrivateKey)
+	if diags.HasError() || len(encoded) == 0 {
+		return nil, diags
+	}
+	var filters alertRuleCanonicalFilters
+	if err := json.Unmarshal(encoded, &filters); err != nil {
+		diags.AddError("Error decoding Alert Rule private state", fmt.Sprintf("Could not decode canonical alert rule filters: %s", err))
+	}
+	return filters, diags
+}
+
+func setAlertRuleCanonicalFilters(ctx context.Context, private alertRulePrivateState, filters alertRuleCanonicalFilters) diag.Diagnostics {
+	var diags diag.Diagnostics
+	encoded, err := json.Marshal(filters)
+	if err != nil {
+		diags.AddError("Error encoding Alert Rule private state", fmt.Sprintf("Could not encode canonical alert rule filters: %s", err))
+		return diags
+	}
+	diags.Append(private.SetKey(ctx, alertRuleCanonicalFiltersPrivateKey, encoded)...)
+	return diags
 }
 
 func stringValue(value *string) types.String {
@@ -391,6 +540,10 @@ func (r *alertRuleResource) Create(ctx context.Context, req resource.CreateReque
 	teamID := toTeamID(r.client.TeamID(plan.TeamID.ValueString()))
 	result, resultDiags := alertRuleFromAPI(ctx, out, teamID)
 	resp.Diagnostics.Append(resultDiags...)
+	currentCanonical := alertRuleCanonicalFiltersFromClient(out.Triggers)
+	result.Triggers, resultDiags = alertRuleTriggersPreservingFilters(ctx, result.Triggers, plan.Triggers, nil, currentCanonical, alertRuleFilterReconcileApply)
+	resp.Diagnostics.Append(resultDiags...)
+	resp.Diagnostics.Append(setAlertRuleCanonicalFilters(ctx, resp.Private, currentCanonical)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -401,6 +554,11 @@ func (r *alertRuleResource) Create(ctx context.Context, req resource.CreateReque
 func (r *alertRuleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state AlertRule
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	previousCanonical, privateDiags := getAlertRuleCanonicalFilters(ctx, req.Private)
+	resp.Diagnostics.Append(privateDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -425,6 +583,10 @@ func (r *alertRuleResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	result, diags := alertRuleFromAPI(ctx, out, state.TeamID)
 	resp.Diagnostics.Append(diags...)
+	currentCanonical := alertRuleCanonicalFiltersFromClient(out.Triggers)
+	result.Triggers, diags = alertRuleTriggersPreservingFilters(ctx, result.Triggers, state.Triggers, previousCanonical, currentCanonical, alertRuleFilterReconcileRefresh)
+	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(setAlertRuleCanonicalFilters(ctx, resp.Private, currentCanonical)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -455,6 +617,10 @@ func (r *alertRuleResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 	result, resultDiags := alertRuleFromAPI(ctx, out, plan.TeamID)
 	resp.Diagnostics.Append(resultDiags...)
+	currentCanonical := alertRuleCanonicalFiltersFromClient(out.Triggers)
+	result.Triggers, resultDiags = alertRuleTriggersPreservingFilters(ctx, result.Triggers, plan.Triggers, nil, currentCanonical, alertRuleFilterReconcileApply)
+	resp.Diagnostics.Append(resultDiags...)
+	resp.Diagnostics.Append(setAlertRuleCanonicalFilters(ctx, resp.Private, currentCanonical)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -481,8 +647,13 @@ func (r *alertRuleResource) ImportState(ctx context.Context, req resource.Import
 		resp.Diagnostics.AddError("Error importing Alert Rule", fmt.Sprintf("Invalid id %q. Expected `team_id/alert_rule_id` or `alert_rule_id`.", req.ID))
 		return
 	}
+	resolvedTeamID := r.client.TeamID(teamID)
+	if resolvedTeamID == "" {
+		resp.Diagnostics.AddError("Error importing Alert Rule", "Alerts v3 requires a team. Configure a default team in the provider or import using `team_id/alert_rule_id`.")
+		return
+	}
 
-	out, err := r.client.GetAlertRule(ctx, id, teamID)
+	out, err := r.client.GetAlertRule(ctx, id, resolvedTeamID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error importing Alert Rule", fmt.Sprintf("Could not get Alert Rule %s, unexpected error: %s", id, err))
 		return
@@ -496,12 +667,13 @@ func (r *alertRuleResource) ImportState(ctx context.Context, req resource.Import
 		return
 	}
 
-	resolvedTeamID := toTeamID(r.client.TeamID(teamID))
-	result, diags := alertRuleFromAPI(ctx, out, resolvedTeamID)
+	teamIDValue := toTeamID(resolvedTeamID)
+	result, diags := alertRuleFromAPI(ctx, out, teamIDValue)
 	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(setAlertRuleCanonicalFilters(ctx, resp.Private, alertRuleCanonicalFiltersFromClient(out.Triggers))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "imported alert rule", map[string]any{"team_id": resolvedTeamID.ValueString(), "alert_rule_id": out.ID})
+	tflog.Info(ctx, "imported alert rule", map[string]any{"team_id": teamIDValue.ValueString(), "alert_rule_id": out.ID})
 	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
