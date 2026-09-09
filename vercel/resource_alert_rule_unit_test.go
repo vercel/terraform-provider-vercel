@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
@@ -50,7 +51,7 @@ func TestAlertRuleConfiguredTriggersPlanSelectedMode(t *testing.T) {
 	ctx := context.Background()
 	ruleSchema := alertRuleSchema(t)
 	configuredTriggers := alertRuleTriggerSet(t, "statusGroup:5xx")
-	scope := &AlertRuleScope{Type: types.StringValue("all"), ProjectIDs: types.SetNull(types.StringType)}
+	scope := alertRuleScopeValue("all", types.SetNull(types.StringType))
 	notificationSettings := types.ObjectValueMust(alertRuleNotificationSettingsAttrType.AttrTypes, map[string]attr.Value{
 		"enable_team_owner_notifications": types.BoolValue(true),
 		"incident_io_routing_key":         types.StringNull(),
@@ -119,6 +120,142 @@ func TestAlertRuleUnknownNotificationSettingsAreOmitted(t *testing.T) {
 	}
 }
 
+func TestAlertRuleUnknownNestedConfigurationIsDeferred(t *testing.T) {
+	ctx := context.Background()
+	ruleSchema := alertRuleSchema(t)
+
+	tests := map[string]func(AlertRule) AlertRule{
+		"entire scope object": func(config AlertRule) AlertRule {
+			config.RuleScope = types.ObjectUnknown(alertRuleScopeAttrType.AttrTypes)
+			return config
+		},
+		"scope project IDs": func(config AlertRule) AlertRule {
+			config.RuleScope = alertRuleScopeValue("all", types.SetUnknown(types.StringType))
+			return config
+		},
+		"entire trigger object": func(config AlertRule) AlertRule {
+			config.Triggers = types.SetValueMust(alertRuleTriggerAttrType, []attr.Value{
+				types.ObjectUnknown(alertRuleTriggerAttrType.AttrTypes),
+			})
+			return config
+		},
+		"trigger filter": func(config AlertRule) AlertRule {
+			config.Triggers = types.SetValueMust(alertRuleTriggerAttrType, []attr.Value{
+				types.ObjectValueMust(alertRuleTriggerAttrType.AttrTypes, map[string]attr.Value{
+					"type":   types.StringValue("botId"),
+					"filter": types.StringUnknown(),
+				}),
+			})
+			return config
+		},
+	}
+
+	for name, mutate := range tests {
+		t.Run(name, func(t *testing.T) {
+			config := mutate(alertRuleConfiguration(t))
+			configPlan := tfsdk.Plan{Schema: ruleSchema}
+			if diags := configPlan.Set(ctx, config); diags.HasError() {
+				t.Fatalf("config Plan.Set() diagnostics = %v", diags)
+			}
+
+			response := &resource.ValidateConfigResponse{}
+			(&alertRuleResource{}).ValidateConfig(ctx, resource.ValidateConfigRequest{
+				Config: tfsdk.Config{Raw: configPlan.Raw, Schema: ruleSchema},
+			}, response)
+			if response.Diagnostics.HasError() {
+				t.Fatalf("ValidateConfig() diagnostics = %v", response.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestAlertRuleKnownInvalidNestedConfigurationIsRejected(t *testing.T) {
+	ctx := context.Background()
+	ruleSchema := alertRuleSchema(t)
+
+	tests := map[string]func(AlertRule) AlertRule{
+		"all scope with project IDs": func(config AlertRule) AlertRule {
+			config.RuleScope = alertRuleScopeValue("all", types.SetValueMust(types.StringType, []attr.Value{types.StringValue("prj_123")}))
+			return config
+		},
+		"include scope without project IDs": func(config AlertRule) AlertRule {
+			config.RuleScope = alertRuleScopeValue("include", types.SetNull(types.StringType))
+			return config
+		},
+		"unsupported trigger filter": func(config AlertRule) AlertRule {
+			config.Triggers = types.SetValueMust(alertRuleTriggerAttrType, []attr.Value{
+				types.ObjectValueMust(alertRuleTriggerAttrType.AttrTypes, map[string]attr.Value{
+					"type":   types.StringValue("botId"),
+					"filter": types.StringValue("botId:bot_123"),
+				}),
+			})
+			return config
+		},
+	}
+
+	for name, mutate := range tests {
+		t.Run(name, func(t *testing.T) {
+			config := mutate(alertRuleConfiguration(t))
+			configPlan := tfsdk.Plan{Schema: ruleSchema}
+			if diags := configPlan.Set(ctx, config); diags.HasError() {
+				t.Fatalf("config Plan.Set() diagnostics = %v", diags)
+			}
+
+			response := &resource.ValidateConfigResponse{}
+			(&alertRuleResource{}).ValidateConfig(ctx, resource.ValidateConfigRequest{
+				Config: tfsdk.Config{Raw: configPlan.Raw, Schema: ruleSchema},
+			}, response)
+			if !response.Diagnostics.HasError() {
+				t.Fatal("ValidateConfig() returned no diagnostics")
+			}
+		})
+	}
+}
+
+func TestAlertRuleModifyPlanAcceptsUnknownScopeObject(t *testing.T) {
+	ctx := context.Background()
+	ruleSchema := alertRuleSchema(t)
+	state := alertRuleConfiguration(t)
+	state.ID = types.StringValue("ar_123")
+	state.TeamID = types.StringValue("team_123")
+	state.TriggerMode = types.StringValue("selected")
+	state.NotificationSettings = types.ObjectValueMust(alertRuleNotificationSettingsAttrType.AttrTypes, map[string]attr.Value{
+		"enable_team_owner_notifications": types.BoolValue(true),
+		"incident_io_routing_key":         types.StringNull(),
+	})
+	state.IsDefault = types.BoolValue(false)
+	state.CreatedAt = types.Int64Value(1)
+	state.UpdatedAt = types.Int64Value(1)
+
+	config := state
+	config.RuleScope = types.ObjectUnknown(alertRuleScopeAttrType.AttrTypes)
+	plan := config
+	plan.TriggerMode = types.StringUnknown()
+
+	configPlan := tfsdk.Plan{Schema: ruleSchema}
+	if diags := configPlan.Set(ctx, config); diags.HasError() {
+		t.Fatalf("config Plan.Set() diagnostics = %v", diags)
+	}
+	plannedState := tfsdk.Plan{Schema: ruleSchema}
+	if diags := plannedState.Set(ctx, plan); diags.HasError() {
+		t.Fatalf("plan Set() diagnostics = %v", diags)
+	}
+	priorState := tfsdk.State{Schema: ruleSchema}
+	if diags := priorState.Set(ctx, state); diags.HasError() {
+		t.Fatalf("state Set() diagnostics = %v", diags)
+	}
+
+	response := &resource.ModifyPlanResponse{Plan: plannedState}
+	(&alertRuleResource{}).ModifyPlan(ctx, resource.ModifyPlanRequest{
+		Config: tfsdk.Config{Raw: configPlan.Raw, Schema: ruleSchema},
+		Plan:   plannedState,
+		State:  priorState,
+	}, response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("ModifyPlan() diagnostics = %v", response.Diagnostics)
+	}
+}
+
 func TestAlertRuleBuiltInRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	filter := "statusGroup:5xx"
@@ -133,10 +270,11 @@ func TestAlertRuleBuiltInRoundTrip(t *testing.T) {
 	if diags.HasError() {
 		t.Fatalf("alertRuleFromAPI() diagnostics = %v", diags)
 	}
-	if rule.Type.ValueString() != client.AlertRuleTypeBuiltIn || rule.RuleScope.Type.ValueString() != "include" || rule.TriggerMode.ValueString() != "selected" {
+	scope := alertRuleScopeModel(t, rule.RuleScope)
+	if rule.Type.ValueString() != client.AlertRuleTypeBuiltIn || scope.Type.ValueString() != "include" || rule.TriggerMode.ValueString() != "selected" {
 		t.Fatalf("rule = %#v", rule)
 	}
-	if len(rule.Triggers.Elements()) != 1 || len(rule.RuleScope.ProjectIDs.Elements()) != 1 {
+	if len(rule.Triggers.Elements()) != 1 || len(scope.ProjectIDs.Elements()) != 1 {
 		t.Fatalf("rule = %#v", rule)
 	}
 
@@ -337,6 +475,41 @@ func alertRuleTriggerSet(t *testing.T, filter string) types.Set {
 		t.Fatalf("types.SetValueFrom() diagnostics = %v", diags)
 	}
 	return value
+}
+
+func alertRuleConfiguration(t *testing.T) AlertRule {
+	t.Helper()
+	return AlertRule{
+		ID:                        types.StringNull(),
+		TeamID:                    types.StringNull(),
+		Type:                      types.StringValue(client.AlertRuleTypeBuiltIn),
+		Name:                      types.StringValue("Errors"),
+		RuleScope:                 alertRuleScopeValue("all", types.SetNull(types.StringType)),
+		TriggerMode:               types.StringNull(),
+		Triggers:                  alertRuleTriggerSet(t, "statusGroup:5xx"),
+		MatchMinimumSeverityLevel: types.StringValue("high"),
+		NotificationSettings:      types.ObjectNull(alertRuleNotificationSettingsAttrType.AttrTypes),
+		IsDefault:                 types.BoolNull(),
+		CreatedAt:                 types.Int64Null(),
+		UpdatedAt:                 types.Int64Null(),
+	}
+}
+
+func alertRuleScopeValue(scopeType string, projectIDs types.Set) types.Object {
+	return types.ObjectValueMust(alertRuleScopeAttrType.AttrTypes, map[string]attr.Value{
+		"type":        types.StringValue(scopeType),
+		"project_ids": projectIDs,
+	})
+}
+
+func alertRuleScopeModel(t *testing.T, value types.Object) AlertRuleScope {
+	t.Helper()
+	var scope AlertRuleScope
+	diags := value.As(context.Background(), &scope, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		t.Fatalf("Object.As() diagnostics = %v", diags)
+	}
+	return scope
 }
 
 func alertRuleTriggerFilter(t *testing.T, value types.Set) string {

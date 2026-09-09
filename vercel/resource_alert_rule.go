@@ -197,14 +197,17 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 }
 
 type AlertRule struct {
-	ID                        types.String    `tfsdk:"id"`
-	TeamID                    types.String    `tfsdk:"team_id"`
-	Type                      types.String    `tfsdk:"type"`
-	Name                      types.String    `tfsdk:"name"`
-	RuleScope                 *AlertRuleScope `tfsdk:"rule_scope"`
-	TriggerMode               types.String    `tfsdk:"trigger_mode"`
-	Triggers                  types.Set       `tfsdk:"triggers"`
-	MatchMinimumSeverityLevel types.String    `tfsdk:"match_minimum_severity_level"`
+	ID     types.String `tfsdk:"id"`
+	TeamID types.String `tfsdk:"team_id"`
+	Type   types.String `tfsdk:"type"`
+	Name   types.String `tfsdk:"name"`
+	// A required nested attribute can still be unknown when its value depends on
+	// another resource. Keep the outer value in a framework type so validation
+	// can defer until Terraform knows the complete scope.
+	RuleScope                 types.Object `tfsdk:"rule_scope"`
+	TriggerMode               types.String `tfsdk:"trigger_mode"`
+	Triggers                  types.Set    `tfsdk:"triggers"`
+	MatchMinimumSeverityLevel types.String `tfsdk:"match_minimum_severity_level"`
 	// A framework object is necessary here because an omitted Optional+Computed
 	// nested attribute is unknown in the create plan, which a struct pointer
 	// cannot represent.
@@ -231,6 +234,11 @@ type AlertRuleNotificationSettings struct {
 
 var alertRuleTriggerAttrType = types.ObjectType{AttrTypes: map[string]attr.Type{
 	"type": types.StringType, "filter": types.StringType,
+}}
+
+var alertRuleScopeAttrType = types.ObjectType{AttrTypes: map[string]attr.Type{
+	"type":        types.StringType,
+	"project_ids": types.SetType{ElemType: types.StringType},
 }}
 
 var alertRuleNotificationSettingsAttrType = types.ObjectType{AttrTypes: map[string]attr.Type{
@@ -261,9 +269,14 @@ const (
 	alertRuleFilterReconcileRefresh
 )
 
-func alertRuleScopeToClient(ctx context.Context, scope *AlertRuleScope) (client.AlertRuleScope, diag.Diagnostics) {
+func alertRuleScopeToClient(ctx context.Context, value types.Object) (client.AlertRuleScope, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	if scope == nil {
+	if value.IsNull() || value.IsUnknown() {
+		return client.AlertRuleScope{}, diags
+	}
+	var scope AlertRuleScope
+	diags.Append(value.As(ctx, &scope, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return client.AlertRuleScope{}, diags
 	}
 
@@ -339,13 +352,6 @@ func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCre
 	}, diags
 }
 
-func alertRuleScopesEqual(a, b *AlertRuleScope) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
-	}
-	return a.Type.Equal(b.Type) && a.ProjectIDs.Equal(b.ProjectIDs)
-}
-
 // toUpdateRequest keeps PATCH semantics aligned with Alerts v3 by sending only
 // fields that changed. This is required for readable legacy trigger filters:
 // the API can preserve them when triggers is omitted, but may reject them if an
@@ -361,7 +367,7 @@ func (plan AlertRule) toUpdateRequest(ctx context.Context, state AlertRule) (cli
 		name := plan.Name.ValueString()
 		request.Name = &name
 	}
-	if !alertRuleScopesEqual(plan.RuleScope, state.RuleScope) {
+	if !plan.RuleScope.Equal(state.RuleScope) {
 		scope, scopeDiags := alertRuleScopeToClient(ctx, plan.RuleScope)
 		diags.Append(scopeDiags...)
 		request.RuleScope = &scope
@@ -383,7 +389,7 @@ func (plan AlertRule) toUpdateRequest(ctx context.Context, state AlertRule) (cli
 	return request, diags
 }
 
-func alertRuleScopeFromClient(ctx context.Context, scope client.AlertRuleScope) (*AlertRuleScope, diag.Diagnostics) {
+func alertRuleScopeFromClient(ctx context.Context, scope client.AlertRuleScope) (types.Object, diag.Diagnostics) {
 	projectIDs := types.SetNull(types.StringType)
 	var diags diag.Diagnostics
 	if len(scope.ProjectIDs) > 0 {
@@ -391,9 +397,11 @@ func alertRuleScopeFromClient(ctx context.Context, scope client.AlertRuleScope) 
 		projectIDs, converted = types.SetValueFrom(ctx, types.StringType, scope.ProjectIDs)
 		diags.Append(converted...)
 	}
-	return &AlertRuleScope{
+	value, converted := types.ObjectValueFrom(ctx, alertRuleScopeAttrType.AttrTypes, AlertRuleScope{
 		Type: types.StringValue(scope.Type), ProjectIDs: projectIDs,
-	}, diags
+	})
+	diags.Append(converted...)
+	return value, diags
 }
 
 func alertRuleTriggersFromClient(ctx context.Context, triggers *client.AlertRuleTriggers) (types.Set, diag.Diagnostics) {
@@ -584,28 +592,54 @@ func (r *alertRuleResource) ValidateConfig(ctx context.Context, req resource.Val
 		return
 	}
 
-	if config.RuleScope != nil && !config.RuleScope.Type.IsNull() && !config.RuleScope.Type.IsUnknown() {
-		scopeType := config.RuleScope.Type.ValueString()
-		if scopeType == "all" && !config.RuleScope.ProjectIDs.IsNull() {
-			resp.Diagnostics.AddAttributeError(path.Root("rule_scope"), "Invalid built-in alert rule scope", "An `all` scope cannot set `project_ids`.")
-		}
-		if (scopeType == "include" || scopeType == "exclude") && config.RuleScope.ProjectIDs.IsNull() {
-			resp.Diagnostics.AddAttributeError(path.Root("rule_scope").AtName("project_ids"), "Invalid built-in alert rule scope", "An `include` or `exclude` scope must set `project_ids`.")
-		}
+	validateAlertRuleScope(ctx, config.RuleScope, resp)
+	validateBuiltInTriggers(ctx, config.Triggers, resp)
+}
+
+func validateAlertRuleScope(ctx context.Context, value types.Object, resp *resource.ValidateConfigResponse) {
+	// Terraform expressions can make either the whole object or one of its
+	// children unknown. Validation must wait for those values instead of trying
+	// to decode them into Go types that cannot represent an unknown object.
+	if value.IsNull() || value.IsUnknown() {
+		return
+	}
+	var scope AlertRuleScope
+	resp.Diagnostics.Append(value.As(ctx, &scope, basetypes.ObjectAsOptions{})...)
+	if resp.Diagnostics.HasError() || scope.Type.IsNull() || scope.Type.IsUnknown() {
+		return
 	}
 
-	validateBuiltInTriggers(ctx, config.Triggers, resp)
+	scopeType := scope.Type.ValueString()
+	if scopeType == "all" && !scope.ProjectIDs.IsNull() && !scope.ProjectIDs.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(path.Root("rule_scope"), "Invalid built-in alert rule scope", "An `all` scope cannot set `project_ids`.")
+	}
+	if (scopeType == "include" || scopeType == "exclude") && scope.ProjectIDs.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("rule_scope").AtName("project_ids"), "Invalid built-in alert rule scope", "An `include` or `exclude` scope must set `project_ids`.")
+	}
 }
 
 func validateBuiltInTriggers(ctx context.Context, value types.Set, resp *resource.ValidateConfigResponse) {
 	if value.IsNull() || value.IsUnknown() {
 		return
 	}
-	var triggers []AlertRuleTrigger
-	resp.Diagnostics.Append(value.ElementsAs(ctx, &triggers, false)...)
 	seen := map[string]bool{}
-	for _, trigger := range triggers {
-		if trigger.Type.IsUnknown() {
+	for _, element := range value.Elements() {
+		triggerObject, ok := element.(types.Object)
+		if !ok {
+			resp.Diagnostics.AddAttributeError(path.Root("triggers"), "Invalid built-in trigger", "A trigger value could not be decoded as an object.")
+			continue
+		}
+		// A collection can be known while one of its object elements is unknown.
+		// Defer validation of that element until Terraform resolves it.
+		if triggerObject.IsNull() || triggerObject.IsUnknown() {
+			continue
+		}
+		var trigger AlertRuleTrigger
+		resp.Diagnostics.Append(triggerObject.As(ctx, &trigger, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if trigger.Type.IsNull() || trigger.Type.IsUnknown() {
 			continue
 		}
 		triggerType := trigger.Type.ValueString()
@@ -616,7 +650,7 @@ func validateBuiltInTriggers(ctx context.Context, value types.Set, resp *resourc
 		if triggerType == "error_anomaly" && trigger.Filter.IsNull() {
 			resp.Diagnostics.AddAttributeError(path.Root("triggers"), "Missing error anomaly filter", "The `error_anomaly` trigger requires a KQL `filter` containing a status group.")
 		}
-		if triggerType != "error_anomaly" && triggerType != "usage_anomaly" && !trigger.Filter.IsNull() {
+		if triggerType != "error_anomaly" && triggerType != "usage_anomaly" && !trigger.Filter.IsNull() && !trigger.Filter.IsUnknown() {
 			resp.Diagnostics.AddAttributeError(path.Root("triggers"), "Unsupported built-in trigger filter", fmt.Sprintf("The %q trigger does not support a filter.", triggerType))
 		}
 	}
