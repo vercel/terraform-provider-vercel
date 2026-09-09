@@ -52,33 +52,28 @@ func TestCreateAlertRule(t *testing.T) {
 	}
 }
 
-func TestUpdateCustomAlertRule(t *testing.T) {
-	operator := "gte"
-	threshold := 10.0
-	querySupported := true
+func TestUpdateAlertRule(t *testing.T) {
+	severity := "medium"
+	notifyOwners := true
 
 	var body UpdateAlertRuleRequest
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch || r.URL.Path != "/alerts/v3/alert-rules/ar_custom" {
-			t.Fatalf("request = %s %s, want PATCH /alerts/v3/alert-rules/ar_custom", r.Method, r.URL.Path)
+		if r.Method != http.MethodPatch || r.URL.Path != "/alerts/v3/alert-rules/ar_123" {
+			t.Fatalf("request = %s %s, want PATCH /alerts/v3/alert-rules/ar_123", r.Method, r.URL.Path)
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Fatal(err)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"rule":{"id":"ar_custom","type":"custom","name":"Request count","ruleScope":{"type":"project","projectId":"prj_123"},"severity":"medium","evaluation":{"window":"5m","query":{"metrics":{"requests":{"metric":"vercel.request.count","aggregation":"sum"}},"outputs":["requests"]}},"trigger":{"type":"threshold","output":"requests","operator":"gte","threshold":10},"notificationSettings":{"enableTeamOwnerNotifications":false},"isDefault":false,"querySupported":true}}`))
+		_, _ = w.Write([]byte(`{"rule":{"id":"ar_123","type":"built-in","name":"5xx anomalies","ruleScope":{"type":"all"},"triggers":{"mode":"selected","items":[{"type":"error_anomaly","filter":"statusGroup:5xx"}]},"matchMinimumSeverityLevel":"medium","notificationSettings":{"enableTeamOwnerNotifications":true},"isDefault":false}}`))
 	}))
 	t.Cleanup(server.Close)
 
 	rule, err := New("TOKEN").WithBaseURL(server.URL).UpdateAlertRule(context.Background(), UpdateAlertRuleRequest{
-		TeamID: "team_123",
-		ID:     "ar_custom",
-		Name:   pointerTo("Request count"),
-		Evaluation: &AlertRuleEvaluation{Window: "5m", Query: AlertRuleCustomQuery{
-			Metrics: map[string]AlertRuleMetricSelection{"requests": {Metric: "vercel.request.count", Aggregation: "sum"}},
-			Outputs: []string{"requests"},
-		}},
-		Trigger: &AlertRuleCustomTrigger{Type: "threshold", Output: "requests", Operator: &operator, Threshold: &threshold},
+		TeamID:                    "team_123",
+		ID:                        "ar_123",
+		MatchMinimumSeverityLevel: &severity,
+		NotificationSettings:      &AlertRuleNotificationSettings{EnableTeamOwnerNotifications: notifyOwners},
 	})
 	if err != nil {
 		t.Fatalf("UpdateAlertRule() error = %v", err)
@@ -86,10 +81,10 @@ func TestUpdateCustomAlertRule(t *testing.T) {
 	if body.TeamID != "" || body.ID != "" {
 		t.Fatalf("decoded transport-only fields = %#v", body)
 	}
-	if body.Evaluation == nil || body.Trigger == nil || body.Trigger.Threshold == nil || *body.Trigger.Threshold != 10 {
+	if body.MatchMinimumSeverityLevel == nil || *body.MatchMinimumSeverityLevel != severity || body.NotificationSettings == nil || !body.NotificationSettings.EnableTeamOwnerNotifications {
 		t.Fatalf("request body = %#v", body)
 	}
-	if rule.QuerySupported == nil || *rule.QuerySupported != querySupported || rule.Evaluation == nil {
+	if rule.MatchMinimumSeverityLevel == nil || *rule.MatchMinimumSeverityLevel != severity {
 		t.Fatalf("rule = %#v", rule)
 	}
 }
@@ -123,8 +118,4 @@ func TestListAlertRulesPaginates(t *testing.T) {
 	if len(rules) != 2 || requests != 2 || rules[1].ID != "ar_2" {
 		t.Fatalf("rules = %#v, requests = %d", rules, requests)
 	}
-}
-
-func pointerTo[T any](value T) *T {
-	return &value
 }

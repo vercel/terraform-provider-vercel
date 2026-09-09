@@ -10,7 +10,6 @@ import (
 
 const (
 	AlertRuleTypeBuiltIn = "built-in"
-	AlertRuleTypeCustom  = "custom"
 )
 
 var AlertRuleBuiltInTriggerTypes = []string{
@@ -31,19 +30,14 @@ type AlertRule struct {
 	RuleScope                 AlertRuleScope                `json:"ruleScope"`
 	Triggers                  *AlertRuleTriggers            `json:"triggers,omitempty"`
 	MatchMinimumSeverityLevel *string                       `json:"matchMinimumSeverityLevel,omitempty"`
-	Severity                  *string                       `json:"severity,omitempty"`
-	Evaluation                *AlertRuleEvaluation          `json:"evaluation"`
-	Trigger                   *AlertRuleCustomTrigger       `json:"trigger,omitempty"`
 	NotificationSettings      AlertRuleNotificationSettings `json:"notificationSettings"`
 	IsDefault                 bool                          `json:"isDefault"`
-	QuerySupported            *bool                         `json:"querySupported,omitempty"`
 	CreatedAt                 *int64                        `json:"createdAt,omitempty"`
 	UpdatedAt                 *int64                        `json:"updatedAt,omitempty"`
 }
 
 type AlertRuleScope struct {
 	Type       string   `json:"type"`
-	ProjectID  *string  `json:"projectId,omitempty"`
 	ProjectIDs []string `json:"projectIds,omitempty"`
 }
 
@@ -62,51 +56,12 @@ type AlertRuleNotificationSettings struct {
 	IncidentIORoutingKey         *string `json:"incidentIoRoutingKey,omitempty"`
 }
 
-type AlertRuleEvaluation struct {
-	Window string               `json:"window"`
-	Query  AlertRuleCustomQuery `json:"query"`
-}
-
-type AlertRuleCustomQuery struct {
-	GroupBy  []string                            `json:"groupBy,omitempty"`
-	Filter   *string                             `json:"filter,omitempty"`
-	Metrics  map[string]AlertRuleMetricSelection `json:"metrics"`
-	Formulas map[string]string                   `json:"formulas,omitempty"`
-	Outputs  []string                            `json:"outputs"`
-}
-
-type AlertRuleMetricSelection struct {
-	Metric      string   `json:"metric"`
-	Aggregation string   `json:"aggregation"`
-	Per         *string  `json:"per,omitempty"`
-	Normalize   *string  `json:"normalize,omitempty"`
-	Dimensions  []string `json:"dimensions,omitempty"`
-	Filter      *string  `json:"filter,omitempty"`
-}
-
-type AlertRuleCustomTrigger struct {
-	Type               string                   `json:"type"`
-	Output             string                   `json:"output"`
-	Operator           *string                  `json:"operator,omitempty"`
-	Threshold          *float64                 `json:"threshold,omitempty"`
-	StandardDeviations *float64                 `json:"standardDeviations,omitempty"`
-	Minimum            *AlertRuleTriggerMinimum `json:"minimum,omitempty"`
-}
-
-type AlertRuleTriggerMinimum struct {
-	Output    string  `json:"output"`
-	Threshold float64 `json:"threshold"`
-}
-
 type AlertRuleCreate struct {
 	Type                      string                         `json:"type"`
 	Name                      string                         `json:"name"`
 	RuleScope                 AlertRuleScope                 `json:"ruleScope"`
 	Triggers                  *AlertRuleTriggers             `json:"triggers,omitempty"`
 	MatchMinimumSeverityLevel *string                        `json:"matchMinimumSeverityLevel,omitempty"`
-	Severity                  *string                        `json:"severity,omitempty"`
-	Evaluation                *AlertRuleEvaluation           `json:"evaluation,omitempty"`
-	Trigger                   *AlertRuleCustomTrigger        `json:"trigger,omitempty"`
 	NotificationSettings      *AlertRuleNotificationSettings `json:"notificationSettings,omitempty"`
 }
 
@@ -123,9 +78,6 @@ type UpdateAlertRuleRequest struct {
 	RuleScope                 *AlertRuleScope                `json:"ruleScope,omitempty"`
 	Triggers                  *AlertRuleTriggers             `json:"triggers,omitempty"`
 	MatchMinimumSeverityLevel *string                        `json:"matchMinimumSeverityLevel,omitempty"`
-	Severity                  *string                        `json:"severity,omitempty"`
-	Evaluation                *AlertRuleEvaluation           `json:"evaluation,omitempty"`
-	Trigger                   *AlertRuleCustomTrigger        `json:"trigger,omitempty"`
 	NotificationSettings      *AlertRuleNotificationSettings `json:"notificationSettings,omitempty"`
 }
 

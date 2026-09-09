@@ -3,7 +3,6 @@ package vercel_test
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -112,84 +111,4 @@ resource "vercel_alert_rule" "example" {
   }
 }
 `, name, severity, notifyOwners)
-}
-
-func TestAcc_AlertRuleResourceCustom(t *testing.T) {
-	if os.Getenv("VERCEL_TERRAFORM_TESTING_OBSERVABILITY_PLUS") == "" {
-		t.Skip("VERCEL_TERRAFORM_TESTING_OBSERVABILITY_PLUS is not set")
-	}
-
-	name := acctest.RandString(16)
-	const resourceName = "vercel_alert_rule.custom"
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckAlertRuleDeleted(testClient(t), resourceName, testTeam(t)),
-		Steps: []resource.TestStep{
-			{
-				Config: cfg(testAccResourceAlertRuleCustom(name, 0.05)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAlertRuleExists(testClient(t), testTeam(t), resourceName),
-					resource.TestCheckResourceAttr(resourceName, "type", "custom"),
-					resource.TestCheckResourceAttr(resourceName, "rule_scope.type", "project"),
-					resource.TestCheckResourceAttr(resourceName, "severity", "medium"),
-					resource.TestCheckResourceAttr(resourceName, "evaluation.window", "1h"),
-					resource.TestCheckResourceAttr(resourceName, "evaluation.query.metrics.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "evaluation.query.formulas.formula", "errors / requests"),
-					resource.TestCheckResourceAttr(resourceName, "trigger.type", "threshold"),
-					resource.TestCheckResourceAttr(resourceName, "trigger.threshold", "0.05"),
-					resource.TestCheckResourceAttr(resourceName, "query_supported", "true"),
-				),
-			},
-			{
-				Config: cfg(testAccResourceAlertRuleCustom(name, 0.1)),
-				Check:  resource.TestCheckResourceAttr(resourceName, "trigger.threshold", "0.1"),
-			},
-		},
-	})
-}
-
-func testAccResourceAlertRuleCustom(name string, threshold float64) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "custom_alert_rule" {
-  name = "test-acc-custom-alert-rule-%[1]s"
-}
-
-resource "vercel_alert_rule" "custom" {
-  type = "custom"
-  name = "error-rate-%[1]s"
-  rule_scope = {
-    type       = "project"
-    project_id = vercel_project.custom_alert_rule.id
-  }
-  severity = "medium"
-  evaluation = {
-    window = "1h"
-    query = {
-      metrics = {
-        errors = {
-          metric      = "vercel.request.count"
-          aggregation = "sum"
-          filter      = "httpStatus>=500"
-        }
-        requests = {
-          metric      = "vercel.request.count"
-          aggregation = "sum"
-        }
-      }
-      formulas = { formula = "errors / requests" }
-      outputs  = ["formula"]
-    }
-  }
-  trigger = {
-    type      = "threshold"
-    output    = "formula"
-    operator  = "gt"
-    threshold = %[2]g
-    minimum = {
-      output    = "errors"
-      threshold = 20
-    }
-  }
-}
-`, name, threshold)
 }

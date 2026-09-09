@@ -69,7 +69,7 @@ func deleteAllAlertRules(ctx context.Context, c *client.Client, teamID string) e
 	}
 
 	for _, alertRule := range alertRules {
-		if alertRule.IsDefault {
+		if alertRule.IsDefault || alertRule.Type != client.AlertRuleTypeBuiltIn {
 			continue
 		}
 		err = c.DeleteAlertRule(ctx, alertRule.ID, teamID)
