@@ -48,7 +48,7 @@ func TestAcc_AlertRuleResource(t *testing.T) {
 		CheckDestroy:             testCheckAlertRuleDeleted(testClient(t), resourceName, testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccResourceAlertRule(name, "high", "NOT statusGroup:4xx", nil)),
+				Config: cfg(testAccResourceAlertRule(name, "high", "statusGroup:5xx", nil)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testCheckAlertRuleExists(testClient(t), testTeam(t), resourceName),
 					resource.TestCheckResourceAttr(resourceName, "type", "built-in"),
@@ -56,15 +56,11 @@ func TestAcc_AlertRuleResource(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "rule_scope.type", "include"),
 					resource.TestCheckResourceAttr(resourceName, "rule_scope.project_ids.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "triggers.#", "1"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "triggers.*", map[string]string{"type": "error_anomaly", "filter": "NOT statusGroup:4xx"}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "triggers.*", map[string]string{"type": "error_anomaly", "filter": "statusGroup:5xx"}),
 					resource.TestCheckResourceAttr(resourceName, "match_minimum_severity_level", "high"),
 					resource.TestCheckResourceAttr(resourceName, "notification_settings.enable_team_owner_notifications", "true"),
 					resource.TestCheckResourceAttr(resourceName, "is_default", "false"),
 				),
-			},
-			{
-				Config:   cfg(testAccResourceAlertRule(name, "high", "NOT statusGroup:4xx", nil)),
-				PlanOnly: true,
 			},
 			{
 				ResourceName:      resourceName,
@@ -73,12 +69,35 @@ func TestAcc_AlertRuleResource(t *testing.T) {
 				ImportStateIdFunc: getAlertRuleImportID(resourceName),
 			},
 			{
-				Config: cfg(testAccResourceAlertRule(name, "medium", "NOT statusGroup:4xx", &notifyOwners)),
+				Config: cfg(testAccResourceAlertRule(name, "medium", "statusGroup:5xx", &notifyOwners)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "match_minimum_severity_level", "medium"),
 					resource.TestCheckResourceAttr(resourceName, "notification_settings.enable_team_owner_notifications", "false"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "triggers.*", map[string]string{"type": "error_anomaly", "filter": "statusGroup:5xx"}),
+				),
+			},
+		},
+	})
+}
+
+func TestAcc_AlertRuleResourceCanonicalizedFilter(t *testing.T) {
+	name := acctest.RandString(16)
+	const resourceName = "vercel_alert_rule.example"
+	config := cfg(testAccResourceAlertRule(name, "high", "NOT statusGroup:4xx", nil))
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testCheckAlertRuleDeleted(testClient(t), resourceName, testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckAlertRuleExists(testClient(t), testTeam(t), resourceName),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "triggers.*", map[string]string{"type": "error_anomaly", "filter": "NOT statusGroup:4xx"}),
 				),
+			},
+			{
+				Config:   config,
+				PlanOnly: true,
 			},
 		},
 	})

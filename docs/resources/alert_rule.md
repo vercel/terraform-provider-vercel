@@ -43,19 +43,20 @@ resource "vercel_alert_rule" "checkout_errors" {
 - `match_minimum_severity_level` (String) The minimum severity matched by a built-in rule.
 - `name` (String) A human-readable name for the alert rule.
 - `rule_scope` (Attributes) The projects affected by the rule. Use `all`, `include`, or `exclude`. (see [below for nested schema](#nestedatt--rule_scope))
-- `triggers` (Attributes Set) The built-in anomaly triggers enabled for a built-in rule. (see [below for nested schema](#nestedatt--triggers))
 - `type` (String) The alert rule type. Currently only `built-in` is supported.
 
 ### Optional
 
 - `notification_settings` (Attributes) Notification delivery settings stored on the rule. Notification channel links are managed separately. (see [below for nested schema](#nestedatt--notification_settings))
 - `team_id` (String) The ID of the team that owns the alert rule. Required if a default team is not configured in the provider.
+- `triggers` (Attributes Set) The built-in anomaly triggers enabled for a built-in rule. A nonempty set is required when creating a rule. Omit this attribute to preserve a response-only legacy trigger mode after import. (see [below for nested schema](#nestedatt--triggers))
 
 ### Read-Only
 
 - `created_at` (Number) Creation time as a Unix epoch timestamp in milliseconds.
 - `id` (String) The ID of the alert rule.
 - `is_default` (Boolean) Whether this is the immutable team default rule. Default rules cannot be managed by this resource.
+- `trigger_mode` (String) The API trigger selection mode. `all` and an empty `selected` set are response-only legacy states; omit `triggers` to preserve either state after import.
 - `updated_at` (Number) Last update time as a Unix epoch timestamp in milliseconds.
 
 <a id="nestedatt--rule_scope"></a>
@@ -70,6 +71,15 @@ Optional:
 - `project_ids` (Set of String) The project IDs included in or excluded from a built-in rule.
 
 
+<a id="nestedatt--notification_settings"></a>
+### Nested Schema for `notification_settings`
+
+Optional:
+
+- `enable_team_owner_notifications` (Boolean)
+- `incident_io_routing_key` (String, Sensitive)
+
+
 <a id="nestedatt--triggers"></a>
 ### Nested Schema for `triggers`
 
@@ -80,15 +90,6 @@ Required:
 Optional:
 
 - `filter` (String) A KQL filter. It is required for `error_anomaly`, optional for `usage_anomaly`, and unavailable for other trigger types.
-
-
-<a id="nestedatt--notification_settings"></a>
-### Nested Schema for `notification_settings`
-
-Optional:
-
-- `enable_team_owner_notifications` (Boolean)
-- `incident_io_routing_key` (String, Sensitive)
 
 ## Import
 

@@ -22,10 +22,13 @@ func alertRuleSchema(t *testing.T) schema.Schema {
 
 func TestAlertRuleSchemaUsesBuiltInShape(t *testing.T) {
 	rule := alertRuleSchema(t)
-	for _, name := range []string{"type", "name", "rule_scope", "triggers", "match_minimum_severity_level"} {
+	for _, name := range []string{"type", "name", "rule_scope", "match_minimum_severity_level"} {
 		if !rule.Attributes[name].IsRequired() {
 			t.Fatalf("%s must be required", name)
 		}
+	}
+	if !rule.Attributes["triggers"].IsOptional() || !rule.Attributes["triggers"].IsComputed() || !rule.Attributes["trigger_mode"].IsComputed() {
+		t.Fatal("triggers must be optional and computed, and trigger mode must be computed")
 	}
 	if !rule.Attributes["notification_settings"].IsOptional() || !rule.Attributes["notification_settings"].IsComputed() || !rule.Attributes["is_default"].IsComputed() {
 		t.Fatal("notification settings must be optional and computed, and default metadata must be computed")
@@ -59,7 +62,7 @@ func TestAlertRuleBuiltInRoundTrip(t *testing.T) {
 	if diags.HasError() {
 		t.Fatalf("alertRuleFromAPI() diagnostics = %v", diags)
 	}
-	if rule.Type.ValueString() != client.AlertRuleTypeBuiltIn || rule.RuleScope.Type.ValueString() != "include" {
+	if rule.Type.ValueString() != client.AlertRuleTypeBuiltIn || rule.RuleScope.Type.ValueString() != "include" || rule.TriggerMode.ValueString() != "selected" {
 		t.Fatalf("rule = %#v", rule)
 	}
 	if len(rule.Triggers.Elements()) != 1 || len(rule.RuleScope.ProjectIDs.Elements()) != 1 {
@@ -78,13 +81,52 @@ func TestAlertRuleBuiltInRoundTrip(t *testing.T) {
 	}
 }
 
-func TestAlertRuleAllTriggersAreExpandedForTerraformState(t *testing.T) {
+func TestAlertRuleAllTriggerModeDoesNotFabricateTriggerState(t *testing.T) {
 	triggers, diags := alertRuleTriggersFromClient(context.Background(), &client.AlertRuleTriggers{Mode: "all"})
 	if diags.HasError() {
 		t.Fatalf("alertRuleTriggersFromClient() diagnostics = %v", diags)
 	}
-	if len(triggers.Elements()) != len(client.AlertRuleBuiltInTriggerTypes) {
-		t.Fatalf("trigger count = %d, want %d", len(triggers.Elements()), len(client.AlertRuleBuiltInTriggerTypes))
+	if !triggers.IsNull() {
+		t.Fatalf("triggers = %#v, want null for response-only all mode", triggers)
+	}
+}
+
+func TestAlertRuleEmptySelectedTriggerStateIsPreserved(t *testing.T) {
+	triggers, diags := alertRuleTriggersFromClient(context.Background(), &client.AlertRuleTriggers{Mode: "selected", Items: []client.AlertRuleTrigger{}})
+	if diags.HasError() {
+		t.Fatalf("alertRuleTriggersFromClient() diagnostics = %v", diags)
+	}
+	if triggers.IsNull() || len(triggers.Elements()) != 0 {
+		t.Fatalf("triggers = %#v, want a known empty set", triggers)
+	}
+}
+
+func TestAlertRuleUpdateOmitsUnchangedLegacyTriggers(t *testing.T) {
+	ctx := context.Background()
+	filter := "statusGroup:5xx OR route:/api"
+	severity := "high"
+	state, diags := alertRuleFromAPI(ctx, client.AlertRule{
+		ID: "ar_123", Type: client.AlertRuleTypeBuiltIn, Name: "Errors",
+		RuleScope:                 client.AlertRuleScope{Type: "all"},
+		Triggers:                  &client.AlertRuleTriggers{Mode: "selected", Items: []client.AlertRuleTrigger{{Type: "error_anomaly", Filter: &filter}}},
+		MatchMinimumSeverityLevel: &severity,
+		NotificationSettings:      client.AlertRuleNotificationSettings{EnableTeamOwnerNotifications: true},
+	}, types.StringValue("team_123"))
+	if diags.HasError() {
+		t.Fatalf("alertRuleFromAPI() diagnostics = %v", diags)
+	}
+	plan := state
+	plan.Name = types.StringValue("Renamed")
+
+	request, diags := plan.toUpdateRequest(ctx, state)
+	if diags.HasError() {
+		t.Fatalf("toUpdateRequest() diagnostics = %v", diags)
+	}
+	if request.Name == nil || *request.Name != "Renamed" {
+		t.Fatalf("request.Name = %#v, want Renamed", request.Name)
+	}
+	if request.Type != nil || request.RuleScope != nil || request.Triggers != nil || request.MatchMinimumSeverityLevel != nil || request.NotificationSettings != nil {
+		t.Fatalf("unchanged fields were included in request: %#v", request)
 	}
 }
 

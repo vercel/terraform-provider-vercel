@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -26,6 +27,7 @@ var (
 	_ resource.Resource                   = &alertRuleResource{}
 	_ resource.ResourceWithConfigure      = &alertRuleResource{}
 	_ resource.ResourceWithImportState    = &alertRuleResource{}
+	_ resource.ResourceWithModifyPlan     = &alertRuleResource{}
 	_ resource.ResourceWithValidateConfig = &alertRuleResource{}
 )
 
@@ -86,7 +88,10 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"name": schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "A human-readable name for the alert rule.",
-				Validators:          []validator.String{stringvalidator.LengthBetween(1, 256)},
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 256),
+					validateStringIsTrimmed(),
+				},
 			},
 			"rule_scope": schema.SingleNestedAttribute{
 				Required:            true,
@@ -104,15 +109,24 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						MarkdownDescription: "The project IDs included in or excluded from a built-in rule.",
 						Validators: []validator.Set{
 							setvalidator.SizeBetween(1, 100),
-							setvalidator.ValueStringsAre(stringvalidator.LengthBetween(1, 256)),
+							setvalidator.ValueStringsAre(
+								stringvalidator.LengthBetween(1, 256),
+								validateStringIsTrimmed(),
+							),
 						},
 					},
 				},
 			},
+			"trigger_mode": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The API trigger selection mode. `all` and an empty `selected` set are response-only legacy states; omit `triggers` to preserve either state after import.",
+			},
 			"triggers": schema.SetNestedAttribute{
-				Required:            true,
-				MarkdownDescription: "The built-in anomaly triggers enabled for a built-in rule.",
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "The built-in anomaly triggers enabled for a built-in rule. A nonempty set is required when creating a rule. Omit this attribute to preserve a response-only legacy trigger mode after import.",
 				Validators:          []validator.Set{setvalidator.SizeAtLeast(1)},
+				PlanModifiers:       []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"type": schema.StringAttribute{
@@ -122,7 +136,10 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						"filter": schema.StringAttribute{
 							Optional:            true,
 							MarkdownDescription: "A KQL filter. It is required for `error_anomaly`, optional for `usage_anomaly`, and unavailable for other trigger types.",
-							Validators:          []validator.String{stringvalidator.LengthBetween(1, 2048)},
+							Validators: []validator.String{
+								stringvalidator.LengthBetween(1, 2048),
+								validateStringIsTrimmed(),
+							},
 						},
 					},
 				},
@@ -144,9 +161,12 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Computed: true,
 					},
 					"incident_io_routing_key": schema.StringAttribute{
-						Optional:   true,
-						Sensitive:  true,
-						Validators: []validator.String{stringvalidator.LengthBetween(1, 256)},
+						Optional:  true,
+						Sensitive: true,
+						Validators: []validator.String{
+							stringvalidator.LengthBetween(1, 256),
+							validateStringIsTrimmed(),
+						},
 					},
 				},
 			},
@@ -172,6 +192,7 @@ type AlertRule struct {
 	Type                      types.String    `tfsdk:"type"`
 	Name                      types.String    `tfsdk:"name"`
 	RuleScope                 *AlertRuleScope `tfsdk:"rule_scope"`
+	TriggerMode               types.String    `tfsdk:"trigger_mode"`
 	Triggers                  types.Set       `tfsdk:"triggers"`
 	MatchMinimumSeverityLevel types.String    `tfsdk:"match_minimum_severity_level"`
 	// A framework object is necessary here because an omitted Optional+Computed
@@ -308,6 +329,50 @@ func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCre
 	}, diags
 }
 
+func alertRuleScopesEqual(a, b *AlertRuleScope) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.Type.Equal(b.Type) && a.ProjectIDs.Equal(b.ProjectIDs)
+}
+
+// toUpdateRequest keeps PATCH semantics aligned with Alerts v3 by sending only
+// fields that changed. This is required for readable legacy trigger filters:
+// the API can preserve them when triggers is omitted, but may reject them if an
+// unrelated update writes the legacy filter back through the current grammar.
+func (plan AlertRule) toUpdateRequest(ctx context.Context, state AlertRule) (client.UpdateAlertRuleRequest, diag.Diagnostics) {
+	request := client.UpdateAlertRuleRequest{
+		TeamID: plan.TeamID.ValueString(),
+		ID:     plan.ID.ValueString(),
+	}
+	var diags diag.Diagnostics
+
+	if !plan.Name.Equal(state.Name) {
+		name := plan.Name.ValueString()
+		request.Name = &name
+	}
+	if !alertRuleScopesEqual(plan.RuleScope, state.RuleScope) {
+		scope, scopeDiags := alertRuleScopeToClient(ctx, plan.RuleScope)
+		diags.Append(scopeDiags...)
+		request.RuleScope = &scope
+	}
+	if !plan.Triggers.Equal(state.Triggers) {
+		triggers, triggerDiags := alertRuleTriggersToClient(ctx, plan.Triggers)
+		diags.Append(triggerDiags...)
+		request.Triggers = triggers
+	}
+	if !plan.MatchMinimumSeverityLevel.Equal(state.MatchMinimumSeverityLevel) {
+		request.MatchMinimumSeverityLevel = optionalString(plan.MatchMinimumSeverityLevel)
+	}
+	if !plan.NotificationSettings.Equal(state.NotificationSettings) {
+		notificationSettings, notificationSettingsDiags := alertRuleNotificationSettingsToClient(ctx, plan.NotificationSettings)
+		diags.Append(notificationSettingsDiags...)
+		request.NotificationSettings = notificationSettings
+	}
+
+	return request, diags
+}
+
 func alertRuleScopeFromClient(ctx context.Context, scope client.AlertRuleScope) (*AlertRuleScope, diag.Diagnostics) {
 	projectIDs := types.SetNull(types.StringType)
 	var diags diag.Diagnostics
@@ -325,15 +390,14 @@ func alertRuleTriggersFromClient(ctx context.Context, triggers *client.AlertRule
 	if triggers == nil {
 		return types.SetNull(alertRuleTriggerAttrType), nil
 	}
-	items := triggers.Items
+	// `all` is a response-only API mode. Keep it distinct from `selected` rather
+	// than expanding it into trigger objects that could not pass write validation
+	// (notably a filterless error_anomaly trigger).
 	if triggers.Mode == "all" {
-		items = make([]client.AlertRuleTrigger, 0, len(client.AlertRuleBuiltInTriggerTypes))
-		for _, triggerType := range client.AlertRuleBuiltInTriggerTypes {
-			items = append(items, client.AlertRuleTrigger{Type: triggerType})
-		}
+		return types.SetNull(alertRuleTriggerAttrType), nil
 	}
-	models := make([]AlertRuleTrigger, 0, len(items))
-	for _, item := range items {
+	models := make([]AlertRuleTrigger, 0, len(triggers.Items))
+	for _, item := range triggers.Items {
 		models = append(models, AlertRuleTrigger{Type: types.StringValue(item.Type), Filter: stringValue(item.Filter)})
 	}
 	return types.SetValueFrom(ctx, alertRuleTriggerAttrType, models)
@@ -343,6 +407,10 @@ func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.St
 	scope, diags := alertRuleScopeFromClient(ctx, out.RuleScope)
 	triggers, triggerDiags := alertRuleTriggersFromClient(ctx, out.Triggers)
 	diags.Append(triggerDiags...)
+	triggerMode := types.StringNull()
+	if out.Triggers != nil {
+		triggerMode = types.StringValue(out.Triggers.Mode)
+	}
 	notificationSettings, notificationSettingsDiags := types.ObjectValueFrom(ctx, alertRuleNotificationSettingsAttrType.AttrTypes, AlertRuleNotificationSettings{
 		EnableTeamOwnerNotifications: types.BoolValue(out.NotificationSettings.EnableTeamOwnerNotifications),
 		IncidentIORoutingKey:         stringValue(out.NotificationSettings.IncidentIORoutingKey),
@@ -351,7 +419,7 @@ func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.St
 
 	return AlertRule{
 		ID: types.StringValue(out.ID), TeamID: teamID, Type: types.StringValue(out.Type), Name: types.StringValue(out.Name),
-		RuleScope: scope, Triggers: triggers, MatchMinimumSeverityLevel: stringValue(out.MatchMinimumSeverityLevel),
+		RuleScope: scope, TriggerMode: triggerMode, Triggers: triggers, MatchMinimumSeverityLevel: stringValue(out.MatchMinimumSeverityLevel),
 		NotificationSettings: notificationSettings,
 		IsDefault:            types.BoolValue(out.IsDefault),
 		CreatedAt:            int64Value(out.CreatedAt), UpdatedAt: int64Value(out.UpdatedAt),
@@ -360,13 +428,7 @@ func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.St
 
 func alertRuleCanonicalFiltersFromClient(triggers *client.AlertRuleTriggers) alertRuleCanonicalFilters {
 	filters := alertRuleCanonicalFilters{}
-	if triggers == nil {
-		return filters
-	}
-	if triggers.Mode == "all" {
-		for _, triggerType := range client.AlertRuleBuiltInTriggerTypes {
-			filters[triggerType] = nil
-		}
+	if triggers == nil || triggers.Mode == "all" {
 		return filters
 	}
 	for _, trigger := range triggers.Items {
@@ -473,6 +535,28 @@ func int64Value(value *int64) types.Int64 {
 		return types.Int64Null()
 	}
 	return types.Int64Value(*value)
+}
+
+func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || !req.State.Raw.IsNull() {
+		return
+	}
+
+	var config AlertRule
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// The API can return legacy `all` and empty `selected` states, so triggers
+	// must be Optional+Computed for existing/imported resources. Current creates,
+	// however, support only an explicitly selected, nonempty trigger set.
+	if config.Triggers.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("triggers"),
+			"Missing built-in alert rule triggers",
+			"A nonempty `triggers` set is required when creating a built-in alert rule.",
+		)
+	}
 }
 
 func (r *alertRuleResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
@@ -596,21 +680,19 @@ func (r *alertRuleResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 func (r *alertRuleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan AlertRule
+	var state AlertRule
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	payload, diags := plan.toCreateRequest(ctx)
+	payload, diags := plan.toUpdateRequest(ctx, state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	out, err := r.client.UpdateAlertRule(ctx, client.UpdateAlertRuleRequest{
-		TeamID: plan.TeamID.ValueString(), ID: plan.ID.ValueString(), Type: &payload.Type, Name: &payload.Name,
-		RuleScope: &payload.RuleScope, Triggers: payload.Triggers, MatchMinimumSeverityLevel: payload.MatchMinimumSeverityLevel,
-		NotificationSettings: payload.NotificationSettings,
-	})
+	out, err := r.client.UpdateAlertRule(ctx, payload)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating Alert Rule", fmt.Sprintf("Could not update Alert Rule %s, unexpected error: %s", plan.ID.ValueString(), err))
 		return
