@@ -108,6 +108,11 @@ func (c *Client) DeleteEdgeConfigItem(ctx context.Context, request EdgeConfigIte
 }
 
 func (c *Client) GetEdgeConfigItem(ctx context.Context, request EdgeConfigItemRequest) (e EdgeConfigItem, err error) {
+	request.TeamID, err = c.edgeConfigTeamID(ctx, request.EdgeConfigID, request.TeamID)
+	if err != nil {
+		return e, err
+	}
+
 	url := fmt.Sprintf("%s/v1/edge-config/%s/item/%s", c.baseURL, request.EdgeConfigID, request.Key)
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))

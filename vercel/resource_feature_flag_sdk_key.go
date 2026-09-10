@@ -252,6 +252,11 @@ func (r *featureFlagSDKKeyResource) ImportState(ctx context.Context, req resourc
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	keys, err := r.client.ListFeatureFlagSDKKeys(ctx, client.ListFeatureFlagSDKKeysRequest{
 		ProjectID: projectID,
 		TeamID:    teamID,
@@ -271,7 +276,7 @@ func (r *featureFlagSDKKeyResource) ImportState(ctx context.Context, req resourc
 
 		result := featureFlagSDKKeyFromClient(key, featureFlagSDKKeyModel{
 			ProjectID: types.StringValue(projectID),
-			TeamID:    types.StringValue(r.client.TeamID(teamID)),
+			TeamID:    toTeamID(teamID),
 		})
 		diags := resp.State.Set(ctx, result)
 		resp.Diagnostics.Append(diags...)

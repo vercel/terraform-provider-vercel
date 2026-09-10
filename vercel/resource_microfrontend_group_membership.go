@@ -324,6 +324,11 @@ func (r *microfrontendGroupMembershipResource) ImportState(ctx context.Context, 
 		)
 		return
 	}
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	out, err := r.client.GetMicrofrontendGroupMembership(ctx, teamID, microfrontendID, projectID)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)

@@ -679,6 +679,11 @@ func (r *projectRouteResource) ImportState(ctx context.Context, req resource.Imp
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	result, diags, err := readProjectRoute(ctx, r.client, routeID, projectID, teamID, ProjectRoute{}, ProjectRoutePosition{})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

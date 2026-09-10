@@ -386,6 +386,11 @@ func (r *featureFlagDefinitionResource) ImportState(ctx context.Context, req res
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	out, err := r.client.GetFeatureFlag(ctx, client.GetFeatureFlagRequest{
 		ProjectID: projectID,
 		TeamID:    teamID,
@@ -405,7 +410,7 @@ func (r *featureFlagDefinitionResource) ImportState(ctx context.Context, req res
 
 	result, diags := featureFlagDefinitionFromClient(out, featureFlagDefinitionModel{
 		ProjectID: types.StringValue(projectID),
-		TeamID:    types.StringValue(r.client.TeamID(teamID)),
+		TeamID:    toTeamID(teamID),
 	})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

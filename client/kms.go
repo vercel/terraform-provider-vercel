@@ -104,7 +104,10 @@ func (c *Client) CreateKMSIssuer(ctx context.Context, request CreateKMSIssuerReq
 	if err != nil {
 		return i, err
 	}
-	i.TeamID = c.TeamID(request.TeamID)
+	i.TeamID = i.OwnerID
+	if i.TeamID == "" {
+		i.TeamID = c.TeamID(request.TeamID)
+	}
 	return i, nil
 }
 
@@ -121,7 +124,10 @@ func (c *Client) GetKMSIssuer(ctx context.Context, issuerID, teamID string) (i K
 	if err != nil {
 		return i, err
 	}
-	i.TeamID = c.TeamID(teamID)
+	i.TeamID = i.OwnerID
+	if i.TeamID == "" {
+		i.TeamID = c.TeamID(teamID)
+	}
 	return i, nil
 }
 
@@ -150,7 +156,10 @@ func (c *Client) ListKMSIssuers(ctx context.Context, teamID string) (issuers []K
 		return nil, err
 	}
 	for i := range response.Issuers {
-		response.Issuers[i].TeamID = c.TeamID(teamID)
+		response.Issuers[i].TeamID = response.Issuers[i].OwnerID
+		if response.Issuers[i].TeamID == "" {
+			response.Issuers[i].TeamID = c.TeamID(teamID)
+		}
 	}
 	return response.Issuers, nil
 }
@@ -179,7 +188,10 @@ func (c *Client) UpdateKMSIssuer(ctx context.Context, request UpdateKMSIssuerReq
 	if err != nil {
 		return i, err
 	}
-	i.TeamID = c.TeamID(request.TeamID)
+	i.TeamID = i.OwnerID
+	if i.TeamID == "" {
+		i.TeamID = c.TeamID(request.TeamID)
+	}
 	return i, nil
 }
 

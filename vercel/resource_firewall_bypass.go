@@ -254,12 +254,17 @@ func (r *firewallBypassResource) Delete(ctx context.Context, req resource.Delete
 
 func splitBypassID(id string) (string, string, string, string, bool) {
 	split := strings.SplitN(id, "/", 2)
-	if len(split) != 2 {
+	if len(split) != 2 || split[0] == "" {
 		return "", "", "", "", false
 	}
 	teamId := split[0]
 
 	idParts := strings.Split(split[1], "#")
+	for _, part := range idParts {
+		if part == "" {
+			return "", "", "", "", false
+		}
+	}
 	switch len(idParts) {
 	case 2:
 		return teamId, idParts[0], "*", idParts[1], true

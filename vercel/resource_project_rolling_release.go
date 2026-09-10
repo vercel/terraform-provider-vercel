@@ -324,7 +324,7 @@ func ConvertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 	result := RollingReleaseInfo{
 		ID:        types.StringValue(response.ProjectID),
 		ProjectID: types.StringValue(response.ProjectID),
-		TeamID:    types.StringValue(response.TeamID),
+		TeamID:    toTeamID(response.TeamID),
 	}
 
 	// If disabled or advancementType is empty, check if we have stages to determine if it's configured
@@ -634,6 +634,11 @@ func (r *projectRollingReleaseResource) ImportState(ctx context.Context, req res
 			"Error importing project rolling release",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id\" or \"project_id\"", req.ID),
 		)
+		return
+	}
+
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
 		return
 	}
 

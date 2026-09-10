@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -93,6 +94,10 @@ func (c *Client) GetDNSRecord(ctx context.Context, recordID, teamID string) (r D
 		body:   "",
 	}, &r)
 	r.TeamID = c.TeamID(teamID)
+	if err == nil && r.TeamID == "" {
+		r.TeamID, err = c.dnsDomainTeamID(ctx, r.Domain)
+	}
+
 	return r, err
 }
 
@@ -159,4 +164,21 @@ func (c *Client) UpdateDNSRecord(ctx context.Context, teamID, recordID string, r
 	}, &r)
 	r.TeamID = c.TeamID(teamID)
 	return r, err
+}
+
+func (c *Client) dnsDomainTeamID(ctx context.Context, domain string) (string, error) {
+	var response struct {
+		Domain struct {
+			TeamID string `json:"teamId"`
+			UserID string `json:"userId"`
+		} `json:"domain"`
+	}
+	err := c.doRequest(clientRequest{ctx: ctx, method: "GET", url: fmt.Sprintf("%s/v5/domains/%s", c.baseURL, url.PathEscape(domain))}, &response)
+	if err != nil {
+		return "", fmt.Errorf("unable to determine DNS domain ownership: %w", err)
+	}
+	if response.Domain.TeamID == "" && response.Domain.UserID == "" {
+		return "", fmt.Errorf("unable to determine DNS domain ownership; include team_id in the import ID or configure team on the provider")
+	}
+	return response.Domain.TeamID, nil
 }

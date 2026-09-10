@@ -932,7 +932,7 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig, mode firewallF
 	cfg := FirewallConfig{
 		ID:        types.StringValue(conf.TeamID + "/" + conf.ProjectID),
 		ProjectID: state.ProjectID,
-		TeamID:    types.StringValue(conf.TeamID),
+		TeamID:    toTeamID(conf.TeamID),
 		Enabled:   types.BoolValue(conf.Enabled),
 	}
 	if mode == preserveConfiguredShape && conf.Enabled && state.Enabled.IsNull() {
@@ -1749,6 +1749,11 @@ func (r *firewallConfigResource) ImportState(ctx context.Context, req resource.I
 		)
 		return
 	}
+
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
 	out, err := r.client.GetFirewallConfig(ctx, projectID, teamID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error importing Firewall Config", err.Error())
@@ -1756,7 +1761,7 @@ func (r *firewallConfigResource) ImportState(ctx context.Context, req resource.I
 	}
 	conf, err := fromClient(out, FirewallConfig{
 		ProjectID: types.StringValue(projectID),
-		TeamID:    types.StringValue(out.TeamID),
+		TeamID:    toTeamID(out.TeamID),
 	}, canonicalImportShape)
 	if err != nil {
 		resp.Diagnostics.AddError("failed to read firewall config", err.Error())

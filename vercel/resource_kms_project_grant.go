@@ -230,7 +230,7 @@ func (r *kmsProjectGrantResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	result, diags := r.modelFromResponse(ctx, state.IssuerID.ValueString(), state.ProjectID.ValueString(), toTeamID(r.client.TeamID(state.TeamID.ValueString())), policy, state)
+	result, diags := r.modelFromResponse(ctx, state.IssuerID.ValueString(), state.ProjectID.ValueString(), toTeamID(out.TeamID), policy, state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -343,7 +343,7 @@ func (r *kmsProjectGrantResource) ImportState(ctx context.Context, req resource.
 		return
 	}
 
-	result, diags := r.modelFromResponse(ctx, issuerID, projectID, toTeamID(r.client.TeamID(teamID)), policy, kmsProjectGrantResourceModel{})
+	result, diags := r.modelFromResponse(ctx, issuerID, projectID, toTeamID(out.TeamID), policy, kmsProjectGrantResourceModel{})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

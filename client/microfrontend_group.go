@@ -124,7 +124,7 @@ func (c *Client) DeleteMicrofrontendGroup(ctx context.Context, request Microfron
 
 func (c *Client) GetMicrofrontendGroup(ctx context.Context, microfrontendGroupID string, teamID string) (r MicrofrontendGroup, err error) {
 	if c.TeamID(teamID) == "" {
-		return r, fmt.Errorf("team_id is required")
+		return r, fmt.Errorf("team_id is required: include it in the import ID or configure the provider team")
 	}
 	url := fmt.Sprintf("%s/v1/microfrontends/groups", c.baseURL)
 	if c.TeamID(teamID) != "" {

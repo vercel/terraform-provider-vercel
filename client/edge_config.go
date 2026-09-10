@@ -110,3 +110,17 @@ func (c *Client) ListEdgeConfigs(ctx context.Context, teamID string) (e []EdgeCo
 	}, &e)
 	return e, err
 }
+
+func (c *Client) edgeConfigTeamID(ctx context.Context, id, teamID string) (string, error) {
+	if teamID = c.TeamID(teamID); teamID != "" {
+		return teamID, nil
+	}
+	parent, err := c.GetEdgeConfig(ctx, id, "")
+	if err != nil {
+		return "", fmt.Errorf("unable to determine Edge Config ownership: %w", err)
+	}
+	if parent.TeamID == "" {
+		return "", fmt.Errorf("unable to determine Edge Config ownership; include team_id in the import ID or configure team on the provider")
+	}
+	return parent.TeamID, nil
+}

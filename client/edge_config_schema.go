@@ -35,6 +35,11 @@ func (c *Client) UpsertEdgeConfigSchema(ctx context.Context, request EdgeConfigS
 }
 
 func (c *Client) GetEdgeConfigSchema(ctx context.Context, id, teamID string) (e EdgeConfigSchema, err error) {
+	teamID, err = c.edgeConfigTeamID(ctx, id, teamID)
+	if err != nil {
+		return e, err
+	}
+
 	url := fmt.Sprintf("%s/v1/edge-config/%s/schema", c.baseURL, id)
 	if c.TeamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))

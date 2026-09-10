@@ -255,6 +255,11 @@ func (r *projectTracingResource) ImportState(ctx context.Context, req resource.I
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	out, err := r.client.GetProjectTracing(ctx, projectID, teamID)
 	if err != nil {
 		resp.Diagnostics.AddError(

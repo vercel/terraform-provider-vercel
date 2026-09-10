@@ -507,6 +507,11 @@ func (r *projectDomainResource) ImportState(ctx context.Context, req resource.Im
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	out, err := r.client.GetProjectDomain(ctx, projectID, domain, teamID)
 	if err != nil {
 		resp.Diagnostics.AddError(

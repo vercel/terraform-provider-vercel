@@ -83,6 +83,11 @@ func (c *Client) DeleteEdgeConfigToken(ctx context.Context, request EdgeConfigTo
 }
 
 func (c *Client) GetEdgeConfigToken(ctx context.Context, request EdgeConfigTokenRequest) (e EdgeConfigToken, err error) {
+	request.TeamID, err = c.edgeConfigTeamID(ctx, request.EdgeConfigID, request.TeamID)
+	if err != nil {
+		return e, err
+	}
+
 	url := fmt.Sprintf("%s/v1/edge-config/%s/token/%s", c.baseURL, request.EdgeConfigID, request.Token)
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))

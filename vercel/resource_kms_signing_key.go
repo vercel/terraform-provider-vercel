@@ -242,7 +242,7 @@ func (r *kmsSigningKeyResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	teamID := toTeamID(r.client.TeamID(state.TeamID.ValueString()))
+	teamID := toTeamID(out.TeamID)
 	result := r.modelFromResponse(key, teamID, state.IssuerID, state.Keepers, state.ImportKey, state.ImportKeyID, state.RevokePreviousAt)
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -326,7 +326,7 @@ func (r *kmsSigningKeyResource) ImportState(ctx context.Context, req resource.Im
 		return
 	}
 
-	result := r.modelFromResponse(key, toTeamID(r.client.TeamID(teamID)), types.StringValue(issuerID), types.MapNull(types.StringType), types.StringNull(), types.StringNull(), types.StringNull())
+	result := r.modelFromResponse(key, toTeamID(out.TeamID), types.StringValue(issuerID), types.MapNull(types.StringType), types.StringNull(), types.StringNull(), types.StringNull())
 	diags := resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
 }

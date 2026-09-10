@@ -572,6 +572,11 @@ func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, re
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	out, err := r.client.GetEnvironmentVariable(ctx, projectID, teamID, envID)
 	if err != nil {
 		resp.Diagnostics.AddError(

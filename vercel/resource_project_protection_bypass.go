@@ -379,6 +379,11 @@ func (r *projectProtectionBypassResource) ImportState(ctx context.Context, req r
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	bypass, err := r.client.GetProtectionBypass(ctx, projectID, teamID, secret)
 	if err != nil {
 		resp.Diagnostics.AddError(

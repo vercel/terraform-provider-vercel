@@ -335,6 +335,11 @@ func (r *featureFlagSegmentResource) ImportState(ctx context.Context, req resour
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	out, err := r.client.GetFeatureFlagSegment(ctx, client.GetFeatureFlagSegmentRequest{
 		ProjectID: projectID,
 		TeamID:    teamID,
@@ -354,7 +359,7 @@ func (r *featureFlagSegmentResource) ImportState(ctx context.Context, req resour
 
 	result, diags := featureFlagSegmentFromClient(ctx, out, featureFlagSegmentModel{
 		ProjectID: types.StringValue(projectID),
-		TeamID:    types.StringValue(r.client.TeamID(teamID)),
+		TeamID:    toTeamID(teamID),
 	})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

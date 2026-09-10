@@ -333,6 +333,11 @@ func (r *bulkRedirectsResource) ImportState(ctx context.Context, req resource.Im
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	out, live, err := readLiveBulkRedirects(ctx, r.client, projectID, teamID)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)

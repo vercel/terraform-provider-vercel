@@ -289,6 +289,11 @@ func (r *vcrRepositoryPermissionResource) ImportState(ctx context.Context, req r
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	res, err := r.client.GetVCRRepositoryPermission(ctx, client.GetVCRRepositoryPermissionRequest{
 		TeamID:          teamID,
 		ProjectID:       projectID,

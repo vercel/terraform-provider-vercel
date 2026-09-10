@@ -311,6 +311,11 @@ func (r *deploymentProtectionExceptionResource) ImportState(ctx context.Context,
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	out, err := r.client.GetAlias(ctx, alias, teamID)
 	if err != nil {
 		resp.Diagnostics.AddError(

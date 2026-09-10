@@ -310,6 +310,11 @@ func (r *vcrRepositoryResource) ImportState(ctx context.Context, req resource.Im
 		return
 	}
 
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
+		return
+	}
+
 	res, err := r.client.GetVCRRepository(ctx, client.GetVCRRepositoryRequest{
 		TeamID:    teamID,
 		ProjectID: projectID,

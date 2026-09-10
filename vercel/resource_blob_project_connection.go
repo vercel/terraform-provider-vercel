@@ -277,6 +277,20 @@ func (r *blobProjectConnectionResource) ImportState(ctx context.Context, req res
 		return
 	}
 
+	teamID = r.client.TeamID(teamID)
+	if teamID == "" {
+		store, err := r.client.GetBlobStore(ctx, storeID, "")
+		if err != nil {
+			resp.Diagnostics.AddError("Error importing Blob store project connection", fmt.Sprintf("Could not determine Blob store ownership: %s", err))
+			return
+		}
+		teamID = store.TeamID
+		if teamID == "" {
+			resp.Diagnostics.AddError("Error importing Blob store project connection", "Could not determine Blob store ownership. Include team_id in the import ID or configure team on the provider.")
+			return
+		}
+	}
+
 	connection, err := r.client.GetBlobStoreConnection(ctx, storeID, connectionID, teamID)
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)

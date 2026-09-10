@@ -78,6 +78,17 @@ type accessGroupMembersResponse struct {
 // members endpoint searching for the requested user. A 404 APIError is returned
 // when the user is not a member, so callers can use NotFound to detect removal.
 func (c *Client) GetAccessGroupMember(ctx context.Context, req GetAccessGroupMemberRequest) (r AccessGroupMember, err error) {
+	if c.TeamID(req.TeamID) == "" {
+		group, err := c.GetAccessGroup(ctx, GetAccessGroupRequest{AccessGroupID: req.AccessGroupID})
+		if err != nil {
+			return r, fmt.Errorf("unable to determine access group ownership: %w", err)
+		}
+		if group.TeamID == "" {
+			return r, fmt.Errorf("unable to determine access group ownership; include team_id in the import ID or configure team on the provider")
+		}
+		req.TeamID = group.TeamID
+	}
+
 	next := ""
 	for {
 		query := url.Values{}

@@ -524,7 +524,7 @@ func (r *aiGatewayAPIKeyResource) ImportState(ctx context.Context, req resource.
 		return
 	}
 
-	quota, err := r.client.GetAIGatewayAPIKeyQuota(ctx, keyID, teamID)
+	quota, err := r.client.GetAIGatewayAPIKeyQuota(ctx, keyID, out.TeamID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing AI Gateway API Key",

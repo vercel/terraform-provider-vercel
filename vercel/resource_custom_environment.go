@@ -212,7 +212,7 @@ func convertResponseToModel(res client.CustomEnvironmentResponse) CustomEnvironm
 	}
 	return CustomEnvironment{
 		ID:             types.StringValue(res.ID),
-		TeamID:         types.StringValue(res.TeamID),
+		TeamID:         toTeamID(res.TeamID),
 		ProjectID:      types.StringValue(res.ProjectID),
 		Name:           types.StringValue(res.Slug),
 		Description:    types.StringValue(res.Description),
@@ -354,6 +354,11 @@ func (r *customEnvironmentResource) ImportState(ctx context.Context, req resourc
 			"Error importing Custom Environment",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id/custom_environment_name\" or \"project_id/custom_environment_name\"", req.ID),
 		)
+		return
+	}
+
+	teamID, ok = importProjectTeam(ctx, r.client, projectID, teamID, resp)
+	if !ok {
 		return
 	}
 	res, err := r.client.GetCustomEnvironment(ctx, client.GetCustomEnvironmentRequest{
