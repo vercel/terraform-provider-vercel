@@ -78,7 +78,7 @@ A Project groups deployments and custom domains. To deploy on Vercel, you need t
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/overview).
 
-~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and this Project resource with Environment Variables defined in-line via the ` + "`environment` field" + `.
+~> The inline ` + "`environment`" + ` field is deprecated and retained for backwards compatibility. Use [vercel_project_environment_variables](project_environment_variables) to manage multiple Environment Variables or [vercel_project_environment_variable](project_environment_variable) to manage a single Environment Variable instead.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 
 -> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Variables targeting ` + "`development`" + ` must set ` + "`sensitive = false`" + `. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
@@ -141,8 +141,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "The version of Node.js that is used in the Build Step and for Serverless Functions. A new Deployment is required for your changes to take effect.",
 			},
 			"environment": schema.SetNestedAttribute{
-				Description: "A set of Environment Variables that should be configured for the project.",
-				Optional:    true,
+				Description:        "A set of Environment Variables that should be configured for the project. Deprecated: use `vercel_project_environment_variables` or `vercel_project_environment_variable` instead. Retained for backwards compatibility.",
+				DeprecationMessage: "The inline environment field is deprecated and retained for backwards compatibility. Use vercel_project_environment_variables or vercel_project_environment_variable instead. Do not manage the same project with both inline environment and separate environment variable resources.",
+				Optional:           true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"target": schema.SetAttribute{
