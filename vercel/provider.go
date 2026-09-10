@@ -125,6 +125,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newBlobStoreSecretsDataSource,
 		newBlobStoresDataSource,
 		newCustomEnvironmentDataSource,
+		newEnvironmentDataSource,
 		newDeploymentDataSource,
 		newDomainConfigDataSource,
 		newEdgeConfigDataSource,
