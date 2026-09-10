@@ -6,7 +6,7 @@ description: |-
   Provides a Project resource.
   A Project groups deployments and custom domains. To deploy on Vercel, you need to create a Project.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/overview.
-  ~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and this Project resource with Environment Variables defined in-line via the environment field.
+  ~> The inline environment field is deprecated and retained for backwards compatibility. Use vercel_project_environment_variables project_environment_variables to manage multiple Environment Variables or vercel_project_environment_variable project_environment_variable to manage a single Environment Variable instead.
   At this time you cannot use a Vercel Project resource with in-line environment in conjunction with any vercel_project_environment_variables or vercel_project_environment_variable resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
   -> Note: Starting in provider version 4.8.0, environment variables require an explicit sensitive value. Variables targeting development must set sensitive = false. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
 ---
@@ -19,7 +19,7 @@ A Project groups deployments and custom domains. To deploy on Vercel, you need t
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/overview).
 
-~> Terraform currently provides a standalone Project Environment Variable resource (a single Environment Variable), a Project Environment Variables resource (multiple Environment Variables), and this Project resource with Environment Variables defined in-line via the `environment` field.
+~> The inline `environment` field is deprecated and retained for backwards compatibility. Use [vercel_project_environment_variables](project_environment_variables) to manage multiple Environment Variables or [vercel_project_environment_variable](project_environment_variable) to manage a single Environment Variable instead.
 At this time you cannot use a Vercel Project resource with in-line `environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 
 -> **Note:** Starting in provider version `4.8.0`, environment variables require an explicit `sensitive` value. Variables targeting `development` must set `sensitive = false`. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
@@ -114,7 +114,7 @@ resource "vercel_project" "with_trusted_sources" {
 - `enable_affected_projects_deployments` (Boolean) When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.
 - `enable_preview_feedback` (Boolean) Enables the Vercel Toolbar on your preview deployments.
 - `enable_production_feedback` (Boolean) Enables the Vercel Toolbar on your production deployments: one of on, off or default.
-- `environment` (Attributes Set) A set of Environment Variables that should be configured for the project. (see [below for nested schema](#nestedatt--environment))
+- `environment` (Attributes Set, Deprecated) A set of Environment Variables that should be configured for the project. Deprecated: use `vercel_project_environment_variables` or `vercel_project_environment_variable` instead. Retained for backwards compatibility. (see [below for nested schema](#nestedatt--environment))
 - `framework` (String) The framework that is being used for this project. If omitted, no framework is selected.
 - `function_failover` (Boolean) Automatically failover Serverless Functions to the nearest region. You can customize regions through vercel.json. A new Deployment is required for your changes to take effect.
 - `git_comments` (Attributes) Configuration for Git Comments. (see [below for nested schema](#nestedatt--git_comments))
