@@ -220,7 +220,6 @@ func (r *oauthAppResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 	}
-
 	out, err := r.client.CreateOAuthApp(ctx, client.CreateOAuthAppRequest{
 		TeamID:            plan.TeamID.ValueString(),
 		Name:              plan.Name.ValueString(),
@@ -345,7 +344,6 @@ func (r *oauthAppResource) Update(ctx context.Context, req resource.UpdateReques
 	if len(scopes) == 0 {
 		scopes = []string{"openid"}
 	}
-
 	out, err := r.client.UpdateOAuthApp(ctx, client.UpdateOAuthAppRequest{
 		TeamID:            state.TeamID.ValueString(),
 		ClientID:          state.ID.ValueString(),
