@@ -40,6 +40,10 @@ type alertRuleNotificationsEnvelope struct {
 	Notifications []AlertRuleNotification `json:"notifications"`
 }
 
+type alertRuleNotificationMutationEnvelope struct {
+	Notification AlertRuleNotificationTarget `json:"notification"`
+}
+
 func (c *Client) GetAlertRuleNotifications(ctx context.Context, alertRuleID, teamID string) ([]AlertRuleNotification, error) {
 	u := c.alertRuleURL(teamID, "/"+url.PathEscape(alertRuleID)+"/notifications", nil)
 	tflog.Info(ctx, "getting alert rule notifications", map[string]any{"url": u})
@@ -49,25 +53,27 @@ func (c *Client) GetAlertRuleNotifications(ctx context.Context, alertRuleID, tea
 	return response.Notifications, err
 }
 
-func (c *Client) LinkAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest) error {
+func (c *Client) LinkAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest) (AlertRuleNotificationTarget, error) {
 	return c.mutateAlertRuleNotification(ctx, request, "POST")
 }
 
-func (c *Client) UnlinkAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest) error {
+func (c *Client) UnlinkAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest) (AlertRuleNotificationTarget, error) {
 	return c.mutateAlertRuleNotification(ctx, request, "DELETE")
 }
 
-func (c *Client) mutateAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest, method string) error {
+func (c *Client) mutateAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest, method string) (AlertRuleNotificationTarget, error) {
 	u := c.alertRuleURL(request.TeamID, "/"+url.PathEscape(request.AlertRuleID)+"/notifications/links", nil)
 	tflog.Info(ctx, "mutating alert rule notification", map[string]any{
 		"url":               u,
 		"method":            method,
 		"notification_type": request.Type,
 	})
-	return c.doRequest(clientRequest{
+	var response alertRuleNotificationMutationEnvelope
+	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: method,
 		url:    u,
 		body:   string(mustMarshal(request.AlertRuleNotificationTarget)),
-	}, nil)
+	}, &response)
+	return response.Notification, err
 }

@@ -40,6 +40,9 @@ func TestAlertRuleNotificationSchema(t *testing.T) {
 			t.Fatalf("%s must require replacement", name)
 		}
 	}
+	if !resourceSchema.Attributes["slack_installation_id"].IsComputed() {
+		t.Fatal("slack_installation_id must be computed")
+	}
 	if len((&alertRuleNotificationResource{}).ConfigValidators(context.Background())) == 0 {
 		t.Fatal("resource must validate the mutually exclusive destinations")
 	}
@@ -71,11 +74,20 @@ func TestAlertRuleNotificationTarget(t *testing.T) {
 			want: client.AlertRuleNotificationTarget{Type: client.AlertRuleNotificationTypeSlack, ConfigID: "icfg_123", ChannelID: "C123"},
 		},
 		{
-			name: "missing Slack installation",
+			name: "Slack with inferred installation",
 			model: AlertRuleNotification{
 				WebhookID:           types.StringNull(),
 				SlackChannelID:      types.StringValue("C123"),
 				SlackInstallationID: types.StringNull(),
+			},
+			want: client.AlertRuleNotificationTarget{Type: client.AlertRuleNotificationTypeSlack, ChannelID: "C123"},
+		},
+		{
+			name: "Slack installation without channel",
+			model: AlertRuleNotification{
+				WebhookID:           types.StringNull(),
+				SlackChannelID:      types.StringNull(),
+				SlackInstallationID: types.StringValue("icfg_123"),
 			},
 			wantErr: true,
 		},
@@ -139,7 +151,7 @@ func TestAlertRuleNotificationCreate(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
-		_, _ = fmt.Fprint(w, `{"success":true}`)
+		_, _ = fmt.Fprint(w, `{"success":true,"notification":{"type":"webhook","webhookId":"hook_123"}}`)
 	}))
 	t.Cleanup(server.Close)
 
@@ -175,6 +187,51 @@ func TestAlertRuleNotificationCreate(t *testing.T) {
 	}
 	if body["type"] != "webhook" || body["webhookId"] != "hook_123" {
 		t.Fatalf("body = %#v", body)
+	}
+}
+
+func TestAlertRuleNotificationCreateResolvesSlackInstallation(t *testing.T) {
+	var body map[string]string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		_, _ = fmt.Fprint(w, `{"success":true,"notification":{"type":"slack","configId":"icfg_123","channelId":"C123"}}`)
+	}))
+	t.Cleanup(server.Close)
+
+	resourceSchema := alertRuleNotificationSchema(t)
+	plan := tfsdk.Plan{Schema: resourceSchema}
+	if diags := plan.Set(context.Background(), AlertRuleNotification{
+		ID:                  types.StringUnknown(),
+		TeamID:              types.StringNull(),
+		AlertRuleID:         types.StringValue("ar_123"),
+		WebhookID:           types.StringNull(),
+		SlackChannelID:      types.StringValue("C123"),
+		SlackInstallationID: types.StringUnknown(),
+	}); diags.HasError() {
+		t.Fatalf("Plan.Set() diagnostics = %v", diags)
+	}
+	response := resource.CreateResponse{State: tfsdk.State{Schema: resourceSchema}}
+	(&alertRuleNotificationResource{
+		client: client.New("TOKEN").WithBaseURL(server.URL).WithTeam(client.Team{ID: "team_123"}),
+	}).Create(context.Background(), resource.CreateRequest{Plan: plan}, &response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("Create() diagnostics = %v", response.Diagnostics)
+	}
+
+	var state AlertRuleNotification
+	if diags := response.State.Get(context.Background(), &state); diags.HasError() {
+		t.Fatalf("State.Get() diagnostics = %v", diags)
+	}
+	if got := state.ID.ValueString(); got != "ar_123/slack/icfg_123/C123" {
+		t.Fatalf("id = %q, want ar_123/slack/icfg_123/C123", got)
+	}
+	if got := state.SlackInstallationID.ValueString(); got != "icfg_123" {
+		t.Fatalf("slack_installation_id = %q, want icfg_123", got)
+	}
+	if _, ok := body["configId"]; ok {
+		t.Fatalf("request unexpectedly included configId: %#v", body)
 	}
 }
 

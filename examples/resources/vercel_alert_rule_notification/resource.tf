@@ -1,7 +1,6 @@
 resource "vercel_alert_rule_notification" "slack" {
-  alert_rule_id         = "ar_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  slack_installation_id = "icfg_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  slack_channel_id      = "C0123456789"
+  alert_rule_id    = "ar_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  slack_channel_id = "C0123456789"
 }
 
 resource "vercel_webhook" "alerts" {

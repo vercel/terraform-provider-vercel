@@ -55,14 +55,18 @@ func TestMutateAlertRuleNotification(t *testing.T) {
 		method   string
 		target   AlertRuleNotificationTarget
 		wantBody map[string]string
-		mutate   func(*Client, context.Context, AlertRuleNotificationRequest) error
+		response string
+		want     AlertRuleNotificationTarget
+		mutate   func(*Client, context.Context, AlertRuleNotificationRequest) (AlertRuleNotificationTarget, error)
 	}{
 		{
-			name:     "link Slack channel",
+			name:     "link Slack channel with resolved installation",
 			method:   http.MethodPost,
-			target:   AlertRuleNotificationTarget{Type: AlertRuleNotificationTypeSlack, ConfigID: "icfg_123", ChannelID: "C123"},
-			wantBody: map[string]string{"type": "slack", "configId": "icfg_123", "channelId": "C123"},
-			mutate: func(c *Client, ctx context.Context, request AlertRuleNotificationRequest) error {
+			target:   AlertRuleNotificationTarget{Type: AlertRuleNotificationTypeSlack, ChannelID: "C123"},
+			wantBody: map[string]string{"type": "slack", "channelId": "C123"},
+			response: `{"success":true,"notification":{"type":"slack","configId":"icfg_123","channelId":"C123"}}`,
+			want:     AlertRuleNotificationTarget{Type: AlertRuleNotificationTypeSlack, ConfigID: "icfg_123", ChannelID: "C123"},
+			mutate: func(c *Client, ctx context.Context, request AlertRuleNotificationRequest) (AlertRuleNotificationTarget, error) {
 				return c.LinkAlertRuleNotification(ctx, request)
 			},
 		},
@@ -71,7 +75,9 @@ func TestMutateAlertRuleNotification(t *testing.T) {
 			method:   http.MethodDelete,
 			target:   AlertRuleNotificationTarget{Type: AlertRuleNotificationTypeWebhook, WebhookID: "hook_123"},
 			wantBody: map[string]string{"type": "webhook", "webhookId": "hook_123"},
-			mutate: func(c *Client, ctx context.Context, request AlertRuleNotificationRequest) error {
+			response: `{"success":true,"notification":{"type":"webhook","webhookId":"hook_123"}}`,
+			want:     AlertRuleNotificationTarget{Type: AlertRuleNotificationTypeWebhook, WebhookID: "hook_123"},
+			mutate: func(c *Client, ctx context.Context, request AlertRuleNotificationRequest) (AlertRuleNotificationTarget, error) {
 				return c.UnlinkAlertRuleNotification(ctx, request)
 			},
 		},
@@ -102,7 +108,7 @@ func TestMutateAlertRuleNotification(t *testing.T) {
 					}
 				}
 				w.Header().Set("Content-Type", "application/json")
-				_, _ = fmt.Fprint(w, `{"success":true}`)
+				_, _ = fmt.Fprint(w, tt.response)
 			}))
 			t.Cleanup(server.Close)
 
@@ -111,8 +117,12 @@ func TestMutateAlertRuleNotification(t *testing.T) {
 				AlertRuleID:                 "ar_123",
 				AlertRuleNotificationTarget: tt.target,
 			}
-			if err := tt.mutate(New("TOKEN").WithBaseURL(server.URL), context.Background(), request); err != nil {
+			got, err := tt.mutate(New("TOKEN").WithBaseURL(server.URL), context.Background(), request)
+			if err != nil {
 				t.Fatalf("mutation error = %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("mutation target = %#v, want %#v", got, tt.want)
 			}
 		})
 	}

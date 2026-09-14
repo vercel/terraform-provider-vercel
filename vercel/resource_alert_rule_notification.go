@@ -103,14 +103,16 @@ func (r *alertRuleNotificationResource) Schema(_ context.Context, _ resource.Sch
 				Optional:            true,
 				MarkdownDescription: "The ID of the Slack channel. Exactly one of `webhook_id` or `slack_channel_id` must be configured.",
 				PlanModifiers:       identityPlanModifiers,
-				Validators: append(identityValidators,
-					stringvalidator.AlsoRequires(path.MatchRoot("slack_installation_id")),
-				),
+				Validators:          identityValidators,
 			},
 			"slack_installation_id": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "The ID of the completed Slack integration installation that owns the channel. Required with `slack_channel_id`.",
-				PlanModifiers:       identityPlanModifiers,
+				Computed:            true,
+				MarkdownDescription: "The ID of the completed Slack integration installation that owns the channel. It can be omitted when the team has exactly one completed Slack installation; the resolved ID is then stored in state. It must be configured when the team has multiple Slack installations.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+					stringplanmodifier.UseNonNullStateForUnknown(),
+				},
 				Validators: append(identityValidators,
 					stringvalidator.AlsoRequires(path.MatchRoot("slack_channel_id")),
 				),
@@ -139,19 +141,68 @@ func (notification AlertRuleNotification) target() (client.AlertRuleNotification
 			Type:      client.AlertRuleNotificationTypeWebhook,
 			WebhookID: notification.WebhookID.ValueString(),
 		}, nil
-	case !webhookConfigured && slackChannelConfigured && slackInstallationConfigured:
+	case !webhookConfigured && slackChannelConfigured:
 		return client.AlertRuleNotificationTarget{
 			Type:      client.AlertRuleNotificationTypeSlack,
-			ConfigID:  notification.SlackInstallationID.ValueString(),
+			ConfigID:  optionalStringValue(notification.SlackInstallationID),
 			ChannelID: notification.SlackChannelID.ValueString(),
 		}, nil
 	default:
-		return client.AlertRuleNotificationTarget{}, fmt.Errorf("configure exactly one webhook or a Slack channel with its installation ID")
+		return client.AlertRuleNotificationTarget{}, fmt.Errorf("configure exactly one webhook or Slack channel; slack_installation_id may only be set with slack_channel_id")
 	}
 }
 
-func (notification AlertRuleNotification) resourceID() (string, error) {
+func optionalStringValue(value types.String) string {
+	if value.IsNull() || value.IsUnknown() {
+		return ""
+	}
+	return value.ValueString()
+}
+
+func (notification AlertRuleNotification) resolvedTarget() (client.AlertRuleNotificationTarget, error) {
 	target, err := notification.target()
+	if err != nil {
+		return client.AlertRuleNotificationTarget{}, err
+	}
+	if target.Type == client.AlertRuleNotificationTypeSlack && target.ConfigID == "" {
+		return client.AlertRuleNotificationTarget{}, fmt.Errorf("slack_installation_id is not resolved")
+	}
+	return target, nil
+}
+
+func (notification *AlertRuleNotification) applyResolvedTarget(requested, resolved client.AlertRuleNotificationTarget) error {
+	if resolved.Type != requested.Type {
+		return fmt.Errorf("API returned notification type %q for requested type %q", resolved.Type, requested.Type)
+	}
+
+	switch resolved.Type {
+	case client.AlertRuleNotificationTypeWebhook:
+		if resolved.WebhookID == "" || resolved.WebhookID != requested.WebhookID {
+			return fmt.Errorf("API returned webhook ID %q for requested webhook %q", resolved.WebhookID, requested.WebhookID)
+		}
+		notification.WebhookID = types.StringValue(resolved.WebhookID)
+		notification.SlackChannelID = types.StringNull()
+		notification.SlackInstallationID = types.StringNull()
+	case client.AlertRuleNotificationTypeSlack:
+		if resolved.ConfigID == "" {
+			return fmt.Errorf("API did not return the resolved Slack installation ID")
+		}
+		if resolved.ChannelID == "" || resolved.ChannelID != requested.ChannelID {
+			return fmt.Errorf("API returned Slack channel ID %q for requested channel %q", resolved.ChannelID, requested.ChannelID)
+		}
+		if requested.ConfigID != "" && resolved.ConfigID != requested.ConfigID {
+			return fmt.Errorf("API returned Slack installation ID %q for requested installation %q", resolved.ConfigID, requested.ConfigID)
+		}
+		notification.WebhookID = types.StringNull()
+		notification.SlackInstallationID = types.StringValue(resolved.ConfigID)
+	default:
+		return fmt.Errorf("API returned unsupported notification type %q", resolved.Type)
+	}
+	return nil
+}
+
+func (notification AlertRuleNotification) resourceID() (string, error) {
+	target, err := notification.resolvedTarget()
 	if err != nil {
 		return "", err
 	}
@@ -195,13 +246,17 @@ func (r *alertRuleNotificationResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	err = r.client.LinkAlertRuleNotification(ctx, client.AlertRuleNotificationRequest{
+	resolvedTarget, err := r.client.LinkAlertRuleNotification(ctx, client.AlertRuleNotificationRequest{
 		TeamID:                      teamID,
 		AlertRuleID:                 plan.AlertRuleID.ValueString(),
 		AlertRuleNotificationTarget: target,
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error linking Alert Rule Notification", fmt.Sprintf("Could not link notification destination to Alert Rule %s, unexpected error: %s", plan.AlertRuleID.ValueString(), err))
+		return
+	}
+	if err = plan.applyResolvedTarget(target, resolvedTarget); err != nil {
+		resp.Diagnostics.AddError("Invalid Alert Rule Notification response", fmt.Sprintf("The notification was linked to Alert Rule %s, but the API returned an invalid destination identity: %s", plan.AlertRuleID.ValueString(), err))
 		return
 	}
 
@@ -227,7 +282,7 @@ func (r *alertRuleNotificationResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	target, err := state.target()
+	target, err := state.resolvedTarget()
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid Alert Rule Notification state", err.Error())
 		return
@@ -265,12 +320,12 @@ func (r *alertRuleNotificationResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	target, err := state.target()
+	target, err := state.resolvedTarget()
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid Alert Rule Notification state", err.Error())
 		return
 	}
-	err = r.client.UnlinkAlertRuleNotification(ctx, client.AlertRuleNotificationRequest{
+	_, err = r.client.UnlinkAlertRuleNotification(ctx, client.AlertRuleNotificationRequest{
 		TeamID:                      state.TeamID.ValueString(),
 		AlertRuleID:                 state.AlertRuleID.ValueString(),
 		AlertRuleNotificationTarget: target,
@@ -303,7 +358,7 @@ func (r *alertRuleNotificationResource) ImportState(ctx context.Context, req res
 	}
 	state.TeamID = types.StringValue(teamID)
 
-	target, err := state.target()
+	target, err := state.resolvedTarget()
 	if err != nil {
 		resp.Diagnostics.AddError("Error importing Alert Rule Notification", err.Error())
 		return

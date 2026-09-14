@@ -23,7 +23,9 @@ description: |-
 
 Each resource owns one link. Do not manage the same alert-rule and destination pair in multiple Terraform resources or states.
 
-Account webhooks must subscribe to `alerts.triggered` and must not set `project_ids`. Configure the webhook separately with `vercel_webhook`, then pass its ID to `webhook_id`. Slack links require both the channel ID and the completed Slack installation ID. The provider requires the installation ID explicitly so the link remains unambiguous if the team installs Slack more than once.
+Account webhooks must subscribe to `alerts.triggered` and must not set `project_ids`. Configure the webhook separately with `vercel_webhook`, then pass its ID to `webhook_id`.
+
+Slack links require a channel ID. If the team has exactly one completed Slack installation, `slack_installation_id` can be omitted and the provider stores the installation selected by the API in state. Teams with multiple Slack installations must configure `slack_installation_id` explicitly.
 
 The special `ar_default` alert rule ID is supported even though the default rule itself cannot be managed by `vercel_alert_rule`.
 

@@ -14,9 +14,8 @@ Manages a link between a Vercel alert rule and one existing notification destina
 
 ```terraform
 resource "vercel_alert_rule_notification" "slack" {
-  alert_rule_id         = "ar_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  slack_installation_id = "icfg_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  slack_channel_id      = "C0123456789"
+  alert_rule_id    = "ar_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  slack_channel_id = "C0123456789"
 }
 
 resource "vercel_webhook" "alerts" {
@@ -34,7 +33,9 @@ resource "vercel_alert_rule_notification" "webhook" {
 
 Each resource owns one link. Do not manage the same alert-rule and destination pair in multiple Terraform resources or states.
 
-Account webhooks must subscribe to `alerts.triggered` and must not set `project_ids`. Configure the webhook separately with `vercel_webhook`, then pass its ID to `webhook_id`. Slack links require both the channel ID and the completed Slack installation ID. The provider requires the installation ID explicitly so the link remains unambiguous if the team installs Slack more than once.
+Account webhooks must subscribe to `alerts.triggered` and must not set `project_ids`. Configure the webhook separately with `vercel_webhook`, then pass its ID to `webhook_id`.
+
+Slack links require a channel ID. If the team has exactly one completed Slack installation, `slack_installation_id` can be omitted and the provider stores the installation selected by the API in state. Teams with multiple Slack installations must configure `slack_installation_id` explicitly.
 
 The special `ar_default` alert rule ID is supported even though the default rule itself cannot be managed by `vercel_alert_rule`.
 
@@ -48,7 +49,7 @@ The special `ar_default` alert rule ID is supported even though the default rule
 ### Optional
 
 - `slack_channel_id` (String) The ID of the Slack channel. Exactly one of `webhook_id` or `slack_channel_id` must be configured.
-- `slack_installation_id` (String) The ID of the completed Slack integration installation that owns the channel. Required with `slack_channel_id`.
+- `slack_installation_id` (String) The ID of the completed Slack integration installation that owns the channel. It can be omitted when the team has exactly one completed Slack installation; the resolved ID is then stored in state. It must be configured when the team has multiple Slack installations.
 - `team_id` (String) The ID of the team that owns the alert rule and notification destination. Required if a default team is not configured in the provider.
 - `webhook_id` (String) The ID of an existing account webhook subscribed to the `alerts.triggered` event. Exactly one of `webhook_id` or `slack_channel_id` must be configured.
 
