@@ -64,7 +64,7 @@ func (r *alertRuleResource) Configure(_ context.Context, req resource.ConfigureR
 
 func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification channel links are managed separately from this resource.",
+		MarkdownDescription: "Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification destination links are managed with the `vercel_alert_rule_notification` resource.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -159,7 +159,7 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"notification_settings": schema.SingleNestedAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Notification delivery settings stored on the rule. Notification channel links are managed separately.",
+				MarkdownDescription: "Notification delivery settings stored on the rule. Notification destination links are managed with the `vercel_alert_rule_notification` resource.",
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"enable_team_owner_notifications": schema.BoolAttribute{

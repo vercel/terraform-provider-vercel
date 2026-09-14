@@ -56,6 +56,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newAccessGroupResource,
 		newAIGatewayAPIKeyResource,
 		newAlertRuleResource,
+		newAlertRuleNotificationResource,
 		newAliasResource,
 		newAttackChallengeModeResource,
 		newAuditLogDrainResource,

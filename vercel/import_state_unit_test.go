@@ -17,6 +17,9 @@ func TestImportStateInvalidIDReturnsBeforeClientCall(t *testing.T) {
 	}{
 		{name: "access group", run: func(resp *resource.ImportStateResponse) { (&accessGroupResource{}).ImportState(ctx, req, resp) }},
 		{name: "access group project", run: func(resp *resource.ImportStateResponse) { (&accessGroupProjectResource{}).ImportState(ctx, req, resp) }},
+		{name: "alert rule notification", run: func(resp *resource.ImportStateResponse) {
+			(&alertRuleNotificationResource{}).ImportState(ctx, req, resp)
+		}},
 		{name: "alert rule", run: func(resp *resource.ImportStateResponse) { (&alertRuleResource{}).ImportState(ctx, req, resp) }},
 		{name: "attack challenge mode", run: func(resp *resource.ImportStateResponse) { (&attackChallengeModeResource{}).ImportState(ctx, req, resp) }},
 		{name: "audit log drain", run: func(resp *resource.ImportStateResponse) { (&auditLogDrainResource{}).ImportState(ctx, req, resp) }},
