@@ -27,6 +27,10 @@ func alertRuleNotificationSchema(t *testing.T) schema.Schema {
 }
 
 func TestAlertRuleNotificationSchema(t *testing.T) {
+	if _, ok := newAlertRuleNotificationResource().(resource.ResourceWithModifyPlan); !ok {
+		t.Fatal("alert rule notification must implement ResourceWithModifyPlan to hide fields for the other destination")
+	}
+
 	resourceSchema := alertRuleNotificationSchema(t)
 	if !resourceSchema.Attributes["alert_rule_id"].IsRequired() {
 		t.Fatal("alert_rule_id must be required")
@@ -45,6 +49,99 @@ func TestAlertRuleNotificationSchema(t *testing.T) {
 	}
 	if len((&alertRuleNotificationResource{}).ConfigValidators(context.Background())) == 0 {
 		t.Fatal("resource must validate the mutually exclusive destinations")
+	}
+}
+
+func TestAlertRuleNotificationModifyPlanHidesOtherDestinationFields(t *testing.T) {
+	tests := []struct {
+		name   string
+		config AlertRuleNotification
+		plan   AlertRuleNotification
+		check  func(*testing.T, AlertRuleNotification)
+	}{
+		{
+			name: "webhook replacement hides Slack installation",
+			config: AlertRuleNotification{
+				ID:                  types.StringNull(),
+				TeamID:              types.StringNull(),
+				AlertRuleID:         types.StringValue("ar_123"),
+				WebhookID:           types.StringUnknown(),
+				SlackChannelID:      types.StringNull(),
+				SlackInstallationID: types.StringNull(),
+			},
+			plan: AlertRuleNotification{
+				ID:                  types.StringUnknown(),
+				TeamID:              types.StringUnknown(),
+				AlertRuleID:         types.StringValue("ar_123"),
+				WebhookID:           types.StringUnknown(),
+				SlackChannelID:      types.StringNull(),
+				SlackInstallationID: types.StringUnknown(),
+			},
+			check: func(t *testing.T, modified AlertRuleNotification) {
+				t.Helper()
+				if !modified.SlackInstallationID.IsNull() {
+					t.Fatalf("slack_installation_id = %v, want null", modified.SlackInstallationID)
+				}
+			},
+		},
+		{
+			name: "Slack replacement hides webhook",
+			config: AlertRuleNotification{
+				ID:                  types.StringNull(),
+				TeamID:              types.StringNull(),
+				AlertRuleID:         types.StringValue("ar_123"),
+				WebhookID:           types.StringNull(),
+				SlackChannelID:      types.StringUnknown(),
+				SlackInstallationID: types.StringNull(),
+			},
+			plan: AlertRuleNotification{
+				ID:                  types.StringUnknown(),
+				TeamID:              types.StringUnknown(),
+				AlertRuleID:         types.StringValue("ar_123"),
+				WebhookID:           types.StringUnknown(),
+				SlackChannelID:      types.StringUnknown(),
+				SlackInstallationID: types.StringUnknown(),
+			},
+			check: func(t *testing.T, modified AlertRuleNotification) {
+				t.Helper()
+				if !modified.WebhookID.IsNull() {
+					t.Fatalf("webhook_id = %v, want null", modified.WebhookID)
+				}
+				if !modified.SlackInstallationID.IsUnknown() {
+					t.Fatalf("slack_installation_id = %v, want unknown for API resolution", modified.SlackInstallationID)
+				}
+			},
+		},
+	}
+
+	ctx := context.Background()
+	resourceSchema := alertRuleNotificationSchema(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configPlan := tfsdk.Plan{Schema: resourceSchema}
+			if diags := configPlan.Set(ctx, tt.config); diags.HasError() {
+				t.Fatalf("config Plan.Set() diagnostics = %v", diags)
+			}
+			plan := tfsdk.Plan{Schema: resourceSchema}
+			if diags := plan.Set(ctx, tt.plan); diags.HasError() {
+				t.Fatalf("Plan.Set() diagnostics = %v", diags)
+			}
+
+			response := &resource.ModifyPlanResponse{Plan: plan}
+			(&alertRuleNotificationResource{}).ModifyPlan(ctx, resource.ModifyPlanRequest{
+				Config: tfsdk.Config{Raw: configPlan.Raw, Schema: resourceSchema},
+				Plan:   plan,
+			}, response)
+			if response.Diagnostics.HasError() {
+				t.Fatalf("ModifyPlan() diagnostics = %v", response.Diagnostics)
+			}
+
+			var modified AlertRuleNotification
+			if diags := response.Plan.Get(ctx, &modified); diags.HasError() {
+				t.Fatalf("modified Plan.Get() diagnostics = %v", diags)
+			}
+			tt.check(t, modified)
+		})
 	}
 }
 

@@ -24,6 +24,7 @@ var (
 	_ resource.ResourceWithConfigure        = &alertRuleNotificationResource{}
 	_ resource.ResourceWithConfigValidators = &alertRuleNotificationResource{}
 	_ resource.ResourceWithImportState      = &alertRuleNotificationResource{}
+	_ resource.ResourceWithModifyPlan       = &alertRuleNotificationResource{}
 )
 
 func newAlertRuleNotificationResource() resource.Resource {
@@ -128,6 +129,30 @@ type AlertRuleNotification struct {
 	WebhookID           types.String `tfsdk:"webhook_id"`
 	SlackChannelID      types.String `tfsdk:"slack_channel_id"`
 	SlackInstallationID types.String `tfsdk:"slack_installation_id"`
+}
+
+func (r *alertRuleNotificationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var config AlertRuleNotification
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Destination IDs can be unknown when the referenced destination is being
+	// replaced. Use their presence in configuration to keep fields belonging to
+	// the other destination explicitly null instead of showing them as computed.
+	switch {
+	case !config.WebhookID.IsNull() && config.SlackChannelID.IsNull():
+		if config.SlackInstallationID.IsNull() {
+			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("slack_installation_id"), types.StringNull())...)
+		}
+	case config.WebhookID.IsNull() && !config.SlackChannelID.IsNull():
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("webhook_id"), types.StringNull())...)
+	}
 }
 
 func (notification AlertRuleNotification) target() (client.AlertRuleNotificationTarget, error) {
