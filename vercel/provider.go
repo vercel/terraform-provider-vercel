@@ -90,6 +90,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newOAuthAppResource,
 		newOIDCFederationPolicyResource,
 		newProjectDeploymentRetentionResource,
+		newProjectDeploymentCheckResource,
 		newProjectCronsResource,
 		newProjectDomainResource,
 		newProjectEnvironmentVariableResource,
