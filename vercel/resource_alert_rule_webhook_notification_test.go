@@ -12,7 +12,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
-func testCheckAlertRuleNotificationExists(testClient *client.Client, teamID, name string) resource.TestCheckFunc {
+func testCheckAlertRuleWebhookNotificationExists(testClient *client.Client, teamID, name string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		resourceState, ok := state.RootModule().Resources[name]
 		if !ok || resourceState.Primary.ID == "" {
@@ -36,7 +36,7 @@ func testCheckAlertRuleNotificationExists(testClient *client.Client, teamID, nam
 	}
 }
 
-func testCheckAlertRuleNotificationDeleted(testClient *client.Client, teamID, name string) resource.TestCheckFunc {
+func testCheckAlertRuleWebhookNotificationDeleted(testClient *client.Client, teamID, name string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		resourceState, ok := state.RootModule().Resources[name]
 		if !ok || resourceState.Primary.ID == "" {
@@ -63,17 +63,17 @@ func testCheckAlertRuleNotificationDeleted(testClient *client.Client, teamID, na
 	}
 }
 
-func TestAcc_AlertRuleNotificationResourceWebhook(t *testing.T) {
+func TestAcc_AlertRuleWebhookNotificationResource(t *testing.T) {
 	name := acctest.RandString(16)
-	const resourceName = "vercel_alert_rule_notification.webhook"
+	const resourceName = "vercel_alert_rule_webhook_notification.webhook"
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testCheckAlertRuleNotificationDeleted(testClient(t), testTeam(t), resourceName),
+		CheckDestroy:             testCheckAlertRuleWebhookNotificationDeleted(testClient(t), testTeam(t), resourceName),
 		Steps: []resource.TestStep{
 			{
-				Config: cfg(testAccResourceAlertRuleNotification(name)),
+				Config: cfg(testAccResourceAlertRuleWebhookNotification(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckAlertRuleNotificationExists(testClient(t), testTeam(t), resourceName),
+					testCheckAlertRuleWebhookNotificationExists(testClient(t), testTeam(t), resourceName),
 					resource.TestCheckResourceAttrPair(resourceName, "alert_rule_id", "vercel_alert_rule.notification", "id"),
 					resource.TestCheckResourceAttrPair(resourceName, "webhook_id", "vercel_webhook.notification", "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -99,7 +99,7 @@ func getAlertRuleNotificationImportID(name string) resource.ImportStateIdFunc {
 	}
 }
 
-func testAccResourceAlertRuleNotification(name string) string {
+func testAccResourceAlertRuleWebhookNotification(name string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "alert_rule_notification" {
   name = "test-acc-alert-rule-notification-%[1]s"
@@ -124,7 +124,7 @@ resource "vercel_webhook" "notification" {
   events   = ["alerts.triggered"]
 }
 
-resource "vercel_alert_rule_notification" "webhook" {
+resource "vercel_alert_rule_webhook_notification" "webhook" {
   alert_rule_id = vercel_alert_rule.notification.id
   webhook_id    = vercel_webhook.notification.id
 }

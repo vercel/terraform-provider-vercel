@@ -21,11 +21,9 @@ description: |-
 
 ## Destination requirements
 
-Each resource owns one link. Do not manage the same alert-rule and destination pair in multiple Terraform resources or states.
+Each resource owns one link. Do not manage the same alert-rule and webhook pair in multiple Terraform resources or states.
 
-Account webhooks must subscribe to `alerts.triggered` and must not set `project_ids`. Configure the webhook separately with `vercel_webhook`, then pass its ID to `webhook_id`.
-
-Slack links require a channel ID. If the team has exactly one completed Slack installation, `slack_installation_id` can be omitted and the provider stores the installation selected by the API in state. Teams with multiple Slack installations must configure `slack_installation_id` explicitly.
+The webhook must subscribe to `alerts.triggered`, must not set `project_ids`, and must be owned by the account. Configure it separately with `vercel_webhook`, then pass its ID to `webhook_id`.
 
 The special `ar_default` alert rule ID is supported even though the default rule itself cannot be managed by `vercel_alert_rule`.
 

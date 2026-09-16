@@ -17,8 +17,11 @@ func TestImportStateInvalidIDReturnsBeforeClientCall(t *testing.T) {
 	}{
 		{name: "access group", run: func(resp *resource.ImportStateResponse) { (&accessGroupResource{}).ImportState(ctx, req, resp) }},
 		{name: "access group project", run: func(resp *resource.ImportStateResponse) { (&accessGroupProjectResource{}).ImportState(ctx, req, resp) }},
-		{name: "alert rule notification", run: func(resp *resource.ImportStateResponse) {
-			(&alertRuleNotificationResource{}).ImportState(ctx, req, resp)
+		{name: "alert rule webhook notification", run: func(resp *resource.ImportStateResponse) {
+			(&alertRuleWebhookNotificationResource{}).ImportState(ctx, req, resp)
+		}},
+		{name: "alert rule Slack notification", run: func(resp *resource.ImportStateResponse) {
+			(&alertRuleSlackNotificationResource{}).ImportState(ctx, resource.ImportStateRequest{ID: "too/many/id/parts/extra"}, resp)
 		}},
 		{name: "alert rule", run: func(resp *resource.ImportStateResponse) { (&alertRuleResource{}).ImportState(ctx, req, resp) }},
 		{name: "attack challenge mode", run: func(resp *resource.ImportStateResponse) { (&attackChallengeModeResource{}).ImportState(ctx, req, resp) }},
