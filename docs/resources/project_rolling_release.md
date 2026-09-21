@@ -4,11 +4,17 @@ page_title: "vercel_project_rolling_release Resource - terraform-provider-vercel
 subcategory: ""
 description: |-
   Resource for a Vercel project rolling release configuration.
+  This provider supports two to ten stages, including a non-final stage whose native rules identify the advancement type. This is a provider support restriction, not a claim that the REST API rejects every single-stage policy.
+  Earlier provider versions accepted one stage. Policies containing only the final 100% stage now fail validation, refresh and import. Keep the prior provider pin until you have reviewed their conversion to supported stages. This provider does not infer missing advancement rules from old state.
 ---
 
 # vercel_project_rolling_release (Resource)
 
 Resource for a Vercel project rolling release configuration.
+
+This provider supports two to ten stages, including a non-final stage whose native rules identify the advancement type. This is a provider support restriction, not a claim that the REST API rejects every single-stage policy.
+
+Earlier provider versions accepted one stage. Policies containing only the final 100% stage now fail validation, refresh and import. Keep the prior provider pin until you have reviewed their conversion to supported stages. This provider does not infer missing advancement rules from old state.
 
 ## Example Usage
 
@@ -26,7 +32,7 @@ resource "vercel_project_rolling_release" "example" {
 			target_percentage = 20
 		},
 		{
-			target_percentage = 50
+			target_percentage = 100
 		}
 	]
 }
@@ -39,7 +45,7 @@ resource "vercel_project_rolling_release" "example" {
 
 - `advancement_type` (String) The type of advancement for the rolling release. Must be either 'automatic' or 'manual-approval'.
 - `project_id` (String) The ID of the project.
-- `stages` (Attributes List) The stages for the rolling release configuration. The last stage must have target_percentage = 100. (see [below for nested schema](#nestedatt--stages))
+- `stages` (Attributes List) Two to ten stages supported by this provider. Include at least one non-final stage and end with target_percentage = 100. (see [below for nested schema](#nestedatt--stages))
 
 ### Optional
 

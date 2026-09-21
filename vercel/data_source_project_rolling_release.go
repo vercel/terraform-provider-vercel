@@ -49,7 +49,7 @@ func (d *projectRollingReleaseDataSource) Configure(ctx context.Context, req dat
 
 func (d *projectRollingReleaseDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Data source for a Vercel project rolling release configuration.",
+		MarkdownDescription: "Data source for a Vercel project rolling release configuration.\n\n" + rollingReleaseSupportedStages,
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
 				Description: "The ID of the project.",
