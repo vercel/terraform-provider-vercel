@@ -97,7 +97,7 @@ func TestProjectRollingReleasePATCHBody(t *testing.T) {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 				}
 			})
-			plan := tfsdk.Plan{Schema: state.Schema, Raw: state.Raw}
+			plan := tfsdk.Plan(state)
 			ctx := context.Background()
 			if operation == "create" {
 				response := resource.CreateResponse{State: state}
@@ -232,7 +232,7 @@ func TestProjectRollingReleaseUnknownWrite(t *testing.T) {
 			})
 			response := resource.UpdateResponse{State: state}
 			r.Update(context.Background(), resource.UpdateRequest{
-				Plan: tfsdk.Plan{Schema: state.Schema, Raw: state.Raw}, State: state,
+				Plan: tfsdk.Plan(state), State: state,
 			}, &response)
 			if !response.Diagnostics.HasError() || patches.Load() != 1 {
 				t.Fatalf("diagnostics = %v, PATCH count = %d", response.Diagnostics, patches.Load())
@@ -274,7 +274,7 @@ func TestProjectRollingReleaseCreateRequiresImport(t *testing.T) {
 		fmt.Fprint(w, manualPolicyResponse)
 	})
 	response := resource.CreateResponse{State: state}
-	r.Create(context.Background(), resource.CreateRequest{Plan: tfsdk.Plan{Schema: state.Schema, Raw: state.Raw}}, &response)
+	r.Create(context.Background(), resource.CreateRequest{Plan: tfsdk.Plan(state)}, &response)
 	if !response.Diagnostics.HasError() || patches.Load() != 0 {
 		t.Fatalf("existing native policy: diagnostics = %v, PATCH count = %d", response.Diagnostics, patches.Load())
 	}
@@ -319,7 +319,7 @@ func TestProjectRollingReleaseCreateReadFailurePreservesIdentity(t *testing.T) {
 			ctx := context.Background()
 			// Create starts with no prior state, as it does under Terraform.
 			response := resource.CreateResponse{State: tfsdk.State{Schema: planned.Schema}}
-			r.Create(ctx, resource.CreateRequest{Plan: tfsdk.Plan{Schema: planned.Schema, Raw: planned.Raw}}, &response)
+			r.Create(ctx, resource.CreateRequest{Plan: tfsdk.Plan(planned)}, &response)
 			if !response.Diagnostics.HasError() || patches.Load() != 1 || reads.Load() != 2 {
 				t.Fatalf("diagnostics = %v, PATCH count = %d, GET count = %d", response.Diagnostics, patches.Load(), reads.Load())
 			}
@@ -366,7 +366,7 @@ func TestProjectRollingReleaseCreateLostReplyDoesNotSaveIdentity(t *testing.T) {
 		}
 	})
 	response := resource.CreateResponse{State: tfsdk.State{Schema: planned.Schema}}
-	r.Create(context.Background(), resource.CreateRequest{Plan: tfsdk.Plan{Schema: planned.Schema, Raw: planned.Raw}}, &response)
+	r.Create(context.Background(), resource.CreateRequest{Plan: tfsdk.Plan(planned)}, &response)
 	if !response.Diagnostics.HasError() || patches.Load() != 1 || reads.Load() != 1 {
 		t.Fatalf("diagnostics = %v, PATCH count = %d, GET count = %d", response.Diagnostics, patches.Load(), reads.Load())
 	}
