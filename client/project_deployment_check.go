@@ -9,17 +9,11 @@ import (
 )
 
 type ProjectDeploymentCheckSource struct {
-	Kind                       string `json:"kind"`
-	ExternalCheckName          string `json:"externalCheckName,omitempty"`
-	Provider                   string `json:"provider,omitempty"`
-	WebhookID                  string `json:"webhookId,omitempty"`
-	ExternalResourceID         string `json:"externalResourceId,omitempty"`
-	IntegrationID              string `json:"integrationId,omitempty"`
-	IntegrationConfigurationID string `json:"integrationConfigurationId,omitempty"`
-	ResourceID                 string `json:"resourceId,omitempty"`
-	JobName                    string `json:"jobName,omitempty"`
-	Origin                     string `json:"origin,omitempty"`
-	SubKind                    string `json:"subKind,omitempty"`
+	Kind               string `json:"kind"`
+	ExternalCheckName  string `json:"externalCheckName,omitempty"`
+	Provider           string `json:"provider,omitempty"`
+	WebhookID          string `json:"webhookId,omitempty"`
+	ExternalResourceID string `json:"externalResourceId,omitempty"`
 }
 
 type ProjectDeploymentCheck struct {
@@ -30,12 +24,9 @@ type ProjectDeploymentCheck struct {
 	IsRerequestable bool                         `json:"isRerequestable"`
 	Requires        string                       `json:"requires"`
 	Source          ProjectDeploymentCheckSource `json:"source"`
-	SourceKind      string                       `json:"sourceKind"`
 	Blocks          string                       `json:"blocks"`
 	Targets         []string                     `json:"targets"`
 	Timeout         int64                        `json:"timeout"`
-	CreatedAt       int64                        `json:"createdAt"`
-	UpdatedAt       int64                        `json:"updatedAt"`
 }
 
 type CreateProjectDeploymentCheckRequest struct {

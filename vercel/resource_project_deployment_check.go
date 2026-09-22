@@ -71,9 +71,7 @@ func (r *projectDeploymentCheckResource) Schema(_ context.Context, _ resource.Sc
 			"is_rerequestable": schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether users can rerun the check. Defaults to false; must be false for a `git-provider` source.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()}},
 			"blocks":           schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The deployment stage blocked by the check. New checks currently support `deployment-alias` and `none`.", Validators: []validator.String{stringvalidator.OneOf("deployment-alias", "none")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
 			"targets":          schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, MarkdownDescription: "Deployment environment slugs to which the check applies, such as `production`, `preview`, or a custom environment slug. Use `[\"all\"]` for every environment; `all` cannot be combined with other targets. The API defaults to `[\"production\"]`.", Validators: []validator.Set{setvalidator.SizeAtLeast(1), setvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1), validateStringIsTrimmed())}, PlanModifiers: []planmodifier.Set{setplanmodifier.UseNonNullStateForUnknown()}},
-			"timeout":          schema.Int64Attribute{Optional: true, Computed: true, MarkdownDescription: "The check timeout value passed to the Checks API. When omitted, the API determines the timeout.", Validators: []validator.Int64{int64validator.AtLeast(1)}, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseNonNullStateForUnknown()}},
-			"created_at":       schema.Int64Attribute{Computed: true, MarkdownDescription: "Creation time as a Unix epoch timestamp in milliseconds."},
-			"updated_at":       schema.Int64Attribute{Computed: true, MarkdownDescription: "Last update time as a Unix epoch timestamp in milliseconds."},
+			"timeout":          schema.Int64Attribute{Optional: true, Computed: true, MarkdownDescription: "The timeout value supplied to check runners by the Checks API. When omitted, the API determines the value.", Validators: []validator.Int64{int64validator.AtLeast(1)}, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseNonNullStateForUnknown()}},
 			"source": schema.SingleNestedAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -82,17 +80,11 @@ func (r *projectDeploymentCheckResource) Schema(_ context.Context, _ resource.Sc
 					objectplanmodifier.UseNonNullStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
-					"kind":                         schema.StringAttribute{Required: true, MarkdownDescription: "The source kind. New checks support `git-provider`, `integration`, and `webhook`; `vercel` is response-only.", Validators: []validator.String{stringvalidator.OneOf("git-provider", "integration", "webhook", "vercel")}, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
-					"external_check_name":          schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The external check name. Required for a `git-provider` source.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
-					"provider":                     schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Git provider. New git-provider checks currently support `github`; imported checks may report `gitlab` or `bitbucket`.", Validators: []validator.String{stringvalidator.OneOf("github", "gitlab", "bitbucket")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
-					"webhook_id":                   schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The webhook ID for a `webhook` source.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
-					"external_resource_id":         schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "An optional external resource ID for an `integration` source. Creating integration checks requires an integration token; the API derives integration IDs from that token.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
-					"integration_id":               schema.StringAttribute{Computed: true, MarkdownDescription: "The integration ID inferred by the API from the integration token.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
-					"integration_configuration_id": schema.StringAttribute{Computed: true, MarkdownDescription: "The integration configuration ID inferred by the API from the integration token.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
-					"resource_id":                  schema.StringAttribute{Computed: true, MarkdownDescription: "The integration resource ID returned by the API.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
-					"job_name":                     schema.StringAttribute{Computed: true, MarkdownDescription: "The job name for a Vercel-managed check.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
-					"origin":                       schema.StringAttribute{Computed: true, MarkdownDescription: "The origin for a Vercel-managed check.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
-					"sub_kind":                     schema.StringAttribute{Computed: true, MarkdownDescription: "The subtype for a Vercel-managed check.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
+					"kind":                 schema.StringAttribute{Required: true, MarkdownDescription: "The source kind. New checks support `git-provider`, `integration`, and `webhook`; `vercel` is response-only.", Validators: []validator.String{stringvalidator.OneOf("git-provider", "integration", "webhook", "vercel")}, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
+					"external_check_name":  schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The external check name. Required for a `git-provider` source.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"provider":             schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Git provider. New git-provider checks currently support `github`; imported checks may report `gitlab` or `bitbucket`.", Validators: []validator.String{stringvalidator.OneOf("github", "gitlab", "bitbucket")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"webhook_id":           schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The webhook ID for a `webhook` source.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"external_resource_id": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "An optional external resource ID for an `integration` source. Creating integration checks requires an integration token; the API derives integration IDs from that token.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
 				},
 			},
 		},
@@ -109,30 +101,20 @@ type ProjectDeploymentCheck struct {
 	Blocks          types.String `tfsdk:"blocks"`
 	Targets         types.Set    `tfsdk:"targets"`
 	Timeout         types.Int64  `tfsdk:"timeout"`
-	CreatedAt       types.Int64  `tfsdk:"created_at"`
-	UpdatedAt       types.Int64  `tfsdk:"updated_at"`
 	Source          types.Object `tfsdk:"source"`
 }
 
 type ProjectDeploymentCheckSource struct {
-	Kind                       types.String `tfsdk:"kind"`
-	ExternalCheckName          types.String `tfsdk:"external_check_name"`
-	Provider                   types.String `tfsdk:"provider"`
-	WebhookID                  types.String `tfsdk:"webhook_id"`
-	ExternalResourceID         types.String `tfsdk:"external_resource_id"`
-	IntegrationID              types.String `tfsdk:"integration_id"`
-	IntegrationConfigurationID types.String `tfsdk:"integration_configuration_id"`
-	ResourceID                 types.String `tfsdk:"resource_id"`
-	JobName                    types.String `tfsdk:"job_name"`
-	Origin                     types.String `tfsdk:"origin"`
-	SubKind                    types.String `tfsdk:"sub_kind"`
+	Kind               types.String `tfsdk:"kind"`
+	ExternalCheckName  types.String `tfsdk:"external_check_name"`
+	Provider           types.String `tfsdk:"provider"`
+	WebhookID          types.String `tfsdk:"webhook_id"`
+	ExternalResourceID types.String `tfsdk:"external_resource_id"`
 }
 
 var projectDeploymentCheckSourceAttrTypes = map[string]attr.Type{
 	"kind": types.StringType, "external_check_name": types.StringType, "provider": types.StringType,
-	"webhook_id": types.StringType, "external_resource_id": types.StringType, "integration_id": types.StringType,
-	"integration_configuration_id": types.StringType, "resource_id": types.StringType, "job_name": types.StringType,
-	"origin": types.StringType, "sub_kind": types.StringType,
+	"webhook_id": types.StringType, "external_resource_id": types.StringType,
 }
 
 func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
@@ -231,8 +213,6 @@ func projectDeploymentCheckSourceFromClient(ctx context.Context, source client.P
 	return types.ObjectValueFrom(ctx, projectDeploymentCheckSourceAttrTypes, ProjectDeploymentCheckSource{
 		Kind: types.StringValue(source.Kind), ExternalCheckName: optionalStringValue(source.ExternalCheckName), Provider: optionalStringValue(source.Provider),
 		WebhookID: optionalStringValue(source.WebhookID), ExternalResourceID: optionalStringValue(source.ExternalResourceID),
-		IntegrationID: optionalStringValue(source.IntegrationID), IntegrationConfigurationID: optionalStringValue(source.IntegrationConfigurationID),
-		ResourceID: optionalStringValue(source.ResourceID), JobName: optionalStringValue(source.JobName), Origin: optionalStringValue(source.Origin), SubKind: optionalStringValue(source.SubKind),
 	})
 }
 
@@ -251,7 +231,7 @@ func projectDeploymentCheckFromClient(ctx context.Context, check client.ProjectD
 		ID: types.StringValue(check.ID), ProjectID: projectID, TeamID: teamID,
 		Name: types.StringValue(check.Name), Requires: types.StringValue(check.Requires), IsRerequestable: types.BoolValue(check.IsRerequestable),
 		Blocks: types.StringValue(check.Blocks), Targets: targets, Timeout: types.Int64Value(check.Timeout),
-		CreatedAt: types.Int64Value(check.CreatedAt), UpdatedAt: types.Int64Value(check.UpdatedAt), Source: source,
+		Source: source,
 	}, diags
 }
 

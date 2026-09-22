@@ -1,4 +1,4 @@
-package client
+package client_test
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestProjectDeploymentCheckCRUD(t *testing.T) {
@@ -20,7 +22,7 @@ func TestProjectDeploymentCheckCRUD(t *testing.T) {
 			if r.URL.Path != "/v2/projects/prj_123/checks" {
 				t.Fatalf("path = %q", r.URL.Path)
 			}
-			var body CreateProjectDeploymentCheckRequest
+			var body client.CreateProjectDeploymentCheckRequest
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}
@@ -41,16 +43,16 @@ func TestProjectDeploymentCheckCRUD(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != http.MethodDelete {
-			_, _ = w.Write([]byte(`{"id":"check_123","name":"E2E","ownerId":"team_123","projectId":"prj_123","isRerequestable":false,"requires":"deployment-url","source":{"kind":"git-provider","provider":"github","externalCheckName":"e2e"},"sourceKind":"git-provider","blocks":"deployment-promotion","targets":["production"],"timeout":300,"createdAt":1,"updatedAt":2}`))
+			_, _ = w.Write([]byte(`{"id":"check_123","name":"E2E","ownerId":"team_123","projectId":"prj_123","isRerequestable":false,"requires":"deployment-url","source":{"kind":"git-provider","provider":"github","externalCheckName":"e2e"},"sourceKind":"git-provider","blocks":"deployment-promotion","targets":["production"],"timeout":300}`))
 		} else {
 			_, _ = w.Write([]byte(`{"success":true}`))
 		}
 	}))
 	t.Cleanup(server.Close)
-	c := New("TOKEN").WithBaseURL(server.URL)
+	c := client.New("TOKEN").WithBaseURL(server.URL)
 	ctx := context.Background()
-	source := ProjectDeploymentCheckSource{Kind: "git-provider", Provider: "github", ExternalCheckName: "e2e"}
-	created, err := c.CreateProjectDeploymentCheck(ctx, CreateProjectDeploymentCheckRequest{ProjectID: "prj_123", TeamID: "team_123", Name: "E2E", Requires: "deployment-url", Source: &source})
+	source := client.ProjectDeploymentCheckSource{Kind: "git-provider", Provider: "github", ExternalCheckName: "e2e"}
+	created, err := c.CreateProjectDeploymentCheck(ctx, client.CreateProjectDeploymentCheckRequest{ProjectID: "prj_123", TeamID: "team_123", Name: "E2E", Requires: "deployment-url", Source: &source})
 	if err != nil || created.ID != "check_123" {
 		t.Fatalf("create = %#v, %v", created, err)
 	}
@@ -58,7 +60,7 @@ func TestProjectDeploymentCheckCRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 	name := "E2E tests"
-	if _, err = c.UpdateProjectDeploymentCheck(ctx, UpdateProjectDeploymentCheckRequest{ProjectID: "prj_123", TeamID: "team_123", ID: "check_123", Name: &name}); err != nil {
+	if _, err = c.UpdateProjectDeploymentCheck(ctx, client.UpdateProjectDeploymentCheckRequest{ProjectID: "prj_123", TeamID: "team_123", ID: "check_123", Name: &name}); err != nil {
 		t.Fatal(err)
 	}
 	if err = c.DeleteProjectDeploymentCheck(ctx, "prj_123", "check_123", "team_123"); err != nil {

@@ -22,9 +22,9 @@ Use a Vercel access token authorized for the project. GitHub checks currently su
 
 ### Integration checks
 
-Integration checks require an integration installation token. The API derives `integration_id` and `integration_configuration_id` from that token; these are read-only attributes. Use this token only with an `integration` source because it determines the returned source kind. The optional `external_resource_id` must belong to that installation.
+Integration checks require an integration installation token. The API identifies the integration and installation from that token. Use this token only with an `integration` source because it determines the returned source kind. The optional `external_resource_id` must belong to that installation.
 
-{{ tffile "examples/resources/vercel_project_deployment_check/integration/resource.tf" }}
+{{ tffile "examples/resources/vercel_project_deployment_check/integration.tf" }}
 
 ## Choosing check behavior
 

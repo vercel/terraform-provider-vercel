@@ -70,7 +70,7 @@ resource "vercel_project_deployment_check" "webhook" {
 
 ### Integration checks
 
-Integration checks require an integration installation token. The API derives `integration_id` and `integration_configuration_id` from that token; these are read-only attributes. Use this token only with an `integration` source because it determines the returned source kind. The optional `external_resource_id` must belong to that installation.
+Integration checks require an integration installation token. The API identifies the integration and installation from that token. Use this token only with an `integration` source because it determines the returned source kind. The optional `external_resource_id` must belong to that installation.
 
 ```terraform
 variable "integration_token" {
@@ -137,13 +137,11 @@ Changing `project_id`, an explicitly configured `team_id`, or a configured sourc
 - `source` (Attributes) The system that supplies the Deployment Check. Required when creating a check; changing a configured source field replaces the check. Omit it when managing an imported check whose source is not writable through the API. (see [below for nested schema](#nestedatt--source))
 - `targets` (Set of String) Deployment environment slugs to which the check applies, such as `production`, `preview`, or a custom environment slug. Use `["all"]` for every environment; `all` cannot be combined with other targets. The API defaults to `["production"]`.
 - `team_id` (String) The ID of the Vercel team.
-- `timeout` (Number) The check timeout value passed to the Checks API. When omitted, the API determines the timeout.
+- `timeout` (Number) The timeout value supplied to check runners by the Checks API. When omitted, the API determines the value.
 
 ### Read-Only
 
-- `created_at` (Number) Creation time as a Unix epoch timestamp in milliseconds.
 - `id` (String) The ID of the Deployment Check.
-- `updated_at` (Number) Last update time as a Unix epoch timestamp in milliseconds.
 
 <a id="nestedatt--source"></a>
 ### Nested Schema for `source`
@@ -158,15 +156,6 @@ Optional:
 - `external_resource_id` (String) An optional external resource ID for an `integration` source. Creating integration checks requires an integration token; the API derives integration IDs from that token.
 - `provider` (String) The Git provider. New git-provider checks currently support `github`; imported checks may report `gitlab` or `bitbucket`.
 - `webhook_id` (String) The webhook ID for a `webhook` source.
-
-Read-Only:
-
-- `integration_configuration_id` (String) The integration configuration ID inferred by the API from the integration token.
-- `integration_id` (String) The integration ID inferred by the API from the integration token.
-- `job_name` (String) The job name for a Vercel-managed check.
-- `origin` (String) The origin for a Vercel-managed check.
-- `resource_id` (String) The integration resource ID returned by the API.
-- `sub_kind` (String) The subtype for a Vercel-managed check.
 
 ## Import
 
