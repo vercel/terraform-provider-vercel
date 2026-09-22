@@ -67,33 +67,32 @@ func (r *projectDeploymentCheckResource) Schema(_ context.Context, _ resource.Sc
 			"project_id":       schema.StringAttribute{Required: true, MarkdownDescription: "The ID or name of the Vercel project.", PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
 			"team_id":          schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The ID of the Vercel team.", PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()}},
 			"name":             schema.StringAttribute{Required: true, MarkdownDescription: "The human-readable name of the Deployment Check.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}},
-			"requires":         schema.StringAttribute{Required: true, MarkdownDescription: "The deployment stage required before the check runs.", Validators: []validator.String{stringvalidator.OneOf("build-ready", "deployment-url", "none")}},
-			"is_rerequestable": schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether users can rerun the check.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()}},
+			"requires":         schema.StringAttribute{Required: true, MarkdownDescription: "The deployment stage required before the check runs: `build-ready`, `deployment-url`, or `none`. Changing this to `none` replaces the check because the API does not support that update.", Validators: []validator.String{stringvalidator.OneOf("build-ready", "deployment-url", "none")}},
+			"is_rerequestable": schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether users can rerun the check. Defaults to false; must be false for a `git-provider` source.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()}},
 			"blocks":           schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The deployment stage blocked by the check. New checks currently support `deployment-alias` and `none`.", Validators: []validator.String{stringvalidator.OneOf("deployment-alias", "none")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
-			"targets":          schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, MarkdownDescription: "Deployment targets to which the check applies. The API defaults to `production`.", Validators: []validator.Set{setvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1), validateStringIsTrimmed())}, PlanModifiers: []planmodifier.Set{setplanmodifier.UseNonNullStateForUnknown()}},
-			"timeout":          schema.Int64Attribute{Optional: true, Computed: true, MarkdownDescription: "Maximum time in seconds for the check to complete. The API defaults to 300.", Validators: []validator.Int64{int64validator.AtLeast(1)}, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseNonNullStateForUnknown()}},
+			"targets":          schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, MarkdownDescription: "Deployment environment slugs to which the check applies, such as `production`, `preview`, or a custom environment slug. Use `[\"all\"]` for every environment; `all` cannot be combined with other targets. The API defaults to `[\"production\"]`.", Validators: []validator.Set{setvalidator.SizeAtLeast(1), setvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1), validateStringIsTrimmed())}, PlanModifiers: []planmodifier.Set{setplanmodifier.UseNonNullStateForUnknown()}},
+			"timeout":          schema.Int64Attribute{Optional: true, Computed: true, MarkdownDescription: "The check timeout value passed to the Checks API. When omitted, the API determines the timeout.", Validators: []validator.Int64{int64validator.AtLeast(1)}, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseNonNullStateForUnknown()}},
 			"created_at":       schema.Int64Attribute{Computed: true, MarkdownDescription: "Creation time as a Unix epoch timestamp in milliseconds."},
 			"updated_at":       schema.Int64Attribute{Computed: true, MarkdownDescription: "Last update time as a Unix epoch timestamp in milliseconds."},
 			"source": schema.SingleNestedAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "The system that supplies the Deployment Check. This is required when creating a check and cannot be changed afterward. Omit it when managing an imported check whose source is not writable through the API.",
+				MarkdownDescription: "The system that supplies the Deployment Check. Required when creating a check; changing a configured source field replaces the check. Omit it when managing an imported check whose source is not writable through the API.",
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.RequiresReplace(),
 					objectplanmodifier.UseNonNullStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
-					"kind":                         schema.StringAttribute{Required: true, MarkdownDescription: "The source kind. New checks support `git-provider`, `integration`, and `webhook`; `vercel` is response-only.", Validators: []validator.String{stringvalidator.OneOf("git-provider", "integration", "webhook", "vercel")}},
-					"external_check_name":          schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The external check name. Required for a `git-provider` source."},
-					"provider":                     schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Git provider. New git-provider checks currently support `github`; imported checks may report `gitlab` or `bitbucket`.", Validators: []validator.String{stringvalidator.OneOf("github", "gitlab", "bitbucket")}},
-					"webhook_id":                   schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The webhook ID for a `webhook` source."},
-					"external_resource_id":         schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "An external resource ID for an `integration` source."},
-					"integration_id":               schema.StringAttribute{Computed: true, MarkdownDescription: "The integration ID returned for an integration source."},
-					"integration_configuration_id": schema.StringAttribute{Computed: true, MarkdownDescription: "The integration configuration ID returned for an integration source."},
-					"resource_id":                  schema.StringAttribute{Computed: true, MarkdownDescription: "The integration resource ID returned by the API."},
-					"job_name":                     schema.StringAttribute{Computed: true, MarkdownDescription: "The job name for a Vercel-managed check."},
-					"origin":                       schema.StringAttribute{Computed: true, MarkdownDescription: "The origin for a Vercel-managed check."},
-					"sub_kind":                     schema.StringAttribute{Computed: true, MarkdownDescription: "The subtype for a Vercel-managed check."},
+					"kind":                         schema.StringAttribute{Required: true, MarkdownDescription: "The source kind. New checks support `git-provider`, `integration`, and `webhook`; `vercel` is response-only.", Validators: []validator.String{stringvalidator.OneOf("git-provider", "integration", "webhook", "vercel")}, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
+					"external_check_name":          schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The external check name. Required for a `git-provider` source.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"provider":                     schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Git provider. New git-provider checks currently support `github`; imported checks may report `gitlab` or `bitbucket`.", Validators: []validator.String{stringvalidator.OneOf("github", "gitlab", "bitbucket")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"webhook_id":                   schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The webhook ID for a `webhook` source.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"external_resource_id":         schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "An optional external resource ID for an `integration` source. Creating integration checks requires an integration token; the API derives integration IDs from that token.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"integration_id":               schema.StringAttribute{Computed: true, MarkdownDescription: "The integration ID inferred by the API from the integration token.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
+					"integration_configuration_id": schema.StringAttribute{Computed: true, MarkdownDescription: "The integration configuration ID inferred by the API from the integration token.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
+					"resource_id":                  schema.StringAttribute{Computed: true, MarkdownDescription: "The integration resource ID returned by the API.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
+					"job_name":                     schema.StringAttribute{Computed: true, MarkdownDescription: "The job name for a Vercel-managed check.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
+					"origin":                       schema.StringAttribute{Computed: true, MarkdownDescription: "The origin for a Vercel-managed check.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
+					"sub_kind":                     schema.StringAttribute{Computed: true, MarkdownDescription: "The subtype for a Vercel-managed check.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
 				},
 			},
 		},
@@ -139,6 +138,17 @@ var projectDeploymentCheckSourceAttrTypes = map[string]attr.Type{
 func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var config ProjectDeploymentCheck
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if !config.Targets.IsNull() && !config.Targets.IsUnknown() {
+		allKnown := true
+		for _, target := range config.Targets.Elements() {
+			allKnown = allKnown && !target.IsUnknown()
+		}
+		for _, target := range config.Targets.Elements() {
+			if allKnown && target.Equal(types.StringValue("all")) && len(config.Targets.Elements()) > 1 {
+				resp.Diagnostics.AddAttributeError(path.Root("targets"), "Invalid deployment targets", "The all target cannot be combined with other environment slugs.")
+			}
+		}
+	}
 	if resp.Diagnostics.HasError() || config.Source.IsNull() || config.Source.IsUnknown() {
 		return
 	}
@@ -148,6 +158,9 @@ func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req
 		return
 	}
 	if source.Kind.ValueString() == "git-provider" {
+		if config.IsRerequestable.ValueBool() {
+			resp.Diagnostics.AddAttributeError(path.Root("is_rerequestable"), "Unsupported rerun setting", "Git provider Deployment Checks cannot be rerequestable. Set is_rerequestable to false or omit it.")
+		}
 		if source.ExternalCheckName.IsNull() {
 			resp.Diagnostics.AddError("Missing source.external_check_name", "source.external_check_name is required when source.kind is git-provider.")
 		}
@@ -155,6 +168,20 @@ func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req
 			resp.Diagnostics.AddError("Missing source.provider", "source.provider is required when source.kind is git-provider.")
 		} else if !source.Provider.IsUnknown() && source.Provider.ValueString() != "github" {
 			resp.Diagnostics.AddError("Unsupported source.provider", "Only github can be configured for a new git-provider Deployment Check.")
+		}
+	}
+	for _, field := range []struct {
+		name  string
+		kind  string
+		value types.String
+	}{
+		{"external_check_name", "git-provider", source.ExternalCheckName},
+		{"provider", "git-provider", source.Provider},
+		{"webhook_id", "webhook", source.WebhookID},
+		{"external_resource_id", "integration", source.ExternalResourceID},
+	} {
+		if !field.value.IsNull() && source.Kind.ValueString() != field.kind {
+			resp.Diagnostics.AddAttributeError(path.Root("source").AtName(field.name), "Invalid source attribute", fmt.Sprintf("source.%s can only be configured for a %s source.", field.name, field.kind))
 		}
 	}
 	if source.Kind.ValueString() == "vercel" {
@@ -173,6 +200,21 @@ func (r *projectDeploymentCheckResource) ModifyPlan(ctx context.Context, req res
 	}
 	if req.State.Raw.IsNull() && config.Source.IsNull() {
 		resp.Diagnostics.AddAttributeError(path.Root("source"), "Missing Deployment Check source", "A source is required when creating a project Deployment Check.")
+	}
+	if !req.State.Raw.IsNull() {
+		var state, plan ProjectDeploymentCheck
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		// PATCH cannot set requires to none, although POST supports it.
+		if plan.Requires.ValueString() == "none" && !plan.Requires.Equal(state.Requires) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("requires"))
+			if config.Source.IsNull() {
+				resp.Diagnostics.AddAttributeError(path.Root("source"), "Missing replacement source", "Changing requires to none replaces the check. Configure a writable source to create the replacement.")
+			}
+		}
 	}
 }
 
@@ -376,7 +418,7 @@ func (r *projectDeploymentCheckResource) ImportState(ctx context.Context, req re
 	if resolvedTeamID == "" && strings.HasPrefix(check.OwnerID, "team_") {
 		resolvedTeamID = check.OwnerID
 	}
-	result, diags := projectDeploymentCheckFromClient(ctx, check, types.StringValue(check.ProjectID), toTeamID(resolvedTeamID))
+	result, diags := projectDeploymentCheckFromClient(ctx, check, types.StringValue(projectID), toTeamID(resolvedTeamID))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

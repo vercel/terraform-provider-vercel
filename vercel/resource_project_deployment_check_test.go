@@ -46,6 +46,7 @@ func projectDeploymentCheckImportID(name string) resource.ImportStateIdFunc {
 func TestAcc_ProjectDeploymentCheck(t *testing.T) {
 	resourceName := "vercel_project_deployment_check.example"
 	nameSuffix := acctest.RandString(16)
+	var checkID string
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
@@ -74,7 +75,34 @@ func TestAcc_ProjectDeploymentCheck(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", "Updated deployment check"),
 					resource.TestCheckResourceAttr(resourceName, "timeout", "600"),
+					resource.TestCheckResourceAttrWith(resourceName, "id", func(value string) error {
+						checkID = value
+						return nil
+					}),
 					testAccProjectDeploymentCheckExists(testClient(t), resourceName),
+				),
+			},
+			{
+				Config: cfg(testAccProjectDeploymentCheckProjectConfig(nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.example", testTeam(t)),
+					func(state *terraform.State) error {
+						if checkID == "" {
+							return fmt.Errorf("no deployment check ID was captured before removal")
+						}
+						project, ok := state.RootModule().Resources["vercel_project.example"]
+						if !ok {
+							return fmt.Errorf("parent project is missing from state")
+						}
+						_, err := testClient(t).GetProjectDeploymentCheck(context.Background(), project.Primary.ID, checkID, testTeam(t))
+						if err == nil {
+							return fmt.Errorf("deployment check %s still exists after removal", checkID)
+						}
+						if !client.NotFound(err) {
+							return fmt.Errorf("checking for deleted deployment check: %w", err)
+						}
+						return nil
+					},
 				),
 			},
 		},
@@ -82,13 +110,9 @@ func TestAcc_ProjectDeploymentCheck(t *testing.T) {
 }
 
 func testAccProjectDeploymentCheckConfig(nameSuffix, checkName string, timeout int) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "example" {
-  name = "test-acc-project-deployment-check-%s"
-}
-
+	return testAccProjectDeploymentCheckProjectConfig(nameSuffix) + fmt.Sprintf(`
 resource "vercel_project_deployment_check" "example" {
-  project_id = vercel_project.example.id
+  project_id = vercel_project.example.name
   name       = %q
   requires   = "deployment-url"
   blocks     = "deployment-alias"
@@ -99,5 +123,13 @@ resource "vercel_project_deployment_check" "example" {
     kind = "webhook"
   }
 }
-`, nameSuffix, checkName, timeout)
+`, checkName, timeout)
+}
+
+func testAccProjectDeploymentCheckProjectConfig(nameSuffix string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "example" {
+  name = "test-acc-project-deployment-check-%s"
+}
+`, nameSuffix)
 }
