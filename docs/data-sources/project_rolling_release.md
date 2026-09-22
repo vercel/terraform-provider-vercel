@@ -4,11 +4,17 @@ page_title: "vercel_project_rolling_release Data Source - terraform-provider-ver
 subcategory: ""
 description: |-
   Data source for a Vercel project rolling release configuration.
+  This provider supports two to ten stages, including a non-final stage whose native rules identify the advancement type. This is a provider support restriction, not a claim that the REST API rejects every single-stage policy.
+  Earlier provider versions accepted one stage. Policies containing only the final 100% stage now fail validation, refresh and import. Keep the prior provider pin until you have reviewed their conversion to supported stages. This provider does not infer missing advancement rules from old state.
 ---
 
 # vercel_project_rolling_release (Data Source)
 
 Data source for a Vercel project rolling release configuration.
+
+This provider supports two to ten stages, including a non-final stage whose native rules identify the advancement type. This is a provider support restriction, not a claim that the REST API rejects every single-stage policy.
+
+Earlier provider versions accepted one stage. Policies containing only the final 100% stage now fail validation, refresh and import. Keep the prior provider pin until you have reviewed their conversion to supported stages. This provider does not infer missing advancement rules from old state.
 
 ## Example Usage
 

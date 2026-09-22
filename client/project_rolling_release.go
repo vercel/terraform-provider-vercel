@@ -9,9 +9,8 @@ import (
 
 // RollingReleaseStage represents a stage in a rolling release
 type RollingReleaseStage struct {
-	TargetPercentage int  `json:"targetPercentage"`          // Required: 0-100
-	Duration         *int `json:"duration,omitempty"`        // Required for automatic advancement: 1-10000 minutes
-	RequireApproval  bool `json:"requireApproval,omitempty"` // Only in response for manual-approval type
+	TargetPercentage int  `json:"targetPercentage"`   // Required: 0-100
+	Duration         *int `json:"duration,omitempty"` // Required for automatic advancement: 1-10000 minutes
 }
 
 // RollingRelease represents the rolling release configuration
@@ -32,7 +31,7 @@ func (c *Client) GetRollingRelease(ctx context.Context, projectID, teamID string
 	teamId := c.TeamID(teamID)
 	url := fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, projectID, teamId)
 
-	var d RollingReleaseInfo
+	var d rollingReleaseResponse
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "GET",
@@ -43,10 +42,7 @@ func (c *Client) GetRollingRelease(ctx context.Context, projectID, teamID string
 		return RollingReleaseInfo{}, fmt.Errorf("error getting rolling-release: %w", err)
 	}
 
-	d.ProjectID = projectID
-	d.TeamID = teamId
-
-	return d, nil
+	return RollingReleaseInfo{RollingRelease: d.RollingRelease, ProjectID: projectID, TeamID: teamId}, nil
 }
 
 // CreateRollingReleaseRequest defines the information that needs to be passed to Vercel in order to
@@ -66,19 +62,22 @@ func (c *Client) CreateRollingRelease(ctx context.Context, request CreateRolling
 		"stages":          request.RollingRelease.Stages,
 	}
 
-	var result RollingReleaseInfo
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "PATCH",
 		url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
 		body:   string(mustMarshal(enableRequest)),
-	}, &result)
+	}, nil)
 	if err != nil {
 		return RollingReleaseInfo{}, fmt.Errorf("error enabling rolling release: %w", err)
 	}
 
-	result.ProjectID = request.ProjectID
-	result.TeamID = request.TeamID
+	// Record the native GET result, not the submitted settings or PATCH acknowledgment.
+	result, err := c.GetRollingRelease(ctx, request.ProjectID, request.TeamID)
+	if err != nil {
+		// The write succeeded, so keep its identity even when verification fails.
+		return RollingReleaseInfo{ProjectID: request.ProjectID, TeamID: request.TeamID}, err
+	}
 	tflog.Info(ctx, "created rolling release", map[string]any{
 		"response": result,
 		"request":  request,
@@ -103,19 +102,21 @@ func (c *Client) UpdateRollingRelease(ctx context.Context, request UpdateRolling
 		"stages":          request.RollingRelease.Stages,
 	}
 
-	var result RollingReleaseInfo
 	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "PATCH",
 		url:    fmt.Sprintf("%s/v1/projects/%s/rolling-release/config?teamId=%s", c.baseURL, request.ProjectID, request.TeamID),
 		body:   string(mustMarshal(enableRequest)),
-	}, &result)
+	}, nil)
 	if err != nil {
 		return RollingReleaseInfo{}, fmt.Errorf("error enabling rolling release: %w", err)
 	}
 
-	result.ProjectID = request.ProjectID
-	result.TeamID = request.TeamID
+	// Record the native GET result, not the submitted settings or PATCH acknowledgment.
+	result, err := c.GetRollingRelease(ctx, request.ProjectID, request.TeamID)
+	if err != nil {
+		return RollingReleaseInfo{}, err
+	}
 	tflog.Info(ctx, "updated rolling release", map[string]any{
 		"response": result,
 		"request":  request,

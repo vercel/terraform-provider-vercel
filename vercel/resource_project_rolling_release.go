@@ -28,6 +28,10 @@ func newProjectRollingReleaseResource() resource.Resource {
 	return &projectRollingReleaseResource{}
 }
 
+const rollingReleaseSupportedStages = `This provider supports two to ten stages, including a non-final stage whose native rules identify the advancement type. This is a provider support restriction, not a claim that the REST API rejects every single-stage policy.
+
+Earlier provider versions accepted one stage. Policies containing only the final 100% stage now fail validation, refresh and import. Keep the prior provider pin until you have reviewed their conversion to supported stages. This provider does not infer missing advancement rules from old state.`
+
 type projectRollingReleaseResource struct {
 	client *client.Client
 }
@@ -166,7 +170,7 @@ func (v terminalStageValidator) ValidateList(ctx context.Context, req validator.
 // Schema returns the schema information for a project rolling release resource.
 func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Resource for a Vercel project rolling release configuration.",
+		MarkdownDescription: "Resource for a Vercel project rolling release configuration.\n\n" + rollingReleaseSupportedStages,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -189,10 +193,10 @@ func (r *projectRollingReleaseResource) Schema(ctx context.Context, _ resource.S
 				},
 			},
 			"stages": schema.ListNestedAttribute{
-				MarkdownDescription: "The stages for the rolling release configuration. The last stage must have target_percentage = 100.",
+				MarkdownDescription: "Two to ten stages supported by this provider. Include at least one non-final stage and end with target_percentage = 100.",
 				Required:            true,
 				Validators: []validator.List{
-					listvalidator.SizeAtLeast(1),
+					listvalidator.SizeAtLeast(2),
 					listvalidator.SizeAtMost(10),
 					terminalStageValidator{},
 				},
@@ -246,7 +250,6 @@ func (e *RollingReleaseInfo) ToCreateRollingReleaseRequest() (client.CreateRolli
 	for i, stage := range rollingReleaseStages {
 		clientStage := client.RollingReleaseStage{
 			TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
-			RequireApproval:  advancementType == "manual-approval",
 		}
 
 		if advancementType == "automatic" && !stage.Duration.IsNull() && !stage.Duration.IsUnknown() {
@@ -289,7 +292,6 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	for i, stage := range rollingReleaseStages {
 		clientStage := client.RollingReleaseStage{
 			TargetPercentage: int(stage.TargetPercentage.ValueInt64()),
-			RequireApproval:  advancementType == "manual-approval",
 		}
 
 		// Add duration for automatic advancement type
@@ -318,7 +320,7 @@ func (e *RollingReleaseInfo) toUpdateRollingReleaseRequest() (client.UpdateRolli
 	}, diags
 }
 
-func ConvertResponseToRollingRelease(response client.RollingReleaseInfo, plan *RollingReleaseInfo, ctx context.Context) (RollingReleaseInfo, diag.Diagnostics) {
+func ConvertResponseToRollingRelease(response client.RollingReleaseInfo, ctx context.Context) (RollingReleaseInfo, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	result := RollingReleaseInfo{
@@ -327,57 +329,8 @@ func ConvertResponseToRollingRelease(response client.RollingReleaseInfo, plan *R
 		TeamID:    types.StringValue(response.TeamID),
 	}
 
-	// If disabled or advancementType is empty, check if we have stages to determine if it's configured
-	if !response.RollingRelease.Enabled || response.RollingRelease.AdvancementType == "" {
-		if plan != nil &&
-			!plan.AdvancementType.IsNull() && plan.AdvancementType.ValueString() != "" &&
-			!plan.Stages.IsNull() && len(plan.Stages.Elements()) > 0 {
-
-			result.AdvancementType = plan.AdvancementType
-			result.Stages = plan.Stages
-			return result, diags
-		}
-
-		if len(response.RollingRelease.Stages) > 0 {
-			advancementType := "manual-approval"
-			for _, stage := range response.RollingRelease.Stages {
-				if stage.Duration != nil {
-					advancementType = "automatic"
-					break
-				}
-			}
-			result.AdvancementType = types.StringValue(advancementType)
-
-			var rollingReleaseStages []RollingReleaseStage
-			for _, stage := range response.RollingRelease.Stages {
-				rollingReleaseStage := RollingReleaseStage{
-					TargetPercentage: types.Int64Value(int64(stage.TargetPercentage)),
-				}
-				if stage.Duration != nil {
-					rollingReleaseStage.Duration = types.Int64Value(int64(*stage.Duration))
-				} else {
-					rollingReleaseStage.Duration = types.Int64Null()
-				}
-				rollingReleaseStages = append(rollingReleaseStages, rollingReleaseStage)
-			}
-			// Do NOT add a terminal 100% stage manually!
-			stages := make([]attr.Value, len(rollingReleaseStages))
-			for i, stage := range rollingReleaseStages {
-				stageObj := types.ObjectValueMust(
-					RollingReleaseStageElementType.AttrTypes,
-					map[string]attr.Value{
-						"target_percentage": stage.TargetPercentage,
-						"duration":          stage.Duration,
-					},
-				)
-				stages[i] = stageObj
-			}
-			stagesList := types.ListValueMust(RollingReleaseStageElementType, stages)
-			result.Stages = stagesList
-		} else {
-			result.AdvancementType = types.StringNull()
-			result.Stages = types.ListNull(RollingReleaseStageElementType)
-		}
+	if !response.RollingRelease.Enabled {
+		diags.AddError("Rolling release configuration is absent", "The API did not return an enabled rolling release configuration.")
 		return result, diags
 	}
 
@@ -471,6 +424,16 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 	})
 
 	out, err := r.client.CreateRollingRelease(ctx, request)
+	if out.ProjectID != "" {
+		// Keep acknowledged creations recoverable without claiming unverified settings.
+		resp.Diagnostics.Append(resp.State.Set(ctx, RollingReleaseInfo{
+			ID:              types.StringValue(out.ProjectID),
+			ProjectID:       types.StringValue(out.ProjectID),
+			TeamID:          types.StringValue(out.TeamID),
+			AdvancementType: types.StringNull(),
+			Stages:          types.ListNull(RollingReleaseStageElementType),
+		})...)
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project rolling release",
@@ -480,9 +443,12 @@ func (r *projectRollingReleaseResource) Create(ctx context.Context, req resource
 		)
 		return
 	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Convert response to state
-	result, diags := ConvertResponseToRollingRelease(out, &plan, ctx)
+	result, diags := ConvertResponseToRollingRelease(out, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -526,6 +492,11 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
+	if !out.RollingRelease.Enabled {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	// Log the response for debugging
 	tflog.Debug(ctx, "got rolling release from API", map[string]any{
 		"enabled":          out.RollingRelease.Enabled,
@@ -533,7 +504,7 @@ func (r *projectRollingReleaseResource) Read(ctx context.Context, req resource.R
 		"stages":           out.RollingRelease.Stages,
 	})
 
-	result, diags := ConvertResponseToRollingRelease(out, &state, ctx)
+	result, diags := ConvertResponseToRollingRelease(out, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -586,7 +557,7 @@ func (r *projectRollingReleaseResource) Update(ctx context.Context, req resource
 	}
 
 	// Convert response to state
-	result, diags := ConvertResponseToRollingRelease(out, &plan, ctx)
+	result, diags := ConvertResponseToRollingRelease(out, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -651,7 +622,7 @@ func (r *projectRollingReleaseResource) ImportState(ctx context.Context, req res
 	}
 
 	// For import, we don't have any state to preserve
-	result, diags := ConvertResponseToRollingRelease(out, nil, ctx)
+	result, diags := ConvertResponseToRollingRelease(out, ctx)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
