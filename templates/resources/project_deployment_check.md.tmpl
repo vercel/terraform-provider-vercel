@@ -30,7 +30,7 @@ Integration checks require an integration installation token. The API identifies
 
 - `requires` selects when the check can run: `build-ready`, `deployment-url`, or `none`.
 - `blocks = "deployment-alias"` gates domain assignment; `blocks = "none"` makes the check non-blocking. Omission uses the API default, `deployment-alias`.
-- `targets` contains environment slugs such as `production`, `preview`, or custom environment slugs. Omission defaults to production. Use `["all"]` to select every environment; do not combine `all` with other targets or supply an empty set.
+- `targets` accepts `production`, `preview`, or custom environment IDs (not slugs). For a custom environment managed by Terraform, use `targets = [vercel_custom_environment.staging.id]`. Omission defaults to production. Use `["all"]` to select every environment; do not combine `all` with other targets or supply an empty set.
 - `is_rerequestable` defaults to false. Enable it only when your webhook runner or integration handles rerun requests.
 - Optional computed settings are populated from the API. Omitting a previously configured setting keeps its current value; it does not reset the setting to its creation default.
 

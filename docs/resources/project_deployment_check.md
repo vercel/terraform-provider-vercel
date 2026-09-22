@@ -115,7 +115,7 @@ resource "vercel_project_deployment_check" "integration" {
 
 - `requires` selects when the check can run: `build-ready`, `deployment-url`, or `none`.
 - `blocks = "deployment-alias"` gates domain assignment; `blocks = "none"` makes the check non-blocking. Omission uses the API default, `deployment-alias`.
-- `targets` contains environment slugs such as `production`, `preview`, or custom environment slugs. Omission defaults to production. Use `["all"]` to select every environment; do not combine `all` with other targets or supply an empty set.
+- `targets` accepts `production`, `preview`, or custom environment IDs (not slugs). For a custom environment managed by Terraform, use `targets = [vercel_custom_environment.staging.id]`. Omission defaults to production. Use `["all"]` to select every environment; do not combine `all` with other targets or supply an empty set.
 - `is_rerequestable` defaults to false. Enable it only when your webhook runner or integration handles rerun requests.
 - Optional computed settings are populated from the API. Omitting a previously configured setting keeps its current value; it does not reset the setting to its creation default.
 
@@ -135,7 +135,7 @@ Changing `project_id`, an explicitly configured `team_id`, or a configured sourc
 - `blocks` (String) The deployment stage blocked by the check. New checks currently support `deployment-alias` and `none`.
 - `is_rerequestable` (Boolean) Whether users can rerun the check. Defaults to false; must be false for a `git-provider` source.
 - `source` (Attributes) The system that supplies the Deployment Check. Required when creating a check; changing a configured source field replaces the check. Omit it when managing an imported check whose source is not writable through the API. (see [below for nested schema](#nestedatt--source))
-- `targets` (Set of String) Deployment environment slugs to which the check applies, such as `production`, `preview`, or a custom environment slug. Use `["all"]` for every environment; `all` cannot be combined with other targets. The API defaults to `["production"]`.
+- `targets` (Set of String) Deployment environments to which the check applies: `production`, `preview`, or a custom environment ID. Use `["all"]` for every environment; `all` cannot be combined with other targets. The API defaults to `["production"]`.
 - `team_id` (String) The ID of the Vercel team.
 - `timeout` (Number) The timeout value supplied to check runners by the Checks API. When omitted, the API determines the value.
 

@@ -70,7 +70,7 @@ func (r *projectDeploymentCheckResource) Schema(_ context.Context, _ resource.Sc
 			"requires":         schema.StringAttribute{Required: true, MarkdownDescription: "The deployment stage required before the check runs: `build-ready`, `deployment-url`, or `none`. Changing this to `none` replaces the check because the API does not support that update.", Validators: []validator.String{stringvalidator.OneOf("build-ready", "deployment-url", "none")}},
 			"is_rerequestable": schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether users can rerun the check. Defaults to false; must be false for a `git-provider` source.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()}},
 			"blocks":           schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The deployment stage blocked by the check. New checks currently support `deployment-alias` and `none`.", Validators: []validator.String{stringvalidator.OneOf("deployment-alias", "none")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
-			"targets":          schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, MarkdownDescription: "Deployment environment slugs to which the check applies, such as `production`, `preview`, or a custom environment slug. Use `[\"all\"]` for every environment; `all` cannot be combined with other targets. The API defaults to `[\"production\"]`.", Validators: []validator.Set{setvalidator.SizeAtLeast(1), setvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1), validateStringIsTrimmed())}, PlanModifiers: []planmodifier.Set{setplanmodifier.UseNonNullStateForUnknown()}},
+			"targets":          schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, MarkdownDescription: "Deployment environments to which the check applies: `production`, `preview`, or a custom environment ID. Use `[\"all\"]` for every environment; `all` cannot be combined with other targets. The API defaults to `[\"production\"]`.", Validators: []validator.Set{setvalidator.SizeAtLeast(1), setvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1), validateStringIsTrimmed())}, PlanModifiers: []planmodifier.Set{setplanmodifier.UseNonNullStateForUnknown()}},
 			"timeout":          schema.Int64Attribute{Optional: true, Computed: true, MarkdownDescription: "The timeout value supplied to check runners by the Checks API. When omitted, the API determines the value.", Validators: []validator.Int64{int64validator.AtLeast(1)}, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseNonNullStateForUnknown()}},
 			"source": schema.SingleNestedAttribute{
 				Optional:            true,
@@ -127,7 +127,7 @@ func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req
 		}
 		for _, target := range config.Targets.Elements() {
 			if allKnown && target.Equal(types.StringValue("all")) && len(config.Targets.Elements()) > 1 {
-				resp.Diagnostics.AddAttributeError(path.Root("targets"), "Invalid deployment targets", "The all target cannot be combined with other environment slugs.")
+				resp.Diagnostics.AddAttributeError(path.Root("targets"), "Invalid deployment targets", "The all target cannot be combined with other environment targets.")
 			}
 		}
 	}
