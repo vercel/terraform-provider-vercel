@@ -43,6 +43,15 @@ func TestAcc_Project(t *testing.T) {
 				                `,
 				ExpectError: regexp.MustCompile("Invalid Framework"),
 			},
+			{
+				Config: fmt.Sprintf(`
+				                    resource "vercel_project" "test" {
+				                        name = "foo"
+				                        ignore_command = "%s"
+				                    }
+				                `, strings.Repeat("a", 257)),
+				ExpectError: regexp.MustCompile("string length must be at most 256"),
+			},
 			// Create and Read testing
 			{
 				Config: cfg(testAccProjectConfig(projectSuffix)),

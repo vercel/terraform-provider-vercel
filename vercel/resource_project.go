@@ -112,6 +112,9 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"ignore_command": schema.StringAttribute{
 				Optional:    true,
 				Description: "When a commit is pushed to the Git repository that is connected with your Project, its SHA will determine if a new Build has to be issued. If the SHA was deployed before, no new Build will be issued. You can customize this behavior with a command that exits with code 1 (new Build needed) or code 0.",
+				Validators: []validator.String{
+					stringvalidator.LengthAtMost(256),
+				},
 			},
 			"serverless_function_region": schema.StringAttribute{
 				DeprecationMessage: "This attribute is deprecated. Please use resource_config.function_default_regions instead.",
