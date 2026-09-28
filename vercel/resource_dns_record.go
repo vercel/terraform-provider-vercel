@@ -64,7 +64,7 @@ Provides a DNS Record resource.
 
 DNS records are instructions that live in authoritative DNS servers and provide information about a domain.
 
-~> The ` + "`value` field" + ` must be specified on all DNS record types except ` + "`SRV`" + `. When using ` + "`SRV`" + ` DNS records, the ` + "`srv`" + ` field must be specified.
+~> The ` + "`value` field" + ` must be specified on all DNS record types except ` + "`SRV`" + ` and ` + "`HTTPS`" + `. When using ` + "`SRV`" + ` DNS records, the ` + "`srv`" + ` field must be specified. When using ` + "`HTTPS`" + ` DNS records, the ` + "`https`" + ` field must be specified.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/custom-domains#dns-records)
         `,
@@ -88,15 +88,15 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Required:    true,
 			},
 			"type": schema.StringAttribute{
-				Description:   "The type of DNS record. Available types: " + "`A`" + ", " + "`AAAA`" + ", " + "`ALIAS`" + ", " + "`CAA`" + ", " + "`CNAME`" + ", " + "`MX`" + ", " + "`NS`" + ", " + "`SRV`" + ", " + "`TXT`" + ".",
+				Description:   "The type of DNS record. Available types: " + "`A`" + ", " + "`AAAA`" + ", " + "`ALIAS`" + ", " + "`CAA`" + ", " + "`CNAME`" + ", " + "`HTTPS`" + ", " + "`MX`" + ", " + "`NS`" + ", " + "`SRV`" + ", " + "`TXT`" + ".",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				Required:      true,
 				Validators: []validator.String{
-					stringvalidator.OneOf("A", "AAAA", "ALIAS", "CAA", "CNAME", "MX", "NS", "SRV", "TXT"),
+					stringvalidator.OneOf("A", "AAAA", "ALIAS", "CAA", "CNAME", "HTTPS", "MX", "NS", "SRV", "TXT"),
 				},
 			},
 			"value": schema.StringAttribute{
-				// required if any record type apart from SRV.
+				// required if any record type apart from SRV and HTTPS.
 				Description: "The value of the DNS record. The format depends on the 'type' property.\nFor an 'A' record, this should be a valid IPv4 address.\nFor an 'AAAA' record, this should be an IPv6 address.\nFor 'ALIAS' records, this should be a hostname.\nFor 'CAA' records, this should specify specify which Certificate Authorities (CAs) are allowed to issue certificates for the domain.\nFor 'CNAME' records, this should be a different domain name.\nFor 'MX' records, this should specify the mail server responsible for accepting messages on behalf of the domain name.\nFor 'TXT' records, this can contain arbitrary text.",
 				Optional:    true,
 			},
@@ -160,6 +160,31 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					},
 				},
 			},
+			"https": schema.SingleNestedAttribute{
+				Description: "Settings for an HTTPS record.",
+				Optional:    true, // required for HTTPS records.
+				Attributes: map[string]schema.Attribute{
+					"priority": schema.Int64Attribute{
+						Description: "The priority of the record. A value of 0 indicates AliasMode, while a value greater than 0 indicates ServiceMode where lower values are preferred.",
+						Required:    true,
+						Validators: []validator.Int64{
+							int64validator.AtLeast(0),
+							int64validator.AtMost(65535),
+						},
+					},
+					"target": schema.StringAttribute{
+						Description: "The target hostname of the record. Use `.` to indicate the owner name of the record itself.",
+						Required:    true,
+						Validators: []validator.String{
+							stringvalidator.LengthBetween(1, 255),
+						},
+					},
+					"params": schema.StringAttribute{
+						Description: "The SvcParams of the record, as a space-separated list of `key=value` pairs, for example `alpn=h2,h3`.",
+						Optional:    true,
+					},
+				},
+			},
 		},
 	}
 }
@@ -181,6 +206,21 @@ var srvAttrType = types.ObjectType{
 	},
 }
 
+// HTTPS reflect the state terraform stores internally for a nested HTTPS Record.
+type HTTPS struct {
+	Priority types.Int64  `tfsdk:"priority"`
+	Target   types.String `tfsdk:"target"`
+	Params   types.String `tfsdk:"params"`
+}
+
+var httpsAttrType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"priority": types.Int64Type,
+		"target":   types.StringType,
+		"params":   types.StringType,
+	},
+}
+
 // DNSRecord reflects the state terraform stores internally for a DNS Record.
 type DNSRecord struct {
 	ID         types.String `tfsdk:"id"`
@@ -188,6 +228,7 @@ type DNSRecord struct {
 	MXPriority types.Int64  `tfsdk:"mx_priority"`
 	Name       types.String `tfsdk:"name"`
 	SRV        types.Object `tfsdk:"srv"`
+	HTTPS      types.Object `tfsdk:"https"`
 	TTL        types.Int64  `tfsdk:"ttl"`
 	TeamID     types.String `tfsdk:"team_id"`
 	Type       types.String `tfsdk:"type"`
@@ -210,6 +251,19 @@ func (d DNSRecord) toCreateDNSRecordRequest() client.CreateDNSRecordRequest {
 		}
 	}
 
+	var https *client.HTTPS = nil
+	if d.Type.ValueString() == "HTTPS" {
+		if !d.HTTPS.IsNull() && !d.HTTPS.IsUnknown() {
+			var h HTTPS
+			_ = d.HTTPS.As(context.Background(), &h, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+			https = &client.HTTPS{
+				Priority: h.Priority.ValueInt64(),
+				Target:   h.Target.ValueString(),
+				Params:   h.Params.ValueString(),
+			}
+		}
+	}
+
 	return client.CreateDNSRecordRequest{
 		Domain:     d.Domain.ValueString(),
 		MXPriority: d.MXPriority.ValueInt64(),
@@ -218,6 +272,7 @@ func (d DNSRecord) toCreateDNSRecordRequest() client.CreateDNSRecordRequest {
 		Type:       d.Type.ValueString(),
 		Value:      d.Value.ValueString(),
 		SRV:        srv,
+		HTTPS:      https,
 		Comment:    d.Comment.ValueString(),
 	}
 }
@@ -239,6 +294,18 @@ func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 			Weight:   s.Weight.ValueInt64Pointer(),
 		}
 	}
+	var https *client.HTTPSUpdate = nil
+	if !d.HTTPS.IsNull() && !d.HTTPS.IsUnknown() {
+		var h HTTPS
+		_ = d.HTTPS.As(context.Background(), &h, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+		https = &client.HTTPSUpdate{
+			Priority: h.Priority.ValueInt64Pointer(),
+			Target:   h.Target.ValueStringPointer(),
+			// The API keeps the existing params when they are omitted or null, so an
+			// empty string is sent to clear them.
+			Params: h.Params.ValueString(),
+		}
+	}
 	var ttlPtr *int64
 	if !d.TTL.IsNull() && !d.TTL.IsUnknown() {
 		ttlVal := d.TTL.ValueInt64()
@@ -248,13 +315,14 @@ func (d DNSRecord) toUpdateRequest() client.UpdateDNSRecordRequest {
 		MXPriority: d.MXPriority.ValueInt64Pointer(),
 		Name:       d.Name.ValueStringPointer(),
 		SRV:        srv,
+		HTTPS:      https,
 		TTL:        ttlPtr,
 		Value:      d.Value.ValueStringPointer(),
 		Comment:    d.Comment.ValueString(),
 	}
 }
 
-func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj types.Object) (record DNSRecord, err error) {
+func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj types.Object, httpsObj types.Object) (record DNSRecord, err error) {
 	record = DNSRecord{
 		Domain:     types.StringValue(r.Domain),
 		ID:         types.StringValue(r.ID),
@@ -264,6 +332,8 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj t
 		TeamID:     toTeamID(r.TeamID),
 		Type:       types.StringValue(r.RecordType),
 		Comment:    types.StringValue(r.Comment),
+		SRV:        types.ObjectNull(srvAttrType.AttrTypes),
+		HTTPS:      types.ObjectNull(httpsAttrType.AttrTypes),
 	}
 
 	if r.RecordType == "SRV" {
@@ -309,6 +379,40 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj t
 		return record, nil
 	}
 
+	if r.RecordType == "HTTPS" {
+		// The returned 'Value' field is comprised of the various parts of the HTTPS block.
+		// SvcParams may themselves contain spaces, so only split off the priority and target.
+		split := strings.SplitN(r.Value, " ", 3)
+		if len(split) < 2 {
+			return record, fmt.Errorf("expected a 2 or 3 part value '{priority} {target} {params}', but got %s", r.Value)
+		}
+		priority, err := strconv.Atoi(split[0])
+		if err != nil {
+			return record, fmt.Errorf("expected HTTPS record priority to be an int, but got %s", split[0])
+		}
+		targetVal := types.StringValue(split[1])
+		paramsVal := types.StringNull()
+		if len(split) == 3 && strings.TrimSpace(split[2]) != "" {
+			paramsVal = types.StringValue(strings.TrimSpace(split[2]))
+		}
+		// Preserve user formatting for target (without trailing dot) if planned target matches
+		if !httpsObj.IsNull() && !httpsObj.IsUnknown() {
+			var h HTTPS
+			_ = httpsObj.As(context.Background(), &h, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
+			if fmt.Sprintf("%s.", h.Target.ValueString()) == targetVal.ValueString() {
+				targetVal = h.Target
+			}
+		}
+		record.HTTPS = types.ObjectValueMust(httpsAttrType.AttrTypes, map[string]attr.Value{
+			"priority": types.Int64Value(int64(priority)),
+			"target":   targetVal,
+			"params":   paramsVal,
+		})
+		// HTTPS records have no value
+		record.Value = types.StringNull()
+		return record, nil
+	}
+
 	if r.RecordType == "MX" {
 		split := strings.Split(r.Value, " ")
 		if len(split) != 2 {
@@ -324,8 +428,6 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj t
 		if split[1] == fmt.Sprintf("%s.", value.ValueString()) {
 			record.Value = value
 		}
-		// Ensure SRV is properly initialized for non-SRV records
-		record.SRV = types.ObjectNull(srvAttrType.AttrTypes)
 		return record, nil
 	}
 
@@ -333,8 +435,6 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj t
 	if r.Value == fmt.Sprintf("%s.", value.ValueString()) {
 		record.Value = value
 	}
-	// Ensure SRV is properly initialized for non-SRV records
-	record.SRV = types.ObjectNull(srvAttrType.AttrTypes)
 	return record, nil
 }
 
@@ -354,7 +454,14 @@ func (r *dnsRecordResource) ValidateConfig(ctx context.Context, req resource.Val
 		)
 	}
 
-	if config.Type.ValueString() != "SRV" && config.Value.IsNull() {
+	if config.Type.ValueString() == "HTTPS" && (config.HTTPS.IsNull() || config.HTTPS.IsUnknown()) {
+		resp.Diagnostics.AddError(
+			"DNS Record Invalid",
+			"A DNS Record type of 'HTTPS' requires the `https` attribute to be set",
+		)
+	}
+
+	if config.Type.ValueString() != "SRV" && config.Type.ValueString() != "HTTPS" && config.Value.IsNull() {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			fmt.Sprintf("The `value` attribute must be set on records of `type` '%s'", config.Type.ValueString()),
@@ -365,6 +472,20 @@ func (r *dnsRecordResource) ValidateConfig(ctx context.Context, req resource.Val
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"The `value` attribute should not be set on records of `type` 'SRV'",
+		)
+	}
+
+	if config.Type.ValueString() == "HTTPS" && !config.Value.IsNull() {
+		resp.Diagnostics.AddError(
+			"DNS Record Invalid",
+			"The `value` attribute should not be set on records of `type` 'HTTPS'",
+		)
+	}
+
+	if config.Type.ValueString() != "HTTPS" && !config.HTTPS.IsNull() && !config.HTTPS.IsUnknown() {
+		resp.Diagnostics.AddError(
+			"DNS Record Invalid",
+			"The `https` attribute should only be set on records of `type` 'HTTPS'",
 		)
 	}
 
@@ -409,7 +530,7 @@ func (r *dnsRecordResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	result, err := convertResponseToDNSRecord(out, plan.Value, plan.SRV)
+	result, err := convertResponseToDNSRecord(out, plan.Value, plan.SRV, plan.HTTPS)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing DNS Record response",
@@ -457,7 +578,7 @@ func (r *dnsRecordResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	result, err := convertResponseToDNSRecord(out, state.Value, state.SRV)
+	result, err := convertResponseToDNSRecord(out, state.Value, state.SRV, state.HTTPS)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing DNS Record response",
@@ -513,7 +634,7 @@ func (r *dnsRecordResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	result, err := convertResponseToDNSRecord(out, plan.Value, plan.SRV)
+	result, err := convertResponseToDNSRecord(out, plan.Value, plan.SRV, plan.HTTPS)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error parsing DNS Record response",
@@ -592,7 +713,7 @@ func (r *dnsRecordResource) ImportState(ctx context.Context, req resource.Import
 		return
 	}
 
-	result, err := convertResponseToDNSRecord(out, types.String{}, types.ObjectNull(srvAttrType.AttrTypes))
+	result, err := convertResponseToDNSRecord(out, types.String{}, types.ObjectNull(srvAttrType.AttrTypes), types.ObjectNull(httpsAttrType.AttrTypes))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error processing DNS Record response",

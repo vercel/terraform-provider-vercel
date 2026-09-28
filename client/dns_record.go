@@ -15,12 +15,20 @@ type SRV struct {
 	Weight   int64  `json:"weight"`
 }
 
+// HTTPS defines the metadata required for creating an HTTPS type DNS Record.
+type HTTPS struct {
+	Priority int64  `json:"priority"`
+	Target   string `json:"target"`
+	Params   string `json:"params,omitempty"`
+}
+
 // CreateDNSRecordRequest defines the information necessary to create a DNS record within Vercel.
 type CreateDNSRecordRequest struct {
 	Domain     string `json:"-"`
 	MXPriority int64  `json:"mxPriority,omitempty"`
 	Name       string `json:"name"`
 	SRV        *SRV   `json:"srv,omitempty"`
+	HTTPS      *HTTPS `json:"https,omitempty"`
 	TTL        int64  `json:"ttl,omitempty"`
 	Type       string `json:"type"`
 	Value      string `json:"value,omitempty"`
@@ -129,14 +137,22 @@ type SRVUpdate struct {
 	Weight   *int64  `json:"weight"`
 }
 
+// HTTPSUpdate defines the updatable fields within an HTTPS block of a DNS record.
+type HTTPSUpdate struct {
+	Priority *int64  `json:"priority"`
+	Target   *string `json:"target"`
+	Params   string  `json:"params"`
+}
+
 // UpdateDNSRecordRequest defines the structure of the request body for updating a DNS record.
 type UpdateDNSRecordRequest struct {
-	MXPriority *int64     `json:"mxPriority,omitempty"`
-	Name       *string    `json:"name,omitempty"`
-	SRV        *SRVUpdate `json:"srv,omitempty"`
-	TTL        *int64     `json:"ttl,omitempty"`
-	Value      *string    `json:"value,omitempty"`
-	Comment    string     `json:"comment"`
+	MXPriority *int64       `json:"mxPriority,omitempty"`
+	Name       *string      `json:"name,omitempty"`
+	SRV        *SRVUpdate   `json:"srv,omitempty"`
+	HTTPS      *HTTPSUpdate `json:"https,omitempty"`
+	TTL        *int64       `json:"ttl,omitempty"`
+	Value      *string      `json:"value,omitempty"`
+	Comment    string       `json:"comment"`
 }
 
 // UpdateDNSRecord updates a DNS record for a specified domain name within Vercel.

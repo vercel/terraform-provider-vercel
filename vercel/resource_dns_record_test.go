@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -64,6 +65,7 @@ func TestAcc_DNSRecord(t *testing.T) {
 			testAccDNSRecordDestroy(testClient(t), "vercel_dns_record.cname", testTeam(t)),
 			testAccDNSRecordDestroy(testClient(t), "vercel_dns_record.mx", testTeam(t)),
 			testAccDNSRecordDestroy(testClient(t), "vercel_dns_record.srv", testTeam(t)),
+			testAccDNSRecordDestroy(testClient(t), "vercel_dns_record.https", testTeam(t)),
 			testAccDNSRecordDestroy(testClient(t), "vercel_dns_record.txt", testTeam(t)),
 		),
 		Steps: []resource.TestStep{
@@ -130,6 +132,15 @@ func TestAcc_DNSRecord(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_dns_record.srv_no_target", "srv.weight", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv_no_target", "srv.priority", "27"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv_no_target", "comment", "srv no target"),
+					testAccDNSRecordExists(testClient(t), "vercel_dns_record.https", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "domain", testDomain(t)),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "type", "HTTPS"),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "ttl", "120"),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.priority", "1"),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.target", "example.com."),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.params", "alpn=h2,h3 port=8443"),
+					resource.TestCheckNoResourceAttr("vercel_dns_record.https", "value"),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "comment", "https"),
 					testAccDNSRecordExists(testClient(t), "vercel_dns_record.txt", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "domain", testDomain(t)),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "type", "TXT"),
@@ -190,6 +201,12 @@ func TestAcc_DNSRecord(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "srv.weight", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "srv.priority", "127"),
 					resource.TestCheckResourceAttr("vercel_dns_record.srv", "srv.target", "example2.com."),
+					testAccDNSRecordExists(testClient(t), "vercel_dns_record.https", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "type", "HTTPS"),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "ttl", "60"),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.priority", "2"),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.target", "example2.com."),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.params", "alpn=h2"),
 					testAccDNSRecordExists(testClient(t), "vercel_dns_record.txt", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "domain", testDomain(t)),
 					resource.TestCheckResourceAttr("vercel_dns_record.txt", "type", "TXT"),
@@ -200,6 +217,15 @@ func TestAcc_DNSRecord(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "type", "NS"),
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "ttl", "60"),
 					resource.TestCheckResourceAttr("vercel_dns_record.ns", "value", "example2.com."),
+				),
+			},
+			{
+				Config: cfg(testAccDNSRecordConfigHTTPSWithoutParams(testDomain(t), nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDNSRecordExists(testClient(t), "vercel_dns_record.https", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.priority", "2"),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.target", "example2.com."),
+					resource.TestCheckNoResourceAttr("vercel_dns_record.https", "https.params"),
 				),
 			},
 		},
@@ -290,6 +316,18 @@ resource "vercel_dns_record" "srv_no_target" {
    }
    comment = "srv no target"
  }
+resource "vercel_dns_record" "https" {
+  domain = "%[1]s"
+  name = "test-acc-%[2]s-https"
+  type = "HTTPS"
+  ttl  = 120
+  https = {
+      priority = 1
+      target   = "example.com."
+      params   = "alpn=h2,h3 port=8443"
+  }
+  comment = "https"
+}
 resource "vercel_dns_record" "txt" {
   domain = "%[1]s"
   name = "test-acc-%[2]s-txt"
@@ -372,6 +410,17 @@ resource "vercel_dns_record" "srv" {
       target   = "example2.com."
   }
 }
+resource "vercel_dns_record" "https" {
+  domain = "%[1]s"
+  name = "test-acc-%[2]s-https-updated"
+  type = "HTTPS"
+  ttl  = 60
+  https = {
+      priority = 2
+      target   = "example2.com."
+      params   = "alpn=h2"
+  }
+}
 resource "vercel_dns_record" "txt" {
   domain = "%[1]s"
   name = "test-acc-%[2]s-txt-updated"
@@ -387,4 +436,8 @@ resource "vercel_dns_record" "ns" {
   value = "example2.com."
 }
 `, testDomain, nameSuffix)
+}
+
+func testAccDNSRecordConfigHTTPSWithoutParams(testDomain, nameSuffix string) string {
+	return strings.Replace(testAccDNSRecordConfigUpdated(testDomain, nameSuffix), "      params   = \"alpn=h2\"\n", "", 1)
 }
