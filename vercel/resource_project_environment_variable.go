@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -561,9 +562,10 @@ func (r *projectEnvironmentVariableResource) Delete(ctx context.Context, req res
 }
 
 // ImportState takes an identifier and reads all the project environment variable information from the Vercel API.
-// The results are then stored in terraform state.
+// Prefix the identifier with "write-only:" to omit the value from imported state.
 func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, projectID, envID, ok := splitInto2Or3(req.ID)
+	importID, writeOnly := strings.CutPrefix(req.ID, "write-only:")
+	teamID, projectID, envID, ok := splitInto2Or3(importID)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing project environment variable",
@@ -587,7 +589,7 @@ func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, re
 	}
 
 	value := types.StringNull()
-	if out.Type != "sensitive" {
+	if !writeOnly && out.Type != "sensitive" {
 		value = types.StringValue(out.Value)
 	}
 
