@@ -140,4 +140,10 @@ terraform import vercel_project_environment_variable.example prj_xxxxxxxxxxxxxxx
 #
 # Note also, that the value field for sensitive environment variables will be imported as `null`.
 terraform import vercel_project_environment_variable.example team_xxxxxxxxxxxxxxxxxxxxxxxx/prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx/FdT2e1E5Of6Cihmt
+
+# When configuring value_wo, prefix the import ID with write-only: so neither
+# import nor subsequent refreshes persist the existing value in Terraform state.
+# Configure value_wo_version to explicitly control subsequent credential updates.
+# The same prefix works with the project_id/env_id form above.
+terraform import vercel_project_environment_variable.example 'write-only:team_xxxxxxxxxxxxxxxxxxxxxxxx/prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx/FdT2e1E5Of6Cihmt'
 ```
