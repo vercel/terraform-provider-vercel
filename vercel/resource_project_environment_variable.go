@@ -561,8 +561,7 @@ func (r *projectEnvironmentVariableResource) Delete(ctx context.Context, req res
 	})
 }
 
-// ImportState takes an identifier and reads all the project environment variable information from the Vercel API.
-// Prefix the identifier with "write-only:" to omit the value from imported state.
+// ImportState reads a project environment variable from the Vercel API, omitting its value from state when the identifier starts with "write-only:".
 func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	importID, writeOnly := strings.CutPrefix(req.ID, "write-only:")
 	teamID, projectID, envID, ok := splitInto2Or3(importID)
