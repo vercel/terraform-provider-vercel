@@ -395,12 +395,17 @@ func convertResponseToDNSRecord(r client.DNSRecord, value types.String, srvObj t
 		if len(split) == 3 && strings.TrimSpace(split[2]) != "" {
 			paramsVal = types.StringValue(strings.TrimSpace(split[2]))
 		}
-		// Preserve user formatting for target (without trailing dot) if planned target matches
 		if !httpsObj.IsNull() && !httpsObj.IsUnknown() {
 			var h HTTPS
 			_ = httpsObj.As(context.Background(), &h, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true, UnhandledUnknownAsEmpty: true})
-			if fmt.Sprintf("%s.", h.Target.ValueString()) == targetVal.ValueString() {
+			// Preserve user formatting for target, as the API normalizes its case and adds a trailing dot.
+			if !h.Target.IsNull() && !h.Target.IsUnknown() &&
+				strings.EqualFold(strings.TrimSuffix(h.Target.ValueString(), "."), strings.TrimSuffix(split[1], ".")) {
 				targetVal = h.Target
+			}
+			// Preserve an explicitly empty params, as the API returns no params for it.
+			if paramsVal.IsNull() && !h.Params.IsNull() && !h.Params.IsUnknown() && h.Params.ValueString() == "" {
+				paramsVal = h.Params
 			}
 		}
 		record.HTTPS = types.ObjectValueMust(httpsAttrType.AttrTypes, map[string]attr.Value{
@@ -454,7 +459,7 @@ func (r *dnsRecordResource) ValidateConfig(ctx context.Context, req resource.Val
 		)
 	}
 
-	if config.Type.ValueString() == "HTTPS" && (config.HTTPS.IsNull() || config.HTTPS.IsUnknown()) {
+	if config.Type.ValueString() == "HTTPS" && config.HTTPS.IsNull() {
 		resp.Diagnostics.AddError(
 			"DNS Record Invalid",
 			"A DNS Record type of 'HTTPS' requires the `https` attribute to be set",

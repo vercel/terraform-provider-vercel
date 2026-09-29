@@ -137,7 +137,7 @@ func TestAcc_DNSRecord(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_dns_record.https", "type", "HTTPS"),
 					resource.TestCheckResourceAttr("vercel_dns_record.https", "ttl", "120"),
 					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.priority", "1"),
-					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.target", "example.com."),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.target", "Example.COM"),
 					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.params", "alpn=h2,h3 port=8443"),
 					resource.TestCheckNoResourceAttr("vercel_dns_record.https", "value"),
 					resource.TestCheckResourceAttr("vercel_dns_record.https", "comment", "https"),
@@ -226,6 +226,13 @@ func TestAcc_DNSRecord(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.priority", "2"),
 					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.target", "example2.com."),
 					resource.TestCheckNoResourceAttr("vercel_dns_record.https", "https.params"),
+				),
+			},
+			{
+				Config: cfg(testAccDNSRecordConfigHTTPSEmptyParams(testDomain(t), nameSuffix)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccDNSRecordExists(testClient(t), "vercel_dns_record.https", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_dns_record.https", "https.params", ""),
 				),
 			},
 		},
@@ -323,7 +330,7 @@ resource "vercel_dns_record" "https" {
   ttl  = 120
   https = {
       priority = 1
-      target   = "example.com."
+      target   = "Example.COM"
       params   = "alpn=h2,h3 port=8443"
   }
   comment = "https"
@@ -440,4 +447,8 @@ resource "vercel_dns_record" "ns" {
 
 func testAccDNSRecordConfigHTTPSWithoutParams(testDomain, nameSuffix string) string {
 	return strings.Replace(testAccDNSRecordConfigUpdated(testDomain, nameSuffix), "      params   = \"alpn=h2\"\n", "", 1)
+}
+
+func testAccDNSRecordConfigHTTPSEmptyParams(testDomain, nameSuffix string) string {
+	return strings.Replace(testAccDNSRecordConfigUpdated(testDomain, nameSuffix), "      params   = \"alpn=h2\"\n", "      params   = \"\"\n", 1)
 }
