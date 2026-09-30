@@ -66,6 +66,8 @@ By default, all teams use three environments when developing their project: Prod
 Custom environments allow you to configure customized, pre-production environments for your project, such as staging or QA, with branch rules that will automatically deploy your branch when the branch name matches the rule. With custom environments you can also attach a domain to your environment, set environment variables, or import environment variables from another environment.
 
 Custom environments are designed as pre-production environments intended for long-running use. This contrasts with regular preview environments, which are designed for creating ephemeral, short-lived deployments.
+
+Built-in environments (` + "`production`" + `, ` + "`preview`" + `, and ` + "`development`" + `) cannot be imported into or managed by this resource. Use the ` + "`vercel_environment`" + ` data source to read them.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -92,6 +94,11 @@ Custom environments are designed as pre-production environments intended for lon
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-z0-9\-]{0,32}$`),
 						"The name of a Custom Environment can only contain up to 32 alphanumeric lowercase characters and hyphens",
+					),
+					stringvalidator.NoneOf(
+						client.EnvironmentIDProduction,
+						client.EnvironmentIDPreview,
+						client.EnvironmentIDDevelopment,
 					),
 				},
 			},
@@ -353,6 +360,13 @@ func (r *customEnvironmentResource) ImportState(ctx context.Context, req resourc
 		resp.Diagnostics.AddError(
 			"Error importing Custom Environment",
 			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id/custom_environment_name\" or \"project_id/custom_environment_name\"", req.ID),
+		)
+		return
+	}
+	if client.IsSystemEnvironmentID(name) {
+		resp.Diagnostics.AddError(
+			"Error importing Custom Environment",
+			fmt.Sprintf("Built-in environment %q cannot be imported into vercel_custom_environment. Use data.vercel_environment to read system environments.", name),
 		)
 		return
 	}

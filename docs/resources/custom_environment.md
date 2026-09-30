@@ -7,6 +7,7 @@ description: |-
   By default, all teams use three environments when developing their project: Production, Preview, and Development. However, teams can also create custom environments to suit their needs. To learn more about the limits for each plan, see limits.
   Custom environments allow you to configure customized, pre-production environments for your project, such as staging or QA, with branch rules that will automatically deploy your branch when the branch name matches the rule. With custom environments you can also attach a domain to your environment, set environment variables, or import environment variables from another environment.
   Custom environments are designed as pre-production environments intended for long-running use. This contrasts with regular preview environments, which are designed for creating ephemeral, short-lived deployments.
+  Built-in environments (production, preview, and development) cannot be imported into or managed by this resource. Use the vercel_environment data source to read them.
 ---
 
 # vercel_custom_environment (Resource)
@@ -18,6 +19,8 @@ By default, all teams use three environments when developing their project: Prod
 Custom environments allow you to configure customized, pre-production environments for your project, such as staging or QA, with branch rules that will automatically deploy your branch when the branch name matches the rule. With custom environments you can also attach a domain to your environment, set environment variables, or import environment variables from another environment.
 
 Custom environments are designed as pre-production environments intended for long-running use. This contrasts with regular preview environments, which are designed for creating ephemeral, short-lived deployments.
+
+Built-in environments (`production`, `preview`, and `development`) cannot be imported into or managed by this resource. Use the `vercel_environment` data source to read them.
 
 ## Example Usage
 
