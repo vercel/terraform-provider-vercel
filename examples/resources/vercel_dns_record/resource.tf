@@ -60,6 +60,18 @@ resource "vercel_dns_record" "srv" {
   }
 }
 
+resource "vercel_dns_record" "https" {
+  domain = "example.com"
+  name   = "subdomain"
+  type   = "HTTPS"
+  ttl    = 60
+  https = {
+    priority = 1
+    target   = "example2.com."
+    params   = "alpn=h2,h3"
+  }
+}
+
 resource "vercel_dns_record" "txt" {
   domain = "example.com"
   name   = "subdomain"
