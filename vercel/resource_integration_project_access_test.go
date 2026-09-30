@@ -19,6 +19,16 @@ func testCheckIntegrationProjectAccessDestroyed(testClient *client.Client, n, te
 		}
 
 		ipa, err := testClient.GetIntegrationProjectAccess(context.TODO(), rs.Primary.Attributes["integration_id"], rs.Primary.Attributes["project_id"], teamID)
+		if client.NotFound(err) {
+			// Terraform also deletes the project, so its access endpoint may already be gone.
+			_, projectErr := testClient.GetProject(context.TODO(), rs.Primary.Attributes["project_id"], teamID)
+			if client.NotFound(projectErr) {
+				return nil
+			}
+			if projectErr != nil {
+				return fmt.Errorf("checking deleted project: %w", projectErr)
+			}
+		}
 		if err != nil {
 			return err
 		}
