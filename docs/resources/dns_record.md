@@ -5,7 +5,7 @@ subcategory: ""
 description: |-
   Provides a DNS Record resource.
   DNS records are instructions that live in authoritative DNS servers and provide information about a domain.
-  ~> The value field must be specified on all DNS record types except SRV. When using SRV DNS records, the srv field must be specified.
+  ~> The value field must be specified on all DNS record types except SRV and HTTPS. When using SRV DNS records, the srv field must be specified. When using HTTPS DNS records, the https field must be specified.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/custom-domains#dns-records
 ---
 
@@ -15,7 +15,7 @@ Provides a DNS Record resource.
 
 DNS records are instructions that live in authoritative DNS servers and provide information about a domain.
 
-~> The `value` field must be specified on all DNS record types except `SRV`. When using `SRV` DNS records, the `srv` field must be specified.
+~> The `value` field must be specified on all DNS record types except `SRV` and `HTTPS`. When using `SRV` DNS records, the `srv` field must be specified. When using `HTTPS` DNS records, the `https` field must be specified.
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/custom-domains#dns-records)
 
@@ -84,6 +84,18 @@ resource "vercel_dns_record" "srv" {
   }
 }
 
+resource "vercel_dns_record" "https" {
+  domain = "example.com"
+  name   = "subdomain"
+  type   = "HTTPS"
+  ttl    = 60
+  https = {
+    priority = 1
+    target   = "example2.com."
+    params   = "alpn=h2,h3"
+  }
+}
+
 resource "vercel_dns_record" "txt" {
   domain = "example.com"
   name   = "subdomain"
@@ -100,11 +112,12 @@ resource "vercel_dns_record" "txt" {
 
 - `domain` (String) The domain name, or zone, that the DNS record should be created beneath.
 - `name` (String) The subdomain name of the record. This should be an empty string if the rercord is for the root domain.
-- `type` (String) The type of DNS record. Available types: `A`, `AAAA`, `ALIAS`, `CAA`, `CNAME`, `MX`, `NS`, `SRV`, `TXT`.
+- `type` (String) The type of DNS record. Available types: `A`, `AAAA`, `ALIAS`, `CAA`, `CNAME`, `HTTPS`, `MX`, `NS`, `SRV`, `TXT`.
 
 ### Optional
 
 - `comment` (String) A comment explaining what the DNS record is for.
+- `https` (Attributes) Settings for an HTTPS record. (see [below for nested schema](#nestedatt--https))
 - `mx_priority` (Number) The priority of the MX record. The priority specifies the sequence that an email server receives emails. A smaller value indicates a higher priority.
 - `srv` (Attributes) Settings for an SRV record. (see [below for nested schema](#nestedatt--srv))
 - `team_id` (String) The team ID that the domain and DNS records belong to. Required when configuring a team resource if a default team has not been set in the provider.
@@ -121,6 +134,19 @@ For 'TXT' records, this can contain arbitrary text.
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+<a id="nestedatt--https"></a>
+### Nested Schema for `https`
+
+Required:
+
+- `priority` (Number) The priority of the record. A value of 0 indicates AliasMode, while a value greater than 0 indicates ServiceMode where lower values are preferred.
+- `target` (String) The target hostname of the record. Use `.` to indicate the owner name of the record itself.
+
+Optional:
+
+- `params` (String) The SvcParams of the record, as a space-separated list of `key=value` pairs, for example `alpn=h2,h3`.
+
 
 <a id="nestedatt--srv"></a>
 ### Nested Schema for `srv`
