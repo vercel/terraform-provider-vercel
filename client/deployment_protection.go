@@ -57,6 +57,7 @@ type TrustedSources struct {
 
 type ProtectionBypass struct {
 	Scope           string  `json:"scope"`
+	Expires         *int64  `json:"expires,omitempty"`
 	IsEnvVar        *bool   `json:"isEnvVar,omitempty"`
 	Note            *string `json:"note,omitempty"`
 	CreatedAt       int64   `json:"createdAt,omitempty"`

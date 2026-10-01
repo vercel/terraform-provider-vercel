@@ -95,10 +95,11 @@ func (c *Client) GetAlias(ctx context.Context, alias, teamID string) (r AliasRes
 		"url": url,
 	})
 	err = c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "GET",
-		url:    url,
-		body:   "",
+		ctx:               ctx,
+		method:            "GET",
+		url:               url,
+		body:              "",
+		sensitiveResponse: true,
 	}, &r)
 	r.TeamID = c.TeamID(teamID)
 	return r, err
