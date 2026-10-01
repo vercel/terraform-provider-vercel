@@ -65,7 +65,7 @@ Read-Only:
 Read-Only:
 
 - `connector_id` (String) The stable ID of the Vercel Connect OAuth application. Null when disabled.
-- `deployment_type` (String) The protected deployment scope. Returns all when disabled.
+- `deployment_type` (String) The deployment scope protected when Passport is enabled. Reports all when disabled as a default value; Passport does not protect any deployments when enabled is false.
 - `enabled` (Boolean) Whether Passport is enabled.
 
 

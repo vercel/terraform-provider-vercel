@@ -64,7 +64,7 @@ func passportDataSourceSchema(description string) datasourceschema.SingleNestedA
 		Attributes: map[string]datasourceschema.Attribute{
 			"enabled":         datasourceschema.BoolAttribute{Computed: true, Description: "Whether Passport is enabled."},
 			"connector_id":    datasourceschema.StringAttribute{Computed: true, Description: "The stable ID of the Vercel Connect OAuth application. Null when disabled."},
-			"deployment_type": datasourceschema.StringAttribute{Computed: true, Description: "The protected deployment scope. Returns all when disabled."},
+			"deployment_type": datasourceschema.StringAttribute{Computed: true, Description: "The deployment scope protected when Passport is enabled. Reports all when disabled as a default value; Passport does not protect any deployments when enabled is false."},
 		},
 	}
 }
