@@ -255,6 +255,7 @@ func isSensitiveTest(pkg, test string) bool {
 	case "TestAcc_SharedEnvironmentVariableProjectLink",
 		"TestAcc_OIDCFederationPolicyResource",
 		"TestAcc_TeamConfig",
+		"TestAcc_TeamDefaultDeploymentProtection",
 		"TestAcc_TeamConfigDataSource",
 		"TestAcc_TeamMemberDataSource",
 		"TestAcc_TeamMemberResource":

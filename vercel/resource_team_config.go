@@ -120,7 +120,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "When enabled, secrets cannot be scoped to both Production and non-Production targets on the same environment variable. One of `on`, `off`, or `default`.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.OneOf("on", "off", "default"),
 				},
@@ -128,7 +128,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 			"email_domain": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Description:   "Hostname that'll be matched with emails on sign-up to automatically join the Team.",
 			},
 			"saml": schema.SingleNestedAttribute{
@@ -178,14 +178,15 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 			},
 			"preview_deployment_suffix": schema.StringAttribute{
 				Optional:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Computed:      true,
 				Description:   "The hostname that is used as the preview deployment suffix.",
 			},
 			"default_deployment_protection": schema.SingleNestedAttribute{
-				Description: "Deployment Protection defaults copied to new projects. Existing projects are unaffected. Removing this attribute leaves the team default unchanged.",
-				Optional:    true,
-				Computed:    true,
+				Description:   "Deployment Protection defaults copied to new projects. Existing projects are unaffected. Removing this attribute leaves the team default unchanged.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"vercel_authentication": schema.SingleNestedAttribute{
 						Required:    true,
@@ -204,7 +205,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "The default build machine type for new projects. Must be one of \"basic\", \"standard\", \"enhanced\", \"turbo\", or \"elastic\".",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.OneOf("basic", "standard", "enhanced", "turbo", "elastic"),
 				},
