@@ -40,7 +40,7 @@ func (p *shareableTestProvider) DataSources(_ context.Context) []func() datasour
 	return []func() datasource.DataSource{newShareableLinkDataSource}
 }
 
-func TestShareableLinkTerraformLifecycle(t *testing.T) {
+func TestAcc_ShareableLinkTerraformLifecycle(t *testing.T) {
 	var mu sync.Mutex
 	bypasses := map[string]client.ProtectionBypass{"*": {Scope: "alias-protection-override"}}
 	sequence := 0
@@ -96,7 +96,7 @@ data "vercel_shareable_link" "test" {
 }
 `, ttl, rotation)
 	}
-	testresource.UnitTest(t, testresource.TestCase{
+	testresource.Test(t, testresource.TestCase{
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){"vercel": providerserver.NewProtocol6WithError(&shareableTestProvider{client: c})},
 		Steps: []testresource.TestStep{
 			{Config: config("1", "ttl_seconds = 600"), Check: testresource.ComposeAggregateTestCheckFunc(
