@@ -288,6 +288,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
+			"passport": passportResourceSchema("Protect deployments with your own identity provider using an existing Vercel Connect OAuth application."),
 			"password_protection": schema.SingleNestedAttribute{
 				Description: "Ensures visitors of your Preview Deployments must enter a password in order to gain access.",
 				Optional:    true,
@@ -773,6 +774,7 @@ func (r *projectResource) ConfigValidators(ctx context.Context) []resource.Confi
 
 // Project reflects the state terraform stores internally for a project.
 type Project struct {
+	Passport                          types.Object `tfsdk:"passport"`
 	BuildCommand                      types.String `tfsdk:"build_command"`
 	DevCommand                        types.String `tfsdk:"dev_command"`
 	Environment                       types.Set    `tfsdk:"environment"`
@@ -833,7 +835,8 @@ func (g *GitComments) toUpdateProjectRequest() *client.GitComments {
 }
 
 func (p Project) RequiresUpdateAfterCreation() bool {
-	return (!p.PasswordProtection.IsNull() && !p.PasswordProtection.IsUnknown()) ||
+	return (!p.Passport.IsNull() && !p.Passport.IsUnknown()) ||
+		(!p.PasswordProtection.IsNull() && !p.PasswordProtection.IsUnknown()) ||
 		(!p.TrustedIps.IsNull() && !p.TrustedIps.IsUnknown()) ||
 		(!p.TrustedSources.IsNull() && !p.TrustedSources.IsUnknown()) ||
 		(!p.OIDCTokenConfig.IsNull() && !p.OIDCTokenConfig.IsUnknown()) ||
@@ -1161,7 +1164,13 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	if diags.HasError() {
 		return req, diags
 	}
+	passport, passportDiags := passportUpdate(ctx, p.Passport)
+	diags.Append(passportDiags...)
+	if diags.HasError() {
+		return req, diags
+	}
 	return client.UpdateProjectRequest{
+		Passport:                             passport,
 		BuildCommand:                         p.BuildCommand.ValueStringPointer(),
 		CommandForIgnoringBuildStep:          p.IgnoreCommand.ValueStringPointer(),
 		DevCommand:                           p.DevCommand.ValueStringPointer(),
@@ -2167,6 +2176,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		RootDirectory:                     types.StringPointerValue(response.RootDirectory),
 		ServerlessFunctionRegion:          serverlessFunctionRegion,
 		TeamID:                            toTeamID(response.TeamID),
+		Passport:                          passportState(response.Passport),
 		PasswordProtection:                passwordObj,
 		VercelAuthentication:              va,
 		TrustedIps:                        trustedIpsObj,

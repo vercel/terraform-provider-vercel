@@ -129,6 +129,7 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Computed:    true,
 				Description: "Indicates if ip addresses should be accessible in log drains.",
 			},
+			"default_passport": passportDataSourceSchema("Default Passport configuration for new projects."),
 			"saml": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"enforced": schema.BoolAttribute{
@@ -161,6 +162,7 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 
 type TeamConfigData struct {
 	DefaultDeploymentProtection        types.Object `tfsdk:"default_deployment_protection"`
+	DefaultPassport                    types.Object `tfsdk:"default_passport"`
 	ID                                 types.String `tfsdk:"id"`
 	Name                               types.String `tfsdk:"name"`
 	Slug                               types.String `tfsdk:"slug"`
@@ -205,6 +207,7 @@ func (d *teamConfigDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	diags = resp.State.Set(ctx, TeamConfigData{
 		DefaultDeploymentProtection:        out.DefaultDeploymentProtection,
+		DefaultPassport:                    out.DefaultPassport,
 		ID:                                 out.ID,
 		Name:                               out.Name,
 		Slug:                               out.Slug,

@@ -63,6 +63,7 @@ data "vercel_project" "example" {
 - `oidc_token_config` (Attributes) Configuration for OpenID Connect (OIDC) tokens. (see [below for nested schema](#nestedatt--oidc_token_config))
 - `options_allowlist` (Attributes) Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths. (see [below for nested schema](#nestedatt--options_allowlist))
 - `output_directory` (String) The output directory of the project. When null is used this value will be automatically detected.
+- `passport` (Attributes) Passport configuration for the project. (see [below for nested schema](#nestedatt--passport))
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
 - `preview_comments` (Boolean, Deprecated) Whether comments are enabled on your Preview Deployments.
 - `preview_deployment_suffix` (String) The preview deployment suffix to apply to preview deployment URLs for this project.
@@ -170,6 +171,16 @@ Read-Only:
 
 - `value` (String)
 
+
+
+<a id="nestedatt--passport"></a>
+### Nested Schema for `passport`
+
+Read-Only:
+
+- `connector_id` (String) The stable ID of the Vercel Connect OAuth application. Null when disabled.
+- `deployment_type` (String) The protected deployment scope. Returns all when disabled.
+- `enabled` (Boolean) Whether Passport is enabled.
 
 
 <a id="nestedatt--password_protection"></a>

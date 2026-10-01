@@ -131,6 +131,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Description:   "Hostname that'll be matched with emails on sign-up to automatically join the Team.",
 			},
+			"default_passport": passportResourceSchema("Default Passport configuration for new projects. Existing projects keep their settings."),
 			"saml": schema.SingleNestedAttribute{
 				Description:   "Configuration for SAML authentication.",
 				Optional:      true,
@@ -309,6 +310,7 @@ type EnableConfig struct {
 
 type TeamConfig struct {
 	DefaultDeploymentProtection        types.Object `tfsdk:"default_deployment_protection"`
+	DefaultPassport                    types.Object `tfsdk:"default_passport"`
 	ID                                 types.String `tfsdk:"id"`
 	Avatar                             types.Map    `tfsdk:"avatar"`
 	Name                               types.String `tfsdk:"name"`
@@ -320,6 +322,25 @@ type TeamConfig struct {
 	EmailDomain                        types.String `tfsdk:"email_domain"`
 	PreviewDeploymentSuffix            types.String `tfsdk:"preview_deployment_suffix"`
 	DefaultBuildMachineType            types.String `tfsdk:"default_build_machine_type"`
+	RemoteCaching                      types.Object `tfsdk:"remote_caching"`
+	EnablePreviewFeedback              types.String `tfsdk:"enable_preview_feedback"`
+	EnableProductionFeedback           types.String `tfsdk:"enable_production_feedback"`
+	HideIPAddresses                    types.Bool   `tfsdk:"hide_ip_addresses"`
+	HideIPAddressesInLogDrains         types.Bool   `tfsdk:"hide_ip_addresses_in_log_drains"`
+	Saml                               types.Object `tfsdk:"saml"`
+}
+
+type teamConfigV0 struct {
+	ID                                 types.String `tfsdk:"id"`
+	Avatar                             types.Map    `tfsdk:"avatar"`
+	Name                               types.String `tfsdk:"name"`
+	Slug                               types.String `tfsdk:"slug"`
+	Description                        types.String `tfsdk:"description"`
+	InviteCode                         types.String `tfsdk:"invite_code"`
+	SensitiveEnvironmentVariablePolicy types.String `tfsdk:"sensitive_environment_variable_policy"`
+	DisjunctiveProductionSecretPolicy  types.String `tfsdk:"disjunctive_production_secret_policy"`
+	EmailDomain                        types.String `tfsdk:"email_domain"`
+	PreviewDeploymentSuffix            types.String `tfsdk:"preview_deployment_suffix"`
 	RemoteCaching                      types.Object `tfsdk:"remote_caching"`
 	EnablePreviewFeedback              types.String `tfsdk:"enable_preview_feedback"`
 	EnableProductionFeedback           types.String `tfsdk:"enable_production_feedback"`
@@ -437,7 +458,12 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		}
 		protection = &client.DefaultDeploymentProtection{VercelAuthentication: authentication.toVercelAuthentication()}
 	}
+	passport, passportDiags := passportUpdate(ctx, t.DefaultPassport)
+	if passportDiags.HasError() {
+		return client.UpdateTeamRequest{}, passportDiags
+	}
 	return client.UpdateTeamRequest{
+		DefaultPassport:                    passport,
 		DefaultDeploymentProtection:        protection,
 		TeamID:                             t.ID.ValueString(),
 		Avatar:                             avatar,
@@ -511,6 +537,7 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 
 	return TeamConfig{
 		DefaultDeploymentProtection:        protection,
+		DefaultPassport:                    passportState(response.DefaultPassport),
 		Avatar:                             avatar,
 		ID:                                 types.StringValue(response.ID),
 		Name:                               types.StringValue(response.Name),
@@ -885,7 +912,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 				},
 			},
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-				var priorStateData TeamConfig
+				var priorStateData teamConfigV0
 				resp.Diagnostics.Append(req.State.Get(ctx, &priorStateData)...)
 				if resp.Diagnostics.HasError() {
 					return
@@ -893,6 +920,8 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 
 				tflog.Info(ctx, "upgrading state for team_config resource", map[string]any{})
 				upgradedStateData := TeamConfig{
+					Saml:                               types.ObjectNull(samlAttrTypes),
+					DefaultPassport:                    types.ObjectNull(passportAttrTypes),
 					ID:                                 priorStateData.ID,
 					Avatar:                             priorStateData.Avatar,
 					Name:                               priorStateData.Name,
