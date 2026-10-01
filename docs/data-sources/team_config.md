@@ -28,6 +28,7 @@ data "vercel_team_config" "example" {
 ### Read-Only
 
 - `default_build_machine_type` (String) The default build machine type for new projects.
+- `default_deployment_protection` (Attributes) Deployment Protection defaults copied to new projects. Existing projects are unaffected. (see [below for nested schema](#nestedatt--default_deployment_protection))
 - `description` (String) A description of the team.
 - `disjunctive_production_secret_policy` (String) When enabled, secrets cannot be scoped to both Production and non-Production targets on the same environment variable.
 - `email_domain` (String) Hostname that'll be matched with emails on sign-up to automatically join the Team.
@@ -42,6 +43,22 @@ data "vercel_team_config" "example" {
 - `saml` (Attributes) Configuration for SAML authentication. (see [below for nested schema](#nestedatt--saml))
 - `sensitive_environment_variable_policy` (String, Deprecated) The legacy policy for sensitive environment variables.
 - `slug` (String) The slug of the team. Used in the URL of the team's dashboard.
+
+<a id="nestedatt--default_deployment_protection"></a>
+### Nested Schema for `default_deployment_protection`
+
+Read-Only:
+
+- `vercel_authentication` (Attributes) Default Vercel Authentication for new projects. (see [below for nested schema](#nestedatt--default_deployment_protection--vercel_authentication))
+
+<a id="nestedatt--default_deployment_protection--vercel_authentication"></a>
+### Nested Schema for `default_deployment_protection.vercel_authentication`
+
+Read-Only:
+
+- `deployment_type` (String) The default protection level, or none when disabled.
+
+
 
 <a id="nestedatt--remote_caching"></a>
 ### Nested Schema for `remote_caching`

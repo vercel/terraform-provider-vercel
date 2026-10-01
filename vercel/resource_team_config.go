@@ -182,6 +182,24 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Computed:      true,
 				Description:   "The hostname that is used as the preview deployment suffix.",
 			},
+			"default_deployment_protection": schema.SingleNestedAttribute{
+				Description: "Deployment Protection defaults copied to new projects. Existing projects are unaffected. Removing this attribute leaves the team default unchanged.",
+				Optional:    true,
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"vercel_authentication": schema.SingleNestedAttribute{
+						Required:    true,
+						Description: "Default Vercel Authentication for new projects.",
+						Attributes: map[string]schema.Attribute{
+							"deployment_type": schema.StringAttribute{
+								Required:    true,
+								Description: "One of standard_protection_new, standard_protection, all_deployments, only_preview_deployments, or none. none disables authentication for new projects.",
+								Validators:  []validator.String{stringvalidator.OneOf("standard_protection_new", "standard_protection", "all_deployments", "only_preview_deployments", "none")},
+							},
+						},
+					},
+				},
+			},
 			"default_build_machine_type": schema.StringAttribute{
 				Description:   "The default build machine type for new projects. Must be one of \"basic\", \"standard\", \"enhanced\", \"turbo\", or \"elastic\".",
 				Optional:      true,
@@ -288,6 +306,7 @@ type EnableConfig struct {
 }
 
 type TeamConfig struct {
+	DefaultDeploymentProtection        types.Object `tfsdk:"default_deployment_protection"`
 	ID                                 types.String `tfsdk:"id"`
 	Avatar                             types.Map    `tfsdk:"avatar"`
 	Name                               types.String `tfsdk:"name"`
@@ -309,6 +328,14 @@ type TeamConfig struct {
 
 type RemoteCaching struct {
 	Enabled types.Bool `tfsdk:"enabled"`
+}
+
+var defaultDeploymentProtectionAttrTypes = map[string]attr.Type{
+	"vercel_authentication": vercelAuthenticationAttrType,
+}
+
+type DefaultDeploymentProtection struct {
+	VercelAuthentication types.Object `tfsdk:"vercel_authentication"`
 }
 
 var remoteCachingAttrTypes = map[string]attr.Type{
@@ -394,7 +421,22 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 			},
 		}
 	}
+	var protection *client.DefaultDeploymentProtection
+	if !t.DefaultDeploymentProtection.IsNull() && !t.DefaultDeploymentProtection.IsUnknown() {
+		var defaults DefaultDeploymentProtection
+		diags = t.DefaultDeploymentProtection.As(ctx, &defaults, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return client.UpdateTeamRequest{}, diags
+		}
+		var authentication VercelAuthentication
+		diags = defaults.VercelAuthentication.As(ctx, &authentication, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return client.UpdateTeamRequest{}, diags
+		}
+		protection = &client.DefaultDeploymentProtection{VercelAuthentication: authentication.toVercelAuthentication()}
+	}
 	return client.UpdateTeamRequest{
+		DefaultDeploymentProtection:        protection,
 		TeamID:                             t.ID.ValueString(),
 		Avatar:                             avatar,
 		EmailDomain:                        t.EmailDomain.ValueString(),
@@ -415,6 +457,16 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 }
 
 func convertResponseToTeamConfig(ctx context.Context, response client.Team, avatar types.Map) (TeamConfig, diag.Diagnostics) {
+	protection := types.ObjectNull(defaultDeploymentProtectionAttrTypes)
+	if response.DefaultDeploymentProtection != nil && (response.DefaultDeploymentProtection.VercelAuthenticationSet || response.DefaultDeploymentProtection.VercelAuthentication != nil) {
+		deploymentType := types.StringValue("none")
+		if response.DefaultDeploymentProtection.VercelAuthentication != nil {
+			deploymentType = fromApiDeploymentProtectionType(response.DefaultDeploymentProtection.VercelAuthentication.DeploymentType)
+		}
+		protection = types.ObjectValueMust(defaultDeploymentProtectionAttrTypes, map[string]attr.Value{
+			"vercel_authentication": types.ObjectValueMust(vercelAuthenticationAttrType.AttrTypes, map[string]attr.Value{"deployment_type": deploymentType}),
+		})
+	}
 	defaultBuildMachineType := types.StringNull()
 	if response.ResourceConfig != nil && response.ResourceConfig.BuildMachine != nil {
 		defaultBuildMachineType = types.StringPointerValue(response.ResourceConfig.BuildMachine.Default)
@@ -456,6 +508,7 @@ func convertResponseToTeamConfig(ctx context.Context, response client.Team, avat
 	}
 
 	return TeamConfig{
+		DefaultDeploymentProtection:        protection,
 		Avatar:                             avatar,
 		ID:                                 types.StringValue(response.ID),
 		Name:                               types.StringValue(response.Name),

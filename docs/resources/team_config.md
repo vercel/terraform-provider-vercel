@@ -18,14 +18,19 @@ data "vercel_file" "example" {
 }
 
 resource "vercel_team_config" "example" {
-  id                                    = "team_xxxxxxxxxxxxxxxxxxxxxxxx"
-  avatar                                = data.vercel_file.example.file
-  name                                  = "Vercel terraform example"
-  slug                                  = "vercel-terraform-example"
-  description                           = "Vercel Terraform Example"
+  id          = "team_xxxxxxxxxxxxxxxxxxxxxxxx"
+  avatar      = data.vercel_file.example.file
+  name        = "Vercel terraform example"
+  slug        = "vercel-terraform-example"
+  description = "Vercel Terraform Example"
   # Paid teams must be eligible for Basic build machine routing.
   default_build_machine_type            = "basic"
   sensitive_environment_variable_policy = "off"
+  default_deployment_protection = {
+    vercel_authentication = {
+      deployment_type = "all_deployments"
+    }
+  }
   remote_caching = {
     enabled = true
   }
@@ -47,6 +52,7 @@ resource "vercel_team_config" "example" {
 
 - `avatar` (Map of String) The `avatar` should be a the 'file' attribute from a vercel_file data source.
 - `default_build_machine_type` (String) The default build machine type for new projects. Must be one of "basic", "standard", "enhanced", "turbo", or "elastic".
+- `default_deployment_protection` (Attributes) Deployment Protection defaults copied to new projects. Existing projects are unaffected. Removing this attribute leaves the team default unchanged. (see [below for nested schema](#nestedatt--default_deployment_protection))
 - `description` (String) A description of the team.
 - `disjunctive_production_secret_policy` (String) When enabled, secrets cannot be scoped to both Production and non-Production targets on the same environment variable. One of `on`, `off`, or `default`.
 - `email_domain` (String) Hostname that'll be matched with emails on sign-up to automatically join the Team.
@@ -64,6 +70,22 @@ resource "vercel_team_config" "example" {
 ### Read-Only
 
 - `invite_code` (String) A code that can be used to join this team. Only visible to Team owners.
+
+<a id="nestedatt--default_deployment_protection"></a>
+### Nested Schema for `default_deployment_protection`
+
+Required:
+
+- `vercel_authentication` (Attributes) Default Vercel Authentication for new projects. (see [below for nested schema](#nestedatt--default_deployment_protection--vercel_authentication))
+
+<a id="nestedatt--default_deployment_protection--vercel_authentication"></a>
+### Nested Schema for `default_deployment_protection.vercel_authentication`
+
+Required:
+
+- `deployment_type` (String) One of standard_protection_new, standard_protection, all_deployments, only_preview_deployments, or none. none disables authentication for new projects.
+
+
 
 <a id="nestedatt--remote_caching"></a>
 ### Nested Schema for `remote_caching`
