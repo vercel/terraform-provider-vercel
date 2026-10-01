@@ -173,6 +173,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 			},
 			"invite_code": schema.StringAttribute{
 				Computed:      true,
+				Sensitive:     true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
 				Description:   "A code that can be used to join this team. Only visible to Team owners.",
 			},

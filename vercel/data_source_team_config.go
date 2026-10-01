@@ -58,6 +58,7 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			},
 			"invite_code": schema.StringAttribute{
 				Computed:    true,
+				Sensitive:   true,
 				Description: "A code that can be used to join this team. Only visible to Team owners.",
 			},
 			"slug": schema.StringAttribute{
