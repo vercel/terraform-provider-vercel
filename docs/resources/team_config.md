@@ -63,7 +63,7 @@ resource "vercel_team_config" "example" {
 
 ### Read-Only
 
-- `invite_code` (String) A code that can be used to join this team. Only visible to Team owners.
+- `invite_code` (String, Sensitive) A code that can be used to join this team. Only visible to Team owners.
 
 <a id="nestedatt--remote_caching"></a>
 ### Nested Schema for `remote_caching`

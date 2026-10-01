@@ -35,7 +35,7 @@ data "vercel_team_config" "example" {
 - `enable_production_feedback` (String) Production feedback configuration.
 - `hide_ip_addresses` (Boolean) Indicates if ip addresses should be accessible in o11y tooling.
 - `hide_ip_addresses_in_log_drains` (Boolean) Indicates if ip addresses should be accessible in log drains.
-- `invite_code` (String) A code that can be used to join this team. Only visible to Team owners.
+- `invite_code` (String, Sensitive) A code that can be used to join this team. Only visible to Team owners.
 - `name` (String) The name of the team.
 - `preview_deployment_suffix` (String) The hostname that is used as the preview deployment suffix.
 - `remote_caching` (Attributes) Configuration for Remote Caching. (see [below for nested schema](#nestedatt--remote_caching))
