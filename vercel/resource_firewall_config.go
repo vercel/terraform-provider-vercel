@@ -1724,7 +1724,7 @@ func (r *firewallConfigResource) Delete(ctx context.Context, req resource.Delete
 	}
 
 	conf := client.FirewallConfig{
-		Enabled:   false,
+		Enabled:   true,
 		ProjectID: state.ProjectID.ValueString(),
 		TeamID:    state.TeamID.ValueString(),
 	}
