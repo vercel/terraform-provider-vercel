@@ -3,12 +3,12 @@
 page_title: "vercel_alert_rule Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification channel links are managed separately from this resource.
+  Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification destination links are managed with the vercel_alert_rule_slack_notification and vercel_alert_rule_webhook_notification resources.
 ---
 
 # vercel_alert_rule (Resource)
 
-Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification channel links are managed separately from this resource.
+Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources.
 
 ## Example Usage
 
@@ -91,7 +91,7 @@ Wildcards and regular expressions are not supported for metric names, so `metric
 
 ### Optional
 
-- `notification_settings` (Attributes) Notification delivery settings stored on the rule. Notification channel links are managed separately. (see [below for nested schema](#nestedatt--notification_settings))
+- `notification_settings` (Attributes) Notification delivery settings stored on the rule. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources. (see [below for nested schema](#nestedatt--notification_settings))
 - `team_id` (String) The ID of the team that owns the alert rule. Required if a default team is not configured in the provider.
 - `triggers` (Attributes Set) The built-in anomaly triggers enabled for a built-in rule. A nonempty set is required when creating a rule. Omit this attribute to preserve a response-only legacy trigger mode after import. (see [below for nested schema](#nestedatt--triggers))
 
