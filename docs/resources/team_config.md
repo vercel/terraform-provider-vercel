@@ -53,6 +53,7 @@ resource "vercel_team_config" "example" {
 - `avatar` (Map of String) The `avatar` should be a the 'file' attribute from a vercel_file data source.
 - `default_build_machine_type` (String) The default build machine type for new projects. Must be one of "basic", "standard", "enhanced", "turbo", or "elastic".
 - `default_deployment_protection` (Attributes) Deployment Protection defaults copied to new projects. Existing projects are unaffected. Removing this attribute leaves the team default unchanged. (see [below for nested schema](#nestedatt--default_deployment_protection))
+- `default_passport` (Attributes) Default Passport configuration for new projects. Existing projects keep their settings. Requires an eligible Enterprise plan and team owner permissions. Omit this attribute to preserve existing settings; set enabled to false to disable Passport. Disabling does not delete the Connect application or its project connections. (see [below for nested schema](#nestedatt--default_passport))
 - `description` (String) A description of the team.
 - `disjunctive_production_secret_policy` (String) When enabled, secrets cannot be scoped to both Production and non-Production targets on the same environment variable. One of `on`, `off`, or `default`.
 - `email_domain` (String) Hostname that'll be matched with emails on sign-up to automatically join the Team.
@@ -85,6 +86,16 @@ Required:
 
 - `deployment_type` (String) One of standard_protection_new, standard_protection, all_deployments, only_preview_deployments, or none. none disables authentication for new projects.
 
+
+
+<a id="nestedatt--default_passport"></a>
+### Nested Schema for `default_passport`
+
+Optional:
+
+- `connector_id` (String) The stable ID of an existing Vercel Connect OAuth application, available from the vercel_connect_application data source. Required when enabled; omit when disabled.
+- `deployment_type` (String) Deployments to protect: all, preview, prod_deployment_urls_and_all_previews, or all_except_custom_domains. Defaults to all.
+- `enabled` (Boolean) Whether Passport is enabled. Defaults to true.
 
 
 <a id="nestedatt--remote_caching"></a>

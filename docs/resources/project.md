@@ -129,6 +129,7 @@ resource "vercel_project" "with_trusted_sources" {
 - `on_demand_concurrent_builds` (Boolean) Instantly scale build capacity to skip the queue, even if all build slots are in use. You can also choose a larger build machine; charges apply per minute if it exceeds your team's default.
 - `options_allowlist` (Attributes) Disable Deployment Protection for CORS preflight `OPTIONS` requests for a list of paths. (see [below for nested schema](#nestedatt--options_allowlist))
 - `output_directory` (String) The output directory of the project. If omitted, this value will be automatically detected.
+- `passport` (Attributes) Protect deployments with your own identity provider using an existing Vercel Connect OAuth application. Requires an eligible Enterprise plan and team owner permissions. Omit this attribute to preserve existing settings; set enabled to false to disable Passport. Disabling does not delete the Connect application or its project connections. (see [below for nested schema](#nestedatt--passport))
 - `password_protection` (Attributes) Ensures visitors of your Preview Deployments must enter a password in order to gain access. (see [below for nested schema](#nestedatt--password_protection))
 - `preview_comments` (Boolean, Deprecated) Enables the Vercel Toolbar on your preview deployments.
 - `preview_deployment_suffix` (String) The preview deployment suffix to apply to preview deployment URLs for this project. If not set, Vercel's default suffix will be used.
@@ -251,6 +252,16 @@ Required:
 
 - `value` (String) The path prefix to compare with the incoming request path.
 
+
+
+<a id="nestedatt--passport"></a>
+### Nested Schema for `passport`
+
+Optional:
+
+- `connector_id` (String) The stable ID of an existing Vercel Connect OAuth application, available from the vercel_connect_application data source. Required when enabled; omit when disabled.
+- `deployment_type` (String) Deployments to protect: all, preview, prod_deployment_urls_and_all_previews, or all_except_custom_domains. Defaults to all.
+- `enabled` (Boolean) Whether Passport is enabled. Defaults to true.
 
 
 <a id="nestedatt--password_protection"></a>

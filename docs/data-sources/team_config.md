@@ -29,6 +29,7 @@ data "vercel_team_config" "example" {
 
 - `default_build_machine_type` (String) The default build machine type for new projects.
 - `default_deployment_protection` (Attributes) Deployment Protection defaults copied to new projects. Existing projects are unaffected. (see [below for nested schema](#nestedatt--default_deployment_protection))
+- `default_passport` (Attributes) Default Passport configuration for new projects. (see [below for nested schema](#nestedatt--default_passport))
 - `description` (String) A description of the team.
 - `disjunctive_production_secret_policy` (String) When enabled, secrets cannot be scoped to both Production and non-Production targets on the same environment variable.
 - `email_domain` (String) Hostname that'll be matched with emails on sign-up to automatically join the Team.
@@ -58,6 +59,16 @@ Read-Only:
 
 - `deployment_type` (String) The default protection level, or none when disabled.
 
+
+
+<a id="nestedatt--default_passport"></a>
+### Nested Schema for `default_passport`
+
+Read-Only:
+
+- `connector_id` (String) The stable ID of the Vercel Connect OAuth application. Null when disabled.
+- `deployment_type` (String) The deployment scope protected when Passport is enabled. Reports all when disabled as a default value; Passport does not protect any deployments when enabled is false.
+- `enabled` (Boolean) Whether Passport is enabled.
 
 
 <a id="nestedatt--remote_caching"></a>

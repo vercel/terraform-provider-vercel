@@ -129,6 +129,7 @@ type TeamResourceConfig struct {
 
 // Team is the information returned by the vercel api when a team is created.
 type Team struct {
+	DefaultPassport                    *Passport                    `json:"defaultPassport"`
 	DefaultDeploymentProtection        *DefaultDeploymentProtection `json:"defaultDeploymentProtection"`
 	ID                                 string                       `json:"id"`
 	Name                               string                       `json:"name"`
@@ -199,6 +200,7 @@ func (r *UpdateSamlConfig) MarshalJSON() ([]byte, error) {
 }
 
 type UpdateTeamRequest struct {
+	DefaultPassport                    **Passport                   `json:"defaultPassport,omitempty"`
 	DefaultDeploymentProtection        *DefaultDeploymentProtection `json:"defaultDeploymentProtection,omitempty"`
 	TeamID                             string                       `json:"-"`
 	Avatar                             string                       `json:"avatar,omitempty"`

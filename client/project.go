@@ -189,6 +189,7 @@ type ProjectResponse struct {
 	RootDirectory                        *string                     `json:"rootDirectory"`
 	ServerlessFunctionRegion             *string                     `json:"serverlessFunctionRegion"`
 	VercelAuthentication                 *VercelAuthentication       `json:"ssoProtection"`
+	Passport                             *Passport                   `json:"passport"`
 	PasswordProtection                   *PasswordProtection         `json:"passwordProtection"`
 	TrustedIps                           *TrustedIps                 `json:"trustedIps"`
 	TrustedSources                       *TrustedSources             `json:"trustedSources"`
@@ -345,6 +346,7 @@ func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectRe
 // - setting the field to an empty value (e.g. "") will remove the setting for that field.
 // - omitting the value entirely from the request will _not_ update the field.
 type UpdateProjectRequest struct {
+	Passport                             **Passport                      `json:"passport,omitempty"`
 	BuildCommand                         *string                         `json:"buildCommand"`
 	CommandForIgnoringBuildStep          *string                         `json:"commandForIgnoringBuildStep"`
 	DevCommand                           *string                         `json:"devCommand"`

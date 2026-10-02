@@ -206,6 +206,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 					},
 				},
 			},
+			"passport": passportDataSourceSchema("Passport configuration for the project."),
 			"password_protection": schema.SingleNestedAttribute{
 				Description: "Ensures visitors of your Preview Deployments must enter a password in order to gain access.",
 				Computed:    true,
@@ -540,6 +541,7 @@ func trustedSourcesEnvMatcherDataSourceSchema() map[string]schema.Attribute {
 
 // Project reflects the state terraform stores internally for a project.
 type ProjectDataSource struct {
+	Passport                            types.Object `tfsdk:"passport"`
 	BuildCommand                        types.String `tfsdk:"build_command"`
 	DevCommand                          types.String `tfsdk:"dev_command"`
 	Environment                         types.Set    `tfsdk:"environment"`
@@ -657,6 +659,7 @@ func convertResponseToProjectDataSource(ctx context.Context, response client.Pro
 		ServerlessFunctionRegion:            project.ServerlessFunctionRegion,
 		TeamID:                              project.TeamID,
 		VercelAuthentication:                project.VercelAuthentication,
+		Passport:                            project.Passport,
 		PasswordProtection:                  ppObj,
 		TrustedIps:                          project.TrustedIps,
 		TrustedSources:                      project.TrustedSources,
