@@ -278,7 +278,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"deployment_type": schema.StringAttribute{
-						Description:   "The deployment environment to protect. The default value is `standard_protection_new` (Standard Protection). Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_preview_deployments`, or `none`.",
+						Description:   "The deployment environment to protect. When omitted on creation, inherits the team default (Standard Protection when the team has no default). Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_preview_deployments`, or `none`.",
 						Optional:      true,
 						Computed:      true,
 						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
@@ -1731,9 +1731,7 @@ func (p *Project) vercelAuthentication(ctx context.Context) (va *VercelAuthentic
 
 func (v *VercelAuthentication) toVercelAuthentication() *client.VercelAuthentication {
 	if v == nil {
-		return &client.VercelAuthentication{
-			DeploymentType: toApiDeploymentProtectionType(types.StringValue("standard_protection_new")),
-		}
+		return nil
 	}
 
 	return &client.VercelAuthentication{
@@ -2461,7 +2459,12 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Fields that have to be updated after the project is initially created.
 	if plan.RequiresUpdateAfterCreation() {
-		req, diags := plan.toUpdateProjectRequest(ctx, plan.Name.ValueString())
+		// Keep the authentication inherited during creation when applying the remaining settings.
+		updatePlan := plan
+		if plan.VercelAuthentication.IsNull() || plan.VercelAuthentication.IsUnknown() {
+			updatePlan.VercelAuthentication = result.VercelAuthentication
+		}
+		req, diags := updatePlan.toUpdateProjectRequest(ctx, plan.Name.ValueString())
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return

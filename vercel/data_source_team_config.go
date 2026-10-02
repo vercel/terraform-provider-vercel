@@ -86,6 +86,19 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Computed:    true,
 				Description: "The hostname that is used as the preview deployment suffix.",
 			},
+			"default_deployment_protection": schema.SingleNestedAttribute{
+				Computed:    true,
+				Description: "Deployment Protection defaults copied to new projects. Existing projects are unaffected.",
+				Attributes: map[string]schema.Attribute{
+					"vercel_authentication": schema.SingleNestedAttribute{
+						Computed:    true,
+						Description: "Default Vercel Authentication for new projects.",
+						Attributes: map[string]schema.Attribute{
+							"deployment_type": schema.StringAttribute{Computed: true, Description: "The default protection level, or none when disabled."},
+						},
+					},
+				},
+			},
 			"default_build_machine_type": schema.StringAttribute{
 				Computed:    true,
 				Description: "The default build machine type for new projects.",
@@ -147,6 +160,7 @@ func (d *teamConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 }
 
 type TeamConfigData struct {
+	DefaultDeploymentProtection        types.Object `tfsdk:"default_deployment_protection"`
 	ID                                 types.String `tfsdk:"id"`
 	Name                               types.String `tfsdk:"name"`
 	Slug                               types.String `tfsdk:"slug"`
@@ -190,6 +204,7 @@ func (d *teamConfigDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	}
 
 	diags = resp.State.Set(ctx, TeamConfigData{
+		DefaultDeploymentProtection:        out.DefaultDeploymentProtection,
 		ID:                                 out.ID,
 		Name:                               out.Name,
 		Slug:                               out.Slug,

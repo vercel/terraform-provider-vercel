@@ -72,6 +72,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
+      sensitive_matrix: ${{ steps.plan.outputs.sensitive_matrix }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -86,7 +87,8 @@ jobs:
         id: plan
         run: |
           matrix=$(go run ./tools/ci-acceptance-shards -general-shards "${ACCEPTANCE_GENERAL_SHARDS}" -format matrix)
-          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+          printf 'matrix=%s\n' "$(jq -c '{include: [.include[] | select(.name | endswith("-sensitive") | not)]}' <<< "$matrix")" >> "$GITHUB_OUTPUT"
+          printf 'sensitive_matrix=%s\n' "$(jq -c '{include: [.include[] | select(.name | endswith("-sensitive"))]}' <<< "$matrix")" >> "$GITHUB_OUTPUT"
       - name: Show shard plan
         run: go run ./tools/ci-acceptance-shards -general-shards "${ACCEPTANCE_GENERAL_SHARDS}" -format summary
 
@@ -130,10 +132,50 @@ jobs:
         run: |
           go test -count=1 -timeout 30m "${TEST_PACKAGE}" -run "${TEST_PATTERN}"
 
+  acceptance-sensitive:
+    name: Acceptance (${{ matrix.name }})
+    needs: [acceptance, acceptance-plan]
+    timeout-minutes: 45
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix: ${{ fromJson(needs.acceptance-plan.outputs.sensitive_matrix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+        id: go
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.*"
+          terraform_wrapper: false
+      - name: Get dependencies
+        run: go mod download
+      - name: TF acceptance shard
+        timeout-minutes: 45
+        env:
+          TF_ACC: "true"
+          TEST_PACKAGE: ${{ matrix.package }}
+          TEST_PATTERN: ${{ matrix.pattern }}
+          VERCEL_API_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
+          VERCEL_TERRAFORM_TESTING_TEAM: "team_GwBFaTRF7juuJfO2jZzzKRgc"
+          VERCEL_TERRAFORM_TESTING_GITHUB_REPO: "dglsparsons/test"
+          VERCEL_TERRAFORM_TESTING_GITLAB_REPO: "dglsparsons/test"
+          VERCEL_TERRAFORM_TESTING_BITBUCKET_REPO: "dglsparsons-test/test"
+          VERCEL_TERRAFORM_TESTING_DOMAIN: "vercel-terraform.com"
+          VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER_EMAIL: ${{ secrets.VERCEL_TERRAFORM_TESTING_ADDITIONAL_USER_EMAIL }}
+          VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION: ${{ secrets.VERCEL_TERRAFORM_TESTING_EXISTING_INTEGRATION }}
+        run: |
+          go test -count=1 -timeout 30m "${TEST_PACKAGE}" -run "${TEST_PATTERN}"
+
   acceptance-compat:
     name: Acceptance Compat (${{ matrix.name }})
     if: ${{ github.event_name == 'push' }}
-    needs: [build]
+    needs: [acceptance-sensitive]
     timeout-minutes: 45
     strategy:
       max-parallel: 1
@@ -181,6 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - acceptance
+      - acceptance-sensitive
       - acceptance-compat
       - acceptance-plan
       - docs
