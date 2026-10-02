@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 
@@ -10,6 +11,7 @@ import (
 
 const (
 	AlertRuleTypeBuiltIn = "built-in"
+	AlertRuleTypeCustom  = "custom"
 )
 
 var AlertRuleBuiltInTriggerTypes = []string{
@@ -24,6 +26,12 @@ var AlertRuleBuiltInTriggerTypes = []string{
 }
 
 type AlertRule struct {
+	Evaluation                *CustomAlertEvaluation        `json:"evaluation,omitempty"`
+	Trigger                   *CustomAlertTrigger           `json:"trigger,omitempty"`
+	Severity                  *string                       `json:"severity,omitempty"`
+	InvestigationPrompt       *string                       `json:"investigationPrompt,omitempty"`
+	AgentTriageEnabled        bool                          `json:"agentTriageEnabled"`
+	QuerySupported            bool                          `json:"querySupported"`
 	ID                        string                        `json:"id"`
 	Type                      string                        `json:"type"`
 	Name                      string                        `json:"name"`
@@ -37,6 +45,7 @@ type AlertRule struct {
 }
 
 type AlertRuleScope struct {
+	ProjectID  string   `json:"projectId,omitempty"`
 	Type       string   `json:"type"`
 	ProjectIDs []string `json:"projectIds,omitempty"`
 }
@@ -57,6 +66,11 @@ type AlertRuleNotificationSettings struct {
 }
 
 type AlertRuleCreate struct {
+	Evaluation                *CustomAlertEvaluation         `json:"evaluation,omitempty"`
+	Trigger                   *CustomAlertTrigger            `json:"trigger,omitempty"`
+	Severity                  *string                        `json:"severity,omitempty"`
+	InvestigationPrompt       *string                        `json:"investigationPrompt,omitempty"`
+	AgentTriageEnabled        *bool                          `json:"agentTriageEnabled,omitempty"`
 	Type                      string                         `json:"type"`
 	Name                      string                         `json:"name"`
 	RuleScope                 AlertRuleScope                 `json:"ruleScope"`
@@ -71,6 +85,11 @@ type CreateAlertRuleRequest struct {
 }
 
 type UpdateAlertRuleRequest struct {
+	Evaluation                *CustomAlertEvaluation         `json:"evaluation,omitempty"`
+	Trigger                   *CustomAlertTrigger            `json:"trigger,omitempty"`
+	Severity                  *string                        `json:"severity,omitempty"`
+	InvestigationPrompt       json.RawMessage                `json:"investigationPrompt,omitempty"`
+	AgentTriageEnabled        *bool                          `json:"agentTriageEnabled,omitempty"`
 	TeamID                    string                         `json:"-"`
 	ID                        string                         `json:"-"`
 	Type                      *string                        `json:"type,omitempty"`
@@ -162,4 +181,26 @@ func (c *Client) ListAlertRules(ctx context.Context, teamID string) ([]AlertRule
 			return rules, nil
 		}
 	}
+}
+
+// CustomAlertEvaluation describes a custom alert's metric query and cadence.
+type CustomAlertEvaluation struct {
+	Window string          `json:"window"`
+	Query  json.RawMessage `json:"query"`
+}
+
+// CustomAlertTrigger describes either a threshold or anomaly condition.
+type CustomAlertTrigger struct {
+	Type               string              `json:"type"`
+	Output             string              `json:"output"`
+	Operator           *string             `json:"operator,omitempty"`
+	Threshold          *float64            `json:"threshold,omitempty"`
+	StandardDeviations *float64            `json:"standardDeviations,omitempty"`
+	Minimum            *CustomAlertMinimum `json:"minimum,omitempty"`
+}
+
+// CustomAlertMinimum gates evaluation on a primitive metric or ratio numerator.
+type CustomAlertMinimum struct {
+	Output    string  `json:"output"`
+	Threshold float64 `json:"threshold"`
 }
