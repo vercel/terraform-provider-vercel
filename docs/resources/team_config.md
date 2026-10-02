@@ -86,6 +86,8 @@ Required:
 
 - `deployment_type` (String) One of standard_protection_new, standard_protection, all_deployments, only_preview_deployments, or none. none disables authentication for new projects.
 
+
+
 <a id="nestedatt--default_passport"></a>
 ### Nested Schema for `default_passport`
 

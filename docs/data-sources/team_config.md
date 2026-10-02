@@ -59,6 +59,8 @@ Read-Only:
 
 - `deployment_type` (String) The default protection level, or none when disabled.
 
+
+
 <a id="nestedatt--default_passport"></a>
 ### Nested Schema for `default_passport`
 

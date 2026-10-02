@@ -920,6 +920,7 @@ func (r *teamConfigResource) UpgradeState(ctx context.Context) map[int64]resourc
 
 				tflog.Info(ctx, "upgrading state for team_config resource", map[string]any{})
 				upgradedStateData := TeamConfig{
+					DefaultDeploymentProtection:        types.ObjectNull(defaultDeploymentProtectionAttrTypes),
 					Saml:                               types.ObjectNull(samlAttrTypes),
 					DefaultPassport:                    types.ObjectNull(passportAttrTypes),
 					ID:                                 priorStateData.ID,

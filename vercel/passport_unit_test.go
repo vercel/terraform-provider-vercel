@@ -170,7 +170,7 @@ func TestPassportTeamConfigV0Upgrade(t *testing.T) {
 	if diags := resp.State.Get(ctx, &state); diags.HasError() {
 		t.Fatal(diags)
 	}
-	if state.ID.ValueString() != "team_1" || !state.DefaultPassport.IsNull() {
+	if state.ID.ValueString() != "team_1" || !state.DefaultPassport.IsNull() || !state.DefaultDeploymentProtection.IsNull() {
 		t.Fatalf("upgraded state = %#v", state)
 	}
 }
