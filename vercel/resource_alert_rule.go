@@ -151,8 +151,10 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			},
 			"match_minimum_severity_level": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "The minimum severity matched by a built-in rule.",
+				MarkdownDescription: "The minimum severity matched by a built-in rule. Must be `low`, `medium`, or `high`; `high` matches High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = \"critical\"` on the notification link. Existing rules that already use `critical` can still be read and imported, but `critical` cannot be newly written.",
 				Validators: []validator.String{
+					// The API still returns `critical` for legacy rules, so it must
+					// remain a valid state value; ModifyPlan rejects new writes.
 					stringvalidator.OneOf("low", "medium", "high", "critical"),
 				},
 			},
@@ -665,6 +667,31 @@ func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 		// plan a mode change when the user starts managing its trigger set.
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("trigger_mode"), types.StringValue("selected"))...)
 	}
+
+	prior := types.StringNull()
+	if !req.State.Raw.IsNull() {
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("match_minimum_severity_level"), &prior)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+	if writesCriticalMatchMinimumSeverityLevel(config.MatchMinimumSeverityLevel, prior) {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("match_minimum_severity_level"),
+			"Critical-only built-in alert rules are not supported",
+			"Use `high` to match High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = \"critical\"` on its `vercel_alert_rule_slack_notification` or `vercel_alert_rule_webhook_notification` link.",
+		)
+	}
+}
+
+// writesCriticalMatchMinimumSeverityLevel reports whether a plan would send
+// `critical` to the API. Legacy rules can still read back as `critical`; keeping
+// that unchanged value is allowed because updates omit unchanged fields.
+func writesCriticalMatchMinimumSeverityLevel(planned, prior types.String) bool {
+	if planned.IsNull() || planned.IsUnknown() || planned.ValueString() != "critical" {
+		return false
+	}
+	return prior.IsNull() || prior.IsUnknown() || prior.ValueString() != "critical"
 }
 
 func (r *alertRuleResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {

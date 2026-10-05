@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
@@ -106,6 +107,63 @@ func TestAlertRuleConfiguredTriggersPlanSelectedMode(t *testing.T) {
 	}
 	if got := modified.TriggerMode.ValueString(); got != "selected" {
 		t.Fatalf("trigger_mode = %q, want selected", got)
+	}
+}
+
+func TestAlertRuleModifyPlanRejectsNewCriticalMatchMinimumSeverityLevel(t *testing.T) {
+	ctx := context.Background()
+	ruleSchema := alertRuleSchema(t)
+	triggers := alertRuleTriggerSet(t, "statusGroup:5xx")
+
+	for _, tc := range []struct {
+		name      string
+		prior     string
+		planned   string
+		wantError bool
+	}{
+		{name: "create critical", planned: "critical", wantError: true},
+		{name: "change to critical", prior: "high", planned: "critical", wantError: true},
+		{name: "keep legacy critical", prior: "critical", planned: "critical"},
+		{name: "move legacy critical to high", prior: "critical", planned: "high"},
+		{name: "create high", planned: "high"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config := AlertRule{
+				ID: types.StringNull(), TeamID: types.StringNull(), Type: types.StringValue(client.AlertRuleTypeBuiltIn), Name: types.StringValue("Errors"),
+				RuleScope: alertRuleScopeValue("all", types.SetNull(types.StringType)), TriggerMode: types.StringNull(), Triggers: triggers,
+				MatchMinimumSeverityLevel: types.StringValue(tc.planned), Tags: types.SetNull(types.StringType),
+				NotificationSettings: types.ObjectNull(alertRuleNotificationSettingsAttrType.AttrTypes), IsDefault: types.BoolNull(), CreatedAt: types.Int64Null(), UpdatedAt: types.Int64Null(),
+			}
+			configValue := tfsdk.Plan{Schema: ruleSchema}
+			if diags := configValue.Set(ctx, config); diags.HasError() {
+				t.Fatalf("config Set() diagnostics = %v", diags)
+			}
+			plannedState := tfsdk.Plan{Schema: ruleSchema}
+			if diags := plannedState.Set(ctx, config); diags.HasError() {
+				t.Fatalf("plan Set() diagnostics = %v", diags)
+			}
+			priorState := tfsdk.State{Schema: ruleSchema, Raw: tftypes.NewValue(ruleSchema.Type().TerraformType(ctx), nil)}
+			if tc.prior != "" {
+				state := config
+				state.ID = types.StringValue("ar_123")
+				state.TeamID = types.StringValue("team_123")
+				state.TriggerMode = types.StringValue("selected")
+				state.MatchMinimumSeverityLevel = types.StringValue(tc.prior)
+				if diags := priorState.Set(ctx, state); diags.HasError() {
+					t.Fatalf("state Set() diagnostics = %v", diags)
+				}
+			}
+
+			response := &resource.ModifyPlanResponse{Plan: plannedState}
+			(&alertRuleResource{}).ModifyPlan(ctx, resource.ModifyPlanRequest{
+				Config: tfsdk.Config{Raw: configValue.Raw, Schema: ruleSchema},
+				Plan:   plannedState,
+				State:  priorState,
+			}, response)
+			if got := response.Diagnostics.HasError(); got != tc.wantError {
+				t.Fatalf("ModifyPlan() error = %v, want %v; diagnostics = %v", got, tc.wantError, response.Diagnostics)
+			}
+		})
 	}
 }
 

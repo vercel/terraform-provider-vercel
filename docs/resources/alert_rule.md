@@ -87,7 +87,7 @@ Wildcards and regular expressions are not supported for metric names, so `metric
 
 ### Required
 
-- `match_minimum_severity_level` (String) The minimum severity matched by a built-in rule.
+- `match_minimum_severity_level` (String) The minimum severity matched by a built-in rule. Must be `low`, `medium`, or `high`; `high` matches High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = "critical"` on the notification link. Existing rules that already use `critical` can still be read and imported, but `critical` cannot be newly written.
 - `name` (String) A human-readable name for the alert rule.
 - `rule_scope` (Attributes) The projects affected by the rule. Use `all`, `include`, or `exclude`. (see [below for nested schema](#nestedatt--rule_scope))
 - `type` (String) The alert rule type. Currently only `built-in` is supported.
