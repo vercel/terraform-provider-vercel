@@ -59,8 +59,8 @@ resource "vercel_alert_rule_webhook_notification" "checkout_errors" {
 }
 
 resource "vercel_webhook" "alerts" {
-  url    = "https://example.com/vercel-alerts"
-  events = ["alerts.triggered"]
+  endpoint = "https://example.com/vercel-alerts"
+  events   = ["alerts.triggered"]
 }
 ```
 

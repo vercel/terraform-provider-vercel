@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
+	"strings"
 	"sync"
 	"testing"
 
@@ -193,6 +195,12 @@ func (p *customAlertMockProvider) Configure(_ context.Context, _ provider.Config
 // Terraform drives the complete lifecycle against a local API, including the
 // private query baseline that is unavailable in direct resource method tests.
 func TestCustomAlertRuleLifecycle(t *testing.T) {
+	t.Run("normal updates", func(t *testing.T) { testCustomAlertRuleLifecycle(t, false) })
+	t.Run("concurrent query change", func(t *testing.T) { testCustomAlertRuleLifecycle(t, true) })
+}
+
+func testCustomAlertRuleLifecycle(t *testing.T, concurrentQueryChange bool) {
+	t.Helper()
 	var mu sync.Mutex
 	var rule client.AlertRule
 	var patches []map[string]json.RawMessage
@@ -240,6 +248,14 @@ func TestCustomAlertRuleLifecycle(t *testing.T) {
 			existing, _ = json.Marshal(merged)
 			rule = client.AlertRule{}
 			_ = json.Unmarshal(existing, &rule)
+			var query map[string]any
+			_ = json.Unmarshal(rule.Evaluation.Query, &query)
+			metric := query["metrics"].(map[string]any)["requests"].(map[string]any)
+			metric["filter"] = strings.ReplaceAll(metric["filter"].(string), "httpStatus >= 500", "httpStatus:>=500")
+			if concurrentQueryChange && len(patches) == 1 {
+				metric["filter"] = "httpStatus:>=400"
+			}
+			rule.Evaluation.Query, _ = json.Marshal(query)
 		case http.MethodGet:
 			if deleted {
 				http.Error(w, `{"error":{"code":"not_found","message":"missing"}}`, 404)
@@ -275,7 +291,7 @@ resource "vercel_custom_alert_rule" "test" {
 	}
 	threshold := `{type = "threshold", output = "requests", operator = "gt", threshold = 0}`
 	anomaly := `{type = "anomaly", output = "requests", standard_deviations = 3, minimum = {output = "requests", threshold = 10}}`
-	tfresource.UnitTest(t, tfresource.TestCase{ProtoV6ProviderFactories: factories, Steps: []tfresource.TestStep{
+	steps := []tfresource.TestStep{
 		{Config: config("Requests", `investigation_prompt = "Investigate checkout failures"`, threshold), Check: tfresource.ComposeTestCheckFunc(
 			tfresource.TestCheckResourceAttr("vercel_custom_alert_rule.test", "id", "ar_123"),
 			tfresource.TestCheckResourceAttr("vercel_custom_alert_rule.test", "trigger.threshold", "0"),
@@ -285,17 +301,40 @@ resource "vercel_custom_alert_rule" "test" {
 		{Config: config("Renamed", "", threshold)},
 		{Config: config("Renamed", "", anomaly)},
 		{ResourceName: "vercel_custom_alert_rule.test", ImportState: true, ImportStateId: "team_123/ar_123", ImportStateVerify: true, ImportStateVerifyIgnore: []string{"evaluation.query"}},
-	}})
+	}
+	expectedPatches := 2
+	if concurrentQueryChange {
+		failedUpdate := tfresource.TestStep{
+			Config:      config("Renamed", "", threshold),
+			ExpectError: regexp.MustCompile("Custom Alert Rule query changed during update"),
+		}
+		steps = append(steps[:1], append([]tfresource.TestStep{failedUpdate}, steps[1:]...)...)
+		expectedPatches++
+	}
+	tfresource.UnitTest(t, tfresource.TestCase{ProtoV6ProviderFactories: factories, Steps: steps})
 	mu.Lock()
 	defer mu.Unlock()
-	if !deleted || len(patches) != 2 {
+	if !deleted || len(patches) != expectedPatches {
 		t.Fatalf("deleted = %v, patches = %#v", deleted, patches)
 	}
 	if len(patches[0]) != 2 || string(patches[0]["name"]) != `"Renamed"` || string(patches[0]["investigationPrompt"]) != "null" {
 		t.Fatalf("metadata patch = %#v", patches[0])
 	}
-	if len(patches[1]) != 1 || patches[1]["trigger"] == nil {
-		t.Fatalf("trigger patch = %#v", patches[1])
+	if concurrentQueryChange {
+		if len(patches[1]) != 1 || patches[1]["evaluation"] == nil {
+			t.Fatalf("drift repair patch = %#v", patches[1])
+		}
+		var query map[string]any
+		if err := json.Unmarshal(rule.Evaluation.Query, &query); err != nil {
+			t.Fatal(err)
+		}
+		if query["metrics"].(map[string]any)["requests"].(map[string]any)["filter"] != "httpStatus:>=500" {
+			t.Fatalf("query drift was not repaired: %s", rule.Evaluation.Query)
+		}
+	}
+	triggerPatch := patches[len(patches)-1]
+	if len(triggerPatch) != 1 || triggerPatch["trigger"] == nil {
+		t.Fatalf("trigger patch = %#v", triggerPatch)
 	}
 }
 

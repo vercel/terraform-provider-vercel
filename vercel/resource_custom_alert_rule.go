@@ -406,6 +406,11 @@ func (r *customAlertRuleResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	previous, d := req.Private.GetKey(ctx, customAlertCanonicalQueryKey)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	out, err := r.client.UpdateAlertRule(ctx, payload)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating custom Alert Rule", err.Error())
@@ -416,8 +421,15 @@ func (r *customAlertRuleResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	result.Evaluation, d = customAlertEvaluationPreservingQuery(ctx, result.Evaluation, plan.Evaluation, nil, out.Evaluation.Query, true)
+	result.Evaluation, d = customAlertEvaluationPreservingQuery(ctx, result.Evaluation, plan.Evaluation, previous, out.Evaluation.Query, payload.Evaluation != nil)
 	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if payload.Evaluation == nil && !result.Evaluation.Equal(plan.Evaluation) {
+		resp.Diagnostics.AddError("Custom Alert Rule query changed during update", "The API returned an evaluation that differs from the saved query baseline, but this update did not send an evaluation. Run terraform plan again to reconcile the remote change.")
+		return
+	}
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, customAlertCanonicalQueryKey, out.Evaluation.Query)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, result)...)
 }
