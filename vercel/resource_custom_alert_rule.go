@@ -48,7 +48,7 @@ type CustomAlertRule struct {
 
 type customAlertEvaluation struct {
 	Window types.String `tfsdk:"window"`
-	Query  types.String `tfsdk:"query"`
+	Query  types.Object `tfsdk:"query"`
 }
 
 type customAlertTrigger struct {
@@ -66,7 +66,7 @@ type customAlertMinimum struct {
 }
 
 var customAlertEvaluationAttrTypes = map[string]attr.Type{
-	"window": types.StringType, "query": types.StringType,
+	"window": types.StringType, "query": types.ObjectType{AttrTypes: customAlertQueryAttrTypes},
 }
 var customAlertMinimumAttrTypes = map[string]attr.Type{
 	"output": types.StringType, "threshold": types.Float64Type,
@@ -111,7 +111,7 @@ func (r *customAlertRuleResource) Schema(ctx context.Context, _ resource.SchemaR
 		Required: true, MarkdownDescription: "The metric query and evaluation window.",
 		Attributes: map[string]schema.Attribute{
 			"window": schema.StringAttribute{Required: true, MarkdownDescription: "Aggregation granularity and detection cadence: `5m`, `15m`, `1h`, or `1d`.", Validators: []validator.String{stringvalidator.OneOf("5m", "15m", "1h", "1d")}},
-			"query":  schema.StringAttribute{Required: true, MarkdownDescription: "The Alerts v3 query as a JSON object. Prefer `jsonencode(...)`. Use one metric without formulas, or two metrics with a division formula named `formula`. Discover supported metrics with `vc metrics schema <metric-or-prefix>`.", Validators: []validator.String{validateJSONObject()}},
+			"query":  customAlertQueryAttribute(),
 		},
 	}
 	attributes["trigger"] = schema.SingleNestedAttribute{
@@ -173,12 +173,9 @@ func customAlertEvaluationToClient(ctx context.Context, value types.Object) (*cl
 		diags.AddError("Unknown custom alert evaluation", "The evaluation must be known before applying the rule.")
 		return nil, diags
 	}
-	var query map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(model.Query.ValueString()), &query); err != nil || query == nil {
-		diags.AddError("Invalid custom alert query", "The query must be a JSON object.")
-		return nil, diags
-	}
-	return &client.CustomAlertEvaluation{Window: model.Window.ValueString(), Query: json.RawMessage(model.Query.ValueString())}, diags
+	query, d := customAlertQueryToJSON(ctx, model.Query)
+	diags.Append(d...)
+	return &client.CustomAlertEvaluation{Window: model.Window.ValueString(), Query: query}, diags
 }
 
 func customAlertTriggerToClient(ctx context.Context, value types.Object) (*client.CustomAlertTrigger, diag.Diagnostics) {
@@ -272,7 +269,9 @@ func customAlertRuleFromAPI(ctx context.Context, rule client.AlertRule, teamID t
 		diags.AddError("Unsupported custom Alert Rule", "This resource requires a custom rule with `querySupported: true`. Legacy rules with unsupported queries must be recreated before Terraform can manage their query.")
 		return CustomAlertRule{}, diags
 	}
-	evaluation, d := types.ObjectValueFrom(ctx, customAlertEvaluationAttrTypes, customAlertEvaluation{Window: types.StringValue(rule.Evaluation.Window), Query: types.StringValue(string(rule.Evaluation.Query))})
+	query, d := customAlertQueryFromJSON(ctx, rule.Evaluation.Query)
+	diags.Append(d...)
+	evaluation, d := types.ObjectValueFrom(ctx, customAlertEvaluationAttrTypes, customAlertEvaluation{Window: types.StringValue(rule.Evaluation.Window), Query: query})
 	diags.Append(d...)
 	minimum := types.ObjectNull(customAlertMinimumAttrTypes)
 	if rule.Trigger.Minimum != nil {

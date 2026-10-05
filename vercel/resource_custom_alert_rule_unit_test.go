@@ -35,8 +35,12 @@ func customAlertRuleSchema(t *testing.T) schema.Schema {
 }
 
 func customAlertEvaluationValue(window, query string) types.Object {
+	value, diags := customAlertQueryFromJSON(context.Background(), json.RawMessage(query))
+	if diags.HasError() {
+		panic(diags)
+	}
 	return types.ObjectValueMust(customAlertEvaluationAttrTypes, map[string]attr.Value{
-		"window": types.StringValue(window), "query": types.StringValue(query),
+		"window": types.StringValue(window), "query": value,
 	})
 }
 
@@ -218,7 +222,7 @@ func TestCustomAlertRuleQueryReconciliation(t *testing.T) {
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
-			if result.Attributes()["query"] != types.StringValue(test.expected) || result.Attributes()["window"] != types.StringValue("1h") {
+			if !result.Attributes()["query"].Equal(customAlertEvaluationValue("1h", test.expected).Attributes()["query"]) || result.Attributes()["window"] != types.StringValue("1h") {
 				t.Fatalf("result = %v", result)
 			}
 		})
@@ -338,7 +342,7 @@ resource "vercel_custom_alert_rule" "test" {
  %s
  evaluation = {
   window = "5m"
-  query = jsonencode({metrics = {requests = {metric = "vercel.request.count", aggregation = "count", filter = "httpStatus >= 500"}}, outputs = ["requests"]})
+  query = {metrics = {requests = {metric = "vercel.request.count", aggregation = "count", filter = "httpStatus >= 500"}}, outputs = ["requests"]}
  }
  trigger = %s
 }

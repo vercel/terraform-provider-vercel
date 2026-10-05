@@ -10,7 +10,7 @@ resource "vercel_custom_alert_rule" "checkout_errors" {
 
   evaluation = {
     window = "5m"
-    query = jsonencode({
+    query = {
       metrics = {
         errors = {
           metric      = "vercel.request.count"
@@ -19,7 +19,7 @@ resource "vercel_custom_alert_rule" "checkout_errors" {
         }
       }
       outputs = ["errors"]
-    })
+    }
   }
 
   trigger = {
