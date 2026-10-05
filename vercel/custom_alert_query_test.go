@@ -53,9 +53,9 @@ func TestCustomAlertQuerySchemaValidation(t *testing.T) {
 		{"reserved metric alias", strings.ReplaceAll(primitive, "requests", "formula"), "metrics"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			model := customAlertTestModel()
+			model := customAlertTestModel(t)
 			model.ID = types.StringNull()
-			model.Evaluation = customAlertEvaluationValue("5m", test.query)
+			model.Evaluation = customAlertEvaluationValue(t, "5m", test.query)
 			config := tfsdk.Plan{Schema: customAlertRuleSchema(t)}
 			if diags := config.Set(context.Background(), model); diags.HasError() {
 				t.Fatal(diags)
@@ -89,7 +89,7 @@ func TestCustomAlertQuerySchemaValidation(t *testing.T) {
 
 func TestCustomAlertQueryUnknownMetric(t *testing.T) {
 	ctx := context.Background()
-	model := customAlertTestModel()
+	model := customAlertTestModel(t)
 	model.ID = types.StringNull()
 	evaluation := model.Evaluation.Attributes()
 	query := evaluation["query"].(types.Object).Attributes()

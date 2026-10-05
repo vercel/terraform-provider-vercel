@@ -34,10 +34,11 @@ func customAlertRuleSchema(t *testing.T) schema.Schema {
 	return response.Schema
 }
 
-func customAlertEvaluationValue(window, query string) types.Object {
+func customAlertEvaluationValue(t *testing.T, window, query string) types.Object {
+	t.Helper()
 	value, diags := customAlertQueryFromJSON(context.Background(), json.RawMessage(query))
 	if diags.HasError() {
-		panic(diags)
+		t.Fatal(diags)
 	}
 	return types.ObjectValueMust(customAlertEvaluationAttrTypes, map[string]attr.Value{
 		"window": types.StringValue(window), "query": value,
@@ -52,11 +53,12 @@ func customAlertThresholdValue(threshold float64) types.Object {
 	})
 }
 
-func customAlertTestModel() CustomAlertRule {
+func customAlertTestModel(t *testing.T) CustomAlertRule {
+	t.Helper()
 	return CustomAlertRule{
 		ID: types.StringValue("ar_123"), TeamID: types.StringValue("team_123"), Name: types.StringValue("Requests"),
 		ProjectID: types.StringValue("prj_123"), Severity: types.StringValue("high"),
-		Evaluation: customAlertEvaluationValue("5m", `{"metrics":{"requests":{"metric":"vercel.request.count","aggregation":"count"}},"outputs":["requests"]}`),
+		Evaluation: customAlertEvaluationValue(t, "5m", `{"metrics":{"requests":{"metric":"vercel.request.count","aggregation":"count"}},"outputs":["requests"]}`),
 		Trigger:    customAlertThresholdValue(0), InvestigationPrompt: types.StringNull(), Tags: types.SetNull(types.StringType),
 		NotificationSettings: types.ObjectNull(alertRuleNotificationSettingsAttrType.AttrTypes), CreatedAt: types.Int64Null(), UpdatedAt: types.Int64Null(),
 	}
@@ -64,7 +66,7 @@ func customAlertTestModel() CustomAlertRule {
 
 func TestCustomAlertRuleRequests(t *testing.T) {
 	ctx := context.Background()
-	state := customAlertTestModel()
+	state := customAlertTestModel(t)
 	create, diags := state.toCreateRequest(ctx)
 	if diags.HasError() {
 		t.Fatal(diags)
@@ -101,7 +103,7 @@ func TestCustomAlertRuleRequests(t *testing.T) {
 		t.Fatalf("metadata PATCH = %s", encoded)
 	}
 	plan = state
-	plan.Evaluation = customAlertEvaluationValue("1h", `{"metrics":{"requests":{"metric":"vercel.request.count","aggregation":"count"}},"outputs":["requests"]}`)
+	plan.Evaluation = customAlertEvaluationValue(t, "1h", `{"metrics":{"requests":{"metric":"vercel.request.count","aggregation":"count"}},"outputs":["requests"]}`)
 	update, diags = plan.toUpdateRequest(ctx, state)
 	if diags.HasError() || update.Evaluation == nil || update.Evaluation.Window != "1h" || update.Trigger != nil || update.RuleScope != nil {
 		t.Fatalf("evaluation PATCH = %#v, diagnostics = %v", update, diags)
@@ -110,7 +112,7 @@ func TestCustomAlertRuleRequests(t *testing.T) {
 
 func TestCustomAlertRuleTagsAndNotificationSettingsRequests(t *testing.T) {
 	ctx := context.Background()
-	state := customAlertTestModel()
+	state := customAlertTestModel(t)
 	state.Tags = types.SetValueMust(types.StringType, []attr.Value{types.StringValue("checkout")})
 	routingKey := "checkout"
 	critical := "critical"
@@ -182,7 +184,7 @@ func TestCustomAlertRuleTriggerValidation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			model := customAlertTestModel()
+			model := customAlertTestModel(t)
 			values := model.Trigger.Attributes()
 			for key, value := range test.values {
 				values[key] = value
@@ -218,11 +220,11 @@ func TestCustomAlertRuleQueryReconciliation(t *testing.T) {
 		{"import without baseline", "", canonical, false, canonical},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			result, diags := customAlertEvaluationPreservingQuery(ctx, customAlertEvaluationValue("1h", test.current), customAlertEvaluationValue("5m", authored), []byte(test.previous), []byte(test.current), test.apply)
+			result, diags := customAlertEvaluationPreservingQuery(ctx, customAlertEvaluationValue(t, "1h", test.current), customAlertEvaluationValue(t, "5m", authored), []byte(test.previous), []byte(test.current), test.apply)
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
-			if !result.Attributes()["query"].Equal(customAlertEvaluationValue("1h", test.expected).Attributes()["query"]) || result.Attributes()["window"] != types.StringValue("1h") {
+			if !result.Attributes()["query"].Equal(customAlertEvaluationValue(t, "1h", test.expected).Attributes()["query"]) || result.Attributes()["window"] != types.StringValue("1h") {
 				t.Fatalf("result = %v", result)
 			}
 		})
@@ -408,7 +410,7 @@ func TestCustomAlertRuleReadAndDeleteFailures(t *testing.T) {
 			t.Cleanup(server.Close)
 			ctx := context.Background()
 			state := tfsdk.State{Schema: customAlertRuleSchema(t)}
-			if diags := state.Set(ctx, customAlertTestModel()); diags.HasError() {
+			if diags := state.Set(ctx, customAlertTestModel(t)); diags.HasError() {
 				t.Fatal(diags)
 			}
 			r := &customAlertRuleResource{client: client.New("TOKEN").WithBaseURL(server.URL)}
@@ -432,7 +434,7 @@ func TestCustomAlertRuleReadAndDeleteFailures(t *testing.T) {
 
 func TestCustomAlertRuleCreateRequiresTeam(t *testing.T) {
 	ctx := context.Background()
-	model := customAlertTestModel()
+	model := customAlertTestModel(t)
 	model.TeamID = types.StringNull()
 	plan := tfsdk.Plan{Schema: customAlertRuleSchema(t)}
 	if diags := plan.Set(ctx, model); diags.HasError() {
