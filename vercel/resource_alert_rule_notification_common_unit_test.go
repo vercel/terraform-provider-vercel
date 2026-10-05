@@ -106,7 +106,7 @@ func TestAlertRuleWebhookNotificationCreate(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
-		_, _ = fmt.Fprint(w, `{"success":true,"notification":{"type":"webhook","webhookId":"hook_123"}}`)
+		_, _ = fmt.Fprint(w, `{"success":true,"notification":{"type":"webhook","webhookId":"hook_123","minimumSeverityLevel":"critical"}}`)
 	}))
 	t.Cleanup(server.Close)
 
@@ -194,6 +194,106 @@ func TestAlertRuleSlackNotificationCreateResolvesInstallation(t *testing.T) {
 	}
 	if !state.MinimumSeverityLevel.IsNull() {
 		t.Fatalf("minimum_severity_level = %s, want null", state.MinimumSeverityLevel)
+	}
+}
+
+func TestAlertRuleNotificationCreateClearsAdoptedMinimumSeverityLevel(t *testing.T) {
+	tests := []struct {
+		name         string
+		slack        bool
+		linkResponse string
+		wantPatch    string
+	}{
+		{
+			name:         "Slack",
+			slack:        true,
+			linkResponse: `{"success":true,"notification":{"type":"slack","configId":"icfg_123","channelId":"C123","minimumSeverityLevel":"critical"}}`,
+			wantPatch:    `{"type":"slack","configId":"icfg_123","channelId":"C123","minimumSeverityLevel":null}`,
+		},
+		{
+			name:         "webhook",
+			linkResponse: `{"success":true,"notification":{"type":"webhook","webhookId":"hook_123","minimumSeverityLevel":"critical"}}`,
+			wantPatch:    `{"type":"webhook","webhookId":"hook_123","minimumSeverityLevel":null}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var methods []string
+			var patchBody string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/alerts/v3/alert-rules/ar_123/notifications/links" {
+					t.Fatalf("path = %s, want notification links", r.URL.Path)
+				}
+				methods = append(methods, r.Method)
+				raw, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Fatalf("read request: %v", err)
+				}
+				switch r.Method {
+				case http.MethodPost:
+					_, _ = fmt.Fprint(w, tt.linkResponse)
+				case http.MethodPatch:
+					patchBody = string(raw)
+					_, _ = fmt.Fprint(w, `{"success":true,"notification":{}}`)
+				default:
+					t.Fatalf("unexpected method %s", r.Method)
+				}
+			}))
+			t.Cleanup(server.Close)
+			apiClient := client.New("TOKEN").WithBaseURL(server.URL).WithTeam(client.Team{ID: "team_123"})
+
+			var resourceSchema schema.Schema
+			var plannedValue any
+			if tt.slack {
+				resourceSchema = alertRuleSlackNotificationSchema(t)
+				plannedValue = AlertRuleSlackNotification{
+					ID:                   types.StringUnknown(),
+					TeamID:               types.StringNull(),
+					AlertRuleID:          types.StringValue("ar_123"),
+					SlackChannelID:       types.StringValue("C123"),
+					SlackInstallationID:  types.StringUnknown(),
+					MinimumSeverityLevel: types.StringNull(),
+				}
+			} else {
+				resourceSchema = alertRuleWebhookNotificationSchema(t)
+				plannedValue = AlertRuleWebhookNotification{
+					ID:                   types.StringUnknown(),
+					TeamID:               types.StringNull(),
+					AlertRuleID:          types.StringValue("ar_123"),
+					WebhookID:            types.StringValue("hook_123"),
+					MinimumSeverityLevel: types.StringNull(),
+				}
+			}
+			plan := tfsdk.Plan{Schema: resourceSchema}
+			if diags := plan.Set(context.Background(), plannedValue); diags.HasError() {
+				t.Fatalf("Plan.Set() diagnostics = %v", diags)
+			}
+			request := resource.CreateRequest{Plan: plan}
+			response := resource.CreateResponse{State: tfsdk.State{Schema: resourceSchema}}
+			if tt.slack {
+				(&alertRuleSlackNotificationResource{client: apiClient}).Create(context.Background(), request, &response)
+			} else {
+				(&alertRuleWebhookNotificationResource{client: apiClient}).Create(context.Background(), request, &response)
+			}
+			if response.Diagnostics.HasError() {
+				t.Fatalf("Create() diagnostics = %v", response.Diagnostics)
+			}
+			if len(methods) != 2 || methods[0] != http.MethodPost || methods[1] != http.MethodPatch {
+				t.Fatalf("methods = %v, want [POST PATCH]", methods)
+			}
+			if patchBody != tt.wantPatch {
+				t.Fatalf("PATCH body = %s, want %s", patchBody, tt.wantPatch)
+			}
+
+			var got types.String
+			if diags := response.State.GetAttribute(context.Background(), path.Root("minimum_severity_level"), &got); diags.HasError() {
+				t.Fatalf("State.GetAttribute() diagnostics = %v", diags)
+			}
+			if !got.IsNull() {
+				t.Fatalf("minimum_severity_level = %s, want null", got)
+			}
+		})
 	}
 }
 

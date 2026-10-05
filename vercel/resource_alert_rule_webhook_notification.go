@@ -109,6 +109,14 @@ func (r *alertRuleWebhookNotificationResource) Create(ctx context.Context, req r
 		)
 		return
 	}
+	if err := reconcileAlertRuleNotificationMinimumSeverityLevel(ctx, r.client, client.AlertRuleNotificationRequest{
+		TeamID:                      teamID,
+		AlertRuleID:                 plan.AlertRuleID.ValueString(),
+		AlertRuleNotificationTarget: target,
+	}, resolved); err != nil {
+		resp.Diagnostics.AddError("Error updating Alert Rule Webhook Notification", fmt.Sprintf("The webhook was already linked to Alert Rule %s with a different minimum severity, and it could not be updated: %s", plan.AlertRuleID.ValueString(), err))
+		return
+	}
 
 	plan.ID = types.StringValue(plan.resourceID())
 	plan.TeamID = types.StringValue(teamID)

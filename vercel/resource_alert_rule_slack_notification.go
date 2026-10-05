@@ -135,6 +135,17 @@ func (r *alertRuleSlackNotificationResource) Create(ctx context.Context, req res
 		return
 	}
 
+	reconcileTarget := target
+	reconcileTarget.ConfigID = resolved.ConfigID
+	if err := reconcileAlertRuleNotificationMinimumSeverityLevel(ctx, r.client, client.AlertRuleNotificationRequest{
+		TeamID:                      teamID,
+		AlertRuleID:                 plan.AlertRuleID.ValueString(),
+		AlertRuleNotificationTarget: reconcileTarget,
+	}, resolved); err != nil {
+		resp.Diagnostics.AddError("Error updating Alert Rule Slack Notification", fmt.Sprintf("The Slack channel was already linked to Alert Rule %s with a different minimum severity, and it could not be updated: %s", plan.AlertRuleID.ValueString(), err))
+		return
+	}
+
 	plan.SlackInstallationID = types.StringValue(resolved.ConfigID)
 	id, err := plan.resourceID()
 	if err != nil {

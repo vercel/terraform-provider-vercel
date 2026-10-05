@@ -1,6 +1,7 @@
 package vercel
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -106,4 +107,23 @@ func validAlertRuleNotificationImportParts(importID string, allowedLengths ...in
 		}
 	}
 	return nil, false
+}
+
+// reconcileAlertRuleNotificationMinimumSeverityLevel aligns an adopted link
+// with the configured minimum severity. Linking a destination that is already
+// linked returns the existing link, including any minimum severity it already
+// has when the request omits one.
+func reconcileAlertRuleNotificationMinimumSeverityLevel(ctx context.Context, c *client.Client, request client.AlertRuleNotificationRequest, resolved client.AlertRuleNotificationTarget) error {
+	if optionalStringsEqual(request.MinimumSeverityLevel, resolved.MinimumSeverityLevel) {
+		return nil
+	}
+	_, err := c.UpdateAlertRuleNotification(ctx, request)
+	return err
+}
+
+func optionalStringsEqual(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }
