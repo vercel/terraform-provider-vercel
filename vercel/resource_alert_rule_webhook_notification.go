@@ -32,10 +32,11 @@ type alertRuleWebhookNotificationResource struct {
 }
 
 type AlertRuleWebhookNotification struct {
-	ID          types.String `tfsdk:"id"`
-	TeamID      types.String `tfsdk:"team_id"`
-	AlertRuleID types.String `tfsdk:"alert_rule_id"`
-	WebhookID   types.String `tfsdk:"webhook_id"`
+	ID                   types.String `tfsdk:"id"`
+	TeamID               types.String `tfsdk:"team_id"`
+	AlertRuleID          types.String `tfsdk:"alert_rule_id"`
+	WebhookID            types.String `tfsdk:"webhook_id"`
+	MinimumSeverityLevel types.String `tfsdk:"minimum_severity_level"`
 }
 
 func (r *alertRuleWebhookNotificationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -60,6 +61,7 @@ func (r *alertRuleWebhookNotificationResource) Schema(_ context.Context, _ resou
 			validateStringIsTrimmed(),
 		},
 	}
+	attributes["minimum_severity_level"] = alertRuleNotificationMinimumSeverityLevelAttribute()
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a link between a Vercel alert rule and one existing account webhook.",
 		Attributes:          attributes,
@@ -90,6 +92,7 @@ func (r *alertRuleWebhookNotificationResource) Create(ctx context.Context, req r
 		return
 	}
 	target := plan.target()
+	target.MinimumSeverityLevel = optionalString(plan.MinimumSeverityLevel)
 	resolved, err := r.client.LinkAlertRuleNotification(ctx, client.AlertRuleNotificationRequest{
 		TeamID:                      teamID,
 		AlertRuleID:                 plan.AlertRuleID.ValueString(),
@@ -133,10 +136,12 @@ func (r *alertRuleWebhookNotificationResource) Read(ctx context.Context, req res
 		resp.Diagnostics.AddError("Error reading Alert Rule Webhook Notification", fmt.Sprintf("Could not read notification destinations for Alert Rule %s, unexpected error: %s", state.AlertRuleID.ValueString(), err))
 		return
 	}
-	if !alertRuleNotificationExists(state.target(), notifications) {
+	notification, ok := findAlertRuleNotification(state.target(), notifications)
+	if !ok {
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	state.MinimumSeverityLevel = stringValue(notification.MinimumSeverityLevel)
 
 	tflog.Info(ctx, "read alert rule webhook notification", map[string]any{
 		"team_id":       state.TeamID.ValueString(),
@@ -146,8 +151,33 @@ func (r *alertRuleWebhookNotificationResource) Read(ctx context.Context, req res
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
-func (r *alertRuleWebhookNotificationResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Alert Rule Webhook Notification cannot be updated", "Changing an Alert Rule Webhook Notification must replace the resource.")
+func (r *alertRuleWebhookNotificationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state AlertRuleWebhookNotification
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	target := state.target()
+	target.MinimumSeverityLevel = optionalString(plan.MinimumSeverityLevel)
+	if _, err := r.client.UpdateAlertRuleNotification(ctx, client.AlertRuleNotificationRequest{
+		TeamID:                      state.TeamID.ValueString(),
+		AlertRuleID:                 state.AlertRuleID.ValueString(),
+		AlertRuleNotificationTarget: target,
+	}); err != nil {
+		resp.Diagnostics.AddError("Error updating Alert Rule Webhook Notification", fmt.Sprintf("Could not update the webhook notification for Alert Rule %s, unexpected error: %s", state.AlertRuleID.ValueString(), err))
+		return
+	}
+
+	state.MinimumSeverityLevel = plan.MinimumSeverityLevel
+	tflog.Info(ctx, "updated alert rule webhook notification", map[string]any{
+		"team_id":                state.TeamID.ValueString(),
+		"alert_rule_id":          state.AlertRuleID.ValueString(),
+		"webhook_id":             state.WebhookID.ValueString(),
+		"minimum_severity_level": state.MinimumSeverityLevel.ValueString(),
+	})
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
 func (r *alertRuleWebhookNotificationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -185,8 +215,9 @@ func (r *alertRuleWebhookNotificationResource) ImportState(ctx context.Context, 
 	}
 
 	state := AlertRuleWebhookNotification{
-		ID:     types.StringNull(),
-		TeamID: types.StringNull(),
+		ID:                   types.StringNull(),
+		TeamID:               types.StringNull(),
+		MinimumSeverityLevel: types.StringNull(),
 	}
 	if len(parts) == 2 {
 		state.AlertRuleID = types.StringValue(parts[0])
@@ -212,10 +243,12 @@ func (r *alertRuleWebhookNotificationResource) ImportState(ctx context.Context, 
 		resp.Diagnostics.AddError("Error importing Alert Rule Webhook Notification", fmt.Sprintf("Could not read notification destinations for Alert Rule %s, unexpected error: %s", state.AlertRuleID.ValueString(), err))
 		return
 	}
-	if !alertRuleNotificationExists(state.target(), notifications) {
+	notification, ok := findAlertRuleNotification(state.target(), notifications)
+	if !ok {
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	state.MinimumSeverityLevel = stringValue(notification.MinimumSeverityLevel)
 
 	state.ID = types.StringValue(state.resourceID())
 	tflog.Info(ctx, "imported alert rule webhook notification", map[string]any{

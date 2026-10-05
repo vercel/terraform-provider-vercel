@@ -32,11 +32,12 @@ type alertRuleSlackNotificationResource struct {
 }
 
 type AlertRuleSlackNotification struct {
-	ID                  types.String `tfsdk:"id"`
-	TeamID              types.String `tfsdk:"team_id"`
-	AlertRuleID         types.String `tfsdk:"alert_rule_id"`
-	SlackChannelID      types.String `tfsdk:"slack_channel_id"`
-	SlackInstallationID types.String `tfsdk:"slack_installation_id"`
+	ID                   types.String `tfsdk:"id"`
+	TeamID               types.String `tfsdk:"team_id"`
+	AlertRuleID          types.String `tfsdk:"alert_rule_id"`
+	SlackChannelID       types.String `tfsdk:"slack_channel_id"`
+	SlackInstallationID  types.String `tfsdk:"slack_installation_id"`
+	MinimumSeverityLevel types.String `tfsdk:"minimum_severity_level"`
 }
 
 func (r *alertRuleSlackNotificationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -72,6 +73,7 @@ func (r *alertRuleSlackNotificationResource) Schema(_ context.Context, _ resourc
 		},
 		Validators: identityValidators,
 	}
+	attributes["minimum_severity_level"] = alertRuleNotificationMinimumSeverityLevelAttribute()
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a link between a Vercel alert rule and one Slack channel.",
 		Attributes:          attributes,
@@ -115,6 +117,7 @@ func (r *alertRuleSlackNotificationResource) Create(ctx context.Context, req res
 		return
 	}
 	target := plan.target()
+	target.MinimumSeverityLevel = optionalString(plan.MinimumSeverityLevel)
 	resolved, err := r.client.LinkAlertRuleNotification(ctx, client.AlertRuleNotificationRequest{
 		TeamID:                      teamID,
 		AlertRuleID:                 plan.AlertRuleID.ValueString(),
@@ -170,10 +173,12 @@ func (r *alertRuleSlackNotificationResource) Read(ctx context.Context, req resou
 		resp.Diagnostics.AddError("Error reading Alert Rule Slack Notification", fmt.Sprintf("Could not read notification destinations for Alert Rule %s, unexpected error: %s", state.AlertRuleID.ValueString(), err))
 		return
 	}
-	if !alertRuleNotificationExists(target, notifications) {
+	notification, ok := findAlertRuleNotification(target, notifications)
+	if !ok {
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	state.MinimumSeverityLevel = stringValue(notification.MinimumSeverityLevel)
 
 	tflog.Info(ctx, "read alert rule Slack notification", map[string]any{
 		"team_id":               state.TeamID.ValueString(),
@@ -184,8 +189,38 @@ func (r *alertRuleSlackNotificationResource) Read(ctx context.Context, req resou
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
-func (r *alertRuleSlackNotificationResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Alert Rule Slack Notification cannot be updated", "Changing an Alert Rule Slack Notification must replace the resource.")
+func (r *alertRuleSlackNotificationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state AlertRuleSlackNotification
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	target, err := state.resolvedTarget()
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Alert Rule Slack Notification state", err.Error())
+		return
+	}
+	target.MinimumSeverityLevel = optionalString(plan.MinimumSeverityLevel)
+	if _, err := r.client.UpdateAlertRuleNotification(ctx, client.AlertRuleNotificationRequest{
+		TeamID:                      state.TeamID.ValueString(),
+		AlertRuleID:                 state.AlertRuleID.ValueString(),
+		AlertRuleNotificationTarget: target,
+	}); err != nil {
+		resp.Diagnostics.AddError("Error updating Alert Rule Slack Notification", fmt.Sprintf("Could not update the Slack notification for Alert Rule %s, unexpected error: %s", state.AlertRuleID.ValueString(), err))
+		return
+	}
+
+	state.MinimumSeverityLevel = plan.MinimumSeverityLevel
+	tflog.Info(ctx, "updated alert rule Slack notification", map[string]any{
+		"team_id":                state.TeamID.ValueString(),
+		"alert_rule_id":          state.AlertRuleID.ValueString(),
+		"slack_installation_id":  state.SlackInstallationID.ValueString(),
+		"slack_channel_id":       state.SlackChannelID.ValueString(),
+		"minimum_severity_level": state.MinimumSeverityLevel.ValueString(),
+	})
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
 func (r *alertRuleSlackNotificationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -229,8 +264,9 @@ func (r *alertRuleSlackNotificationResource) ImportState(ctx context.Context, re
 	}
 
 	state := AlertRuleSlackNotification{
-		ID:     types.StringNull(),
-		TeamID: types.StringNull(),
+		ID:                   types.StringNull(),
+		TeamID:               types.StringNull(),
+		MinimumSeverityLevel: types.StringNull(),
 	}
 	if len(parts) == 3 {
 		state.AlertRuleID = types.StringValue(parts[0])
@@ -263,10 +299,12 @@ func (r *alertRuleSlackNotificationResource) ImportState(ctx context.Context, re
 		resp.Diagnostics.AddError("Error importing Alert Rule Slack Notification", fmt.Sprintf("Could not read notification destinations for Alert Rule %s, unexpected error: %s", state.AlertRuleID.ValueString(), err))
 		return
 	}
-	if !alertRuleNotificationExists(target, notifications) {
+	notification, ok := findAlertRuleNotification(target, notifications)
+	if !ok {
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	state.MinimumSeverityLevel = stringValue(notification.MinimumSeverityLevel)
 
 	id, err := state.resourceID()
 	if err != nil {

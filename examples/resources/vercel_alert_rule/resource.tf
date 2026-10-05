@@ -14,6 +14,7 @@ resource "vercel_alert_rule" "checkout_errors" {
     filter = "statusGroup:5xx AND route:/api/checkout"
   }]
   match_minimum_severity_level = "high"
+  tags                         = ["checkout"]
   notification_settings = {
     enable_team_owner_notifications = true
   }

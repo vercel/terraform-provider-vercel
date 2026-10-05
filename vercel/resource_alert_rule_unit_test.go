@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -53,14 +54,15 @@ func TestAlertRuleConfiguredTriggersPlanSelectedMode(t *testing.T) {
 	configuredTriggers := alertRuleTriggerSet(t, "statusGroup:5xx")
 	scope := alertRuleScopeValue("all", types.SetNull(types.StringType))
 	notificationSettings := types.ObjectValueMust(alertRuleNotificationSettingsAttrType.AttrTypes, map[string]attr.Value{
-		"enable_team_owner_notifications": types.BoolValue(true),
-		"incident_io_routing_key":         types.StringNull(),
+		"enable_team_owner_notifications":             types.BoolValue(true),
+		"incident_io_routing_key":                     types.StringNull(),
+		"vercel_notifications_minimum_severity_level": types.StringNull(),
 	})
 
 	config := AlertRule{
 		ID: types.StringNull(), TeamID: types.StringNull(), Type: types.StringValue(client.AlertRuleTypeBuiltIn), Name: types.StringValue("Errors"),
 		RuleScope: scope, TriggerMode: types.StringNull(), Triggers: configuredTriggers, MatchMinimumSeverityLevel: types.StringValue("high"),
-		NotificationSettings: types.ObjectNull(alertRuleNotificationSettingsAttrType.AttrTypes), IsDefault: types.BoolNull(), CreatedAt: types.Int64Null(), UpdatedAt: types.Int64Null(),
+		Tags: types.SetNull(types.StringType), NotificationSettings: types.ObjectNull(alertRuleNotificationSettingsAttrType.AttrTypes), IsDefault: types.BoolNull(), CreatedAt: types.Int64Null(), UpdatedAt: types.Int64Null(),
 	}
 	state := config
 	state.ID = types.StringValue("ar_123")
@@ -220,8 +222,9 @@ func TestAlertRuleModifyPlanAcceptsUnknownScopeObject(t *testing.T) {
 	state.TeamID = types.StringValue("team_123")
 	state.TriggerMode = types.StringValue("selected")
 	state.NotificationSettings = types.ObjectValueMust(alertRuleNotificationSettingsAttrType.AttrTypes, map[string]attr.Value{
-		"enable_team_owner_notifications": types.BoolValue(true),
-		"incident_io_routing_key":         types.StringNull(),
+		"enable_team_owner_notifications":             types.BoolValue(true),
+		"incident_io_routing_key":                     types.StringNull(),
+		"vercel_notifications_minimum_severity_level": types.StringNull(),
 	})
 	state.IsDefault = types.BoolValue(false)
 	state.CreatedAt = types.Int64Value(1)
@@ -287,6 +290,60 @@ func TestAlertRuleBuiltInRoundTrip(t *testing.T) {
 	}
 	if payload.RuleScope.ProjectIDs[0] != "prj_123" || payload.NotificationSettings == nil || !payload.NotificationSettings.EnableTeamOwnerNotifications {
 		t.Fatalf("payload = %#v", payload)
+	}
+}
+
+func TestAlertRuleTagsRequests(t *testing.T) {
+	ctx := context.Background()
+	severity := "high"
+	state, diags := alertRuleFromAPI(ctx, client.AlertRule{
+		ID: "ar_123", Type: client.AlertRuleTypeBuiltIn, Name: "Errors",
+		RuleScope:                 client.AlertRuleScope{Type: "all"},
+		Triggers:                  &client.AlertRuleTriggers{Mode: "selected", Items: []client.AlertRuleTrigger{{Type: "error_anomaly"}}},
+		MatchMinimumSeverityLevel: &severity,
+		Tags:                      []string{"checkout", "payments"},
+		NotificationSettings:      client.AlertRuleNotificationSettings{EnableTeamOwnerNotifications: true},
+	}, types.StringValue("team_123"))
+	if diags.HasError() {
+		t.Fatalf("alertRuleFromAPI() diagnostics = %v", diags)
+	}
+	if len(state.Tags.Elements()) != 2 {
+		t.Fatalf("state.Tags = %v, want 2 tags", state.Tags)
+	}
+
+	create, diags := state.toCreateRequest(ctx)
+	if diags.HasError() {
+		t.Fatalf("toCreateRequest() diagnostics = %v", diags)
+	}
+	if len(create.Tags) != 2 {
+		t.Fatalf("create.Tags = %v, want 2 tags", create.Tags)
+	}
+
+	unchanged, diags := state.toUpdateRequest(ctx, state)
+	if diags.HasError() || unchanged.Tags != nil {
+		t.Fatalf("unchanged update tags = %s, diagnostics = %v", unchanged.Tags, diags)
+	}
+
+	plan := state
+	plan.Tags = types.SetNull(types.StringType)
+	cleared, diags := plan.toUpdateRequest(ctx, state)
+	if diags.HasError() {
+		t.Fatalf("toUpdateRequest() diagnostics = %v", diags)
+	}
+	body, err := json.Marshal(cleared)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if string(body) != `{"tags":null}` {
+		t.Fatalf("clearing PATCH body = %s", body)
+	}
+
+	empty, diags := alertRuleFromAPI(ctx, client.AlertRule{
+		ID: "ar_123", Type: client.AlertRuleTypeBuiltIn, Name: "Errors", RuleScope: client.AlertRuleScope{Type: "all"},
+		MatchMinimumSeverityLevel: &severity, Tags: []string{},
+	}, types.StringValue("team_123"))
+	if diags.HasError() || !empty.Tags.IsNull() {
+		t.Fatalf("empty tags = %v, diagnostics = %v", empty.Tags, diags)
 	}
 }
 
@@ -379,8 +436,9 @@ func TestAlertRuleUpdatePreservesUnconfiguredOwnerNotifications(t *testing.T) {
 	plan := state
 	plan.Name = types.StringValue("Renamed")
 	plan.NotificationSettings = types.ObjectValueMust(alertRuleNotificationSettingsAttrType.AttrTypes, map[string]attr.Value{
-		"enable_team_owner_notifications": modifierResponse.PlanValue,
-		"incident_io_routing_key":         types.StringValue(routingKey),
+		"enable_team_owner_notifications":             modifierResponse.PlanValue,
+		"incident_io_routing_key":                     types.StringValue(routingKey),
+		"vercel_notifications_minimum_severity_level": types.StringNull(),
 	})
 
 	request, diags := plan.toUpdateRequest(ctx, state)
@@ -488,6 +546,7 @@ func alertRuleConfiguration(t *testing.T) AlertRule {
 		TriggerMode:               types.StringNull(),
 		Triggers:                  alertRuleTriggerSet(t, "statusGroup:5xx"),
 		MatchMinimumSeverityLevel: types.StringValue("high"),
+		Tags:                      types.SetNull(types.StringType),
 		NotificationSettings:      types.ObjectNull(alertRuleNotificationSettingsAttrType.AttrTypes),
 		IsDefault:                 types.BoolNull(),
 		CreatedAt:                 types.Int64Null(),

@@ -69,20 +69,28 @@ func alertRuleNotificationOptionalStringValue(value types.String) string {
 	return value.ValueString()
 }
 
-func alertRuleNotificationExists(target client.AlertRuleNotificationTarget, notifications []client.AlertRuleNotification) bool {
+func alertRuleNotificationMinimumSeverityLevelAttribute() schema.StringAttribute {
+	return schema.StringAttribute{
+		Optional:            true,
+		MarkdownDescription: "Set to `critical` to notify this destination only when an alert is classified as Critical. For custom alert rules, Critical is assigned after the agent investigation completes. Omit to notify this destination at every severity.",
+		Validators:          []validator.String{stringvalidator.OneOf("critical")},
+	}
+}
+
+func findAlertRuleNotification(target client.AlertRuleNotificationTarget, notifications []client.AlertRuleNotification) (client.AlertRuleNotification, bool) {
 	for _, notification := range notifications {
 		switch target.Type {
 		case client.AlertRuleNotificationTypeWebhook:
 			if notification.Type == target.Type && notification.Webhook.ID == target.WebhookID {
-				return true
+				return notification, true
 			}
 		case client.AlertRuleNotificationTypeSlack:
 			if notification.Type == target.Type && notification.ConfigID == target.ConfigID && notification.ChannelID == target.ChannelID {
-				return true
+				return notification, true
 			}
 		}
 	}
-	return false
+	return client.AlertRuleNotification{}, false
 }
 
 func validAlertRuleNotificationImportParts(importID string, allowedLengths ...int) ([]string, bool) {

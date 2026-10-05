@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -41,7 +40,7 @@ type CustomAlertRule struct {
 	Trigger              types.Object `tfsdk:"trigger"`
 	Severity             types.String `tfsdk:"severity"`
 	InvestigationPrompt  types.String `tfsdk:"investigation_prompt"`
-	AgentTriageEnabled   types.Bool   `tfsdk:"agent_triage_enabled"`
+	Tags                 types.Set    `tfsdk:"tags"`
 	NotificationSettings types.Object `tfsdk:"notification_settings"`
 	CreatedAt            types.Int64  `tfsdk:"created_at"`
 	UpdatedAt            types.Int64  `tfsdk:"updated_at"`
@@ -107,10 +106,7 @@ func (r *customAlertRuleResource) Schema(ctx context.Context, _ resource.SchemaR
 		Optional: true, MarkdownDescription: "Optional guidance stored for agent investigations. The API currently stores this prompt without passing it to the investigation workflow. Removing it clears the stored prompt.",
 		Validators: []validator.String{stringvalidator.LengthAtMost(2000), validateStringIsTrimmed()},
 	}
-	attributes["agent_triage_enabled"] = schema.BoolAttribute{
-		Optional: true, Computed: true, Default: booldefault.StaticBool(false),
-		MarkdownDescription: "When true, publish notifications only after the alert is classified as Critical. Defaults to false.",
-	}
+	attributes["tags"] = alertRuleTagsAttribute()
 	attributes["evaluation"] = schema.SingleNestedAttribute{
 		Required: true, MarkdownDescription: "The metric query and evaluation window.",
 		Attributes: map[string]schema.Attribute{
@@ -214,13 +210,14 @@ func (model CustomAlertRule) toCreateRequest(ctx context.Context) (client.Create
 	diags.Append(triggerDiags...)
 	settings, settingsDiags := alertRuleNotificationSettingsToClient(ctx, model.NotificationSettings)
 	diags.Append(settingsDiags...)
+	tags, tagDiags := alertRuleTagsToClient(ctx, model.Tags)
+	diags.Append(tagDiags...)
 	severity := model.Severity.ValueString()
-	triage := model.AgentTriageEnabled.ValueBool()
 	return client.CreateAlertRuleRequest{TeamID: model.TeamID.ValueString(), AlertRuleCreate: client.AlertRuleCreate{
 		Type: client.AlertRuleTypeCustom, Name: model.Name.ValueString(),
 		RuleScope:  client.AlertRuleScope{Type: "project", ProjectID: model.ProjectID.ValueString()},
 		Evaluation: evaluation, Trigger: trigger, Severity: &severity,
-		InvestigationPrompt: optionalString(model.InvestigationPrompt), AgentTriageEnabled: &triage, NotificationSettings: settings,
+		InvestigationPrompt: optionalString(model.InvestigationPrompt), Tags: tags, NotificationSettings: settings,
 	}}, diags
 }
 
@@ -238,9 +235,10 @@ func (plan CustomAlertRule) toUpdateRequest(ctx context.Context, state CustomAle
 	if !plan.Severity.Equal(state.Severity) {
 		request.Severity = optionalString(plan.Severity)
 	}
-	if !plan.AgentTriageEnabled.Equal(state.AgentTriageEnabled) {
-		value := plan.AgentTriageEnabled.ValueBool()
-		request.AgentTriageEnabled = &value
+	if !plan.Tags.Equal(state.Tags) {
+		tags, tagDiags := alertRuleTagsUpdateValue(ctx, plan.Tags)
+		diags.Append(tagDiags...)
+		request.Tags = tags
 	}
 	if !plan.InvestigationPrompt.Equal(state.InvestigationPrompt) {
 		encoded, err := json.Marshal(optionalString(plan.InvestigationPrompt))
@@ -261,7 +259,7 @@ func (plan CustomAlertRule) toUpdateRequest(ctx context.Context, state CustomAle
 		request.Trigger = value
 	}
 	if !plan.NotificationSettings.Equal(state.NotificationSettings) {
-		value, d := alertRuleNotificationSettingsToClient(ctx, plan.NotificationSettings)
+		value, d := alertRuleNotificationSettingsToUpdateClient(ctx, plan.NotificationSettings)
 		diags.Append(d...)
 		request.NotificationSettings = value
 	}
@@ -286,14 +284,14 @@ func customAlertRuleFromAPI(ctx context.Context, rule client.AlertRule, teamID t
 		Threshold: customAlertFloat64Value(rule.Trigger.Threshold), StandardDeviations: customAlertFloat64Value(rule.Trigger.StandardDeviations), Minimum: minimum,
 	})
 	diags.Append(d...)
-	settings, d := types.ObjectValueFrom(ctx, alertRuleNotificationSettingsAttrType.AttrTypes, AlertRuleNotificationSettings{
-		EnableTeamOwnerNotifications: types.BoolValue(rule.NotificationSettings.EnableTeamOwnerNotifications), IncidentIORoutingKey: stringValue(rule.NotificationSettings.IncidentIORoutingKey),
-	})
+	settings, d := alertRuleNotificationSettingsFromClient(ctx, rule.NotificationSettings)
+	diags.Append(d...)
+	tags, d := alertRuleTagsFromClient(ctx, rule.Tags)
 	diags.Append(d...)
 	return CustomAlertRule{
 		ID: types.StringValue(rule.ID), TeamID: teamID, Name: types.StringValue(rule.Name), ProjectID: types.StringValue(rule.RuleScope.ProjectID),
 		Evaluation: evaluation, Trigger: trigger, Severity: stringValue(rule.Severity), InvestigationPrompt: stringValue(rule.InvestigationPrompt),
-		AgentTriageEnabled: types.BoolValue(rule.AgentTriageEnabled), NotificationSettings: settings,
+		Tags: tags, NotificationSettings: settings,
 		CreatedAt: int64Value(rule.CreatedAt), UpdatedAt: int64Value(rule.UpdatedAt),
 	}, diags
 }

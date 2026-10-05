@@ -58,6 +58,7 @@ func TestAcc_AlertRuleResource(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "triggers.#", "1"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "triggers.*", map[string]string{"type": "error_anomaly", "filter": "statusGroup:5xx"}),
 					resource.TestCheckResourceAttr(resourceName, "match_minimum_severity_level", "high"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "tags.*", "test-acc"),
 					resource.TestCheckResourceAttr(resourceName, "notification_settings.enable_team_owner_notifications", "true"),
 					resource.TestCheckResourceAttr(resourceName, "is_default", "false"),
 				),
@@ -139,6 +140,7 @@ resource "vercel_alert_rule" "example" {
     filter = "%[3]s"
   }]
   match_minimum_severity_level = "%[2]s"
+  tags                         = ["test-acc"]
 %[4]s
 }
 `, name, severity, filter, notificationSettings)

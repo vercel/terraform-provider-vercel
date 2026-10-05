@@ -73,7 +73,7 @@ func TestUpdateAlertRule(t *testing.T) {
 		TeamID:                    "team_123",
 		ID:                        "ar_123",
 		MatchMinimumSeverityLevel: &severity,
-		NotificationSettings:      &AlertRuleNotificationSettings{EnableTeamOwnerNotifications: notifyOwners},
+		NotificationSettings:      &AlertRuleNotificationSettingsUpdate{EnableTeamOwnerNotifications: notifyOwners},
 	})
 	if err != nil {
 		t.Fatalf("UpdateAlertRule() error = %v", err)

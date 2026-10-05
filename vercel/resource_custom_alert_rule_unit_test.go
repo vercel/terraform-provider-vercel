@@ -53,7 +53,7 @@ func customAlertTestModel() CustomAlertRule {
 		ID: types.StringValue("ar_123"), TeamID: types.StringValue("team_123"), Name: types.StringValue("Requests"),
 		ProjectID: types.StringValue("prj_123"), Severity: types.StringValue("high"),
 		Evaluation: customAlertEvaluationValue("5m", `{"metrics":{"requests":{"metric":"vercel.request.count","aggregation":"count"}},"outputs":["requests"]}`),
-		Trigger:    customAlertThresholdValue(0), InvestigationPrompt: types.StringNull(), AgentTriageEnabled: types.BoolValue(false),
+		Trigger:    customAlertThresholdValue(0), InvestigationPrompt: types.StringNull(), Tags: types.SetNull(types.StringType),
 		NotificationSettings: types.ObjectNull(alertRuleNotificationSettingsAttrType.AttrTypes), CreatedAt: types.Int64Null(), UpdatedAt: types.Int64Null(),
 	}
 }
@@ -73,10 +73,10 @@ func TestCustomAlertRuleRequests(t *testing.T) {
 	if err := json.Unmarshal(encoded, &body); err != nil {
 		t.Fatal(err)
 	}
-	if body["type"] != "custom" || body["agentTriageEnabled"] != false || create.Trigger.Threshold == nil || *create.Trigger.Threshold != 0 {
+	if body["type"] != "custom" || create.Trigger.Threshold == nil || *create.Trigger.Threshold != 0 {
 		t.Fatalf("create = %s", encoded)
 	}
-	for _, field := range []string{"teamId", "id", "triggers", "matchMinimumSeverityLevel", "investigationPrompt"} {
+	for _, field := range []string{"teamId", "id", "triggers", "matchMinimumSeverityLevel", "investigationPrompt", "agentTriageEnabled", "tags"} {
 		if _, exists := body[field]; exists {
 			t.Fatalf("unexpected %s in %s", field, encoded)
 		}
@@ -101,6 +101,61 @@ func TestCustomAlertRuleRequests(t *testing.T) {
 	update, diags = plan.toUpdateRequest(ctx, state)
 	if diags.HasError() || update.Evaluation == nil || update.Evaluation.Window != "1h" || update.Trigger != nil || update.RuleScope != nil {
 		t.Fatalf("evaluation PATCH = %#v, diagnostics = %v", update, diags)
+	}
+}
+
+func TestCustomAlertRuleTagsAndNotificationSettingsRequests(t *testing.T) {
+	ctx := context.Background()
+	state := customAlertTestModel()
+	state.Tags = types.SetValueMust(types.StringType, []attr.Value{types.StringValue("checkout")})
+	routingKey := "checkout"
+	critical := "critical"
+	state.NotificationSettings, _ = alertRuleNotificationSettingsFromClient(ctx, client.AlertRuleNotificationSettings{
+		EnableTeamOwnerNotifications: true, IncidentIORoutingKey: &routingKey, VercelNotificationsMinimumSeverityLevel: &critical,
+	})
+	create, diags := state.toCreateRequest(ctx)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	encoded, err := json.Marshal(create)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"tags":["checkout"]`) || !strings.Contains(string(encoded), `"notificationSettings":{"enableTeamOwnerNotifications":true,"incidentIoRoutingKey":"checkout","vercelNotificationsMinimumSeverityLevel":"critical"}`) {
+		t.Fatalf("create = %s", encoded)
+	}
+
+	plan := state
+	plan.Tags = types.SetNull(types.StringType)
+	plan.NotificationSettings, _ = alertRuleNotificationSettingsFromClient(ctx, client.AlertRuleNotificationSettings{EnableTeamOwnerNotifications: true})
+	update, diags := plan.toUpdateRequest(ctx, state)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	encoded, err = json.Marshal(update)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(encoded) != `{"tags":null,"notificationSettings":{"enableTeamOwnerNotifications":true,"incidentIoRoutingKey":null,"vercelNotificationsMinimumSeverityLevel":null}}` {
+		t.Fatalf("clearing PATCH = %s", encoded)
+	}
+
+	rule := client.AlertRule{
+		ID: "ar_123", Type: client.AlertRuleTypeCustom, QuerySupported: true, Name: "Requests", Tags: []string{"checkout"},
+		RuleScope:  client.AlertRuleScope{Type: "project", ProjectID: "prj_123"},
+		Evaluation: &client.CustomAlertEvaluation{Window: "5m", Query: json.RawMessage(`{}`)}, Trigger: &client.CustomAlertTrigger{Type: "threshold", Output: "requests"},
+		NotificationSettings: client.AlertRuleNotificationSettings{VercelNotificationsMinimumSeverityLevel: &critical},
+	}
+	result, diags := customAlertRuleFromAPI(ctx, rule, types.StringValue("team_123"))
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	if !result.Tags.Equal(state.Tags) || result.NotificationSettings.Attributes()["vercel_notifications_minimum_severity_level"] != types.StringValue("critical") {
+		t.Fatalf("result = %#v", result)
+	}
+	rule.Tags = nil
+	if result, _ = customAlertRuleFromAPI(ctx, rule, types.StringValue("team_123")); !result.Tags.IsNull() {
+		t.Fatalf("empty tags = %v, want null", result.Tags)
 	}
 }
 
@@ -274,7 +329,7 @@ func testCustomAlertRuleLifecycle(t *testing.T, concurrentQueryChange bool) {
 	factories := map[string]func() (tfprotov6.ProviderServer, error){"vercel": providerserver.NewProtocol6WithError(&customAlertMockProvider{
 		Provider: New(), client: client.New("TOKEN").WithBaseURL(server.URL).WithTeam(client.Team{ID: "team_123"}),
 	})}
-	config := func(name, prompt, trigger string) string {
+	config := func(name, extra, trigger string) string {
 		return fmt.Sprintf(`
 resource "vercel_custom_alert_rule" "test" {
  name = %q
@@ -287,16 +342,17 @@ resource "vercel_custom_alert_rule" "test" {
  }
  trigger = %s
 }
-`, name, prompt, trigger)
+`, name, extra, trigger)
 	}
 	threshold := `{type = "threshold", output = "requests", operator = "gt", threshold = 0}`
 	anomaly := `{type = "anomaly", output = "requests", standard_deviations = 3, minimum = {output = "requests", threshold = 10}}`
 	steps := []tfresource.TestStep{
-		{Config: config("Requests", `investigation_prompt = "Investigate checkout failures"`, threshold), Check: tfresource.ComposeTestCheckFunc(
+		{Config: config("Requests", "investigation_prompt = \"Investigate checkout failures\"\n tags = [\"checkout\"]", threshold), Check: tfresource.ComposeTestCheckFunc(
 			tfresource.TestCheckResourceAttr("vercel_custom_alert_rule.test", "id", "ar_123"),
 			tfresource.TestCheckResourceAttr("vercel_custom_alert_rule.test", "trigger.threshold", "0"),
 			tfresource.TestCheckResourceAttr("vercel_custom_alert_rule.test", "team_id", "team_123"),
 			tfresource.TestCheckResourceAttr("vercel_custom_alert_rule.test", "notification_settings.enable_team_owner_notifications", "true"),
+			tfresource.TestCheckTypeSetElemAttr("vercel_custom_alert_rule.test", "tags.*", "checkout"),
 		)},
 		{Config: config("Renamed", "", threshold)},
 		{Config: config("Renamed", "", anomaly)},
@@ -317,7 +373,7 @@ resource "vercel_custom_alert_rule" "test" {
 	if !deleted || len(patches) != expectedPatches {
 		t.Fatalf("deleted = %v, patches = %#v", deleted, patches)
 	}
-	if len(patches[0]) != 2 || string(patches[0]["name"]) != `"Renamed"` || string(patches[0]["investigationPrompt"]) != "null" {
+	if len(patches[0]) != 3 || string(patches[0]["name"]) != `"Renamed"` || string(patches[0]["investigationPrompt"]) != "null" || string(patches[0]["tags"]) != "null" {
 		t.Fatalf("metadata patch = %#v", patches[0])
 	}
 	if concurrentQueryChange {

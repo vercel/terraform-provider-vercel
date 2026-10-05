@@ -37,6 +37,7 @@ The special `ar_default` alert rule ID is supported even though the default rule
 
 ### Optional
 
+- `minimum_severity_level` (String) Set to `critical` to notify this destination only when an alert is classified as Critical. For custom alert rules, Critical is assigned after the agent investigation completes. Omit to notify this destination at every severity.
 - `slack_installation_id` (String) The ID of the completed Slack integration installation that owns the channel. It can be omitted when the team has exactly one completed Slack installation; the resolved ID is then stored in state. It must be configured when the team has multiple Slack installations.
 - `team_id` (String) The ID of the team that owns the alert rule and notification destination. Required if a default team is not configured in the provider.
 

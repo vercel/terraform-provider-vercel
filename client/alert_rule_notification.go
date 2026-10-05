@@ -21,13 +21,28 @@ type AlertRuleNotification struct {
 	ConfigID  string                       `json:"configId,omitempty"`
 	ChannelID string                       `json:"channelId,omitempty"`
 	Webhook   AlertRuleNotificationWebhook `json:"webhook,omitempty"`
+	// MinimumSeverityLevel is set when the destination only receives alerts of
+	// at least this severity.
+	MinimumSeverityLevel *string `json:"minimumSeverityLevel,omitempty"`
 }
 
 type AlertRuleNotificationTarget struct {
-	Type      string `json:"type"`
-	ConfigID  string `json:"configId,omitempty"`
-	ChannelID string `json:"channelId,omitempty"`
-	WebhookID string `json:"webhookId,omitempty"`
+	Type                 string  `json:"type"`
+	ConfigID             string  `json:"configId,omitempty"`
+	ChannelID            string  `json:"channelId,omitempty"`
+	WebhookID            string  `json:"webhookId,omitempty"`
+	MinimumSeverityLevel *string `json:"minimumSeverityLevel,omitempty"`
+}
+
+// alertRuleNotificationUpdateBody always serializes minimumSeverityLevel
+// because the API preserves the current value when the field is omitted and
+// clears it when the field is null.
+type alertRuleNotificationUpdateBody struct {
+	Type                 string  `json:"type"`
+	ConfigID             string  `json:"configId,omitempty"`
+	ChannelID            string  `json:"channelId,omitempty"`
+	WebhookID            string  `json:"webhookId,omitempty"`
+	MinimumSeverityLevel *string `json:"minimumSeverityLevel"`
 }
 
 type AlertRuleNotificationRequest struct {
@@ -54,14 +69,22 @@ func (c *Client) GetAlertRuleNotifications(ctx context.Context, alertRuleID, tea
 }
 
 func (c *Client) LinkAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest) (AlertRuleNotificationTarget, error) {
-	return c.mutateAlertRuleNotification(ctx, request, "POST")
+	return c.mutateAlertRuleNotification(ctx, request, "POST", request.AlertRuleNotificationTarget)
+}
+
+// UpdateAlertRuleNotification sets the minimum severity of an existing link.
+// A nil MinimumSeverityLevel clears it.
+func (c *Client) UpdateAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest) (AlertRuleNotificationTarget, error) {
+	return c.mutateAlertRuleNotification(ctx, request, "PATCH", alertRuleNotificationUpdateBody(request.AlertRuleNotificationTarget))
 }
 
 func (c *Client) UnlinkAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest) (AlertRuleNotificationTarget, error) {
-	return c.mutateAlertRuleNotification(ctx, request, "DELETE")
+	target := request.AlertRuleNotificationTarget
+	target.MinimumSeverityLevel = nil
+	return c.mutateAlertRuleNotification(ctx, request, "DELETE", target)
 }
 
-func (c *Client) mutateAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest, method string) (AlertRuleNotificationTarget, error) {
+func (c *Client) mutateAlertRuleNotification(ctx context.Context, request AlertRuleNotificationRequest, method string, body any) (AlertRuleNotificationTarget, error) {
 	u := c.alertRuleURL(request.TeamID, "/"+url.PathEscape(request.AlertRuleID)+"/notifications/links", nil)
 	tflog.Info(ctx, "mutating alert rule notification", map[string]any{
 		"url":               u,
@@ -73,7 +96,7 @@ func (c *Client) mutateAlertRuleNotification(ctx context.Context, request AlertR
 		ctx:    ctx,
 		method: method,
 		url:    u,
-		body:   string(mustMarshal(request.AlertRuleNotificationTarget)),
+		body:   string(mustMarshal(body)),
 	}, &response)
 	return response.Notification, err
 }

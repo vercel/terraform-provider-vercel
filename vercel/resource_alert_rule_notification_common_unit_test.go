@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -59,27 +61,36 @@ func TestAlertRuleNotificationSchemasAreDestinationSpecific(t *testing.T) {
 	}
 }
 
-func TestAlertRuleNotificationExistsMatchesDestinationIdentity(t *testing.T) {
+func TestFindAlertRuleNotificationMatchesDestinationIdentity(t *testing.T) {
+	critical := "critical"
 	notifications := []client.AlertRuleNotification{
 		{Type: client.AlertRuleNotificationTypeSlack, ConfigID: "icfg_other", ChannelID: "C123"},
-		{Type: client.AlertRuleNotificationTypeSlack, ConfigID: "icfg_123", ChannelID: "C123"},
+		{Type: client.AlertRuleNotificationTypeSlack, ConfigID: "icfg_123", ChannelID: "C123", MinimumSeverityLevel: &critical},
 		{Type: client.AlertRuleNotificationTypeWebhook, Webhook: client.AlertRuleNotificationWebhook{ID: "hook_123"}},
 	}
 
-	if !alertRuleNotificationExists(client.AlertRuleNotificationTarget{
+	slack, ok := findAlertRuleNotification(client.AlertRuleNotificationTarget{
 		Type: client.AlertRuleNotificationTypeSlack, ConfigID: "icfg_123", ChannelID: "C123",
-	}, notifications) {
+	}, notifications)
+	if !ok {
 		t.Fatal("matching Slack destination was not found")
 	}
-	if alertRuleNotificationExists(client.AlertRuleNotificationTarget{
+	if slack.MinimumSeverityLevel == nil || *slack.MinimumSeverityLevel != "critical" {
+		t.Fatalf("Slack minimum severity = %v, want critical", slack.MinimumSeverityLevel)
+	}
+	if _, ok := findAlertRuleNotification(client.AlertRuleNotificationTarget{
 		Type: client.AlertRuleNotificationTypeSlack, ConfigID: "icfg_missing", ChannelID: "C123",
-	}, notifications) {
+	}, notifications); ok {
 		t.Fatal("Slack destination with a different installation was matched")
 	}
-	if !alertRuleNotificationExists(client.AlertRuleNotificationTarget{
+	webhook, ok := findAlertRuleNotification(client.AlertRuleNotificationTarget{
 		Type: client.AlertRuleNotificationTypeWebhook, WebhookID: "hook_123",
-	}, notifications) {
+	}, notifications)
+	if !ok {
 		t.Fatal("matching webhook destination was not found")
+	}
+	if webhook.MinimumSeverityLevel != nil {
+		t.Fatalf("webhook minimum severity = %q, want nil", *webhook.MinimumSeverityLevel)
 	}
 }
 
@@ -102,10 +113,11 @@ func TestAlertRuleWebhookNotificationCreate(t *testing.T) {
 	resourceSchema := alertRuleWebhookNotificationSchema(t)
 	plan := tfsdk.Plan{Schema: resourceSchema}
 	if diags := plan.Set(context.Background(), AlertRuleWebhookNotification{
-		ID:          types.StringUnknown(),
-		TeamID:      types.StringNull(),
-		AlertRuleID: types.StringValue("ar_123"),
-		WebhookID:   types.StringValue("hook_123"),
+		ID:                   types.StringUnknown(),
+		TeamID:               types.StringNull(),
+		AlertRuleID:          types.StringValue("ar_123"),
+		WebhookID:            types.StringValue("hook_123"),
+		MinimumSeverityLevel: types.StringValue("critical"),
 	}); diags.HasError() {
 		t.Fatalf("Plan.Set() diagnostics = %v", diags)
 	}
@@ -127,8 +139,11 @@ func TestAlertRuleWebhookNotificationCreate(t *testing.T) {
 	if got := state.TeamID.ValueString(); got != "team_123" {
 		t.Fatalf("team_id = %q, want team_123", got)
 	}
-	if body["type"] != "webhook" || body["webhookId"] != "hook_123" {
+	if body["type"] != "webhook" || body["webhookId"] != "hook_123" || body["minimumSeverityLevel"] != "critical" {
 		t.Fatalf("body = %#v", body)
+	}
+	if got := state.MinimumSeverityLevel.ValueString(); got != "critical" {
+		t.Fatalf("minimum_severity_level = %q, want critical", got)
 	}
 }
 
@@ -173,6 +188,121 @@ func TestAlertRuleSlackNotificationCreateResolvesInstallation(t *testing.T) {
 	}
 	if _, ok := body["configId"]; ok {
 		t.Fatalf("request unexpectedly included configId: %#v", body)
+	}
+	if _, ok := body["minimumSeverityLevel"]; ok {
+		t.Fatalf("request unexpectedly included minimumSeverityLevel: %#v", body)
+	}
+	if !state.MinimumSeverityLevel.IsNull() {
+		t.Fatalf("minimum_severity_level = %s, want null", state.MinimumSeverityLevel)
+	}
+}
+
+func TestAlertRuleNotificationUpdateMinimumSeverityLevel(t *testing.T) {
+	tests := []struct {
+		name     string
+		slack    bool
+		prior    types.String
+		planned  types.String
+		wantBody string
+	}{
+		{
+			name:     "Slack becomes Critical-only",
+			slack:    true,
+			prior:    types.StringNull(),
+			planned:  types.StringValue("critical"),
+			wantBody: `{"type":"slack","configId":"icfg_123","channelId":"C123","minimumSeverityLevel":"critical"}`,
+		},
+		{
+			name:     "webhook clears Critical-only",
+			prior:    types.StringValue("critical"),
+			planned:  types.StringNull(),
+			wantBody: `{"type":"webhook","webhookId":"hook_123","minimumSeverityLevel":null}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var body string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPatch || r.URL.Path != "/alerts/v3/alert-rules/ar_123/notifications/links" {
+					t.Fatalf("request = %s %s, want notification link PATCH", r.Method, r.URL.Path)
+				}
+				if got := r.URL.Query().Get("teamId"); got != "team_123" {
+					t.Fatalf("teamId = %q, want team_123", got)
+				}
+				raw, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Fatalf("read request: %v", err)
+				}
+				body = string(raw)
+				if tt.slack {
+					_, _ = fmt.Fprint(w, `{"success":true,"notification":{"type":"slack","configId":"icfg_123","channelId":"C123","minimumSeverityLevel":"critical"}}`)
+					return
+				}
+				_, _ = fmt.Fprint(w, `{"success":true,"notification":{"type":"webhook","webhookId":"hook_123"}}`)
+			}))
+			t.Cleanup(server.Close)
+			apiClient := client.New("TOKEN").WithBaseURL(server.URL)
+
+			var resourceSchema schema.Schema
+			var priorValue, plannedValue any
+			if tt.slack {
+				resourceSchema = alertRuleSlackNotificationSchema(t)
+				notification := AlertRuleSlackNotification{
+					ID:                   types.StringValue("ar_123/icfg_123/C123"),
+					TeamID:               types.StringValue("team_123"),
+					AlertRuleID:          types.StringValue("ar_123"),
+					SlackChannelID:       types.StringValue("C123"),
+					SlackInstallationID:  types.StringValue("icfg_123"),
+					MinimumSeverityLevel: tt.prior,
+				}
+				priorValue = notification
+				notification.MinimumSeverityLevel = tt.planned
+				plannedValue = notification
+			} else {
+				resourceSchema = alertRuleWebhookNotificationSchema(t)
+				notification := AlertRuleWebhookNotification{
+					ID:                   types.StringValue("ar_123/hook_123"),
+					TeamID:               types.StringValue("team_123"),
+					AlertRuleID:          types.StringValue("ar_123"),
+					WebhookID:            types.StringValue("hook_123"),
+					MinimumSeverityLevel: tt.prior,
+				}
+				priorValue = notification
+				notification.MinimumSeverityLevel = tt.planned
+				plannedValue = notification
+			}
+
+			state := tfsdk.State{Schema: resourceSchema}
+			if diags := state.Set(context.Background(), priorValue); diags.HasError() {
+				t.Fatalf("State.Set() diagnostics = %v", diags)
+			}
+			plan := tfsdk.Plan{Schema: resourceSchema}
+			if diags := plan.Set(context.Background(), plannedValue); diags.HasError() {
+				t.Fatalf("Plan.Set() diagnostics = %v", diags)
+			}
+			request := resource.UpdateRequest{Plan: plan, State: state}
+			response := resource.UpdateResponse{State: tfsdk.State{Schema: resourceSchema}}
+			if tt.slack {
+				(&alertRuleSlackNotificationResource{client: apiClient}).Update(context.Background(), request, &response)
+			} else {
+				(&alertRuleWebhookNotificationResource{client: apiClient}).Update(context.Background(), request, &response)
+			}
+			if response.Diagnostics.HasError() {
+				t.Fatalf("Update() diagnostics = %v", response.Diagnostics)
+			}
+			if body != tt.wantBody {
+				t.Fatalf("body = %s, want %s", body, tt.wantBody)
+			}
+
+			var got types.String
+			if diags := response.State.GetAttribute(context.Background(), path.Root("minimum_severity_level"), &got); diags.HasError() {
+				t.Fatalf("State.GetAttribute() diagnostics = %v", diags)
+			}
+			if !got.Equal(tt.planned) {
+				t.Fatalf("minimum_severity_level = %s, want %s", got, tt.planned)
+			}
+		})
 	}
 }
 
@@ -275,7 +405,7 @@ func TestAlertRuleNotificationImportState(t *testing.T) {
 			name:           "Slack with provider team",
 			importID:       "ar_default/icfg_123/C123",
 			configuredTeam: client.Team{ID: "team_456"},
-			response:       `{"notifications":[{"type":"slack","configId":"icfg_123","channelId":"C123"}]}`,
+			response:       `{"notifications":[{"type":"slack","configId":"icfg_123","channelId":"C123","minimumSeverityLevel":"critical"}]}`,
 			resourceSchema: alertRuleSlackNotificationSchema,
 			slack:          true,
 			checkState: func(t *testing.T, state tfsdk.State) {
@@ -288,6 +418,9 @@ func TestAlertRuleNotificationImportState(t *testing.T) {
 				}
 				if got := notification.TeamID.ValueString(); got != "team_456" {
 					t.Fatalf("team_id = %q, want team_456", got)
+				}
+				if got := notification.MinimumSeverityLevel.ValueString(); got != "critical" {
+					t.Fatalf("minimum_severity_level = %q, want critical", got)
 				}
 			},
 		},

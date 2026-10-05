@@ -29,6 +29,7 @@ resource "vercel_alert_rule" "checkout_errors" {
     filter = "statusGroup:5xx AND route:/api/checkout"
   }]
   match_minimum_severity_level = "high"
+  tags                         = ["checkout"]
   notification_settings = {
     enable_team_owner_notifications = true
   }
@@ -94,6 +95,7 @@ Wildcards and regular expressions are not supported for metric names, so `metric
 ### Optional
 
 - `notification_settings` (Attributes) Notification delivery settings stored on the rule. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources. (see [below for nested schema](#nestedatt--notification_settings))
+- `tags` (Set of String) Up to 10 unique tags used to organize the rule. Removing all tags clears them.
 - `team_id` (String) The ID of the team that owns the alert rule. Required if a default team is not configured in the provider.
 - `triggers` (Attributes Set) The built-in anomaly triggers enabled for a built-in rule. A nonempty set is required when creating a rule. Omit this attribute to preserve a response-only legacy trigger mode after import. (see [below for nested schema](#nestedatt--triggers))
 
@@ -124,6 +126,7 @@ Optional:
 
 - `enable_team_owner_notifications` (Boolean)
 - `incident_io_routing_key` (String)
+- `vercel_notifications_minimum_severity_level` (String) Set to `critical` to send Vercel notifications only for alerts classified as Critical. Omit to send Vercel notifications for every severity.
 
 
 <a id="nestedatt--triggers"></a>

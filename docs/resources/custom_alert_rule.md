@@ -21,6 +21,7 @@ resource "vercel_custom_alert_rule" "checkout_errors" {
   name       = "Checkout server errors"
   project_id = data.vercel_project.checkout.id
   severity   = "high"
+  tags       = ["checkout", "payments"]
 
   evaluation = {
     window = "5m"
@@ -51,6 +52,13 @@ resource "vercel_custom_alert_rule" "checkout_errors" {
 resource "vercel_alert_rule_slack_notification" "checkout_errors" {
   alert_rule_id    = vercel_custom_alert_rule.checkout_errors.id
   slack_channel_id = "C0123456789"
+}
+
+# Page on-call only when the agent investigation classifies the alert as Critical.
+resource "vercel_alert_rule_slack_notification" "checkout_errors_oncall" {
+  alert_rule_id          = vercel_custom_alert_rule.checkout_errors.id
+  slack_channel_id       = "C0ONCALL00"
+  minimum_severity_level = "critical"
 }
 
 resource "vercel_alert_rule_webhook_notification" "checkout_errors" {
@@ -104,9 +112,9 @@ The provider retains configured query text when the API canonicalizes filters an
 
 ### Optional
 
-- `agent_triage_enabled` (Boolean) When true, publish notifications only after the alert is classified as Critical. Defaults to false.
 - `investigation_prompt` (String) Optional guidance stored for agent investigations. The API currently stores this prompt without passing it to the investigation workflow. Removing it clears the stored prompt.
 - `notification_settings` (Attributes) Notification delivery settings stored on the rule. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources. (see [below for nested schema](#nestedatt--notification_settings))
+- `tags` (Set of String) Up to 10 unique tags used to organize the rule. Removing all tags clears them.
 - `team_id` (String) The ID of the team that owns the alert rule. Required if a default team is not configured in the provider.
 
 ### Read-Only
@@ -156,6 +164,7 @@ Optional:
 
 - `enable_team_owner_notifications` (Boolean)
 - `incident_io_routing_key` (String)
+- `vercel_notifications_minimum_severity_level` (String) Set to `critical` to send Vercel notifications only for alerts classified as Critical. Omit to send Vercel notifications for every severity.
 
 ## Import
 

@@ -6,6 +6,7 @@ resource "vercel_custom_alert_rule" "checkout_errors" {
   name       = "Checkout server errors"
   project_id = data.vercel_project.checkout.id
   severity   = "high"
+  tags       = ["checkout", "payments"]
 
   evaluation = {
     window = "5m"
@@ -36,6 +37,13 @@ resource "vercel_custom_alert_rule" "checkout_errors" {
 resource "vercel_alert_rule_slack_notification" "checkout_errors" {
   alert_rule_id    = vercel_custom_alert_rule.checkout_errors.id
   slack_channel_id = "C0123456789"
+}
+
+# Page on-call only when the agent investigation classifies the alert as Critical.
+resource "vercel_alert_rule_slack_notification" "checkout_errors_oncall" {
+  alert_rule_id          = vercel_custom_alert_rule.checkout_errors.id
+  slack_channel_id       = "C0ONCALL00"
+  minimum_severity_level = "critical"
 }
 
 resource "vercel_alert_rule_webhook_notification" "checkout_errors" {
