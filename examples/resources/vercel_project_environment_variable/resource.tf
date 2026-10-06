@@ -29,14 +29,15 @@ resource "vercel_project_environment_variable" "example_git_branch" {
   comment    = "a staging secret"
 }
 
-# Development environment variables must explicitly set `sensitive = false`.
+# A Development Secret uses the same classification as Production and Preview Secrets.
 resource "vercel_project_environment_variable" "example_development" {
   project_id = vercel_project.example.id
   key        = "foo-development"
   value      = "bar-development"
   target     = ["development"]
-  sensitive  = false
-  comment    = "available during local development"
+  sensitive  = true
+  visibility = "secret"
+  comment    = "a development secret"
 }
 
 # An environment variable that will be created referencing

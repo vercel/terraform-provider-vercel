@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
@@ -25,7 +26,6 @@ var (
 	_ resource.Resource                     = &sharedEnvironmentVariableResource{}
 	_ resource.ResourceWithConfigure        = &sharedEnvironmentVariableResource{}
 	_ resource.ResourceWithImportState      = &sharedEnvironmentVariableResource{}
-	_ resource.ResourceWithModifyPlan       = &sharedEnvironmentVariableResource{}
 	_ resource.ResourceWithConfigValidators = &sharedEnvironmentVariableResource{}
 )
 
@@ -69,7 +69,7 @@ A Shared Environment Variable resource defines an Environment Variable that can 
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables/shared-environment-variables).
 
--> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Variables targeting ` + "`development`" + ` must set ` + "`sensitive = false`" + `. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
+-> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Secrets (` + "`sensitive = true`" + `) are supported in all target environments, including Development. Team environment variable policies are enforced by the Vercel API at apply time.
 
 -> **Note:** Write-Only argument ` + "`value_wo`" + ` is available to use in place of ` + "`value`" + `. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).
 `,
@@ -136,7 +136,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Computed:      true,
 			},
 			"sensitive": schema.BoolAttribute{
-				Description:   "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Variables targeting `development` must set this to `false`.",
+				Description:   "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Secrets are supported in all target environments, including Development.",
 				Required:      true,
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
@@ -258,52 +258,6 @@ func shouldUpdateSharedEnvironmentVariableValueWO(state, plan SharedEnvironmentV
 	versionChanged := !plan.ValueWOVersion.Equal(state.ValueWOVersion)
 	switchedToValueWO := !state.Value.IsNull() && plan.Value.IsNull()
 	return versionChanged || switchedToValueWO
-}
-
-func (e SharedEnvironmentVariable) hasTarget(ctx context.Context, target string) (bool, diag.Diagnostics) {
-	if e.Target.IsNull() || e.Target.IsUnknown() {
-		return false, nil
-	}
-
-	var targets []string
-	diags := e.Target.ElementsAs(ctx, &targets, true)
-	if diags.HasError() {
-		return false, diags
-	}
-
-	for _, t := range targets {
-		if t == target {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-func (r *sharedEnvironmentVariableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-	var config SharedEnvironmentVariable
-	diags := req.Plan.Get(ctx, &config)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	hasDevelopmentTarget, diags := config.hasTarget(ctx, "development")
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if hasDevelopmentTarget && !config.isExplicitlyNonSensitive() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("sensitive"),
-			"Shared Environment Variable Invalid",
-			"Environment variables targeting `development` must explicitly set `sensitive = false`.",
-		)
-	}
 }
 
 func (e *SharedEnvironmentVariable) toCreateSharedEnvironmentVariableRequest(ctx context.Context, diags diag.Diagnostics, valueWO types.String) (req client.CreateSharedEnvironmentVariableRequest, ok bool) {

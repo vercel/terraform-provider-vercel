@@ -6,7 +6,7 @@ description: |-
   Provides a Shared Environment Variable resource.
   A Shared Environment Variable resource defines an Environment Variable that can be shared between multiple Vercel Projects.
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/environment-variables/shared-environment-variables.
-  -> Note: Starting in provider version 4.8.0, environment variables require an explicit sensitive value. Variables targeting development must set sensitive = false. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
+  -> Note: Starting in provider version 4.8.0, environment variables require an explicit sensitive value. Secrets (sensitive = true) are supported in all target environments, including Development. Team environment variable policies are enforced by the Vercel API at apply time.
   -> Note: Write-Only argument value_wo is available to use in place of value. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. Learn more https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments.
 ---
 
@@ -18,7 +18,7 @@ A Shared Environment Variable resource defines an Environment Variable that can 
 
 For more detailed information, please see the [Vercel documentation](https://vercel.com/docs/concepts/projects/environment-variables/shared-environment-variables).
 
--> **Note:** Starting in provider version `4.8.0`, environment variables require an explicit `sensitive` value. Variables targeting `development` must set `sensitive = false`. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
+-> **Note:** Starting in provider version `4.8.0`, environment variables require an explicit `sensitive` value. Secrets (`sensitive = true`) are supported in all target environments, including Development. Team environment variable policies are enforced by the Vercel API at apply time.
 
 -> **Note:** Write-Only argument `value_wo` is available to use in place of `value`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).
 
@@ -36,23 +36,23 @@ resource "vercel_project" "example" {
 
 # Shared environment variables must explicitly set `sensitive`.
 resource "vercel_shared_environment_variable" "example" {
-  key     = "EXAMPLE"
-  value   = "some_value"
-  target  = ["production"]
+  key       = "EXAMPLE"
+  value     = "some_value"
+  target    = ["production"]
   sensitive = true
-  comment = "an example shared variable"
+  comment   = "an example shared variable"
   project_ids = [
     vercel_project.example.id
   ]
 }
 
-# Shared environment variables targeting `development` must explicitly set `sensitive = false`.
+# A shared Development Secret uses the same classification as other Secrets.
 resource "vercel_shared_environment_variable" "example_development" {
   key       = "EXAMPLE_DEVELOPMENT"
   value     = "some_development_value"
   target    = ["development"]
-  sensitive = false
-  comment   = "available during local development"
+  sensitive = true
+  comment   = "a development secret"
   project_ids = [
     vercel_project.example.id
   ]
@@ -82,7 +82,7 @@ resource "vercel_shared_environment_variable" "example_ephemeral" {
 ### Required
 
 - `key` (String) The name of the Environment Variable.
-- `sensitive` (Boolean) Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Variables targeting `development` must set this to `false`.
+- `sensitive` (Boolean) Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Secrets are supported in all target environments, including Development.
 
 ### Optional
 

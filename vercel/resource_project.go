@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
@@ -34,7 +35,6 @@ var (
 	_ resource.Resource                     = &projectResource{}
 	_ resource.ResourceWithConfigure        = &projectResource{}
 	_ resource.ResourceWithImportState      = &projectResource{}
-	_ resource.ResourceWithModifyPlan       = &projectResource{}
 	_ resource.ResourceWithConfigValidators = &projectResource{}
 )
 
@@ -81,7 +81,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 ~> The inline ` + "`environment`" + ` field is deprecated and retained for backwards compatibility. Use [vercel_project_environment_variables](project_environment_variables) to manage multiple Environment Variables or [vercel_project_environment_variable](project_environment_variable) to manage a single Environment Variable instead.
 At this time you cannot use a Vercel Project resource with in-line ` + "`environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable`" + ` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 
--> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Variables targeting ` + "`development`" + ` must set ` + "`sensitive = false`" + `. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
+-> **Note:** Starting in provider version ` + "`4.8.0`" + `, environment variables require an explicit ` + "`sensitive`" + ` value. Secrets (` + "`sensitive = true`" + `) are supported in all target environments, including Development. Team environment variable policies are enforced by the Vercel API at apply time.
         `,
 		Attributes: map[string]schema.Attribute{
 			"team_id": schema.StringAttribute{
@@ -200,7 +200,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							Computed:    true,
 						},
 						"sensitive": schema.BoolAttribute{
-							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Variables targeting `development` must set this to `false`.",
+							Description: "Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Secrets are supported in all target environments, including Development.",
 							Required:    true,
 						},
 						"visibility": environmentVariableVisibilitySchemaAttribute(),
@@ -1226,26 +1226,6 @@ func (e EnvironmentItem) isExplicitlyNonSensitive() bool {
 
 func (e EnvironmentItem) isSensitive() bool {
 	return !e.isExplicitlyNonSensitive()
-}
-
-func (e EnvironmentItem) hasTarget(ctx context.Context, target string) (bool, diag.Diagnostics) {
-	if e.Target.IsNull() || e.Target.IsUnknown() {
-		return false, nil
-	}
-
-	var targets []string
-	diags := e.Target.ElementsAs(ctx, &targets, true)
-	if diags.HasError() {
-		return false, diags
-	}
-
-	for _, t := range targets {
-		if t == target {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 func (e *EnvironmentItem) equal(other *EnvironmentItem) bool {
@@ -2322,44 +2302,6 @@ func responseFunctionDefaultRegions(response client.ProjectResponse) []string {
 		return []string{*response.ServerlessFunctionRegion}
 	}
 	return nil
-}
-
-func (r *projectResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-	var plan Project
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	environment, err := plan.environment(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error parsing project environment variables",
-			"Could not read environment variables, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	for i, e := range environment {
-		hasDevelopmentTarget, diags := e.hasTarget(ctx, "development")
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if hasDevelopmentTarget && !e.isExplicitlyNonSensitive() {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("environment").
-					AtSetValue(plan.Environment.Elements()[i]).
-					AtName("sensitive"),
-				"Project Invalid",
-				"Environment variables targeting `development` must explicitly set `sensitive = false`.",
-			)
-		}
-	}
 }
 
 // Create will create a project within Vercel by calling the Vercel API.

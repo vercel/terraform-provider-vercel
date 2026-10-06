@@ -95,50 +95,6 @@ func TestEnvironmentItemSensitiveSemantics(t *testing.T) {
 	}
 }
 
-func TestEnvironmentItemHasTarget(t *testing.T) {
-	tests := []struct {
-		name       string
-		target     types.Set
-		wantTarget bool
-	}{
-		{
-			name:       "null target",
-			target:     types.SetNull(types.StringType),
-			wantTarget: false,
-		},
-		{
-			name:       "unknown target",
-			target:     types.SetUnknown(types.StringType),
-			wantTarget: false,
-		},
-		{
-			name:       "development target present",
-			target:     stringSet("development", "preview"),
-			wantTarget: true,
-		},
-		{
-			name:       "development target absent",
-			target:     stringSet("production", "preview"),
-			wantTarget: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			env := EnvironmentItem{Target: tt.target}
-
-			got, diags := env.hasTarget(context.Background(), "development")
-			if diags.HasError() {
-				t.Fatalf("hasTarget() returned diagnostics: %v", diags)
-			}
-
-			if got != tt.wantTarget {
-				t.Fatalf("hasTarget() = %t, want %t", got, tt.wantTarget)
-			}
-		})
-	}
-}
-
 func TestEnvironmentItemToEnvironmentVariableRequestTreatsUnsetSensitiveAsSensitive(t *testing.T) {
 	env := EnvironmentItem{
 		Target:               types.SetNull(types.StringType),
@@ -176,5 +132,21 @@ func assertBoolRequired(t *testing.T, attr schema.BoolAttribute, label string) {
 	}
 	if attr.Default != nil {
 		t.Fatalf("%s should not have a default", label)
+	}
+}
+
+func TestEnvironmentItemDevelopmentSecretRequest(t *testing.T) {
+	ctx := context.Background()
+	items := EnvironmentItems{{Target: stringSet("development"), CustomEnvironmentIDs: types.SetNull(types.StringType), Sensitive: types.BoolValue(true), Visibility: types.StringValue("secret"), Key: types.StringValue("EXAMPLE"), Value: types.StringValue("placeholder")}}
+	bulk, diags := items.toCreateEnvironmentVariablesRequest(ctx, types.StringValue("prj_example"), types.StringNull())
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	if len(bulk.EnvironmentVariables) != 1 {
+		t.Fatalf("got %d bulk variables, want 1", len(bulk.EnvironmentVariables))
+	}
+	item := bulk.EnvironmentVariables[0]
+	if item.Type != "sensitive" || item.Visibility == nil || *item.Visibility != "secret" || len(item.Target) != 1 || item.Target[0] != "development" {
+		t.Fatalf("unexpected bulk Development Secret request: %#v", item)
 	}
 }

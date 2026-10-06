@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
@@ -322,14 +323,20 @@ func TestAcc_ProjectEnvironmentVariable_NeitherValueNorValueWO(t *testing.T) {
 	})
 }
 
-func TestAcc_ProjectEnvironmentVariable_DevelopmentTargetRequiresNonSensitive(t *testing.T) {
+func TestAcc_ProjectEnvironmentVariable_DevelopmentSecret(t *testing.T) {
 	nameSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
 		Steps: []resource.TestStep{
 			{
-				Config:      cfg(testAccProjectEnvironmentVariableConfigDevelopmentSensitiveTrue(nameSuffix, testGithubRepo(t))),
-				ExpectError: regexp.MustCompile(`(?s)Environment variables targeting \x60development\x60 must explicitly set \x60sensitive\s*=\s*false\x60\.`),
+				Config: cfg(testAccProjectEnvironmentVariableConfigDevelopmentSensitiveTrue(nameSuffix, testGithubRepo(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_development", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_development", "sensitive", "true"),
+					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_development", "visibility", "secret"),
+					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_development", "target.*", "development"),
+				),
 			},
 		},
 	})
@@ -440,6 +447,7 @@ resource "vercel_project_environment_variable" "example_development" {
 	value      = "bar-development"
 	target     = ["development"]
 	sensitive  = true
+	visibility = "secret"
 }
 `, projectName, githubRepo)
 }

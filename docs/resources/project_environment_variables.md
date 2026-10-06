@@ -9,7 +9,7 @@ description: |-
   For more detailed information, please see the Vercel documentation https://vercel.com/docs/concepts/projects/environment-variables.
   ~> Terraform currently provides this Project Environment Variables resource (multiple Environment Variables), a single Project Environment Variable Resource, and a Project resource with Environment Variables defined in-line via the environment field.
   At this time you cannot use a Vercel Project resource with in-line environment in conjunction with any vercel_project_environment_variables or vercel_project_environment_variable resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
-  -> Note: Starting in provider version 4.8.0, environment variables require an explicit sensitive value. Variables targeting development must set sensitive = false. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
+  -> Note: Starting in provider version 4.8.0, environment variables require an explicit sensitive value. Secrets (sensitive = true) are supported in all target environments, including Development. Team environment variable policies are enforced by the Vercel API at apply time.
 ---
 
 # vercel_project_environment_variables (Resource)
@@ -25,7 +25,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 ~> Terraform currently provides this Project Environment Variables resource (multiple Environment Variables), a single Project Environment Variable Resource, and a Project resource with Environment Variables defined in-line via the `environment` field.
 At this time you cannot use a Vercel Project resource with in-line `environment` in conjunction with any `vercel_project_environment_variables` or `vercel_project_environment_variable` resources. Doing so will cause a conflict of settings and will overwrite Environment Variables.
 
--> **Note:** Starting in provider version `4.8.0`, environment variables require an explicit `sensitive` value. Variables targeting `development` must set `sensitive = false`. Team sensitive-environment-variable policy is enforced by the Vercel API at apply time.
+-> **Note:** Starting in provider version `4.8.0`, environment variables require an explicit `sensitive` value. Secrets (`sensitive = true`) are supported in all target environments, including Development. Team environment variable policies are enforced by the Vercel API at apply time.
 
 ## Example Usage
 
@@ -87,7 +87,7 @@ resource "vercel_project_environment_variables" "example" {
 Required:
 
 - `key` (String) The name of the Environment Variable.
-- `sensitive` (Boolean) Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Variables targeting `development` must set this to `false`.
+- `sensitive` (Boolean) Whether the Environment Variable is sensitive (meaning it cannot be read via the API or Vercel Dashboard once set). This must be explicitly set. Secrets are supported in all target environments, including Development.
 - `value` (String, Sensitive) The value of the Environment Variable.
 
 Optional:
