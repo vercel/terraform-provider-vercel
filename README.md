@@ -93,11 +93,3 @@ Building the documentation generates markdown in the `docs` folder, ready for de
 - To view the documentation:
 
   Paste `/docs` Markdown file content into [https://registry.terraform.io/tools/doc-preview](https://registry.terraform.io/tools/doc-preview)
-
-## Alert rules
-
-Use `vercel_alert_rule` for built-in anomaly detectors and `vercel_custom_alert_rule` for project-scoped metric thresholds or anomalies. Custom alerts require team access and an Observability Plus subscription on the selected project.
-
-Link reusable notification destinations with `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification`. Both work with built-in rules, custom rules, and `ar_default`. These resources manage links; deleting a link does not delete the rule, webhook, or Slack installation.
-
-See the [custom alert example](examples/resources/vercel_custom_alert_rule/resource.tf) for rule creation and notification routing. Webhooks must be account-owned and subscribed to `alerts.triggered`. Slack installation IDs may be omitted when the team has one completed installation.
