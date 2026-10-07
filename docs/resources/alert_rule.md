@@ -3,12 +3,12 @@
 page_title: "vercel_alert_rule Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification channel links are managed separately from this resource.
+  Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification destination links are managed with the vercel_alert_rule_slack_notification and vercel_alert_rule_webhook_notification resources.
 ---
 
 # vercel_alert_rule (Resource)
 
-Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification channel links are managed separately from this resource.
+Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources.
 
 ## Example Usage
 
@@ -29,11 +29,14 @@ resource "vercel_alert_rule" "checkout_errors" {
     filter = "statusGroup:5xx AND route:/api/checkout"
   }]
   match_minimum_severity_level = "high"
+  tags                         = ["checkout"]
   notification_settings = {
     enable_team_owner_notifications = true
   }
 }
 ```
+
+Use `vercel_custom_alert_rule` for project-scoped metric thresholds and anomalies.
 
 ## Trigger filters
 
@@ -84,14 +87,15 @@ Wildcards and regular expressions are not supported for metric names, so `metric
 
 ### Required
 
-- `match_minimum_severity_level` (String) The minimum severity matched by a built-in rule.
+- `match_minimum_severity_level` (String) The minimum severity matched by a built-in rule. Must be `low`, `medium`, or `high`; `high` matches High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = "critical"` on the notification link. Existing rules that already use `critical` can still be read and imported, but `critical` cannot be newly written.
 - `name` (String) A human-readable name for the alert rule.
 - `rule_scope` (Attributes) The projects affected by the rule. Use `all`, `include`, or `exclude`. (see [below for nested schema](#nestedatt--rule_scope))
 - `type` (String) The alert rule type. Currently only `built-in` is supported.
 
 ### Optional
 
-- `notification_settings` (Attributes) Notification delivery settings stored on the rule. Notification channel links are managed separately. (see [below for nested schema](#nestedatt--notification_settings))
+- `notification_settings` (Attributes) Notification delivery settings stored on the rule. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources. (see [below for nested schema](#nestedatt--notification_settings))
+- `tags` (Set of String) Up to 10 unique tags used to organize the rule. Removing all tags clears them.
 - `team_id` (String) The ID of the team that owns the alert rule. Required if a default team is not configured in the provider.
 - `triggers` (Attributes Set) The built-in anomaly triggers enabled for a built-in rule. A nonempty set is required when creating a rule. Omit this attribute to preserve a response-only legacy trigger mode after import. (see [below for nested schema](#nestedatt--triggers))
 
@@ -122,6 +126,7 @@ Optional:
 
 - `enable_team_owner_notifications` (Boolean)
 - `incident_io_routing_key` (String)
+- `vercel_notifications_minimum_severity_level` (String) Set to `critical` to send Vercel notifications only for alerts classified as Critical. Omit to send Vercel notifications for every severity.
 
 
 <a id="nestedatt--triggers"></a>

@@ -64,7 +64,7 @@ func (r *alertRuleResource) Configure(_ context.Context, req resource.ConfigureR
 
 func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification channel links are managed separately from this resource.",
+		MarkdownDescription: "Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -151,15 +151,18 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			},
 			"match_minimum_severity_level": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "The minimum severity matched by a built-in rule.",
+				MarkdownDescription: "The minimum severity matched by a built-in rule. Must be `low`, `medium`, or `high`; `high` matches High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = \"critical\"` on the notification link. Existing rules that already use `critical` can still be read and imported, but `critical` cannot be newly written.",
 				Validators: []validator.String{
+					// The API still returns `critical` for legacy rules, so it must
+					// remain a valid state value; ModifyPlan rejects new writes.
 					stringvalidator.OneOf("low", "medium", "high", "critical"),
 				},
 			},
+			"tags": alertRuleTagsAttribute(),
 			"notification_settings": schema.SingleNestedAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Notification delivery settings stored on the rule. Notification channel links are managed separately.",
+				MarkdownDescription: "Notification delivery settings stored on the rule. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources.",
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"enable_team_owner_notifications": schema.BoolAttribute{
@@ -174,6 +177,13 @@ func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Validators: []validator.String{
 							stringvalidator.LengthBetween(1, 256),
 							validateStringIsTrimmed(),
+						},
+					},
+					"vercel_notifications_minimum_severity_level": schema.StringAttribute{
+						Optional:            true,
+						MarkdownDescription: "Set to `critical` to send Vercel notifications only for alerts classified as Critical. Omit to send Vercel notifications for every severity.",
+						Validators: []validator.String{
+							stringvalidator.OneOf("critical"),
 						},
 					},
 				},
@@ -208,6 +218,7 @@ type AlertRule struct {
 	TriggerMode               types.String `tfsdk:"trigger_mode"`
 	Triggers                  types.Set    `tfsdk:"triggers"`
 	MatchMinimumSeverityLevel types.String `tfsdk:"match_minimum_severity_level"`
+	Tags                      types.Set    `tfsdk:"tags"`
 	// A framework object is necessary here because an omitted Optional+Computed
 	// nested attribute is unknown in the create plan, which a struct pointer
 	// cannot represent.
@@ -228,8 +239,9 @@ type AlertRuleTrigger struct {
 }
 
 type AlertRuleNotificationSettings struct {
-	EnableTeamOwnerNotifications types.Bool   `tfsdk:"enable_team_owner_notifications"`
-	IncidentIORoutingKey         types.String `tfsdk:"incident_io_routing_key"`
+	EnableTeamOwnerNotifications            types.Bool   `tfsdk:"enable_team_owner_notifications"`
+	IncidentIORoutingKey                    types.String `tfsdk:"incident_io_routing_key"`
+	VercelNotificationsMinimumSeverityLevel types.String `tfsdk:"vercel_notifications_minimum_severity_level"`
 }
 
 var alertRuleTriggerAttrType = types.ObjectType{AttrTypes: map[string]attr.Type{
@@ -242,8 +254,9 @@ var alertRuleScopeAttrType = types.ObjectType{AttrTypes: map[string]attr.Type{
 }}
 
 var alertRuleNotificationSettingsAttrType = types.ObjectType{AttrTypes: map[string]attr.Type{
-	"enable_team_owner_notifications": types.BoolType,
-	"incident_io_routing_key":         types.StringType,
+	"enable_team_owner_notifications":             types.BoolType,
+	"incident_io_routing_key":                     types.StringType,
+	"vercel_notifications_minimum_severity_level": types.StringType,
 }}
 
 const alertRuleCanonicalFiltersPrivateKey = "alert_rule_canonical_filters"
@@ -327,9 +340,72 @@ func alertRuleNotificationSettingsToClient(ctx context.Context, value types.Obje
 		enableTeamOwnerNotifications = settings.EnableTeamOwnerNotifications.ValueBool()
 	}
 	return &client.AlertRuleNotificationSettings{
-		EnableTeamOwnerNotifications: enableTeamOwnerNotifications,
-		IncidentIORoutingKey:         optionalString(settings.IncidentIORoutingKey),
+		EnableTeamOwnerNotifications:            enableTeamOwnerNotifications,
+		IncidentIORoutingKey:                    optionalString(settings.IncidentIORoutingKey),
+		VercelNotificationsMinimumSeverityLevel: optionalString(settings.VercelNotificationsMinimumSeverityLevel),
 	}, diags
+}
+
+// The API merges notification settings field by field, so updates send every
+// field and use explicit nulls to clear optional values removed from config.
+func alertRuleNotificationSettingsToUpdateClient(ctx context.Context, value types.Object) (*client.AlertRuleNotificationSettingsUpdate, diag.Diagnostics) {
+	settings, diags := alertRuleNotificationSettingsToClient(ctx, value)
+	if settings == nil {
+		return nil, diags
+	}
+	return &client.AlertRuleNotificationSettingsUpdate{
+		EnableTeamOwnerNotifications:            settings.EnableTeamOwnerNotifications,
+		IncidentIORoutingKey:                    settings.IncidentIORoutingKey,
+		VercelNotificationsMinimumSeverityLevel: settings.VercelNotificationsMinimumSeverityLevel,
+	}, diags
+}
+
+func alertRuleNotificationSettingsFromClient(ctx context.Context, settings client.AlertRuleNotificationSettings) (types.Object, diag.Diagnostics) {
+	return types.ObjectValueFrom(ctx, alertRuleNotificationSettingsAttrType.AttrTypes, AlertRuleNotificationSettings{
+		EnableTeamOwnerNotifications:            types.BoolValue(settings.EnableTeamOwnerNotifications),
+		IncidentIORoutingKey:                    stringValue(settings.IncidentIORoutingKey),
+		VercelNotificationsMinimumSeverityLevel: stringValue(settings.VercelNotificationsMinimumSeverityLevel),
+	})
+}
+
+func alertRuleTagsAttribute() schema.SetAttribute {
+	return schema.SetAttribute{
+		Optional:            true,
+		ElementType:         types.StringType,
+		MarkdownDescription: "Up to 10 unique tags used to organize the rule. Removing all tags clears them.",
+		Validators: []validator.Set{
+			setvalidator.SizeBetween(1, 10),
+			setvalidator.ValueStringsAre(stringvalidator.LengthBetween(1, 256), validateStringIsTrimmed()),
+		},
+	}
+}
+
+func alertRuleTagsToClient(ctx context.Context, value types.Set) ([]string, diag.Diagnostics) {
+	if value.IsNull() || value.IsUnknown() {
+		return nil, nil
+	}
+	var tags []string
+	diags := value.ElementsAs(ctx, &tags, false)
+	return tags, diags
+}
+
+// alertRuleTagsUpdateValue encodes tags for PATCH. Removed tags encode as an
+// explicit null because an omitted field preserves the stored tags.
+func alertRuleTagsUpdateValue(ctx context.Context, value types.Set) (json.RawMessage, diag.Diagnostics) {
+	tags, diags := alertRuleTagsToClient(ctx, value)
+	encoded, err := json.Marshal(tags)
+	if err != nil {
+		diags.AddError("Invalid tags", err.Error())
+		return nil, diags
+	}
+	return encoded, diags
+}
+
+func alertRuleTagsFromClient(ctx context.Context, tags []string) (types.Set, diag.Diagnostics) {
+	if len(tags) == 0 {
+		return types.SetNull(types.StringType), nil
+	}
+	return types.SetValueFrom(ctx, types.StringType, tags)
 }
 
 func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCreate, diag.Diagnostics) {
@@ -338,6 +414,8 @@ func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCre
 	diags.Append(triggerDiags...)
 	notificationSettings, notificationSettingsDiags := alertRuleNotificationSettingsToClient(ctx, model.NotificationSettings)
 	diags.Append(notificationSettingsDiags...)
+	tags, tagDiags := alertRuleTagsToClient(ctx, model.Tags)
+	diags.Append(tagDiags...)
 	if diags.HasError() {
 		return client.AlertRuleCreate{}, diags
 	}
@@ -348,6 +426,7 @@ func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCre
 		RuleScope:                 scope,
 		Triggers:                  triggers,
 		MatchMinimumSeverityLevel: optionalString(model.MatchMinimumSeverityLevel),
+		Tags:                      tags,
 		NotificationSettings:      notificationSettings,
 	}, diags
 }
@@ -380,8 +459,13 @@ func (plan AlertRule) toUpdateRequest(ctx context.Context, state AlertRule) (cli
 	if !plan.MatchMinimumSeverityLevel.Equal(state.MatchMinimumSeverityLevel) {
 		request.MatchMinimumSeverityLevel = optionalString(plan.MatchMinimumSeverityLevel)
 	}
+	if !plan.Tags.Equal(state.Tags) {
+		tags, tagDiags := alertRuleTagsUpdateValue(ctx, plan.Tags)
+		diags.Append(tagDiags...)
+		request.Tags = tags
+	}
 	if !plan.NotificationSettings.Equal(state.NotificationSettings) {
-		notificationSettings, notificationSettingsDiags := alertRuleNotificationSettingsToClient(ctx, plan.NotificationSettings)
+		notificationSettings, notificationSettingsDiags := alertRuleNotificationSettingsToUpdateClient(ctx, plan.NotificationSettings)
 		diags.Append(notificationSettingsDiags...)
 		request.NotificationSettings = notificationSettings
 	}
@@ -429,15 +513,15 @@ func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.St
 	if out.Triggers != nil {
 		triggerMode = types.StringValue(out.Triggers.Mode)
 	}
-	notificationSettings, notificationSettingsDiags := types.ObjectValueFrom(ctx, alertRuleNotificationSettingsAttrType.AttrTypes, AlertRuleNotificationSettings{
-		EnableTeamOwnerNotifications: types.BoolValue(out.NotificationSettings.EnableTeamOwnerNotifications),
-		IncidentIORoutingKey:         stringValue(out.NotificationSettings.IncidentIORoutingKey),
-	})
+	notificationSettings, notificationSettingsDiags := alertRuleNotificationSettingsFromClient(ctx, out.NotificationSettings)
 	diags.Append(notificationSettingsDiags...)
+	tags, tagDiags := alertRuleTagsFromClient(ctx, out.Tags)
+	diags.Append(tagDiags...)
 
 	return AlertRule{
 		ID: types.StringValue(out.ID), TeamID: teamID, Type: types.StringValue(out.Type), Name: types.StringValue(out.Name),
 		RuleScope: scope, TriggerMode: triggerMode, Triggers: triggers, MatchMinimumSeverityLevel: stringValue(out.MatchMinimumSeverityLevel),
+		Tags:                 tags,
 		NotificationSettings: notificationSettings,
 		IsDefault:            types.BoolValue(out.IsDefault),
 		CreatedAt:            int64Value(out.CreatedAt), UpdatedAt: int64Value(out.UpdatedAt),
@@ -583,6 +667,31 @@ func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 		// plan a mode change when the user starts managing its trigger set.
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("trigger_mode"), types.StringValue("selected"))...)
 	}
+
+	prior := types.StringNull()
+	if !req.State.Raw.IsNull() {
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("match_minimum_severity_level"), &prior)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+	if writesCriticalMatchMinimumSeverityLevel(config.MatchMinimumSeverityLevel, prior) {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("match_minimum_severity_level"),
+			"Critical-only built-in alert rules are not supported",
+			"Use `high` to match High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = \"critical\"` on its `vercel_alert_rule_slack_notification` or `vercel_alert_rule_webhook_notification` link.",
+		)
+	}
+}
+
+// writesCriticalMatchMinimumSeverityLevel reports whether a plan would send
+// `critical` to the API. Legacy rules can still read back as `critical`; keeping
+// that unchanged value is allowed because updates omit unchanged fields.
+func writesCriticalMatchMinimumSeverityLevel(planned, prior types.String) bool {
+	if planned.IsNull() || planned.IsUnknown() || planned.ValueString() != "critical" {
+		return false
+	}
+	return prior.IsNull() || prior.IsUnknown() || prior.ValueString() != "critical"
 }
 
 func (r *alertRuleResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
