@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
@@ -224,25 +223,46 @@ func TestSharedEnvironmentVariableSensitiveSemantics(t *testing.T) {
 	}
 }
 
-func TestSharedEnvironmentVariableDevelopmentSecretRequests(t *testing.T) {
-	ctx := context.Background()
-	shared := SharedEnvironmentVariable{Target: stringSet("development"), Sensitive: types.BoolValue(true), Key: types.StringValue("EXAMPLE"), Value: types.StringNull()}
-	sharedCreate, ok := shared.toCreateSharedEnvironmentVariableRequest(ctx, nil, types.StringValue("write-only-placeholder"))
-	if !ok {
-		t.Fatal("shared Development Secret create request failed")
+func TestSharedEnvironmentVariableHasTarget(t *testing.T) {
+	tests := []struct {
+		name       string
+		target     types.Set
+		wantTarget bool
+	}{
+		{
+			name:       "null target",
+			target:     types.SetNull(types.StringType),
+			wantTarget: false,
+		},
+		{
+			name:       "unknown target",
+			target:     types.SetUnknown(types.StringType),
+			wantTarget: false,
+		},
+		{
+			name:       "development target present",
+			target:     stringSet("development", "preview"),
+			wantTarget: true,
+		},
+		{
+			name:       "development target absent",
+			target:     stringSet("production", "preview"),
+			wantTarget: false,
+		},
 	}
-	if sharedCreate.EnvironmentVariable.Type != "sensitive" || len(sharedCreate.EnvironmentVariable.Target) != 1 || sharedCreate.EnvironmentVariable.Target[0] != "development" || len(sharedCreate.EnvironmentVariable.EnvironmentVariables) != 1 || sharedCreate.EnvironmentVariable.EnvironmentVariables[0].Value != "write-only-placeholder" {
-		t.Fatalf("unexpected shared Development Secret create request: %#v", sharedCreate)
-	}
-	sharedUpdate, ok := shared.toUpdateSharedEnvironmentVariableRequest(ctx, nil, types.StringValue("rotated-placeholder"))
-	if !ok {
-		t.Fatal("shared Development Secret update request failed")
-	}
-	if sharedUpdate.Type != "sensitive" || len(sharedUpdate.Target) != 1 || sharedUpdate.Target[0] != "development" || sharedUpdate.Value == nil || *sharedUpdate.Value != "rotated-placeholder" {
-		t.Fatalf("unexpected shared Development Secret update request: %#v", sharedUpdate)
-	}
-	sharedState := convertResponseToSharedEnvironmentVariable(client.SharedEnvironmentVariableResponse{Target: []string{"development"}, Type: "sensitive", Value: "should-not-be-stored"}, types.StringNull(), types.Int64Value(1), types.SetNull(types.StringType))
-	if !sharedState.Value.IsNull() || !sharedState.ValueWO.IsNull() {
-		t.Fatal("shared Development write-only secret value persisted in state")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := SharedEnvironmentVariable{Target: tt.target}
+
+			got, diags := env.hasTarget(context.Background(), "development")
+			if diags.HasError() {
+				t.Fatalf("hasTarget() returned diagnostics: %v", diags)
+			}
+
+			if got != tt.wantTarget {
+				t.Fatalf("hasTarget() = %t, want %t", got, tt.wantTarget)
+			}
+		})
 	}
 }

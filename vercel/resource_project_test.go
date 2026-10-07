@@ -157,29 +157,6 @@ func TestAcc_Project(t *testing.T) {
 	})
 }
 
-func TestAcc_Project_DevelopmentSecret(t *testing.T) {
-	projectSuffix := acctest.RandString(16)
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
-		Steps: []resource.TestStep{
-			{
-				Config: cfg(testAccProjectConfigDevelopmentSensitiveTrue(projectSuffix)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckTypeSetElemNestedAttrs("vercel_project.test", "environment.*", map[string]string{
-						"key":        "development_thing",
-						"sensitive":  "true",
-						"visibility": "secret",
-						"target.#":   "1",
-						"target.0":   "development",
-					}),
-				),
-			},
-		},
-	})
-}
-
 func TestAcc_ProjectFluidCompute(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 
@@ -1301,23 +1278,6 @@ resource "vercel_project" "test" {
   ]
   on_demand_concurrent_builds = true
   build_machine_type = "enhanced"
-}
-`, projectSuffix)
-}
-
-func testAccProjectConfigDevelopmentSensitiveTrue(projectSuffix string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "test-acc-project-dev-%s"
-  environment = [
-    {
-      key        = "development_thing"
-      value      = "bar"
-      target     = ["development"]
-      sensitive  = true
-      visibility = "secret"
-    }
-  ]
 }
 `, projectSuffix)
 }

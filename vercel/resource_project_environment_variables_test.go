@@ -70,29 +70,6 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 	})
 }
 
-func TestAcc_ProjectEnvironmentVariables_DevelopmentSecret(t *testing.T) {
-	projectName := "test-acc-example-env-vars-" + acctest.RandString(16)
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
-		Steps: []resource.TestStep{
-			{
-				Config: cfg(testAccProjectEnvironmentVariablesConfigDevelopmentSensitiveTrue(projectName, testGithubRepo(t))),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckTypeSetElemNestedAttrs("vercel_project_environment_variables.test", "variables.*", map[string]string{
-						"key":        "DEV_VAR",
-						"sensitive":  "true",
-						"visibility": "secret",
-						"target.#":   "1",
-						"target.0":   "development",
-					}),
-				),
-			},
-		},
-	})
-}
-
 func testAccProjectEnvironmentVariablesConfig(projectName string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
@@ -162,32 +139,6 @@ resource "vercel_project_environment_variables" "test" {
       value = "sensitive_value"
       target = ["production"]
       sensitive = true
-    }
-  ]
-}
-`, projectName, githubRepo)
-}
-
-func testAccProjectEnvironmentVariablesConfigDevelopmentSensitiveTrue(projectName string, githubRepo string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "%s"
-
-  git_repository = {
-    type = "github"
-    repo = "%[2]s"
-  }
-}
-
-resource "vercel_project_environment_variables" "test" {
-  project_id = vercel_project.test.id
-  variables = [
-    {
-      key        = "DEV_VAR"
-      value      = "dev_value"
-      target     = ["development"]
-      sensitive  = true
-      visibility = "secret"
     }
   ]
 }

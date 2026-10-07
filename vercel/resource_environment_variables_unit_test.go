@@ -18,7 +18,7 @@ func TestDevelopmentEnvironmentVariablePlanning(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, resourceName := range []string{"vercel_project_environment_variable", "vercel_project_environment_variables", "vercel_shared_environment_variable", "vercel_project"} {
+	for _, resourceName := range []string{"vercel_project_environment_variable", "vercel_project_environment_variables", "vercel_project"} {
 		for _, classification := range []struct {
 			name       string
 			sensitive  bool

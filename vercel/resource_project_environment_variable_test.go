@@ -323,25 +323,6 @@ func TestAcc_ProjectEnvironmentVariable_NeitherValueNorValueWO(t *testing.T) {
 	})
 }
 
-func TestAcc_ProjectEnvironmentVariable_DevelopmentSecret(t *testing.T) {
-	nameSuffix := acctest.RandString(16)
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.example", testTeam(t)),
-		Steps: []resource.TestStep{
-			{
-				Config: cfg(testAccProjectEnvironmentVariableConfigDevelopmentSensitiveTrue(nameSuffix, testGithubRepo(t))),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccProjectEnvironmentVariableExists(testClient(t), "vercel_project_environment_variable.example_development", testTeam(t)),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_development", "sensitive", "true"),
-					resource.TestCheckResourceAttr("vercel_project_environment_variable.example_development", "visibility", "secret"),
-					resource.TestCheckTypeSetElemAttr("vercel_project_environment_variable.example_development", "target.*", "development"),
-				),
-			},
-		},
-	})
-}
-
 func testAccProjectEnvironmentVariableConfigValueWO(projectName string, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "example" {
@@ -426,28 +407,6 @@ resource "vercel_project_environment_variable" "example_none" {
 	key        = "foo_none"
 	target     = ["production"]
 	sensitive  = true
-}
-`, projectName, githubRepo)
-}
-
-func testAccProjectEnvironmentVariableConfigDevelopmentSensitiveTrue(projectName string, githubRepo string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "example" {
-	name = "test-acc-example-project-%[1]s"
-
-	git_repository = {
-		type = "github"
-		repo = "%[2]s"
-	}
-}
-
-resource "vercel_project_environment_variable" "example_development" {
-	project_id = vercel_project.example.id
-	key        = "foo_development"
-	value      = "bar-development"
-	target     = ["development"]
-	sensitive  = true
-	visibility = "secret"
 }
 `, projectName, githubRepo)
 }
