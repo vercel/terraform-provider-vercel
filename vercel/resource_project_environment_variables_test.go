@@ -2,7 +2,6 @@ package vercel_test
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -66,20 +65,6 @@ func TestAcc_ProjectEnvironmentVariables(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "variables.1.id"),
 					resource.TestCheckResourceAttrSet(resourceName, "variables.2.id"),
 				),
-			},
-		},
-	})
-}
-
-func TestAcc_ProjectEnvironmentVariables_DevelopmentTargetRequiresNonSensitive(t *testing.T) {
-	projectName := "test-acc-example-env-vars-" + acctest.RandString(16)
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      cfg(testAccProjectEnvironmentVariablesConfigDevelopmentSensitiveTrue(projectName, testGithubRepo(t))),
-				ExpectError: regexp.MustCompile(`(?s)Environment variables targeting \x60development\x60 must explicitly set \x60sensitive\s*=\s*false\x60\.`),
 			},
 		},
 	})
@@ -153,31 +138,6 @@ resource "vercel_project_environment_variables" "test" {
       key = "TEST_VAR_4"
       value = "sensitive_value"
       target = ["production"]
-      sensitive = true
-    }
-  ]
-}
-`, projectName, githubRepo)
-}
-
-func testAccProjectEnvironmentVariablesConfigDevelopmentSensitiveTrue(projectName string, githubRepo string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "%s"
-
-  git_repository = {
-    type = "github"
-    repo = "%[2]s"
-  }
-}
-
-resource "vercel_project_environment_variables" "test" {
-  project_id = vercel_project.test.id
-  variables = [
-    {
-      key       = "DEV_VAR"
-      value     = "dev_value"
-      target    = ["development"]
       sensitive = true
     }
   ]

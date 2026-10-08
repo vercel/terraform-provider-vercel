@@ -297,6 +297,8 @@ func (r *sharedEnvironmentVariableResource) ModifyPlan(ctx context.Context, req 
 		return
 	}
 
+	// Shared Secret creation supports Development, but the API still rejects updates
+	// retaining that target. Keep this guard until the complete lifecycle is supported.
 	if hasDevelopmentTarget && !config.isExplicitlyNonSensitive() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("sensitive"),

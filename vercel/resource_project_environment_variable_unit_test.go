@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
@@ -226,116 +226,6 @@ func TestProjectEnvironmentVariableSensitiveSemantics(t *testing.T) {
 	}
 }
 
-func TestProjectEnvironmentVariableHasTarget(t *testing.T) {
-	tests := []struct {
-		name       string
-		target     types.Set
-		wantTarget bool
-	}{
-		{
-			name:       "null target",
-			target:     types.SetNull(types.StringType),
-			wantTarget: false,
-		},
-		{
-			name:       "unknown target",
-			target:     types.SetUnknown(types.StringType),
-			wantTarget: false,
-		},
-		{
-			name:       "development target present",
-			target:     stringSet("development", "preview"),
-			wantTarget: true,
-		},
-		{
-			name:       "development target absent",
-			target:     stringSet("production", "preview"),
-			wantTarget: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			env := ProjectEnvironmentVariable{Target: tt.target}
-
-			got, diags := env.hasTarget(context.Background(), "development")
-			if diags.HasError() {
-				t.Fatalf("hasTarget() returned diagnostics: %v", diags)
-			}
-
-			if got != tt.wantTarget {
-				t.Fatalf("hasTarget() = %t, want %t", got, tt.wantTarget)
-			}
-		})
-	}
-}
-
-func TestProjectEnvironmentVariableModifyPlanUsesPlannedDevelopmentTarget(t *testing.T) {
-	ctx := context.Background()
-	res := &projectEnvironmentVariableResource{}
-
-	schemaResp := &resource.SchemaResponse{}
-	res.Schema(ctx, resource.SchemaRequest{}, schemaResp)
-
-	config := ProjectEnvironmentVariable{
-		Target:               types.SetNull(types.StringType),
-		CustomEnvironmentIDs: types.SetNull(types.StringType),
-		GitBranch:            types.StringNull(),
-		Key:                  types.StringValue("EXAMPLE"),
-		Value:                types.StringValue("value"),
-		ValueWO:              types.StringNull(),
-		ValueWOVersion:       types.Int64Null(),
-		TeamID:               types.StringNull(),
-		ProjectID:            types.StringValue("prj_123"),
-		ID:                   types.StringNull(),
-		Sensitive:            types.BoolValue(true),
-		Visibility:           types.StringNull(),
-		Comment:              types.StringNull(),
-	}
-
-	plan := config
-	plan.Target = stringSet("development")
-	plan.ID = types.StringValue("env_123")
-	plan.Sensitive = types.BoolValue(true)
-
-	configPlan := tfsdk.Plan{Schema: schemaResp.Schema}
-	diags := configPlan.Set(ctx, config)
-	if diags.HasError() {
-		t.Fatalf("configPlan.Set() returned diagnostics: %v", diags)
-	}
-
-	plannedState := tfsdk.Plan{Schema: schemaResp.Schema}
-	diags = plannedState.Set(ctx, plan)
-	if diags.HasError() {
-		t.Fatalf("plannedState.Set() returned diagnostics: %v", diags)
-	}
-
-	req := resource.ModifyPlanRequest{
-		Config: tfsdk.Config{
-			Raw:    configPlan.Raw,
-			Schema: schemaResp.Schema,
-		},
-		Plan: plannedState,
-	}
-	resp := &resource.ModifyPlanResponse{
-		Plan: plannedState,
-	}
-
-	res.ModifyPlan(ctx, req, resp)
-
-	if !resp.Diagnostics.HasError() {
-		t.Fatal("ModifyPlan() expected diagnostics, got none")
-	}
-
-	if len(resp.Diagnostics) != 1 {
-		t.Fatalf("ModifyPlan() returned %d diagnostics, want 1", len(resp.Diagnostics))
-	}
-
-	if got := resp.Diagnostics[0].Detail(); got != "Environment variables targeting `development` must explicitly set `sensitive = false`." {
-		t.Fatalf("ModifyPlan() diagnostic detail = %q, want %q", got, "Environment variables targeting `development` must explicitly set `sensitive = false`.")
-	}
-}
-
 func stringSet(values ...string) types.Set {
 	targets := make([]attr.Value, 0, len(values))
 	for _, value := range values {
@@ -343,4 +233,30 @@ func stringSet(values ...string) types.Set {
 	}
 
 	return types.SetValueMust(types.StringType, targets)
+}
+
+func TestProjectEnvironmentVariableDevelopmentSecretRequests(t *testing.T) {
+	ctx := context.Background()
+	env := ProjectEnvironmentVariable{
+		Target: stringSet("development"), CustomEnvironmentIDs: types.SetNull(types.StringType), Sensitive: types.BoolValue(true), Visibility: types.StringValue("secret"),
+		Key: types.StringValue("EXAMPLE"), Value: types.StringNull(),
+	}
+	create, diags := env.toCreateEnvironmentVariableRequest(ctx, types.StringValue("write-only-placeholder"))
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	if create.EnvironmentVariable.Type != "sensitive" || create.EnvironmentVariable.Visibility == nil || *create.EnvironmentVariable.Visibility != "secret" || create.EnvironmentVariable.Value != "write-only-placeholder" || len(create.EnvironmentVariable.Target) != 1 || create.EnvironmentVariable.Target[0] != "development" {
+		t.Fatalf("unexpected Development Secret create request: %#v", create)
+	}
+	update, diags := env.toUpdateEnvironmentVariableRequest(ctx, types.StringValue("rotated-placeholder"))
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	if update.Type != "sensitive" || update.Visibility == nil || *update.Visibility != "secret" || update.Value == nil || *update.Value != "rotated-placeholder" || len(update.Target) != 1 || update.Target[0] != "development" {
+		t.Fatalf("unexpected Development Secret update request: %#v", update)
+	}
+	state := convertResponseToProjectEnvironmentVariable(client.EnvironmentVariable{Target: []string{"development"}, Type: "sensitive", Value: "should-not-be-stored"}, types.StringValue("prj_example"), types.StringNull(), types.Int64Value(1))
+	if !state.Value.IsNull() || !state.ValueWO.IsNull() {
+		t.Fatal("Development write-only secret value persisted in state")
+	}
 }

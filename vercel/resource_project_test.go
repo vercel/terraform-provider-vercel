@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
@@ -151,20 +152,6 @@ func TestAcc_Project(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "true"),
 					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "true"),
 				),
-			},
-		},
-	})
-}
-
-func TestAcc_Project_DevelopmentEnvironmentRequiresNonSensitive(t *testing.T) {
-	projectSuffix := acctest.RandString(16)
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      cfg(testAccProjectConfigDevelopmentSensitiveTrue(projectSuffix)),
-				ExpectError: regexp.MustCompile(`(?s)Environment variables targeting \x60development\x60 must explicitly set \x60sensitive\s*=\s*false\x60\.`),
 			},
 		},
 	})
@@ -1291,22 +1278,6 @@ resource "vercel_project" "test" {
   ]
   on_demand_concurrent_builds = true
   build_machine_type = "enhanced"
-}
-`, projectSuffix)
-}
-
-func testAccProjectConfigDevelopmentSensitiveTrue(projectSuffix string) string {
-	return fmt.Sprintf(`
-resource "vercel_project" "test" {
-  name = "test-acc-project-dev-%s"
-  environment = [
-    {
-      key       = "development_thing"
-      value     = "bar"
-      target    = ["development"]
-      sensitive = true
-    }
-  ]
 }
 `, projectSuffix)
 }
