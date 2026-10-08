@@ -539,7 +539,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						Computed:            true,
 					},
 					"create_deployments": schema.BoolAttribute{
-						MarkdownDescription: "Whether to create deployments",
+						MarkdownDescription: "Whether Vercel creates GitHub Deployments for this project, which send `deployment_status` events to GitHub. This matches the `deployment_status` Events toggle in the project's Git settings. Setting this to `false` does not stop Git pushes from triggering Vercel deployments.",
 						Optional:            true,
 						Computed:            true,
 					},

@@ -187,7 +187,7 @@ Required:
 Optional:
 
 - `consolidated_git_commit_status` (Attributes) **Beta:** Configuration for consolidated git commit status reporting. When enabled, Vercel posts a single consolidated commit status instead of one per deployment. This feature is in beta and may change in backwards-incompatible ways. (see [below for nested schema](#nestedatt--git_provider_options--consolidated_git_commit_status))
-- `create_deployments` (Boolean) Whether to create deployments
+- `create_deployments` (Boolean) Whether Vercel creates GitHub Deployments for this project, which send `deployment_status` events to GitHub. This matches the `deployment_status` Events toggle in the project's Git settings. Setting this to `false` does not stop Git pushes from triggering Vercel deployments.
 - `git_commit_status` (Boolean) Whether Vercel should post git commit statuses for this project. Defaults to `true` when unset.
 - `repository_dispatch_events` (Boolean) Whether to enable repository dispatch events
 - `require_verified_commits` (Boolean) Whether to require verified commits

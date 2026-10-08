@@ -392,7 +392,7 @@ For more detailed information, please see the [Vercel documentation](https://ver
 						Computed:            true,
 					},
 					"create_deployments": schema.BoolAttribute{
-						MarkdownDescription: "Whether to create deployments.",
+						MarkdownDescription: "Whether Vercel creates GitHub Deployments for this project, which send `deployment_status` events to GitHub. This does not control whether Git pushes trigger Vercel deployments.",
 						Computed:            true,
 					},
 					"repository_dispatch_events": schema.BoolAttribute{
