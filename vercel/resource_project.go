@@ -1908,6 +1908,16 @@ func fromSkewProtectionMaxAge(sp int) types.String {
 	return types.StringValue(v)
 }
 
+// listInlineEnvironment lists environment variables only when the deprecated inline
+// `environment` attribute is in use: convertResponseToProject discards the list
+// otherwise, and the list is decrypted, so fetching it needs secret-read permission.
+func (r *projectResource) listInlineEnvironment(ctx context.Context, model Project, projectID, teamID string) ([]client.EnvironmentVariable, error) {
+	if model.Environment.IsNull() {
+		return nil, nil
+	}
+	return r.client.GetEnvironmentVariables(ctx, projectID, teamID)
+}
+
 func convertResponseToProject(ctx context.Context, response client.ProjectResponse, plan Project, environmentVariables []client.EnvironmentVariable) (Project, error) {
 	fields := plan.coercedFields()
 
@@ -2337,7 +2347,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
+	environmentVariables, err := r.listInlineEnvironment(ctx, plan, out.ID, out.TeamID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project environment variables",
@@ -2520,7 +2530,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
+	environmentVariables, err := r.listInlineEnvironment(ctx, state, out.ID, out.TeamID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project environment variables",
@@ -2880,7 +2890,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
+	environmentVariables, err := r.listInlineEnvironment(ctx, plan, out.ID, out.TeamID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project environment variables",
@@ -2966,7 +2976,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	environmentVariables, err := r.client.GetEnvironmentVariables(ctx, out.ID, out.TeamID)
+	environmentVariables, err := r.listInlineEnvironment(ctx, nullProject, out.ID, out.TeamID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project environment variables",

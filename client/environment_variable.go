@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -375,6 +376,9 @@ type ListEnvironmentVariablesRequest struct {
 	Limit     int
 	Until     *int64
 	Since     *int64
+	// Encrypted lists with decrypt=false. Values come back as ciphertext, which
+	// ListEnvironmentVariablesPage clears, so only metadata is returned.
+	Encrypted bool
 }
 
 type ListEnvironmentVariablesResponse struct {
@@ -385,7 +389,7 @@ type ListEnvironmentVariablesResponse struct {
 func (c *Client) ListEnvironmentVariablesPage(ctx context.Context, request ListEnvironmentVariablesRequest) (ListEnvironmentVariablesResponse, error) {
 	baseURL := fmt.Sprintf("%s/v8/projects/%s/env", c.baseURL, request.ProjectID)
 	query := url.Values{}
-	query.Set("decrypt", "true")
+	query.Set("decrypt", strconv.FormatBool(!request.Encrypted))
 	if c.TeamID(request.TeamID) != "" {
 		query.Set("teamId", c.TeamID(request.TeamID))
 	}
@@ -406,6 +410,9 @@ func (c *Client) ListEnvironmentVariablesPage(ctx context.Context, request ListE
 	}, &response)
 	for i := 0; i < len(response.Env); i++ {
 		response.Env[i].TeamID = c.TeamID(request.TeamID)
+		if request.Encrypted {
+			response.Env[i].Value = ""
+		}
 	}
 	return ListEnvironmentVariablesResponse{
 		EnvironmentVariables: response.Env,
@@ -423,6 +430,37 @@ func (c *Client) GetEnvironmentVariables(ctx context.Context, projectID, teamID 
 		})
 		return response.EnvironmentVariables, response.Pagination, err
 	})
+}
+
+// GetEnvironmentVariableMetadata returns an environment variable WITHOUT its value.
+// The single-variable endpoint always decrypts, which needs permission to read
+// secrets; the list endpoint honours decrypt=false. Use this when the caller does
+// not track the value (write-only or sensitive variables). Value is always "".
+// A missing variable is reported as a 404 APIError, so NotFound(err) holds.
+func (c *Client) GetEnvironmentVariableMetadata(ctx context.Context, projectID, teamID, envID string) (EnvironmentVariable, error) {
+	envs, err := collectPages(func(until *int64) ([]EnvironmentVariable, PageInfo, error) {
+		response, err := c.ListEnvironmentVariablesPage(ctx, ListEnvironmentVariablesRequest{
+			ProjectID: projectID,
+			TeamID:    teamID,
+			Limit:     defaultPaginationLimit,
+			Until:     until,
+			Encrypted: true,
+		})
+		return response.EnvironmentVariables, response.Pagination, err
+	})
+	if err != nil {
+		return EnvironmentVariable{}, err
+	}
+	for _, e := range envs {
+		if e.ID == envID {
+			return e, nil
+		}
+	}
+	return EnvironmentVariable{}, APIError{
+		Code:       "not_found",
+		Message:    fmt.Sprintf("environment variable %s not found in project %s", envID, projectID),
+		StatusCode: 404,
+	}
 }
 
 // GetEnvironmentVariable gets a singluar environment variable from Vercel based on its ID.
