@@ -396,7 +396,12 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	out, err := r.client.GetEnvironmentVariable(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString(), state.ID.ValueString())
+	// State holds no value for write-only and sensitive variables, so skip decryption.
+	get := r.client.GetEnvironmentVariable
+	if state.Value.IsNull() {
+		get = r.client.GetEnvironmentVariableMetadata
+	}
+	out, err := get(ctx, state.ProjectID.ValueString(), state.TeamID.ValueString(), state.ID.ValueString())
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -527,7 +532,11 @@ func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, re
 		return
 	}
 
-	out, err := r.client.GetEnvironmentVariable(ctx, projectID, teamID, envID)
+	get := r.client.GetEnvironmentVariable
+	if writeOnly {
+		get = r.client.GetEnvironmentVariableMetadata
+	}
+	out, err := get(ctx, projectID, teamID, envID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project environment variable",
