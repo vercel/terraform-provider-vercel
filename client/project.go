@@ -160,6 +160,7 @@ func (r *ProjectResponse) Repository() *Repository {
 
 // ProjectResponse defines the information Vercel returns about a project.
 type ProjectResponse struct {
+	AccountID                   string  `json:"accountId"`
 	BuildCommand                *string `json:"buildCommand"`
 	CommandForIgnoringBuildStep *string `json:"commandForIgnoringBuildStep"`
 	DevCommand                  *string `json:"devCommand"`
@@ -308,7 +309,14 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r Pr
 		return r, fmt.Errorf("unable to get project: %w", err)
 	}
 
-	r.TeamID = c.TeamID(teamID)
+	switch {
+	case strings.HasPrefix(r.AccountID, "team_"):
+		r.TeamID = r.AccountID
+	case r.AccountID != "":
+		r.TeamID = ""
+	default:
+		r.TeamID = c.TeamID(teamID)
+	}
 	r.normalizeBuildMachineType()
 	return r, err
 }

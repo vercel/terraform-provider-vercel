@@ -144,3 +144,46 @@ func TestGetProjectNormalizesElasticBuildMachine(t *testing.T) {
 		})
 	}
 }
+
+func TestGetProjectTeamOwnership(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		accountID    string
+		teamID       string
+		providerTeam string
+		requestTeam  string
+		wantTeam     string
+	}{
+		{name: "bare project discovers team", accountID: "team_123", wantTeam: "team_123"},
+		{name: "explicit team", accountID: "team_123", teamID: "team_123", requestTeam: "team_123", wantTeam: "team_123"},
+		{name: "provider team", accountID: "team_123", providerTeam: "team_123", requestTeam: "team_123", wantTeam: "team_123"},
+		{name: "explicit team overrides provider", accountID: "team_123", teamID: "team_123", providerTeam: "team_other", requestTeam: "team_123", wantTeam: "team_123"},
+		{name: "personal project", accountID: "user_123"},
+		{name: "missing owner preserves explicit team", teamID: "team_123", requestTeam: "team_123", wantTeam: "team_123"},
+		{name: "missing owner preserves provider team", providerTeam: "team_123", requestTeam: "team_123", wantTeam: "team_123"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				if req.Method != http.MethodGet || req.URL.Path != "/v10/projects/prj_123" {
+					t.Errorf("unexpected request: %s %s", req.Method, req.URL)
+					http.NotFound(w, req)
+					return
+				}
+				if got := req.URL.Query().Get("teamId"); got != tc.requestTeam {
+					t.Errorf("request teamId = %q, want %q", got, tc.requestTeam)
+				}
+				fmt.Fprintf(w, `{"id":"prj_123","accountId":%q}`, tc.accountID)
+			}))
+			defer server.Close()
+
+			c := New("test").WithBaseURL(server.URL).WithTeam(Team{ID: tc.providerTeam})
+			project, err := c.GetProject(context.Background(), "prj_123", tc.teamID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if project.TeamID != tc.wantTeam {
+				t.Fatalf("TeamID = %q, want %q", project.TeamID, tc.wantTeam)
+			}
+		})
+	}
+}
