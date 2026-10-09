@@ -18,7 +18,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
@@ -481,10 +483,39 @@ func (r *firewallConfigResource) ModifyPlan(ctx context.Context, req resource.Mo
 		return
 	}
 
+	settingsKnown, err := firewallSettingsKnown(req.Plan.Raw)
+	if err != nil {
+		resp.Diagnostics.AddError("failed to read planned firewall settings", err.Error())
+		return
+	}
 	var plan, state FirewallConfig
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
+	canPatchRules := false
+	if settingsKnown {
+		resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		canPatchRules, err = onlyFirewallRulesChanged(state, plan)
+		if err != nil {
+			tflog.Debug(ctx, "Unable to compare firewall settings in the current plan", map[string]any{"error": err.Error()})
+		}
+	}
+	if !canPatchRules {
+		// PUT regenerates every custom-rule ID. Do not promise existing IDs when
+		// settings change or unknown settings prevent establishing the update method.
+		unknownIDsPlan, err := tftypes.Transform(req.Plan.Raw, func(p *tftypes.AttributePath, value tftypes.Value) (tftypes.Value, error) {
+			if p.NextStep() == tftypes.AttributeName("rules") && p.LastStep() == tftypes.AttributeName("id") {
+				return tftypes.NewValue(value.Type(), tftypes.UnknownValue), nil
+			}
+			return value, nil
+		})
+		if err != nil {
+			resp.Diagnostics.AddError("failed to plan firewall rule IDs", err.Error())
+			return
+		}
+		resp.Plan.Raw = unknownIDsPlan
 		return
 	}
 
@@ -496,6 +527,30 @@ func (r *firewallConfigResource) ModifyPlan(ctx context.Context, req resource.Mo
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
+}
+
+func firewallSettingsKnown(plan tftypes.Value) (bool, error) {
+	var attributes map[string]tftypes.Value
+	if err := plan.As(&attributes); err != nil {
+		return false, err
+	}
+	if !attributes["enabled"].IsFullyKnown() || !attributes["managed_rulesets"].IsFullyKnown() {
+		return false, nil
+	}
+
+	known := true
+	err := tftypes.Walk(attributes["ip_rules"], func(p *tftypes.AttributePath, value tftypes.Value) (bool, error) {
+		// IP IDs do not affect routing and may be computed even for unchanged IP rules.
+		if p.LastStep() == tftypes.AttributeName("id") {
+			return false, nil
+		}
+		if !value.IsKnown() {
+			known = false
+			return false, nil
+		}
+		return true, nil
+	})
+	return known, err
 }
 
 func (r *firewallConfigResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
