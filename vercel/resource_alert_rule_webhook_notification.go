@@ -149,7 +149,12 @@ func (r *alertRuleWebhookNotificationResource) Read(ctx context.Context, req res
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	state.MinimumSeverityLevel = stringValue(notification.MinimumSeverityLevel)
+	// The API can return only a webhook ID when it cannot hydrate webhook
+	// details. In that response, a missing severity does not mean the floor is
+	// unset, so keep the last known value in state.
+	if notification.MinimumSeverityLevel != nil {
+		state.MinimumSeverityLevel = types.StringValue(*notification.MinimumSeverityLevel)
+	}
 
 	tflog.Info(ctx, "read alert rule webhook notification", map[string]any{
 		"team_id":       state.TeamID.ValueString(),
