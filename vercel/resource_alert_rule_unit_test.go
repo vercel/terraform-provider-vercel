@@ -359,7 +359,7 @@ func TestAlertRuleTagsRequests(t *testing.T) {
 		RuleScope:                 client.AlertRuleScope{Type: "all"},
 		Triggers:                  &client.AlertRuleTriggers{Mode: "selected", Items: []client.AlertRuleTrigger{{Type: "error_anomaly"}}},
 		MatchMinimumSeverityLevel: &severity,
-		Tags:                      []string{"checkout", "payments"},
+		Tags:                      []string{"checkout", "payments", terraformProviderVercelAlertRuleTag},
 		NotificationSettings:      client.AlertRuleNotificationSettings{EnableTeamOwnerNotifications: true},
 	}, types.StringValue("team_123"))
 	if diags.HasError() {
@@ -373,12 +373,12 @@ func TestAlertRuleTagsRequests(t *testing.T) {
 	if diags.HasError() {
 		t.Fatalf("toCreateRequest() diagnostics = %v", diags)
 	}
-	if len(create.Tags) != 2 {
-		t.Fatalf("create.Tags = %v, want 2 tags", create.Tags)
+	if len(create.Tags) != 3 || create.Tags[2] != terraformProviderVercelAlertRuleTag {
+		t.Fatalf("create.Tags = %v, want user tags and provider marker", create.Tags)
 	}
 
 	unchanged, diags := state.toUpdateRequest(ctx, state)
-	if diags.HasError() || unchanged.Tags != nil {
+	if diags.HasError() || string(unchanged.Tags) != `["checkout","payments","terraform-provider-vercel"]` {
 		t.Fatalf("unchanged update tags = %s, diagnostics = %v", unchanged.Tags, diags)
 	}
 
@@ -392,7 +392,7 @@ func TestAlertRuleTagsRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
 	}
-	if string(body) != `{"tags":null}` {
+	if string(body) != `{"tags":["terraform-provider-vercel"]}` {
 		t.Fatalf("clearing PATCH body = %s", body)
 	}
 

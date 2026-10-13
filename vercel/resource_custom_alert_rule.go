@@ -218,8 +218,9 @@ func (model CustomAlertRule) toCreateRequest(ctx context.Context) (client.Create
 	}}, diags
 }
 
-// Only changed fields are sent: metadata updates must not recompile the query
-// or require an Observability Plus subscription on a previously enabled project.
+// Only changed rule fields are sent: metadata updates must not recompile the
+// query or require an Observability Plus subscription on a previously enabled
+// project. Tags are always sent so the provider marker remains attached.
 func (plan CustomAlertRule) toUpdateRequest(ctx context.Context, state CustomAlertRule) (client.UpdateAlertRuleRequest, diag.Diagnostics) {
 	request := client.UpdateAlertRuleRequest{ID: state.ID.ValueString(), TeamID: state.TeamID.ValueString()}
 	var diags diag.Diagnostics
@@ -232,11 +233,9 @@ func (plan CustomAlertRule) toUpdateRequest(ctx context.Context, state CustomAle
 	if !plan.Severity.Equal(state.Severity) {
 		request.Severity = optionalString(plan.Severity)
 	}
-	if !plan.Tags.Equal(state.Tags) {
-		tags, tagDiags := alertRuleTagsUpdateValue(ctx, plan.Tags)
-		diags.Append(tagDiags...)
-		request.Tags = tags
-	}
+	tags, tagDiags := alertRuleTagsUpdateValue(ctx, plan.Tags)
+	diags.Append(tagDiags...)
+	request.Tags = tags
 	if !plan.InvestigationPrompt.Equal(state.InvestigationPrompt) {
 		encoded, err := json.Marshal(optionalString(plan.InvestigationPrompt))
 		if err != nil {

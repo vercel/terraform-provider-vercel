@@ -372,20 +372,39 @@ func alertRuleTagsAttribute() schema.SetAttribute {
 	return schema.SetAttribute{
 		Optional:            true,
 		ElementType:         types.StringType,
-		MarkdownDescription: "Up to 10 unique tags used to organize the rule. Removing all tags clears them.",
+		MarkdownDescription: "Up to 10 unique tags used to organize the rule. The provider adds `terraform-provider-vercel` when fewer than 10 user tags are configured. This provider-owned tag is hidden from Terraform state and cannot be configured directly. Removing all user tags clears them.",
 		Validators: []validator.Set{
 			setvalidator.SizeBetween(1, 10),
-			setvalidator.ValueStringsAre(stringvalidator.LengthBetween(1, 256), validateStringIsTrimmed()),
+			setvalidator.ValueStringsAre(
+				stringvalidator.LengthBetween(1, 256),
+				validateStringIsTrimmed(),
+				stringvalidator.NoneOf(terraformProviderVercelAlertRuleTag),
+			),
 		},
 	}
 }
 
+const terraformProviderVercelAlertRuleTag = "terraform-provider-vercel"
+
 func alertRuleTagsToClient(ctx context.Context, value types.Set) ([]string, diag.Diagnostics) {
-	if value.IsNull() || value.IsUnknown() {
-		return nil, nil
-	}
 	var tags []string
-	diags := value.ElementsAs(ctx, &tags, false)
+	var diags diag.Diagnostics
+	if !value.IsNull() && !value.IsUnknown() {
+		diags = value.ElementsAs(ctx, &tags, false)
+	}
+	if diags.HasError() {
+		return nil, diags
+	}
+	for _, tag := range tags {
+		if tag == terraformProviderVercelAlertRuleTag {
+			return tags, diags
+		}
+	}
+	// The Alerts API allows at most 10 tags. Preserve 10 configured tags rather
+	// than dropping a user tag to make room for the provider marker.
+	if len(tags) < 10 {
+		tags = append(tags, terraformProviderVercelAlertRuleTag)
+	}
 	return tags, diags
 }
 
@@ -402,10 +421,16 @@ func alertRuleTagsUpdateValue(ctx context.Context, value types.Set) (json.RawMes
 }
 
 func alertRuleTagsFromClient(ctx context.Context, tags []string) (types.Set, diag.Diagnostics) {
-	if len(tags) == 0 {
+	userTags := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		if tag != terraformProviderVercelAlertRuleTag {
+			userTags = append(userTags, tag)
+		}
+	}
+	if len(userTags) == 0 {
 		return types.SetNull(types.StringType), nil
 	}
-	return types.SetValueFrom(ctx, types.StringType, tags)
+	return types.SetValueFrom(ctx, types.StringType, userTags)
 }
 
 func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCreate, diag.Diagnostics) {
@@ -432,9 +457,10 @@ func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCre
 }
 
 // toUpdateRequest keeps PATCH semantics aligned with Alerts v3 by sending only
-// fields that changed. This is required for readable legacy trigger filters:
-// the API can preserve them when triggers is omitted, but may reject them if an
-// unrelated update writes the legacy filter back through the current grammar.
+// changed rule fields, plus the provider marker tag. This is required for
+// readable legacy trigger filters: the API can preserve them when triggers is
+// omitted, but may reject them if an unrelated update writes the legacy filter
+// back through the current grammar.
 func (plan AlertRule) toUpdateRequest(ctx context.Context, state AlertRule) (client.UpdateAlertRuleRequest, diag.Diagnostics) {
 	request := client.UpdateAlertRuleRequest{
 		TeamID: plan.TeamID.ValueString(),
@@ -459,11 +485,9 @@ func (plan AlertRule) toUpdateRequest(ctx context.Context, state AlertRule) (cli
 	if !plan.MatchMinimumSeverityLevel.Equal(state.MatchMinimumSeverityLevel) {
 		request.MatchMinimumSeverityLevel = optionalString(plan.MatchMinimumSeverityLevel)
 	}
-	if !plan.Tags.Equal(state.Tags) {
-		tags, tagDiags := alertRuleTagsUpdateValue(ctx, plan.Tags)
-		diags.Append(tagDiags...)
-		request.Tags = tags
-	}
+	tags, tagDiags := alertRuleTagsUpdateValue(ctx, plan.Tags)
+	diags.Append(tagDiags...)
+	request.Tags = tags
 	if !plan.NotificationSettings.Equal(state.NotificationSettings) {
 		notificationSettings, notificationSettingsDiags := alertRuleNotificationSettingsToUpdateClient(ctx, plan.NotificationSettings)
 		diags.Append(notificationSettingsDiags...)
