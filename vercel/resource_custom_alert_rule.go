@@ -262,7 +262,7 @@ func (plan CustomAlertRule) toUpdateRequest(ctx context.Context, state CustomAle
 	return request, diags
 }
 
-func customAlertRuleFromAPI(ctx context.Context, rule client.AlertRule, teamID types.String) (CustomAlertRule, diag.Diagnostics) {
+func customAlertRuleFromAPI(ctx context.Context, rule client.AlertRule, teamID types.String, configuredTags ...types.Set) (CustomAlertRule, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if rule.Type != client.AlertRuleTypeCustom || !rule.QuerySupported || rule.Evaluation == nil || rule.Trigger == nil {
 		diags.AddError("Unsupported custom Alert Rule", "This resource requires a custom rule with `querySupported: true`. Legacy rules with unsupported queries must be recreated before Terraform can manage their query.")
@@ -284,7 +284,7 @@ func customAlertRuleFromAPI(ctx context.Context, rule client.AlertRule, teamID t
 	diags.Append(d...)
 	settings, d := alertRuleNotificationSettingsFromClient(ctx, rule.NotificationSettings)
 	diags.Append(d...)
-	tags, d := alertRuleTagsFromClient(ctx, rule.Tags)
+	tags, d := alertRuleTagsFromClient(ctx, rule.Tags, configuredTags...)
 	diags.Append(d...)
 	return CustomAlertRule{
 		ID: types.StringValue(rule.ID), TeamID: teamID, Name: types.StringValue(rule.Name), ProjectID: types.StringValue(rule.RuleScope.ProjectID),
@@ -348,7 +348,7 @@ func (r *customAlertRuleResource) Create(ctx context.Context, req resource.Creat
 		resp.Diagnostics.AddError("Error creating custom Alert Rule", err.Error())
 		return
 	}
-	result, d := customAlertRuleFromAPI(ctx, out, types.StringValue(teamID))
+	result, d := customAlertRuleFromAPI(ctx, out, types.StringValue(teamID), plan.Tags)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -374,7 +374,7 @@ func (r *customAlertRuleResource) Read(ctx context.Context, req resource.ReadReq
 		resp.Diagnostics.AddError("Error reading custom Alert Rule", err.Error())
 		return
 	}
-	result, d := customAlertRuleFromAPI(ctx, out, state.TeamID)
+	result, d := customAlertRuleFromAPI(ctx, out, state.TeamID, state.Tags)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -412,7 +412,7 @@ func (r *customAlertRuleResource) Update(ctx context.Context, req resource.Updat
 		resp.Diagnostics.AddError("Error updating custom Alert Rule", err.Error())
 		return
 	}
-	result, d := customAlertRuleFromAPI(ctx, out, state.TeamID)
+	result, d := customAlertRuleFromAPI(ctx, out, state.TeamID, plan.Tags)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return

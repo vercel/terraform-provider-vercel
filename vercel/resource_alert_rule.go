@@ -372,14 +372,10 @@ func alertRuleTagsAttribute() schema.SetAttribute {
 	return schema.SetAttribute{
 		Optional:            true,
 		ElementType:         types.StringType,
-		MarkdownDescription: "Up to 10 unique tags used to organize the rule. The provider adds `terraform-provider-vercel` when fewer than 10 user tags are configured. This provider-owned tag is hidden from Terraform state and cannot be configured directly. Removing all user tags clears them.",
+		MarkdownDescription: "Up to 10 unique tags used to organize the rule. The provider adds `terraform-provider-vercel` when fewer than 10 user tags are configured. The provider-owned tag is hidden from Terraform state unless configured explicitly. Removing all user tags clears them.",
 		Validators: []validator.Set{
 			setvalidator.SizeBetween(1, 10),
-			setvalidator.ValueStringsAre(
-				stringvalidator.LengthBetween(1, 256),
-				validateStringIsTrimmed(),
-				stringvalidator.NoneOf(terraformProviderVercelAlertRuleTag),
-			),
+			setvalidator.ValueStringsAre(stringvalidator.LengthBetween(1, 256), validateStringIsTrimmed()),
 		},
 	}
 }
@@ -420,11 +416,23 @@ func alertRuleTagsUpdateValue(ctx context.Context, value types.Set) (json.RawMes
 	return encoded, diags
 }
 
-func alertRuleTagsFromClient(ctx context.Context, tags []string) (types.Set, diag.Diagnostics) {
+func alertRuleTagsFromClient(ctx context.Context, tags []string, configured ...types.Set) (types.Set, diag.Diagnostics) {
 	userTags := make([]string, 0, len(tags))
 	for _, tag := range tags {
 		if tag != terraformProviderVercelAlertRuleTag {
 			userTags = append(userTags, tag)
+		}
+	}
+	if len(configured) > 0 && !configured[0].IsNull() && !configured[0].IsUnknown() {
+		var configuredTags []string
+		if diags := configured[0].ElementsAs(ctx, &configuredTags, false); diags.HasError() {
+			return types.SetUnknown(types.StringType), diags
+		}
+		for _, tag := range configuredTags {
+			if tag == terraformProviderVercelAlertRuleTag {
+				userTags = append(userTags, terraformProviderVercelAlertRuleTag)
+				break
+			}
 		}
 	}
 	if len(userTags) == 0 {
@@ -529,7 +537,7 @@ func alertRuleTriggersFromClient(ctx context.Context, triggers *client.AlertRule
 	return types.SetValueFrom(ctx, alertRuleTriggerAttrType, models)
 }
 
-func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.String) (AlertRule, diag.Diagnostics) {
+func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.String, configuredTags ...types.Set) (AlertRule, diag.Diagnostics) {
 	scope, diags := alertRuleScopeFromClient(ctx, out.RuleScope)
 	triggers, triggerDiags := alertRuleTriggersFromClient(ctx, out.Triggers)
 	diags.Append(triggerDiags...)
@@ -539,7 +547,7 @@ func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.St
 	}
 	notificationSettings, notificationSettingsDiags := alertRuleNotificationSettingsFromClient(ctx, out.NotificationSettings)
 	diags.Append(notificationSettingsDiags...)
-	tags, tagDiags := alertRuleTagsFromClient(ctx, out.Tags)
+	tags, tagDiags := alertRuleTagsFromClient(ctx, out.Tags, configuredTags...)
 	diags.Append(tagDiags...)
 
 	return AlertRule{
@@ -807,7 +815,7 @@ func (r *alertRuleResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 	teamID := toTeamID(r.client.TeamID(plan.TeamID.ValueString()))
-	result, resultDiags := alertRuleFromAPI(ctx, out, teamID)
+	result, resultDiags := alertRuleFromAPI(ctx, out, teamID, plan.Tags)
 	resp.Diagnostics.Append(resultDiags...)
 	currentCanonical := alertRuleCanonicalFiltersFromClient(out.Triggers)
 	result.Triggers, resultDiags = alertRuleTriggersPreservingFilters(ctx, result.Triggers, plan.Triggers, nil, currentCanonical, alertRuleFilterReconcileApply)
@@ -850,7 +858,7 @@ func (r *alertRuleResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	result, diags := alertRuleFromAPI(ctx, out, state.TeamID)
+	result, diags := alertRuleFromAPI(ctx, out, state.TeamID, state.Tags)
 	resp.Diagnostics.Append(diags...)
 	currentCanonical := alertRuleCanonicalFiltersFromClient(out.Triggers)
 	result.Triggers, diags = alertRuleTriggersPreservingFilters(ctx, result.Triggers, state.Triggers, previousCanonical, currentCanonical, alertRuleFilterReconcileRefresh)
@@ -882,7 +890,7 @@ func (r *alertRuleResource) Update(ctx context.Context, req resource.UpdateReque
 		resp.Diagnostics.AddError("Error updating Alert Rule", fmt.Sprintf("Could not update Alert Rule %s, unexpected error: %s", plan.ID.ValueString(), err))
 		return
 	}
-	result, resultDiags := alertRuleFromAPI(ctx, out, plan.TeamID)
+	result, resultDiags := alertRuleFromAPI(ctx, out, plan.TeamID, plan.Tags)
 	resp.Diagnostics.Append(resultDiags...)
 	currentCanonical := alertRuleCanonicalFiltersFromClient(out.Triggers)
 	result.Triggers, resultDiags = alertRuleTriggersPreservingFilters(ctx, result.Triggers, plan.Triggers, nil, currentCanonical, alertRuleFilterReconcileApply)
