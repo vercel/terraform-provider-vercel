@@ -3,6 +3,7 @@ package vercel
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -378,7 +379,12 @@ func TestAlertRuleTagsRequests(t *testing.T) {
 	}
 
 	unchanged, diags := state.toUpdateRequest(ctx, state)
-	if diags.HasError() || string(unchanged.Tags) != `["checkout","payments","terraform-provider-vercel"]` {
+	var updateTags []string
+	if err := json.Unmarshal(unchanged.Tags, &updateTags); err != nil {
+		t.Fatal(err)
+	}
+	slices.Sort(updateTags)
+	if diags.HasError() || !slices.Equal(updateTags, []string{terraformProviderVercelAlertRuleTag, "checkout", "payments"}) {
 		t.Fatalf("unchanged update tags = %s, diagnostics = %v", unchanged.Tags, diags)
 	}
 
