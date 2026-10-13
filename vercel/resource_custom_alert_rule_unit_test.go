@@ -99,7 +99,11 @@ func TestCustomAlertRuleRequests(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(encoded) != `{"tags":["terraform-provider-vercel"],"investigationPrompt":null,"name":"Checkout requests"}` {
+	var patch map[string]json.RawMessage
+	if err := json.Unmarshal(encoded, &patch); err != nil {
+		t.Fatalf("metadata PATCH JSON = %s, error = %v", encoded, err)
+	}
+	if len(patch) != 3 || string(patch["tags"]) != `["terraform-provider-vercel"]` || string(patch["investigationPrompt"]) != "null" || string(patch["name"]) != `"Checkout requests"` {
 		t.Fatalf("metadata PATCH = %s", encoded)
 	}
 	plan = state

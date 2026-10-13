@@ -384,7 +384,7 @@ func TestAlertRuleTagsRequests(t *testing.T) {
 		t.Fatal(err)
 	}
 	slices.Sort(updateTags)
-	if diags.HasError() || !slices.Equal(updateTags, []string{terraformProviderVercelAlertRuleTag, "checkout", "payments"}) {
+	if diags.HasError() || !slices.Equal(updateTags, []string{"checkout", "payments", terraformProviderVercelAlertRuleTag}) {
 		t.Fatalf("unchanged update tags = %s, diagnostics = %v", unchanged.Tags, diags)
 	}
 
