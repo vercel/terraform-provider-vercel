@@ -126,7 +126,7 @@ resource "vercel_webhook" "notification" {
 
 resource "vercel_monitor_webhook_notification" "webhook" {
   monitor_id = vercel_monitor.notification.id
-  webhook_id    = vercel_webhook.notification.id
+  webhook_id = vercel_webhook.notification.id
 }
 `, name)
 }

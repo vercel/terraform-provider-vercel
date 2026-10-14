@@ -727,7 +727,10 @@ func modifyBuiltInPlan(ctx context.Context, req resource.ModifyPlanRequest, resp
 		resp.Diagnostics.AddAttributeError(
 			path.Root("match_minimum_severity_level"),
 			fmt.Sprintf("Critical-only built-in %ss are not supported", noun),
-			"Use `high` to match High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = \"critical\"` on its `vercel_alert_rule_slack_notification` or `vercel_alert_rule_webhook_notification` link.",
+			fmt.Sprintf(
+				"Use `high` to match High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = \"critical\"` on its `vercel_%[1]s_slack_notification` or `vercel_%[1]s_webhook_notification` link.",
+				strings.ReplaceAll(noun, " ", "_"),
+			),
 		)
 	}
 }

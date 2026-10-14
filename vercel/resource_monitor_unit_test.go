@@ -205,6 +205,10 @@ func TestMonitorModifyPlanRejectsCriticalMatchLevel(t *testing.T) {
 	if got := response.Diagnostics.Errors()[0].Summary(); got != "Critical-only built-in monitors are not supported" {
 		t.Fatalf("ModifyPlan() summary = %q, want monitor wording", got)
 	}
+	detail := response.Diagnostics.Errors()[0].Detail()
+	if !strings.Contains(detail, "vercel_monitor_slack_notification") || !strings.Contains(detail, "vercel_monitor_webhook_notification") || strings.Contains(detail, "alert_rule") {
+		t.Fatalf("ModifyPlan() detail = %q, want monitor notification resources", detail)
+	}
 }
 
 func TestMonitorValidateConfigUsesMonitorWording(t *testing.T) {

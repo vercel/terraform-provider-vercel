@@ -35,19 +35,9 @@ func (r *monitorResource) Metadata(_ context.Context, req resource.MetadataReque
 }
 
 func (r *monitorResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if configured, ok := configureAlertRuleNotificationResource(req, resp); ok {
+		r.client = configured
 	}
-
-	configuredClient, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
-	r.client = configuredClient
 }
 
 func (r *monitorResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
