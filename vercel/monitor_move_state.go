@@ -28,6 +28,9 @@ func matchesMoveSource(req resource.MoveStateRequest, typeName string) bool {
 	return req.SourceTypeName == typeName && strings.HasSuffix(req.SourceProviderAddress, "/vercel")
 }
 
+// Private state (canonical filter and query baselines) is not copied by the
+// framework, so the alert rule and custom movers carry it over explicitly.
+//
 // Alert rules were renamed to monitors and the state shapes are identical, so a
 // `moved` block can convert a deprecated resource into its monitor equivalent.
 
@@ -43,6 +46,7 @@ func (r *monitorResource) MoveState(ctx context.Context) []resource.StateMover {
 			if resp.Diagnostics.HasError() {
 				return
 			}
+			resp.TargetPrivate = req.SourcePrivate
 			resp.Diagnostics.Append(resp.TargetState.Set(ctx, state)...)
 		},
 	}}
@@ -60,6 +64,7 @@ func (r *customMonitorResource) MoveState(ctx context.Context) []resource.StateM
 			if resp.Diagnostics.HasError() {
 				return
 			}
+			resp.TargetPrivate = req.SourcePrivate
 			resp.Diagnostics.Append(resp.TargetState.Set(ctx, state)...)
 		},
 	}}

@@ -423,12 +423,17 @@ func alertRuleTagsUpdateValue(ctx context.Context, value types.Set) (json.RawMes
 
 func alertRuleTagsFromClient(ctx context.Context, tags []string, configured ...types.Set) (types.Set, diag.Diagnostics) {
 	userTags := make([]string, 0, len(tags))
+	apiHasMarker := false
 	for _, tag := range tags {
-		if tag != terraformProviderVercelAlertRuleTag {
-			userTags = append(userTags, tag)
+		if tag == terraformProviderVercelAlertRuleTag {
+			apiHasMarker = true
+			continue
 		}
+		userTags = append(userTags, tag)
 	}
-	if len(configured) > 0 && !configured[0].IsNull() && !configured[0].IsUnknown() {
+	// The marker is only surfaced when configured explicitly and still present
+	// remotely, so removing it outside Terraform shows up as drift.
+	if apiHasMarker && len(configured) > 0 && !configured[0].IsNull() && !configured[0].IsUnknown() {
 		var configuredTags []string
 		if diags := configured[0].ElementsAs(ctx, &configuredTags, false); diags.HasError() {
 			return types.SetUnknown(types.StringType), diags

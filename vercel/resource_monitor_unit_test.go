@@ -240,3 +240,24 @@ func TestMonitorImportRequiresTeam(t *testing.T) {
 		t.Fatal("ImportState() returned no diagnostics without team context")
 	}
 }
+
+func TestAlertRuleTagsFromClientSurfacesExplicitMarkerOnlyWhenRemotePresent(t *testing.T) {
+	ctx := context.Background()
+	configured := types.SetValueMust(types.StringType, []attr.Value{types.StringValue("a"), types.StringValue(terraformProviderVercelAlertRuleTag)})
+
+	got, diags := alertRuleTagsFromClient(ctx, []string{"a", terraformProviderVercelAlertRuleTag}, configured)
+	if diags.HasError() || !got.Equal(configured) {
+		t.Fatalf("explicit marker present remotely = %v (%v), want %v", got, diags, configured)
+	}
+
+	got, diags = alertRuleTagsFromClient(ctx, []string{"a"}, configured)
+	want := types.SetValueMust(types.StringType, []attr.Value{types.StringValue("a")})
+	if diags.HasError() || !got.Equal(want) {
+		t.Fatalf("marker removed remotely = %v (%v), want %v so the drift is visible", got, diags, want)
+	}
+
+	got, _ = alertRuleTagsFromClient(ctx, []string{"a", terraformProviderVercelAlertRuleTag}, types.SetValueMust(types.StringType, []attr.Value{types.StringValue("a")}))
+	if !got.Equal(want) {
+		t.Fatalf("implicit marker = %v, want it hidden", got)
+	}
+}

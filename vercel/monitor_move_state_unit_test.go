@@ -110,7 +110,8 @@ func TestMonitorMoveIgnoresOtherSources(t *testing.T) {
 }
 
 // A `moved` block must adopt the existing alert rule as a monitor without
-// recreating it or changing the plan afterwards.
+// recreating it or changing the plan afterwards, even when the API
+// canonicalizes the configured filter.
 func TestMonitorMovedBlockAdoptsAlertRule(t *testing.T) {
 	var mu sync.Mutex
 	var rule client.AlertRule
@@ -130,6 +131,10 @@ func TestMonitorMovedBlockAdoptsAlertRule(t *testing.T) {
 				t.Error(err)
 			}
 			rule.ID = "ar_123"
+			// Simulate the API's KQL canonicalization.
+			for i := range rule.Triggers.Items {
+				rule.Triggers.Items[i].Filter = strPtr("statusGroup:(5xx)")
+			}
 		case http.MethodPatch:
 			t.Errorf("unexpected update %s", req.URL.Path)
 		case http.MethodDelete:
@@ -146,7 +151,7 @@ func TestMonitorMovedBlockAdoptsAlertRule(t *testing.T) {
   type = "built-in"
   name = "Errors"
   rule_scope = { type = "all" }
-  triggers = [{ type = "usage_anomaly" }]
+  triggers = [{ type = "error_anomaly", filter = "statusGroup:5xx" }]
   match_minimum_severity_level = "high"
 `
 	tfresource.UnitTest(t, tfresource.TestCase{ProtoV6ProviderFactories: factories, Steps: []tfresource.TestStep{
@@ -168,5 +173,70 @@ resource "vercel_monitor" "errors" {` + body + `}`, Check: tfresource.TestCheckR
 	}
 	if len(requests) == 0 || requests[len(requests)-1] != "DELETE /alerts/v3/monitors/ar_123" {
 		t.Fatalf("requests = %v, want the monitor destroyed through the monitors API", requests)
+	}
+}
+
+func TestCustomMonitorMovedBlockAdoptsCustomAlertRule(t *testing.T) {
+	var mu sync.Mutex
+	var rule client.AlertRule
+	var requests []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		requests = append(requests, req.Method+" "+req.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		envelope := "rule"
+		if strings.HasPrefix(req.URL.Path, "/alerts/v3/monitors") {
+			envelope = "monitor"
+		}
+		switch req.Method {
+		case http.MethodPost:
+			if err := json.NewDecoder(req.Body).Decode(&rule); err != nil {
+				t.Error(err)
+			}
+			rule.ID, rule.QuerySupported = "ar_123", true
+			// Simulate the API's KQL canonicalization.
+			var query map[string]any
+			_ = json.Unmarshal(rule.Evaluation.Query, &query)
+			query["metrics"].(map[string]any)["requests"].(map[string]any)["filter"] = "httpStatus:>=500"
+			rule.Evaluation.Query, _ = json.Marshal(query)
+		case http.MethodPatch:
+			t.Errorf("unexpected update %s", req.URL.Path)
+		case http.MethodDelete:
+			_, _ = fmt.Fprint(w, `{"success":true}`)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{envelope: rule})
+	}))
+	t.Cleanup(server.Close)
+	factories := map[string]func() (tfprotov6.ProviderServer, error){"vercel": providerserver.NewProtocol6WithError(&customAlertMockProvider{
+		Provider: New(), client: client.New("TOKEN").WithBaseURL(server.URL).WithTeam(client.Team{ID: "team_123"}),
+	})}
+	body := `
+  name = "Requests"
+  project_id = "prj_123"
+  severity = "high"
+  evaluation = {
+    window = "5m"
+    query = {metrics = {requests = {metric = "vercel.request.count", aggregation = "count", filter = "httpStatus >= 500"}}, outputs = ["requests"]}
+  }
+  trigger = {type = "threshold", output = "requests", operator = "gt", threshold = 0}
+`
+	tfresource.UnitTest(t, tfresource.TestCase{ProtoV6ProviderFactories: factories, Steps: []tfresource.TestStep{
+		{Config: `resource "vercel_custom_alert_rule" "requests" {` + body + `}`},
+		{Config: `
+moved {
+  from = vercel_custom_alert_rule.requests
+  to   = vercel_custom_monitor.requests
+}
+
+resource "vercel_custom_monitor" "requests" {` + body + `}`, Check: tfresource.TestCheckResourceAttr("vercel_custom_monitor.requests", "id", "ar_123")},
+	}})
+	mu.Lock()
+	defer mu.Unlock()
+	for _, request := range requests {
+		if request == "POST /alerts/v3/monitors" || strings.HasPrefix(request, "PATCH") {
+			t.Fatalf("the monitor was recreated or updated: %v", requests)
+		}
 	}
 }
