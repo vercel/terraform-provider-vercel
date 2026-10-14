@@ -129,6 +129,7 @@ func (r *customAlertRuleResource) Schema(ctx context.Context, _ resource.SchemaR
 		},
 	}
 	resp.Schema = schema.Schema{
+		DeprecationMessage:  "Alert rules were renamed to monitors. Use the `vercel_custom_monitor` resource instead. This resource will be removed in a future major version of this provider.",
 		MarkdownDescription: "Creates a project-scoped custom Vercel alert rule using the Alerts v3 API. Supports threshold and anomaly conditions on a metric or same-event ratio. Custom alerts must be enabled for the team. Manage Slack and webhook links with `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification`.",
 		Attributes:          attributes,
 	}
@@ -218,8 +219,9 @@ func (model CustomAlertRule) toCreateRequest(ctx context.Context) (client.Create
 	}}, diags
 }
 
-// Only changed fields are sent: metadata updates must not recompile the query
-// or require an Observability Plus subscription on a previously enabled project.
+// Only changed rule fields are sent: metadata updates must not recompile the
+// query or require an Observability Plus subscription on a previously enabled
+// project. Tags are always sent so the provider marker remains attached.
 func (plan CustomAlertRule) toUpdateRequest(ctx context.Context, state CustomAlertRule) (client.UpdateAlertRuleRequest, diag.Diagnostics) {
 	request := client.UpdateAlertRuleRequest{ID: state.ID.ValueString(), TeamID: state.TeamID.ValueString()}
 	var diags diag.Diagnostics
@@ -232,11 +234,9 @@ func (plan CustomAlertRule) toUpdateRequest(ctx context.Context, state CustomAle
 	if !plan.Severity.Equal(state.Severity) {
 		request.Severity = optionalString(plan.Severity)
 	}
-	if !plan.Tags.Equal(state.Tags) {
-		tags, tagDiags := alertRuleTagsUpdateValue(ctx, plan.Tags)
-		diags.Append(tagDiags...)
-		request.Tags = tags
-	}
+	tags, tagDiags := alertRuleTagsUpdateValue(ctx, plan.Tags)
+	diags.Append(tagDiags...)
+	request.Tags = tags
 	if !plan.InvestigationPrompt.Equal(state.InvestigationPrompt) {
 		encoded, err := json.Marshal(optionalString(plan.InvestigationPrompt))
 		if err != nil {
@@ -263,7 +263,7 @@ func (plan CustomAlertRule) toUpdateRequest(ctx context.Context, state CustomAle
 	return request, diags
 }
 
-func customAlertRuleFromAPI(ctx context.Context, rule client.AlertRule, teamID types.String) (CustomAlertRule, diag.Diagnostics) {
+func customAlertRuleFromAPI(ctx context.Context, rule client.AlertRule, teamID types.String, configuredTags ...types.Set) (CustomAlertRule, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if rule.Type != client.AlertRuleTypeCustom || !rule.QuerySupported || rule.Evaluation == nil || rule.Trigger == nil {
 		diags.AddError("Unsupported custom Alert Rule", "This resource requires a custom rule with `querySupported: true`. Legacy rules with unsupported queries must be recreated before Terraform can manage their query.")
@@ -285,7 +285,7 @@ func customAlertRuleFromAPI(ctx context.Context, rule client.AlertRule, teamID t
 	diags.Append(d...)
 	settings, d := alertRuleNotificationSettingsFromClient(ctx, rule.NotificationSettings)
 	diags.Append(d...)
-	tags, d := alertRuleTagsFromClient(ctx, rule.Tags)
+	tags, d := alertRuleTagsFromClient(ctx, rule.Tags, configuredTags...)
 	diags.Append(d...)
 	return CustomAlertRule{
 		ID: types.StringValue(rule.ID), TeamID: teamID, Name: types.StringValue(rule.Name), ProjectID: types.StringValue(rule.RuleScope.ProjectID),
@@ -349,7 +349,7 @@ func (r *customAlertRuleResource) Create(ctx context.Context, req resource.Creat
 		resp.Diagnostics.AddError("Error creating custom Alert Rule", err.Error())
 		return
 	}
-	result, d := customAlertRuleFromAPI(ctx, out, types.StringValue(teamID))
+	result, d := customAlertRuleFromAPI(ctx, out, types.StringValue(teamID), plan.Tags)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -375,7 +375,7 @@ func (r *customAlertRuleResource) Read(ctx context.Context, req resource.ReadReq
 		resp.Diagnostics.AddError("Error reading custom Alert Rule", err.Error())
 		return
 	}
-	result, d := customAlertRuleFromAPI(ctx, out, state.TeamID)
+	result, d := customAlertRuleFromAPI(ctx, out, state.TeamID, state.Tags)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -413,7 +413,7 @@ func (r *customAlertRuleResource) Update(ctx context.Context, req resource.Updat
 		resp.Diagnostics.AddError("Error updating custom Alert Rule", err.Error())
 		return
 	}
-	result, d := customAlertRuleFromAPI(ctx, out, state.TeamID)
+	result, d := customAlertRuleFromAPI(ctx, out, state.TeamID, plan.Tags)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return

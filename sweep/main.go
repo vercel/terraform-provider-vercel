@@ -57,6 +57,33 @@ func main() {
 		//lintignore:R009
 		panic(err)
 	}
+	err = deleteAllMonitors(ctx, c, teamID)
+	if err != nil {
+		//lintignore:R009
+		panic(err)
+	}
+}
+
+// deleteAllMonitors removes monitors left behind by failed test runs. Like alert
+// rules, only the acceptance-test prefix identifies monitors this sweeper owns.
+func deleteAllMonitors(ctx context.Context, c *client.Client, teamID string) error {
+	monitors, err := c.ListMonitors(ctx, teamID)
+	if err != nil {
+		return fmt.Errorf("error listing monitors: %w", err)
+	}
+
+	for _, monitor := range monitors {
+		if monitor.IsDefault || monitor.Type != client.AlertRuleTypeBuiltIn || !strings.HasPrefix(monitor.Name, "test-acc-monitor-") {
+			continue
+		}
+		err = c.DeleteMonitor(ctx, monitor.ID, teamID)
+		if err != nil {
+			return fmt.Errorf("error deleting monitor: %w", err)
+		}
+		log.Printf("Deleted monitor %s", monitor.ID)
+	}
+
+	return nil
 }
 
 // deleteAllAlertRules removes alert rules left behind by failed test runs. Alert

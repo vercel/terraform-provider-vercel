@@ -64,6 +64,7 @@ func (r *alertRuleResource) Configure(_ context.Context, req resource.ConfigureR
 
 func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		DeprecationMessage:  "Alert rules were renamed to monitors. Use the `vercel_monitor` resource instead. This resource will be removed in a future major version of this provider.",
 		MarkdownDescription: "Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -368,11 +369,15 @@ func alertRuleNotificationSettingsFromClient(ctx context.Context, settings clien
 	})
 }
 
+func alertRuleTagsDescription(noun string) string {
+	return fmt.Sprintf("Up to 10 unique tags used to organize the %[1]s. The provider adds `terraform-provider-vercel` when fewer than 10 user tags are configured. The provider-owned tag is hidden from Terraform state unless configured explicitly. Removing all user tags leaves only the provider-owned tag on the %[1]s.", noun)
+}
+
 func alertRuleTagsAttribute() schema.SetAttribute {
 	return schema.SetAttribute{
 		Optional:            true,
 		ElementType:         types.StringType,
-		MarkdownDescription: "Up to 10 unique tags used to organize the rule. Removing all tags clears them.",
+		MarkdownDescription: alertRuleTagsDescription("rule"),
 		Validators: []validator.Set{
 			setvalidator.SizeBetween(1, 10),
 			setvalidator.ValueStringsAre(stringvalidator.LengthBetween(1, 256), validateStringIsTrimmed()),
@@ -380,12 +385,27 @@ func alertRuleTagsAttribute() schema.SetAttribute {
 	}
 }
 
+const terraformProviderVercelAlertRuleTag = "terraform-provider-vercel"
+
 func alertRuleTagsToClient(ctx context.Context, value types.Set) ([]string, diag.Diagnostics) {
-	if value.IsNull() || value.IsUnknown() {
-		return nil, nil
-	}
 	var tags []string
-	diags := value.ElementsAs(ctx, &tags, false)
+	var diags diag.Diagnostics
+	if !value.IsNull() && !value.IsUnknown() {
+		diags = value.ElementsAs(ctx, &tags, false)
+	}
+	if diags.HasError() {
+		return nil, diags
+	}
+	for _, tag := range tags {
+		if tag == terraformProviderVercelAlertRuleTag {
+			return tags, diags
+		}
+	}
+	// The Alerts API allows at most 10 tags. Preserve 10 configured tags rather
+	// than dropping a user tag to make room for the provider marker.
+	if len(tags) < 10 {
+		tags = append(tags, terraformProviderVercelAlertRuleTag)
+	}
 	return tags, diags
 }
 
@@ -401,11 +421,34 @@ func alertRuleTagsUpdateValue(ctx context.Context, value types.Set) (json.RawMes
 	return encoded, diags
 }
 
-func alertRuleTagsFromClient(ctx context.Context, tags []string) (types.Set, diag.Diagnostics) {
-	if len(tags) == 0 {
+func alertRuleTagsFromClient(ctx context.Context, tags []string, configured ...types.Set) (types.Set, diag.Diagnostics) {
+	userTags := make([]string, 0, len(tags))
+	apiHasMarker := false
+	for _, tag := range tags {
+		if tag == terraformProviderVercelAlertRuleTag {
+			apiHasMarker = true
+			continue
+		}
+		userTags = append(userTags, tag)
+	}
+	// The marker is only surfaced when configured explicitly and still present
+	// remotely, so removing it outside Terraform shows up as drift.
+	if apiHasMarker && len(configured) > 0 && !configured[0].IsNull() && !configured[0].IsUnknown() {
+		var configuredTags []string
+		if diags := configured[0].ElementsAs(ctx, &configuredTags, false); diags.HasError() {
+			return types.SetUnknown(types.StringType), diags
+		}
+		for _, tag := range configuredTags {
+			if tag == terraformProviderVercelAlertRuleTag {
+				userTags = append(userTags, terraformProviderVercelAlertRuleTag)
+				break
+			}
+		}
+	}
+	if len(userTags) == 0 {
 		return types.SetNull(types.StringType), nil
 	}
-	return types.SetValueFrom(ctx, types.StringType, tags)
+	return types.SetValueFrom(ctx, types.StringType, userTags)
 }
 
 func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCreate, diag.Diagnostics) {
@@ -432,9 +475,10 @@ func (model AlertRule) toCreateRequest(ctx context.Context) (client.AlertRuleCre
 }
 
 // toUpdateRequest keeps PATCH semantics aligned with Alerts v3 by sending only
-// fields that changed. This is required for readable legacy trigger filters:
-// the API can preserve them when triggers is omitted, but may reject them if an
-// unrelated update writes the legacy filter back through the current grammar.
+// changed rule fields, plus the provider marker tag. This is required for
+// readable legacy trigger filters: the API can preserve them when triggers is
+// omitted, but may reject them if an unrelated update writes the legacy filter
+// back through the current grammar.
 func (plan AlertRule) toUpdateRequest(ctx context.Context, state AlertRule) (client.UpdateAlertRuleRequest, diag.Diagnostics) {
 	request := client.UpdateAlertRuleRequest{
 		TeamID: plan.TeamID.ValueString(),
@@ -459,11 +503,9 @@ func (plan AlertRule) toUpdateRequest(ctx context.Context, state AlertRule) (cli
 	if !plan.MatchMinimumSeverityLevel.Equal(state.MatchMinimumSeverityLevel) {
 		request.MatchMinimumSeverityLevel = optionalString(plan.MatchMinimumSeverityLevel)
 	}
-	if !plan.Tags.Equal(state.Tags) {
-		tags, tagDiags := alertRuleTagsUpdateValue(ctx, plan.Tags)
-		diags.Append(tagDiags...)
-		request.Tags = tags
-	}
+	tags, tagDiags := alertRuleTagsUpdateValue(ctx, plan.Tags)
+	diags.Append(tagDiags...)
+	request.Tags = tags
 	if !plan.NotificationSettings.Equal(state.NotificationSettings) {
 		notificationSettings, notificationSettingsDiags := alertRuleNotificationSettingsToUpdateClient(ctx, plan.NotificationSettings)
 		diags.Append(notificationSettingsDiags...)
@@ -505,7 +547,7 @@ func alertRuleTriggersFromClient(ctx context.Context, triggers *client.AlertRule
 	return types.SetValueFrom(ctx, alertRuleTriggerAttrType, models)
 }
 
-func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.String) (AlertRule, diag.Diagnostics) {
+func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.String, configuredTags ...types.Set) (AlertRule, diag.Diagnostics) {
 	scope, diags := alertRuleScopeFromClient(ctx, out.RuleScope)
 	triggers, triggerDiags := alertRuleTriggersFromClient(ctx, out.Triggers)
 	diags.Append(triggerDiags...)
@@ -515,7 +557,7 @@ func alertRuleFromAPI(ctx context.Context, out client.AlertRule, teamID types.St
 	}
 	notificationSettings, notificationSettingsDiags := alertRuleNotificationSettingsFromClient(ctx, out.NotificationSettings)
 	diags.Append(notificationSettingsDiags...)
-	tags, tagDiags := alertRuleTagsFromClient(ctx, out.Tags)
+	tags, tagDiags := alertRuleTagsFromClient(ctx, out.Tags, configuredTags...)
 	diags.Append(tagDiags...)
 
 	return AlertRule{
@@ -640,6 +682,12 @@ func int64Value(value *int64) types.Int64 {
 }
 
 func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	modifyBuiltInPlan(ctx, req, resp, "alert rule")
+}
+
+// modifyBuiltInPlan is shared by the alert rule and monitor resources. The
+// noun only changes the wording of diagnostics.
+func modifyBuiltInPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse, noun string) {
 	if req.Plan.Raw.IsNull() {
 		return
 	}
@@ -655,8 +703,8 @@ func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 	if req.State.Raw.IsNull() && config.Triggers.IsNull() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("triggers"),
-			"Missing built-in alert rule triggers",
-			"A nonempty `triggers` set is required when creating a built-in alert rule.",
+			fmt.Sprintf("Missing built-in %s triggers", noun),
+			fmt.Sprintf("A nonempty `triggers` set is required when creating a built-in %s.", noun),
 		)
 		return
 	}
@@ -678,8 +726,11 @@ func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 	if writesCriticalMatchMinimumSeverityLevel(config.MatchMinimumSeverityLevel, prior) {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("match_minimum_severity_level"),
-			"Critical-only built-in alert rules are not supported",
-			"Use `high` to match High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = \"critical\"` on its `vercel_alert_rule_slack_notification` or `vercel_alert_rule_webhook_notification` link.",
+			fmt.Sprintf("Critical-only built-in %ss are not supported", noun),
+			fmt.Sprintf(
+				"Use `high` to match High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = \"critical\"` on its `vercel_%[1]s_slack_notification` or `vercel_%[1]s_webhook_notification` link.",
+				strings.ReplaceAll(noun, " ", "_"),
+			),
 		)
 	}
 }
@@ -701,11 +752,11 @@ func (r *alertRuleResource) ValidateConfig(ctx context.Context, req resource.Val
 		return
 	}
 
-	validateAlertRuleScope(ctx, config.RuleScope, resp)
+	validateAlertRuleScope(ctx, config.RuleScope, "alert rule", resp)
 	validateBuiltInTriggers(ctx, config.Triggers, resp)
 }
 
-func validateAlertRuleScope(ctx context.Context, value types.Object, resp *resource.ValidateConfigResponse) {
+func validateAlertRuleScope(ctx context.Context, value types.Object, noun string, resp *resource.ValidateConfigResponse) {
 	// Terraform expressions can make either the whole object or one of its
 	// children unknown. Validation must wait for those values instead of trying
 	// to decode them into Go types that cannot represent an unknown object.
@@ -719,11 +770,12 @@ func validateAlertRuleScope(ctx context.Context, value types.Object, resp *resou
 	}
 
 	scopeType := scope.Type.ValueString()
+	summary := fmt.Sprintf("Invalid built-in %s scope", noun)
 	if scopeType == "all" && !scope.ProjectIDs.IsNull() && !scope.ProjectIDs.IsUnknown() {
-		resp.Diagnostics.AddAttributeError(path.Root("rule_scope"), "Invalid built-in alert rule scope", "An `all` scope cannot set `project_ids`.")
+		resp.Diagnostics.AddAttributeError(path.Root("rule_scope"), summary, "An `all` scope cannot set `project_ids`.")
 	}
 	if (scopeType == "include" || scopeType == "exclude") && scope.ProjectIDs.IsNull() {
-		resp.Diagnostics.AddAttributeError(path.Root("rule_scope").AtName("project_ids"), "Invalid built-in alert rule scope", "An `include` or `exclude` scope must set `project_ids`.")
+		resp.Diagnostics.AddAttributeError(path.Root("rule_scope").AtName("project_ids"), summary, "An `include` or `exclude` scope must set `project_ids`.")
 	}
 }
 
@@ -783,7 +835,7 @@ func (r *alertRuleResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 	teamID := toTeamID(r.client.TeamID(plan.TeamID.ValueString()))
-	result, resultDiags := alertRuleFromAPI(ctx, out, teamID)
+	result, resultDiags := alertRuleFromAPI(ctx, out, teamID, plan.Tags)
 	resp.Diagnostics.Append(resultDiags...)
 	currentCanonical := alertRuleCanonicalFiltersFromClient(out.Triggers)
 	result.Triggers, resultDiags = alertRuleTriggersPreservingFilters(ctx, result.Triggers, plan.Triggers, nil, currentCanonical, alertRuleFilterReconcileApply)
@@ -826,7 +878,7 @@ func (r *alertRuleResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	result, diags := alertRuleFromAPI(ctx, out, state.TeamID)
+	result, diags := alertRuleFromAPI(ctx, out, state.TeamID, state.Tags)
 	resp.Diagnostics.Append(diags...)
 	currentCanonical := alertRuleCanonicalFiltersFromClient(out.Triggers)
 	result.Triggers, diags = alertRuleTriggersPreservingFilters(ctx, result.Triggers, state.Triggers, previousCanonical, currentCanonical, alertRuleFilterReconcileRefresh)
@@ -858,7 +910,7 @@ func (r *alertRuleResource) Update(ctx context.Context, req resource.UpdateReque
 		resp.Diagnostics.AddError("Error updating Alert Rule", fmt.Sprintf("Could not update Alert Rule %s, unexpected error: %s", plan.ID.ValueString(), err))
 		return
 	}
-	result, resultDiags := alertRuleFromAPI(ctx, out, plan.TeamID)
+	result, resultDiags := alertRuleFromAPI(ctx, out, plan.TeamID, plan.Tags)
 	resp.Diagnostics.Append(resultDiags...)
 	currentCanonical := alertRuleCanonicalFiltersFromClient(out.Triggers)
 	result.Triggers, resultDiags = alertRuleTriggersPreservingFilters(ctx, result.Triggers, plan.Triggers, nil, currentCanonical, alertRuleFilterReconcileApply)

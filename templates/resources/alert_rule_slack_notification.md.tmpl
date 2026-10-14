@@ -10,6 +10,19 @@ description: |-
 
 {{ .Description | trimspace }}
 
+~> **Deprecated** Alert rules were renamed to monitors. Use [`vercel_monitor_slack_notification`](monitor_slack_notification) instead. This resource will be removed in a future major version of this provider.
+
+To migrate without recreating the resource, replace it with `vercel_monitor_slack_notification` and add a `moved` block, for example:
+
+```terraform
+moved {
+  from = vercel_alert_rule_slack_notification.example
+  to   = vercel_monitor_slack_notification.example
+}
+```
+
+Rename the `alert_rule_id` argument to `monitor_id`.
+
 {{ if .HasExamples -}}
 ## Example Usage
 
