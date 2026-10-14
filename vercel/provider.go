@@ -68,6 +68,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newCustomAlertRuleResource,
 		newCustomCertificateResource,
 		newCustomEnvironmentResource,
+		newCustomMonitorResource,
 		newDeploymentProtectionExceptionResource,
 		newDeploymentResource,
 		newDNSRecordResource,

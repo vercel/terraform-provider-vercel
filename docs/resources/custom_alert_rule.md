@@ -10,6 +10,17 @@ description: |-
 
 Creates a project-scoped custom Vercel alert rule using the Alerts v3 API. Supports threshold and anomaly conditions on a metric or same-event ratio. Custom alerts must be enabled for the team. Manage Slack and webhook links with `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification`.
 
+~> **Deprecated** Alert rules were renamed to monitors. Use [`vercel_custom_monitor`](custom_monitor) instead. This resource will be removed in a future major version of this provider.
+
+To migrate without recreating the resource, replace it with `vercel_custom_monitor` and add a `moved` block, for example:
+
+```terraform
+moved {
+  from = vercel_custom_alert_rule.example
+  to   = vercel_custom_monitor.example
+}
+```
+
 ## Example Usage
 
 ```terraform

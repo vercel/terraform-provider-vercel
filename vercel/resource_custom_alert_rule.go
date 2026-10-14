@@ -129,6 +129,7 @@ func (r *customAlertRuleResource) Schema(ctx context.Context, _ resource.SchemaR
 		},
 	}
 	resp.Schema = schema.Schema{
+		DeprecationMessage:  "Alert rules were renamed to monitors. Use the `vercel_custom_monitor` resource instead. This resource will be removed in a future major version of this provider.",
 		MarkdownDescription: "Creates a project-scoped custom Vercel alert rule using the Alerts v3 API. Supports threshold and anomaly conditions on a metric or same-event ratio. Custom alerts must be enabled for the team. Manage Slack and webhook links with `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification`.",
 		Attributes:          attributes,
 	}

@@ -77,10 +77,10 @@ func (r *monitorResource) Schema(ctx context.Context, _ resource.SchemaRequest, 
 	override("name", "A human-readable name for the monitor.")
 	override("rule_scope", "The projects affected by the monitor. Use `all`, `include`, or `exclude`.")
 	override("tags", alertRuleTagsDescription("monitor"))
-	override("notification_settings", "Notification delivery settings stored on the monitor. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources, which accept a monitor ID as `alert_rule_id`.")
+	override("notification_settings", "Notification delivery settings stored on the monitor. Notification destination links are managed with the `vercel_monitor_slack_notification` and `vercel_monitor_webhook_notification` resources.")
 	override("is_default", "Whether this is the immutable team default monitor. Default monitors cannot be managed by this resource.")
 
-	base.Schema.MarkdownDescription = "Creates a built-in Vercel monitor (formerly alert rule) using the monitors API. Built-in monitors select anomaly triggers across a team scope. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources."
+	base.Schema.MarkdownDescription = "Creates a built-in Vercel monitor (formerly alert rule) using the monitors API. Built-in monitors select anomaly triggers across a team scope. Notification destination links are managed with the `vercel_monitor_slack_notification` and `vercel_monitor_webhook_notification` resources."
 	base.Schema.DeprecationMessage = ""
 	resp.Schema = base.Schema
 }

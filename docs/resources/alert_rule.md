@@ -12,6 +12,15 @@ Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules sel
 
 ~> **Deprecated** Alert rules were renamed to monitors. Use [`vercel_monitor`](monitor) instead. This resource will be removed in a future major version of this provider.
 
+To migrate without recreating the resource, replace it with `vercel_monitor` and add a `moved` block, for example:
+
+```terraform
+moved {
+  from = vercel_alert_rule.example
+  to   = vercel_monitor.example
+}
+```
+
 ## Example Usage
 
 ```terraform
@@ -38,7 +47,7 @@ resource "vercel_alert_rule" "checkout_errors" {
 }
 ```
 
-Use `vercel_custom_alert_rule` for project-scoped metric thresholds and anomalies.
+Use [`vercel_custom_alert_rule`](custom_alert_rule) for project-scoped metric thresholds and anomalies.
 
 ## Trigger filters
 
