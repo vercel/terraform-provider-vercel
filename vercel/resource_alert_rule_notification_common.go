@@ -17,6 +17,14 @@ import (
 )
 
 func alertRuleNotificationCommonAttributes(idDescription string) map[string]schema.Attribute {
+	return notificationCommonAttributes(idDescription, "alert rule", "alert_rule_id", "default rule")
+}
+
+// notificationCommonAttributes builds the attributes shared by notification
+// link resources. noun names the parent object ("alert rule" or "monitor"),
+// parentIDKey is the attribute that references it, and defaultNoun describes
+// the team's default object in the parent ID description.
+func notificationCommonAttributes(idDescription, noun, parentIDKey, defaultNoun string) map[string]schema.Attribute {
 	identityPlanModifiers := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	identityValidators := []validator.String{
 		stringvalidator.LengthBetween(1, 256),
@@ -32,15 +40,15 @@ func alertRuleNotificationCommonAttributes(idDescription string) map[string]sche
 		"team_id": schema.StringAttribute{
 			Optional:            true,
 			Computed:            true,
-			MarkdownDescription: "The ID of the team that owns the alert rule and notification destination. Required if a default team is not configured in the provider.",
+			MarkdownDescription: fmt.Sprintf("The ID of the team that owns the %s and notification destination. Required if a default team is not configured in the provider.", noun),
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplaceIfConfigured(),
 				stringplanmodifier.UseNonNullStateForUnknown(),
 			},
 		},
-		"alert_rule_id": schema.StringAttribute{
+		parentIDKey: schema.StringAttribute{
 			Required:            true,
-			MarkdownDescription: "The ID of the alert rule. Use `ar_default` to manage a notification destination for the team's default rule.",
+			MarkdownDescription: fmt.Sprintf("The ID of the %s. Use `ar_default` to manage a notification destination for the team's %s.", noun, defaultNoun),
 			PlanModifiers:       identityPlanModifiers,
 			Validators:          identityValidators,
 		},

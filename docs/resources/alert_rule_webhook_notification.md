@@ -10,6 +10,8 @@ description: |-
 
 Manages a link between a Vercel alert rule and one existing account webhook.
 
+~> **Deprecated** Alert rules were renamed to monitors. Use [`vercel_monitor_webhook_notification`](monitor_webhook_notification) instead. This resource will be removed in a future major version of this provider.
+
 ## Example Usage
 
 ```terraform

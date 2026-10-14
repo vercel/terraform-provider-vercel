@@ -10,6 +10,8 @@ description: |-
 
 Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources.
 
+~> **Deprecated** Alert rules were renamed to monitors. Use [`vercel_monitor`](monitor) instead. This resource will be removed in a future major version of this provider.
+
 ## Example Usage
 
 ```terraform

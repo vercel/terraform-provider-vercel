@@ -63,6 +63,47 @@ func TestMonitorSchemaDescriptionsUseMonitorWording(t *testing.T) {
 	}
 }
 
+func TestAlertRuleIsDeprecatedInFavorOfMonitor(t *testing.T) {
+	rule := alertRuleSchema(t)
+	if !strings.Contains(rule.DeprecationMessage, "vercel_monitor") {
+		t.Fatalf("alert rule DeprecationMessage = %q, want it to point to vercel_monitor", rule.DeprecationMessage)
+	}
+	if got := monitorSchema(t).Schema.DeprecationMessage; got != "" {
+		t.Fatalf("monitor DeprecationMessage = %q, want empty", got)
+	}
+}
+
+func TestAlertRuleNotificationsAreDeprecatedInFavorOfMonitors(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name        string
+		deprecated  resource.Resource
+		replacement resource.Resource
+		want        string
+	}{
+		{"slack", newAlertRuleSlackNotificationResource(), newMonitorSlackNotificationResource(), "vercel_monitor_slack_notification"},
+		{"webhook", newAlertRuleWebhookNotificationResource(), newMonitorWebhookNotificationResource(), "vercel_monitor_webhook_notification"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var old, current resource.SchemaResponse
+			tc.deprecated.Schema(ctx, resource.SchemaRequest{}, &old)
+			tc.replacement.Schema(ctx, resource.SchemaRequest{}, &current)
+			if !strings.Contains(old.Schema.DeprecationMessage, tc.want) {
+				t.Errorf("DeprecationMessage = %q, want it to point to %s", old.Schema.DeprecationMessage, tc.want)
+			}
+			if current.Schema.DeprecationMessage != "" {
+				t.Errorf("monitor notification DeprecationMessage = %q, want empty", current.Schema.DeprecationMessage)
+			}
+			if _, ok := current.Schema.Attributes["monitor_id"]; !ok {
+				t.Errorf("monitor notification schema is missing monitor_id")
+			}
+			if _, ok := current.Schema.Attributes["alert_rule_id"]; ok {
+				t.Errorf("monitor notification schema must not expose alert_rule_id")
+			}
+		})
+	}
+}
+
 func TestMonitorMetadata(t *testing.T) {
 	var response resource.MetadataResponse
 	newMonitorResource().Metadata(context.Background(), resource.MetadataRequest{ProviderTypeName: "vercel"}, &response)

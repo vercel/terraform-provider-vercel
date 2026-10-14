@@ -81,6 +81,7 @@ func (r *monitorResource) Schema(ctx context.Context, _ resource.SchemaRequest, 
 	override("is_default", "Whether this is the immutable team default monitor. Default monitors cannot be managed by this resource.")
 
 	base.Schema.MarkdownDescription = "Creates a built-in Vercel monitor (formerly alert rule) using the monitors API. Built-in monitors select anomaly triggers across a team scope. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources."
+	base.Schema.DeprecationMessage = ""
 	resp.Schema = base.Schema
 }
 

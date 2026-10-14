@@ -64,6 +64,7 @@ func (r *alertRuleResource) Configure(_ context.Context, req resource.ConfigureR
 
 func (r *alertRuleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		DeprecationMessage:  "Alert rules were renamed to monitors. Use the `vercel_monitor` resource instead. This resource will be removed in a future major version of this provider.",
 		MarkdownDescription: "Creates a built-in Vercel alert rule using the Alerts v3 API. Built-in rules select anomaly triggers across a team scope. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

@@ -10,6 +10,8 @@ description: |-
 
 {{ .Description | trimspace }}
 
+~> **Deprecated** Alert rules were renamed to monitors. Use [`vercel_monitor_slack_notification`](monitor_slack_notification) instead. This resource will be removed in a future major version of this provider.
+
 {{ if .HasExamples -}}
 ## Example Usage
 

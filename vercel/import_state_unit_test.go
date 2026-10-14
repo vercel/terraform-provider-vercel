@@ -26,6 +26,12 @@ func TestImportStateInvalidIDReturnsBeforeClientCall(t *testing.T) {
 		{name: "custom alert rule", run: func(resp *resource.ImportStateResponse) { (&customAlertRuleResource{}).ImportState(ctx, req, resp) }},
 		{name: "alert rule", run: func(resp *resource.ImportStateResponse) { (&alertRuleResource{}).ImportState(ctx, req, resp) }},
 		{name: "monitor", run: func(resp *resource.ImportStateResponse) { (&monitorResource{}).ImportState(ctx, req, resp) }},
+		{name: "monitor webhook notification", run: func(resp *resource.ImportStateResponse) {
+			(&monitorWebhookNotificationResource{}).ImportState(ctx, req, resp)
+		}},
+		{name: "monitor Slack notification", run: func(resp *resource.ImportStateResponse) {
+			(&monitorSlackNotificationResource{}).ImportState(ctx, resource.ImportStateRequest{ID: "too/many/id/parts/extra"}, resp)
+		}},
 		{name: "attack challenge mode", run: func(resp *resource.ImportStateResponse) { (&attackChallengeModeResource{}).ImportState(ctx, req, resp) }},
 		{name: "audit log drain", run: func(resp *resource.ImportStateResponse) { (&auditLogDrainResource{}).ImportState(ctx, req, resp) }},
 		{name: "custom environment", run: func(resp *resource.ImportStateResponse) { (&customEnvironmentResource{}).ImportState(ctx, req, resp) }},
