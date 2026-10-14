@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -44,6 +45,21 @@ func TestMonitorSchemaMirrorsAlertRule(t *testing.T) {
 	}
 	if monitor.MarkdownDescription == rule.MarkdownDescription {
 		t.Fatal("monitor schema description must not be the alert rule description")
+	}
+}
+
+func TestMonitorSchemaDescriptionsUseMonitorWording(t *testing.T) {
+	monitor := monitorSchema(t).Schema
+	rule := alertRuleSchema(t)
+
+	for _, name := range []string{"id", "team_id", "type", "name", "rule_scope", "tags", "notification_settings", "is_default"} {
+		got := monitor.Attributes[name].GetMarkdownDescription()
+		if got == rule.Attributes[name].GetMarkdownDescription() {
+			t.Errorf("%s description was not overridden for monitors", name)
+		}
+		if strings.Contains(got, "alert rule") || strings.Contains(got, "the rule") {
+			t.Errorf("%s description %q still uses alert rule wording", name, got)
+		}
 	}
 }
 
@@ -120,6 +136,55 @@ func TestMonitorModifyPlanRequiresTriggersOnCreate(t *testing.T) {
 	}, response)
 	if !response.Diagnostics.HasError() {
 		t.Fatal("ModifyPlan() returned no diagnostics for a monitor without triggers")
+	}
+	if got := response.Diagnostics.Errors()[0].Summary(); got != "Missing built-in monitor triggers" {
+		t.Fatalf("ModifyPlan() summary = %q, want monitor wording", got)
+	}
+}
+
+func TestMonitorModifyPlanRejectsCriticalMatchLevel(t *testing.T) {
+	ctx := context.Background()
+	monitorSchema := monitorSchema(t).Schema
+	config := alertRuleConfiguration(t)
+	config.MatchMinimumSeverityLevel = types.StringValue("critical")
+	plan := tfsdk.Plan{Schema: monitorSchema}
+	if diags := plan.Set(ctx, config); diags.HasError() {
+		t.Fatalf("Plan.Set() diagnostics = %v", diags)
+	}
+
+	response := &resource.ModifyPlanResponse{Plan: plan}
+	(&monitorResource{}).ModifyPlan(ctx, resource.ModifyPlanRequest{
+		Config: tfsdk.Config{Raw: plan.Raw, Schema: monitorSchema},
+		Plan:   plan,
+		State:  tfsdk.State{Schema: monitorSchema, Raw: tftypes.NewValue(monitorSchema.Type().TerraformType(ctx), nil)},
+	}, response)
+	if !response.Diagnostics.HasError() {
+		t.Fatal("ModifyPlan() returned no diagnostics for a critical match level")
+	}
+	if got := response.Diagnostics.Errors()[0].Summary(); got != "Critical-only built-in monitors are not supported" {
+		t.Fatalf("ModifyPlan() summary = %q, want monitor wording", got)
+	}
+}
+
+func TestMonitorValidateConfigUsesMonitorWording(t *testing.T) {
+	ctx := context.Background()
+	monitorSchema := monitorSchema(t).Schema
+	config := alertRuleConfiguration(t)
+	config.RuleScope = alertRuleScopeValue("include", types.SetNull(types.StringType))
+	raw := tfsdk.Config{Schema: monitorSchema}
+	state := tfsdk.State{Schema: monitorSchema}
+	if diags := state.Set(ctx, config); diags.HasError() {
+		t.Fatalf("State.Set() diagnostics = %v", diags)
+	}
+	raw.Raw = state.Raw
+
+	response := &resource.ValidateConfigResponse{}
+	(&monitorResource{}).ValidateConfig(ctx, resource.ValidateConfigRequest{Config: raw}, response)
+	if !response.Diagnostics.HasError() {
+		t.Fatal("ValidateConfig() returned no diagnostics for an include scope without project_ids")
+	}
+	if got := response.Diagnostics.Errors()[0].Summary(); got != "Invalid built-in monitor scope" {
+		t.Fatalf("ValidateConfig() summary = %q, want monitor wording", got)
 	}
 }
 

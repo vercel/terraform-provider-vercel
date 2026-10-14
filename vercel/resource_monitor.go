@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
@@ -78,7 +76,7 @@ func (r *monitorResource) Schema(ctx context.Context, _ resource.SchemaRequest, 
 	override("type", "The monitor type. Currently only `built-in` is supported.")
 	override("name", "A human-readable name for the monitor.")
 	override("rule_scope", "The projects affected by the monitor. Use `all`, `include`, or `exclude`.")
-	override("tags", "Up to 10 unique tags used to organize the monitor. The provider adds `terraform-provider-vercel` when fewer than 10 user tags are configured. The provider-owned tag is hidden from Terraform state unless configured explicitly. Removing all user tags clears them.")
+	override("tags", alertRuleTagsDescription("monitor"))
 	override("notification_settings", "Notification delivery settings stored on the monitor. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources, which accept a monitor ID as `alert_rule_id`.")
 	override("is_default", "Whether this is the immutable team default monitor. Default monitors cannot be managed by this resource.")
 
@@ -87,42 +85,7 @@ func (r *monitorResource) Schema(ctx context.Context, _ resource.SchemaRequest, 
 }
 
 func (r *monitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-
-	var config AlertRule
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	if req.State.Raw.IsNull() && config.Triggers.IsNull() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("triggers"),
-			"Missing built-in monitor triggers",
-			"A nonempty `triggers` set is required when creating a built-in monitor.",
-		)
-		return
-	}
-
-	if !config.Triggers.IsNull() {
-		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("trigger_mode"), types.StringValue("selected"))...)
-	}
-
-	prior := types.StringNull()
-	if !req.State.Raw.IsNull() {
-		resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("match_minimum_severity_level"), &prior)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-	if writesCriticalMatchMinimumSeverityLevel(config.MatchMinimumSeverityLevel, prior) {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("match_minimum_severity_level"),
-			"Critical-only built-in monitors are not supported",
-			"Use `high` to match High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = \"critical\"` on its `vercel_alert_rule_slack_notification` or `vercel_alert_rule_webhook_notification` link.",
-		)
-	}
+	modifyBuiltInPlan(ctx, req, resp, "monitor")
 }
 
 func (r *monitorResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
@@ -132,7 +95,7 @@ func (r *monitorResource) ValidateConfig(ctx context.Context, req resource.Valid
 		return
 	}
 
-	validateAlertRuleScope(ctx, config.RuleScope, resp)
+	validateAlertRuleScope(ctx, config.RuleScope, "monitor", resp)
 	validateBuiltInTriggers(ctx, config.Triggers, resp)
 }
 

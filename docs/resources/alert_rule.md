@@ -95,7 +95,7 @@ Wildcards and regular expressions are not supported for metric names, so `metric
 ### Optional
 
 - `notification_settings` (Attributes) Notification delivery settings stored on the rule. Notification destination links are managed with the `vercel_alert_rule_slack_notification` and `vercel_alert_rule_webhook_notification` resources. (see [below for nested schema](#nestedatt--notification_settings))
-- `tags` (Set of String) Up to 10 unique tags used to organize the rule. The provider adds `terraform-provider-vercel` when fewer than 10 user tags are configured. The provider-owned tag is hidden from Terraform state unless configured explicitly. Removing all user tags clears them.
+- `tags` (Set of String) Up to 10 unique tags used to organize the rule. The provider adds `terraform-provider-vercel` when fewer than 10 user tags are configured. The provider-owned tag is hidden from Terraform state unless configured explicitly. Removing all user tags leaves only the provider-owned tag on the rule.
 - `team_id` (String) The ID of the team that owns the alert rule. Required if a default team is not configured in the provider.
 - `triggers` (Attributes Set) The built-in anomaly triggers enabled for a built-in rule. A nonempty set is required when creating a rule. Omit this attribute to preserve a response-only legacy trigger mode after import. (see [below for nested schema](#nestedatt--triggers))
 

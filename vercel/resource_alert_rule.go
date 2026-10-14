@@ -368,11 +368,15 @@ func alertRuleNotificationSettingsFromClient(ctx context.Context, settings clien
 	})
 }
 
+func alertRuleTagsDescription(noun string) string {
+	return fmt.Sprintf("Up to 10 unique tags used to organize the %[1]s. The provider adds `terraform-provider-vercel` when fewer than 10 user tags are configured. The provider-owned tag is hidden from Terraform state unless configured explicitly. Removing all user tags leaves only the provider-owned tag on the %[1]s.", noun)
+}
+
 func alertRuleTagsAttribute() schema.SetAttribute {
 	return schema.SetAttribute{
 		Optional:            true,
 		ElementType:         types.StringType,
-		MarkdownDescription: "Up to 10 unique tags used to organize the rule. The provider adds `terraform-provider-vercel` when fewer than 10 user tags are configured. The provider-owned tag is hidden from Terraform state unless configured explicitly. Removing all user tags clears them.",
+		MarkdownDescription: alertRuleTagsDescription("rule"),
 		Validators: []validator.Set{
 			setvalidator.SizeBetween(1, 10),
 			setvalidator.ValueStringsAre(stringvalidator.LengthBetween(1, 256), validateStringIsTrimmed()),
@@ -672,6 +676,12 @@ func int64Value(value *int64) types.Int64 {
 }
 
 func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	modifyBuiltInPlan(ctx, req, resp, "alert rule")
+}
+
+// modifyBuiltInPlan is shared by the alert rule and monitor resources. The
+// noun only changes the wording of diagnostics.
+func modifyBuiltInPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse, noun string) {
 	if req.Plan.Raw.IsNull() {
 		return
 	}
@@ -687,8 +697,8 @@ func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 	if req.State.Raw.IsNull() && config.Triggers.IsNull() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("triggers"),
-			"Missing built-in alert rule triggers",
-			"A nonempty `triggers` set is required when creating a built-in alert rule.",
+			fmt.Sprintf("Missing built-in %s triggers", noun),
+			fmt.Sprintf("A nonempty `triggers` set is required when creating a built-in %s.", noun),
 		)
 		return
 	}
@@ -710,7 +720,7 @@ func (r *alertRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 	if writesCriticalMatchMinimumSeverityLevel(config.MatchMinimumSeverityLevel, prior) {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("match_minimum_severity_level"),
-			"Critical-only built-in alert rules are not supported",
+			fmt.Sprintf("Critical-only built-in %ss are not supported", noun),
 			"Use `high` to match High and Critical alerts. To notify a destination only for Critical alerts, set `minimum_severity_level = \"critical\"` on its `vercel_alert_rule_slack_notification` or `vercel_alert_rule_webhook_notification` link.",
 		)
 	}
@@ -733,11 +743,11 @@ func (r *alertRuleResource) ValidateConfig(ctx context.Context, req resource.Val
 		return
 	}
 
-	validateAlertRuleScope(ctx, config.RuleScope, resp)
+	validateAlertRuleScope(ctx, config.RuleScope, "alert rule", resp)
 	validateBuiltInTriggers(ctx, config.Triggers, resp)
 }
 
-func validateAlertRuleScope(ctx context.Context, value types.Object, resp *resource.ValidateConfigResponse) {
+func validateAlertRuleScope(ctx context.Context, value types.Object, noun string, resp *resource.ValidateConfigResponse) {
 	// Terraform expressions can make either the whole object or one of its
 	// children unknown. Validation must wait for those values instead of trying
 	// to decode them into Go types that cannot represent an unknown object.
@@ -751,11 +761,12 @@ func validateAlertRuleScope(ctx context.Context, value types.Object, resp *resou
 	}
 
 	scopeType := scope.Type.ValueString()
+	summary := fmt.Sprintf("Invalid built-in %s scope", noun)
 	if scopeType == "all" && !scope.ProjectIDs.IsNull() && !scope.ProjectIDs.IsUnknown() {
-		resp.Diagnostics.AddAttributeError(path.Root("rule_scope"), "Invalid built-in alert rule scope", "An `all` scope cannot set `project_ids`.")
+		resp.Diagnostics.AddAttributeError(path.Root("rule_scope"), summary, "An `all` scope cannot set `project_ids`.")
 	}
 	if (scopeType == "include" || scopeType == "exclude") && scope.ProjectIDs.IsNull() {
-		resp.Diagnostics.AddAttributeError(path.Root("rule_scope").AtName("project_ids"), "Invalid built-in alert rule scope", "An `include` or `exclude` scope must set `project_ids`.")
+		resp.Diagnostics.AddAttributeError(path.Root("rule_scope").AtName("project_ids"), summary, "An `include` or `exclude` scope must set `project_ids`.")
 	}
 }
 
