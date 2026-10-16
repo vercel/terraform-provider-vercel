@@ -338,16 +338,6 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 							stringvalidator.OneOf("standard_protection_new", "standard_protection", "all_deployments", "only_production_deployments", "only_preview_deployments"),
 						},
 					},
-					"protection_mode": schema.StringAttribute{
-						Optional:      true,
-						Computed:      true,
-						Default:       stringdefault.StaticString("trusted_ip_required"),
-						Description:   "Whether or not Trusted IPs is optional to access a deployment. Must be either `trusted_ip_required` or `trusted_ip_optional`. `trusted_ip_optional` is only available with Standalone Trusted IPs.",
-						PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
-						Validators: []validator.String{
-							stringvalidator.OneOf("trusted_ip_required", "trusted_ip_optional"),
-						},
-					},
 				},
 			},
 			"trusted_sources": schema.SingleNestedAttribute{
@@ -1361,28 +1351,6 @@ func (p *PasswordProtectionWithPassword) toUpdateProjectRequest() *client.Passwo
 	}
 }
 
-func toApiTrustedIpProtectionMode(dt types.String) string {
-	switch dt {
-	case types.StringValue("trusted_ip_required"):
-		return "additional"
-	case types.StringValue("trusted_ip_optional"):
-		return "exclusive"
-	default:
-		return dt.ValueString()
-	}
-}
-
-func fromApiTrustedIpProtectionMode(dt string) types.String {
-	switch dt {
-	case "additional":
-		return types.StringValue("trusted_ip_required")
-	case "exclusive":
-		return types.StringValue("trusted_ip_optional")
-	default:
-		return types.StringValue(dt)
-	}
-}
-
 func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 	if t == nil {
 		return nil
@@ -1399,7 +1367,6 @@ func (t *TrustedIps) toUpdateProjectRequest() *client.TrustedIps {
 	return &client.TrustedIps{
 		Addresses:      addresses,
 		DeploymentType: toApiDeploymentProtectionType(t.DeploymentType),
-		ProtectionMode: toApiTrustedIpProtectionMode(t.ProtectionMode),
 	}
 }
 
@@ -1599,7 +1566,6 @@ var trustedIpAddressAttrType = types.ObjectType{
 var trustedIpsAttrType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
 		"deployment_type": types.StringType,
-		"protection_mode": types.StringType,
 		"addresses":       types.SetType{ElemType: trustedIpAddressAttrType},
 	},
 }
@@ -1985,7 +1951,6 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		}
 		trustedIpsObj = types.ObjectValueMust(trustedIpsAttrType.AttrTypes, map[string]attr.Value{
 			"deployment_type": fromApiDeploymentProtectionType(response.TrustedIps.DeploymentType),
-			"protection_mode": fromApiTrustedIpProtectionMode(response.TrustedIps.ProtectionMode),
 			"addresses":       types.SetValueMust(trustedIpAddressAttrType, addrVals),
 		})
 	}

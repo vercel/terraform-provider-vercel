@@ -32,7 +32,6 @@ func TestAcc_ProjectDataSource(t *testing.T) {
 						"value": "1.1.1.1",
 					}),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.deployment_type", "only_production_deployments"),
-					resource.TestCheckResourceAttr("data.vercel_project.test", "trusted_ips.protection_mode", "trusted_ip_required"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "options_allowlist.paths.#", "1"),
 					resource.TestCheckResourceAttr("data.vercel_project.test", "options_allowlist.paths.0.value", "/api"),
 
@@ -118,7 +117,6 @@ resource "vercel_project" "test" {
 		}
 	]
 	deployment_type = "only_production_deployments"
-	protection_mode = "trusted_ip_required"
   }
   options_allowlist = {
     paths = [

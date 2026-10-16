@@ -22,7 +22,6 @@ type TrustedIpAddress struct {
 type TrustedIps struct {
 	DeploymentType types.String       `tfsdk:"deployment_type"`
 	Addresses      []TrustedIpAddress `tfsdk:"addresses"`
-	ProtectionMode types.String       `tfsdk:"protection_mode"`
 }
 
 type TrustedSources struct {

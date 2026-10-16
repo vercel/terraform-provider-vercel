@@ -278,7 +278,6 @@ Required:
 
 Optional:
 
-- `protection_mode` (String) Whether or not Trusted IPs is optional to access a deployment. Must be either `trusted_ip_required` or `trusted_ip_optional`. `trusted_ip_optional` is only available with Standalone Trusted IPs.
 
 <a id="nestedatt--trusted_ips--addresses"></a>
 ### Nested Schema for `trusted_ips.addresses`

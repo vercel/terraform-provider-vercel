@@ -230,10 +230,6 @@ For more detailed information, please see the [Vercel documentation](https://ver
 							},
 						},
 					},
-					"protection_mode": schema.StringAttribute{
-						Description: "Whether or not Trusted IPs is required or optional to access a deployment.",
-						Computed:    true,
-					},
 				},
 			},
 			"trusted_sources": schema.SingleNestedAttribute{

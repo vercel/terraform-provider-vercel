@@ -20,7 +20,6 @@ type TrustedIpAddress struct {
 type TrustedIps struct {
 	DeploymentType string             `json:"deploymentType"`
 	Addresses      []TrustedIpAddress `json:"addresses"`
-	ProtectionMode string             `json:"protectionMode"`
 }
 
 type TrustedSourcesClaims map[string][]string

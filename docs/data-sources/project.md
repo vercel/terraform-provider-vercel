@@ -196,7 +196,6 @@ Read-Only:
 
 - `addresses` (Set of Object) The allowed IP addressses and CIDR ranges with optional descriptions. (see [below for nested schema](#nestedatt--trusted_ips--addresses))
 - `deployment_type` (String) The deployment environment that will be protected.
-- `protection_mode` (String) Whether or not Trusted IPs is required or optional to access a deployment.
 
 <a id="nestedatt--trusted_ips--addresses"></a>
 ### Nested Schema for `trusted_ips.addresses`
