@@ -6,7 +6,7 @@
 - Unit tests: `mise run test:unit`
 - Acceptance tests: `mise run test:acceptance` (sets `TF_ACC=true` and creates real resources)
 - Specific acceptance tests: `mise run test:acceptance -run 'TestAcc_Project*'`
-- Lint: `mise run lint` (runs staticcheck, tfproviderlint, gofmt, go vet)
+- Lint: `mise run lint` (runs staticcheck, tfproviderlint, gofmt, go vet). tfproviderlint is built from `tools/lint/go.mod`, which pins Go-compatible analysis libraries independently of provider dependencies.
 - Docs: `mise run docs` (generates Terraform docs)
 - Local Terraform on macOS/Linux: `mise run terraform -- <args>` (uses the locally built provider without modifying `~/.terraformrc`)
 
