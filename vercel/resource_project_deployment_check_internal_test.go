@@ -13,7 +13,6 @@ func TestProjectDeploymentCheckVercelCISourceToClient(t *testing.T) {
 	filters := types.ListValueMust(types.StringType, []attr.Value{types.StringValue("vercel-docs")})
 	selection := types.ObjectValueMust(projectDeploymentCheckSourceSelectionAttrTypes, map[string]attr.Value{
 		"kind":             types.StringValue("turborepo"),
-		"job":              types.StringValue("Turborepo"),
 		"task":             types.StringValue("e2e:ci"),
 		"filters":          filters,
 		"fail_if_no_match": types.BoolValue(true),

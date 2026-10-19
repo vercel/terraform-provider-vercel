@@ -11,7 +11,6 @@ resource "vercel_project_deployment_check" "vercel_ci" {
 
     selection = {
       kind             = "turborepo"
-      job              = "Turborepo"
       task             = "e2e:ci"
       filters          = ["vercel-docs"]
       fail_if_no_match = true

@@ -101,7 +101,7 @@ func TestProjectDeploymentCheckImportPreservesVercelCISource(t *testing.T) {
 	if source.Kind.ValueString() != "vercel" || source.SubKind.ValueString() != "vercel-ci-check" || source.Origin.ValueString() != "api" {
 		t.Errorf("source = %#v", source)
 	}
-	if selection.Kind.ValueString() != "turborepo" || selection.Job.ValueString() != "Turborepo" || selection.Task.ValueString() != "e2e:ci" || !selection.FailIfNoMatch.ValueBool() || fmt.Sprint(gotFilters) != fmt.Sprint(filters) {
+	if selection.Kind.ValueString() != "turborepo" || selection.Task.ValueString() != "e2e:ci" || !selection.FailIfNoMatch.ValueBool() || fmt.Sprint(gotFilters) != fmt.Sprint(filters) {
 		t.Errorf("selection = %#v, filters = %v", selection, gotFilters)
 	}
 }

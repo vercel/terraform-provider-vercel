@@ -113,7 +113,7 @@ resource "vercel_project_deployment_check" "integration" {
 
 ### Vercel CI checks
 
-Vercel CI checks select a deployment, job, or Turborepo task from a Vercel CI invocation. They require `requires = "none"` and `blocks = "deployment-alias"` and cannot be rerequestable. Creating these checks requires the corresponding Vercel CI feature flags for the team. The provider sets the API source origin automatically.
+Vercel CI checks select a deployment or filtered Turborepo task from a Vercel CI invocation. They require `requires = "none"` and `blocks = "deployment-alias"` and cannot be rerequestable. Creating these checks requires the corresponding Vercel CI feature flags for the team. The provider sets the API source origin and the `Turborepo` job automatically.
 
 ```terraform
 resource "vercel_project_deployment_check" "vercel_ci" {
@@ -129,7 +129,6 @@ resource "vercel_project_deployment_check" "vercel_ci" {
 
     selection = {
       kind             = "turborepo"
-      job              = "Turborepo"
       task             = "e2e:ci"
       filters          = ["vercel-docs"]
       fail_if_no_match = true
@@ -183,7 +182,7 @@ Optional:
 - `external_resource_id` (String) An optional external resource ID for an `integration` source. Creating integration checks requires an integration token; the API derives integration IDs from that token.
 - `origin` (String) The Vercel source origin. Vercel CI checks use `api`; the provider supplies this value when omitted.
 - `provider` (String) The Git provider. New git-provider checks currently support `github`; imported checks may report `gitlab` or `bitbucket`.
-- `selection` (Attributes) Selects the Vercel CI deployment, job, or Turborepo task that supplies the check. (see [below for nested schema](#nestedatt--source--selection))
+- `selection` (Attributes) Selects the Vercel CI deployment or filtered Turborepo task that supplies the check. (see [below for nested schema](#nestedatt--source--selection))
 - `sub_kind` (String) The Vercel source subtype. Set to `vercel-ci-check` for a Vercel CI check.
 - `webhook_id` (String) The webhook ID for a `webhook` source.
 
@@ -192,13 +191,12 @@ Optional:
 
 Required:
 
-- `kind` (String) The selection kind: `deployment`, `job`, or `turborepo`.
+- `kind` (String) The selection kind: `deployment` or `turborepo`.
 
 Optional:
 
 - `fail_if_no_match` (Boolean) Whether the check fails when no Turborepo task matches the selection.
 - `filters` (List of String) Turborepo package filters used to select task runs.
-- `job` (String) The Vercel CI job name. Required for `job` and `turborepo` selections; Turborepo selections require `Turborepo`.
 - `task` (String) The Turborepo task name.
 
 ## Import

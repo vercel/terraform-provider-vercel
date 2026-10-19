@@ -88,14 +88,13 @@ func (r *projectDeploymentCheckResource) Schema(_ context.Context, _ resource.Sc
 					"selection": schema.SingleNestedAttribute{
 						Optional:            true,
 						Computed:            true,
-						MarkdownDescription: "Selects the Vercel CI deployment, job, or Turborepo task that supplies the check.",
+						MarkdownDescription: "Selects the Vercel CI deployment or filtered Turborepo task that supplies the check.",
 						PlanModifiers: []planmodifier.Object{
 							objectplanmodifier.UseNonNullStateForUnknown(),
 							objectplanmodifier.RequiresReplace(),
 						},
 						Attributes: map[string]schema.Attribute{
-							"kind":             schema.StringAttribute{Required: true, MarkdownDescription: "The selection kind: `deployment`, `job`, or `turborepo`.", Validators: []validator.String{stringvalidator.OneOf("deployment", "job", "turborepo")}},
-							"job":              schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Vercel CI job name. Required for `job` and `turborepo` selections; Turborepo selections require `Turborepo`.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
+							"kind":             schema.StringAttribute{Required: true, MarkdownDescription: "The selection kind: `deployment` or `turborepo`.", Validators: []validator.String{stringvalidator.OneOf("deployment", "turborepo")}},
 							"task":             schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Turborepo task name.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
 							"filters":          schema.ListAttribute{Optional: true, Computed: true, ElementType: types.StringType, MarkdownDescription: "Turborepo package filters used to select task runs.", Validators: []validator.List{listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1), validateStringIsTrimmed())}, PlanModifiers: []planmodifier.List{listplanmodifier.UseNonNullStateForUnknown()}},
 							"fail_if_no_match": schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether the check fails when no Turborepo task matches the selection.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()}},
@@ -137,14 +136,13 @@ type ProjectDeploymentCheckSource struct {
 
 type ProjectDeploymentCheckSourceSelection struct {
 	Kind          types.String `tfsdk:"kind"`
-	Job           types.String `tfsdk:"job"`
 	Task          types.String `tfsdk:"task"`
 	Filters       types.List   `tfsdk:"filters"`
 	FailIfNoMatch types.Bool   `tfsdk:"fail_if_no_match"`
 }
 
 var projectDeploymentCheckSourceSelectionAttrTypes = map[string]attr.Type{
-	"kind": types.StringType, "job": types.StringType, "task": types.StringType,
+	"kind": types.StringType, "task": types.StringType,
 	"filters": types.ListType{ElemType: types.StringType}, "fail_if_no_match": types.BoolType,
 }
 
@@ -255,22 +253,12 @@ func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req
 	}
 	switch selection.Kind.ValueString() {
 	case "deployment":
-		rejectSelectionField("job", selection.Job)
-		rejectSelectionField("task", selection.Task)
-		rejectSelectionField("filters", selection.Filters)
-		rejectSelectionField("fail_if_no_match", selection.FailIfNoMatch)
-	case "job":
-		requireSelectionField("job", selection.Job)
 		rejectSelectionField("task", selection.Task)
 		rejectSelectionField("filters", selection.Filters)
 		rejectSelectionField("fail_if_no_match", selection.FailIfNoMatch)
 	case "turborepo":
-		requireSelectionField("job", selection.Job)
 		requireSelectionField("task", selection.Task)
 		requireSelectionField("filters", selection.Filters)
-		if !selection.Job.IsNull() && !selection.Job.IsUnknown() && selection.Job.ValueString() != "Turborepo" {
-			resp.Diagnostics.AddAttributeError(path.Root("source").AtName("selection").AtName("job"), "Invalid Turborepo job", "source.selection.job must be Turborepo when source.selection.kind is turborepo.")
-		}
 	}
 }
 
@@ -320,8 +308,10 @@ func projectDeploymentCheckSourceToClient(ctx context.Context, value types.Objec
 		diags.Append(source.Selection.As(ctx, &selection, basetypes.ObjectAsOptions{})...)
 		result.Selection = &client.ProjectDeploymentCheckSourceSelection{
 			Kind: selection.Kind.ValueString(),
-			Job:  selection.Job.ValueString(),
 			Task: selection.Task.ValueString(),
+		}
+		if result.Selection.Kind == "turborepo" {
+			result.Selection.Job = "Turborepo"
 		}
 		if !selection.Filters.IsNull() && !selection.Filters.IsUnknown() {
 			var filters []string
@@ -353,7 +343,6 @@ func projectDeploymentCheckSourceFromClient(ctx context.Context, source client.P
 		var selectionDiags diag.Diagnostics
 		selection, selectionDiags = types.ObjectValueFrom(ctx, projectDeploymentCheckSourceSelectionAttrTypes, ProjectDeploymentCheckSourceSelection{
 			Kind:          types.StringValue(source.Selection.Kind),
-			Job:           optionalStringValue(source.Selection.Job),
 			Task:          optionalStringValue(source.Selection.Task),
 			Filters:       filters,
 			FailIfNoMatch: failIfNoMatch,
