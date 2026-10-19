@@ -24,13 +24,17 @@ func importedDeploymentCheck(t *testing.T) (resource.Resource, tfsdk.State) {
 func importedDeploymentCheckWithSource(t *testing.T, source client.ProjectDeploymentCheckSource) (resource.Resource, tfsdk.State) {
 	t.Helper()
 	ctx := context.Background()
+	requires := "deployment-url"
+	if source.Kind == "vercel" && source.SubKind == "vercel-ci-check" {
+		requires = "none"
+	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodGet || req.URL.Path != "/v2/projects/my-project/checks/check_123" || req.URL.Query().Get("teamId") != "team_123" {
 			t.Errorf("unexpected request: %s %s", req.Method, req.URL)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(client.ProjectDeploymentCheck{ID: "check_123", ProjectID: "prj_123", OwnerID: "team_123", Name: "Check", Requires: "deployment-url", Targets: []string{"production"}, Source: source})
+		_ = json.NewEncoder(w).Encode(client.ProjectDeploymentCheck{ID: "check_123", ProjectID: "prj_123", OwnerID: "team_123", Name: "Check", Requires: requires, Targets: []string{"production"}, Source: source})
 	}))
 	t.Cleanup(server.Close)
 	for _, factory := range vercel.New().Resources(ctx) {

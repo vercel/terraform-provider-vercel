@@ -113,7 +113,7 @@ resource "vercel_project_deployment_check" "integration" {
 
 ### Vercel CI checks
 
-Vercel CI checks select a deployment or filtered Turborepo task from a Vercel CI invocation. They require `requires = "none"` and `blocks = "deployment-alias"` and cannot be rerequestable. Creating these checks requires the corresponding Vercel CI feature flags for the team. The provider sets the API source origin and the `Turborepo` job automatically.
+Vercel CI checks select a deployment or filtered Turborepo task from a Vercel CI invocation. They require `requires = "none"` and cannot be rerequestable. Blocking checks use `blocks = "deployment-alias"`; `blocks = "none"` additionally requires the team's Vercel CI non-blocking checks feature flag. Creating these checks requires the corresponding Vercel CI feature flags for the team. The provider sets the API source origin and the `Turborepo` job automatically.
 
 ```terraform
 resource "vercel_project_deployment_check" "vercel_ci" {

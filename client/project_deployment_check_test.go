@@ -96,7 +96,7 @@ func TestCreateProjectDeploymentCheckVercelCISource(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id": "check_123", "name": "E2E", "ownerId": "team_123", "projectId": "prj_123",
-			"requires": "deployment-url", "source": source, "targets": []string{"production"},
+			"requires": "none", "source": source, "targets": []string{"production"},
 		})
 	}))
 	t.Cleanup(server.Close)
@@ -116,7 +116,7 @@ func TestCreateProjectDeploymentCheckVercelCISource(t *testing.T) {
 		context.Background(),
 		client.CreateProjectDeploymentCheckRequest{
 			ProjectID: "prj_123", TeamID: "team_123", Name: "E2E",
-			Requires: "deployment-url", Source: &source,
+			Requires: "none", Source: &source,
 		},
 	)
 	if err != nil {
