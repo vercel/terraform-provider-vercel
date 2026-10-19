@@ -9,11 +9,22 @@ import (
 )
 
 type ProjectDeploymentCheckSource struct {
-	Kind               string `json:"kind"`
-	ExternalCheckName  string `json:"externalCheckName,omitempty"`
-	Provider           string `json:"provider,omitempty"`
-	WebhookID          string `json:"webhookId,omitempty"`
-	ExternalResourceID string `json:"externalResourceId,omitempty"`
+	Kind               string                                 `json:"kind"`
+	SubKind            string                                 `json:"subKind,omitempty"`
+	Origin             string                                 `json:"origin,omitempty"`
+	Selection          *ProjectDeploymentCheckSourceSelection `json:"selection,omitempty"`
+	ExternalCheckName  string                                 `json:"externalCheckName,omitempty"`
+	Provider           string                                 `json:"provider,omitempty"`
+	WebhookID          string                                 `json:"webhookId,omitempty"`
+	ExternalResourceID string                                 `json:"externalResourceId,omitempty"`
+}
+
+type ProjectDeploymentCheckSourceSelection struct {
+	Kind          string    `json:"kind"`
+	Job           string    `json:"job,omitempty"`
+	Task          string    `json:"task,omitempty"`
+	Filters       *[]string `json:"filters,omitempty"`
+	FailIfNoMatch *bool     `json:"failIfNoMatch,omitempty"`
 }
 
 type ProjectDeploymentCheck struct {

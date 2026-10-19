@@ -26,6 +26,12 @@ Integration checks require an integration installation token. The API identifies
 
 {{ tffile "examples/resources/vercel_project_deployment_check/integration.tf" }}
 
+### Vercel CI checks
+
+Vercel CI checks select a deployment, job, or Turborepo task from a Vercel CI invocation. Creating these checks requires the corresponding Vercel CI feature flags for the team. The provider sets the API source origin automatically.
+
+{{ tffile "examples/resources/vercel_project_deployment_check/vercel_ci.tf" }}
+
 ## Choosing check behavior
 
 - `requires` selects when the check can run: `build-ready`, `deployment-url`, or `none`.
@@ -59,6 +65,6 @@ resource "vercel_project_deployment_check" "existing" {
 }
 ```
 
-Match `name` and `requires` to the existing check before applying. Omit `source` to preserve an imported source, including Vercel-managed checks and Git-provider variants that this resource cannot create. Likewise, omit `blocks` to preserve an API value outside the configurable `deployment-alias` and `none` values. Inspect the imported state with `terraform state show` before configuring additional fields.
+Match `name` and `requires` to the existing check before applying. Omit `source` to preserve an imported source that this resource cannot create, including native Vercel checks and Git-provider variants other than GitHub. Likewise, omit `blocks` to preserve an API value outside the configurable `deployment-alias` and `none` values. Inspect the imported state with `terraform state show` before configuring additional fields.
 
 A source is required for new checks. For an imported check with an omitted source, configuring a different source replaces it. Supply a writable source before changing `requires` to `none`; response-only sources cannot be recreated by this resource.
