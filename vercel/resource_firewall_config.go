@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -468,6 +469,12 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
+			"bot_id_enabled": schema.BoolAttribute{
+				MarkdownDescription: "Enable BotID Deep Analysis for this project. Requires a Pro or Enterprise plan and the BotID SDK integration. When `false`, BotID uses Basic checks. Per-route SDK configuration can override this setting. When omitted, preserves the current setting on updates; new configurations default to Basic.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
 			"enabled": schema.BoolAttribute{
 				Description: "Whether firewall is enabled or not.",
 				Optional:    true,
@@ -534,7 +541,7 @@ func firewallSettingsKnown(plan tftypes.Value) (bool, error) {
 	if err := plan.As(&attributes); err != nil {
 		return false, err
 	}
-	if !attributes["enabled"].IsFullyKnown() || !attributes["managed_rulesets"].IsFullyKnown() {
+	if !attributes["bot_id_enabled"].IsFullyKnown() || !attributes["enabled"].IsFullyKnown() || !attributes["managed_rulesets"].IsFullyKnown() {
 		return false, nil
 	}
 
@@ -575,6 +582,7 @@ type FirewallConfig struct {
 	ID              types.String             `tfsdk:"id"`
 	ProjectID       types.String             `tfsdk:"project_id"`
 	TeamID          types.String             `tfsdk:"team_id"`
+	BotIDEnabled    types.Bool               `tfsdk:"bot_id_enabled"`
 	Enabled         types.Bool               `tfsdk:"enabled"`
 	ManagedRulesets *FirewallManagedRulesets `tfsdk:"managed_rulesets"`
 
@@ -985,10 +993,11 @@ func fromCoreRuleset(crsRule client.CoreRuleSet, ref *CRSRuleConfig, mode firewa
 func fromClient(conf client.FirewallConfig, state FirewallConfig, mode firewallFlattenMode) (FirewallConfig, error) {
 	var err error
 	cfg := FirewallConfig{
-		ID:        types.StringValue(conf.TeamID + "/" + conf.ProjectID),
-		ProjectID: state.ProjectID,
-		TeamID:    types.StringValue(conf.TeamID),
-		Enabled:   types.BoolValue(conf.Enabled),
+		ID:           types.StringValue(conf.TeamID + "/" + conf.ProjectID),
+		ProjectID:    state.ProjectID,
+		TeamID:       types.StringValue(conf.TeamID),
+		Enabled:      types.BoolValue(conf.Enabled),
+		BotIDEnabled: types.BoolValue(conf.BotIDEnabled),
 	}
 	if mode == preserveConfiguredShape && conf.Enabled && state.Enabled.IsNull() {
 		cfg.Enabled = state.Enabled
@@ -1070,9 +1079,10 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig, mode firewallF
 
 func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 	conf := client.FirewallConfig{
-		ProjectID: f.ProjectID.ValueString(),
-		TeamID:    f.TeamID.ValueString(),
-		Enabled:   f.Enabled.IsNull() || f.Enabled.ValueBool(),
+		ProjectID:    f.ProjectID.ValueString(),
+		TeamID:       f.TeamID.ValueString(),
+		Enabled:      f.Enabled.IsNull() || f.Enabled.ValueBool(),
+		BotIDEnabled: f.BotIDEnabled.ValueBool(),
 	}
 
 	if f.ManagedRulesets != nil {
@@ -1453,7 +1463,7 @@ func onlyFirewallRulesChanged(state, plan FirewallConfig) (bool, error) {
 		return false, err
 	}
 
-	if stateConfig.Enabled != planConfig.Enabled {
+	if stateConfig.Enabled != planConfig.Enabled || stateConfig.BotIDEnabled != planConfig.BotIDEnabled {
 		return false, nil
 	}
 

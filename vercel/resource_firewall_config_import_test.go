@@ -20,7 +20,8 @@ func TestFirewallImportStateLifecycle(t *testing.T) {
 		apiDefaults[category] = client.CoreRuleSet{Active: true, Action: "log"}
 	}
 	full := client.FirewallConfig{
-		Enabled: false,
+		Enabled:      false,
+		BotIDEnabled: true,
 		ManagedRulesets: map[string]client.ManagedRule{
 			"owasp": {Active: true}, "bot_protection": {Active: true, Action: "challenge"}, "ai_bots": {Active: false, Action: "deny"},
 		},
@@ -100,6 +101,9 @@ func TestFirewallImportStateLifecycle(t *testing.T) {
 				roundTrip, err := model.toClient()
 				if err != nil {
 					t.Fatal(err)
+				}
+				if roundTrip.BotIDEnabled != tc.config.BotIDEnabled {
+					t.Fatalf("BotID changed on import: %v", roundTrip.BotIDEnabled)
 				}
 				if roundTrip.ManagedRulesets["owasp"].Active != tc.wantOWASP {
 					t.Fatalf("round trip changed OWASP activation: %+v", roundTrip.ManagedRulesets)

@@ -719,3 +719,16 @@ func TestFirewallReadOWASPDisabled(t *testing.T) {
 		}
 	}
 }
+
+func TestFirewallBotIDRefreshDetectsDrift(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		state := FirewallConfig{BotIDEnabled: types.BoolValue(!enabled)}
+		got, err := fromClient(client.FirewallConfig{BotIDEnabled: enabled}, state, preserveConfiguredShape)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !got.BotIDEnabled.Equal(types.BoolValue(enabled)) {
+			t.Fatalf("BotID = %s, want %v", got.BotIDEnabled, enabled)
+		}
+	}
+}

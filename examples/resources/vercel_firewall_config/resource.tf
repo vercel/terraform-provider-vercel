@@ -5,6 +5,9 @@ resource "vercel_project" "example" {
 resource "vercel_firewall_config" "example" {
   project_id = vercel_project.example.id
 
+  # Requires Pro or Enterprise and the BotID SDK integration.
+  bot_id_enabled = true
+
   rules {
     rule {
       name        = "Bypass Known request"
