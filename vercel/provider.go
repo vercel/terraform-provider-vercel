@@ -79,6 +79,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newFirewallBypassResource,
 		newFirewallConfigResource,
 		newFeatureFlagDefinitionResource,
+		newFeatureFlagConnectionResource,
 		newFeatureFlagSDKKeyResource,
 		newFeatureFlagSegmentResource,
 		newFeatureFlagConfigResource,
