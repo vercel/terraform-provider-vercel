@@ -1,7 +1,7 @@
 resource "vercel_project_deployment_check" "vercel_ci" {
   project_id = vercel_project.example.id
   name       = "E2E tests"
-  requires   = "deployment-url"
+  requires   = "none"
   blocks     = "deployment-alias"
   targets    = ["production"]
 

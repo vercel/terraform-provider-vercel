@@ -219,6 +219,15 @@ func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req
 		}
 		return
 	}
+	if !config.Requires.IsUnknown() && config.Requires.ValueString() != "none" {
+		resp.Diagnostics.AddAttributeError(path.Root("requires"), "Invalid Vercel CI requirement stage", "Vercel CI Deployment Checks require requires to be none.")
+	}
+	if !config.Blocks.IsNull() && !config.Blocks.IsUnknown() && config.Blocks.ValueString() != "deployment-alias" {
+		resp.Diagnostics.AddAttributeError(path.Root("blocks"), "Invalid Vercel CI blocking stage", "Vercel CI Deployment Checks require blocks to be deployment-alias.")
+	}
+	if !config.IsRerequestable.IsNull() && !config.IsRerequestable.IsUnknown() && config.IsRerequestable.ValueBool() {
+		resp.Diagnostics.AddAttributeError(path.Root("is_rerequestable"), "Unsupported Vercel CI rerun setting", "Vercel CI Deployment Checks cannot be rerequestable. Set is_rerequestable to false or omit it.")
+	}
 	if source.SubKind.IsNull() {
 		resp.Diagnostics.AddAttributeError(path.Root("source").AtName("sub_kind"), "Missing Vercel source subtype", "source.sub_kind must be set to vercel-ci-check for a vercel source.")
 	}

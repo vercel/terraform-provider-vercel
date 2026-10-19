@@ -113,13 +113,13 @@ resource "vercel_project_deployment_check" "integration" {
 
 ### Vercel CI checks
 
-Vercel CI checks select a deployment, job, or Turborepo task from a Vercel CI invocation. Creating these checks requires the corresponding Vercel CI feature flags for the team. The provider sets the API source origin automatically.
+Vercel CI checks select a deployment, job, or Turborepo task from a Vercel CI invocation. They require `requires = "none"` and `blocks = "deployment-alias"` and cannot be rerequestable. Creating these checks requires the corresponding Vercel CI feature flags for the team. The provider sets the API source origin automatically.
 
 ```terraform
 resource "vercel_project_deployment_check" "vercel_ci" {
   project_id = vercel_project.example.id
   name       = "E2E tests"
-  requires   = "deployment-url"
+  requires   = "none"
   blocks     = "deployment-alias"
   targets    = ["production"]
 
