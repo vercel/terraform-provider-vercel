@@ -20,6 +20,9 @@ resource "vercel_project" "example" {
 resource "vercel_firewall_config" "example" {
   project_id = vercel_project.example.id
 
+  # Requires Pro or Enterprise and the BotID SDK integration.
+  bot_id_enabled = true
+
   rules {
     rule {
       name        = "Bypass Known request"
@@ -237,6 +240,7 @@ resource "vercel_firewall_config" "ip-blocking" {
 
 ### Optional
 
+- `bot_id_enabled` (Boolean) Enable BotID Deep Analysis for this project. Requires a Pro or Enterprise plan and the BotID SDK integration. When `false`, BotID uses Basic checks. Per-route SDK configuration can override this setting. When omitted, preserves the current setting on updates; new configurations default to Basic.
 - `enabled` (Boolean) Whether firewall is enabled or not.
 - `ip_rules` (Block, Optional) IP rules to apply to the project. (see [below for nested schema](#nestedblock--ip_rules))
 - `managed_rulesets` (Block, Optional) The managed rulesets that are enabled. (see [below for nested schema](#nestedblock--managed_rulesets))

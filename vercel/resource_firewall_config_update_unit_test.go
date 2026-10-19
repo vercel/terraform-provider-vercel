@@ -52,6 +52,7 @@ func TestFirewallConfigModifyPlanUnknownSettings(t *testing.T) {
 		value any
 	}{
 		{"enabled", path.Root("enabled"), types.BoolUnknown()},
+		{"bot_id_enabled", path.Root("bot_id_enabled"), types.BoolUnknown()},
 		{"managed_active", path.Root("managed_rulesets").AtName("bot_protection").AtName("active"), types.BoolUnknown()},
 		{"crs_active", path.Root("managed_rulesets").AtName("owasp").AtName("xss").AtName("active"), types.BoolUnknown()},
 		{"ip_notes", path.Root("ip_rules").AtName("rule").AtListIndex(0).AtName("notes"), types.StringUnknown()},
@@ -178,5 +179,26 @@ func TestFirewallConfigModifyPlanPreservesPATCHIdentityWhenUnknownsResolve(t *te
 		if !got.Rules.Rules[i].ID.Equal(rule.ID) {
 			t.Errorf("known PATCH ID changed when name resolved: rule[%d] was %s, now %s", i, rule.ID, got.Rules.Rules[i].ID)
 		}
+	}
+}
+
+func TestFirewallBotIDChangeRequiresFullUpdate(t *testing.T) {
+	state, plan := firewallConfigUpdateFixture(), firewallConfigUpdateFixture()
+	state.BotIDEnabled = types.BoolValue(true)
+	plan.BotIDEnabled = types.BoolValue(false)
+	canPatch, err := onlyFirewallRulesChanged(state, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canPatch {
+		t.Fatal("BotID change would be skipped by rules-only update")
+	}
+	plan.BotIDEnabled = types.BoolValue(true)
+	canPatch, err = onlyFirewallRulesChanged(state, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !canPatch {
+		t.Fatal("unchanged BotID should permit rules-only updates")
 	}
 }

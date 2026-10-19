@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -105,5 +106,85 @@ func TestUpdateFirewallConfigUsesConfiguredTeam(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("UpdateFirewallConfig returned error: %v", err)
+	}
+}
+
+func TestPutFirewallConfigBotID(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		t.Run(fmt.Sprint(enabled), func(t *testing.T) {
+			calls := 0
+			c := newFeatureFlagTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				switch calls {
+				case 1:
+					body := map[string]any{"firewallEnabled": true}
+					if enabled {
+						body["botIdEnabled"] = true
+					}
+					assertRequest(t, r, "PUT", "/v1/security/firewall/config", "team_123", body)
+					fmt.Fprint(w, `{"active":{"firewallEnabled":true}}`)
+				case 2:
+					assertRequest(t, r, "PATCH", "/v1/security/firewall/config", "team_123", map[string]any{"action": "botId.toggle", "id": nil, "value": true})
+					fmt.Fprint(w, `{}`)
+				case 3:
+					assertRequest(t, r, "GET", "/v1/security/firewall/config/active", "team_123", nil)
+					fmt.Fprint(w, `{"firewallEnabled":true,"botIdEnabled":true}`)
+				default:
+					t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
+				}
+				if r.URL.Query().Get("projectId") != "prj_123" {
+					t.Error("missing project scope")
+				}
+			})
+			got, err := c.PutFirewallConfig(context.Background(), vercelclient.FirewallConfig{ProjectID: "prj_123", TeamID: "team_123", Enabled: true, BotIDEnabled: enabled})
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantCalls := 1
+			if enabled {
+				wantCalls = 3
+			}
+			if calls != wantCalls || got.BotIDEnabled != enabled {
+				t.Fatalf("calls=%d, BotID=%v; want %d, %v", calls, got.BotIDEnabled, wantCalls, enabled)
+			}
+		})
+	}
+}
+
+func TestPutFirewallConfigBotIDToggleFailure(t *testing.T) {
+	calls := 0
+	c := newFeatureFlagTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if calls == 1 {
+			fmt.Fprint(w, `{"active":{"firewallEnabled":true}}`)
+			return
+		}
+		if r.Method != "PATCH" {
+			t.Fatalf("unexpected request: %s", r.Method)
+		}
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, `{"error":{"code":"forbidden","message":"BotID unavailable"}}`)
+	})
+	_, err := c.PutFirewallConfig(context.Background(), vercelclient.FirewallConfig{ProjectID: "prj_123", TeamID: "team_123", Enabled: true, BotIDEnabled: true})
+	if err == nil {
+		t.Fatal("expected BotID toggle error")
+	}
+}
+
+func TestPutFirewallConfigDoesNotToggleWhenBotIDReturned(t *testing.T) {
+	calls := 0
+	c := newFeatureFlagTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if r.Method != "PUT" {
+			t.Fatalf("unexpected request: %s", r.Method)
+		}
+		fmt.Fprint(w, `{"active":{"firewallEnabled":true,"botIdEnabled":true}}`)
+	})
+	got, err := c.PutFirewallConfig(context.Background(), vercelclient.FirewallConfig{ProjectID: "prj_123", TeamID: "team_123", Enabled: true, BotIDEnabled: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 || !got.BotIDEnabled {
+		t.Fatalf("calls=%d, BotID=%v", calls, got.BotIDEnabled)
 	}
 }

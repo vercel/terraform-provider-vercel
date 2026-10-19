@@ -8,6 +8,7 @@ import (
 type FirewallConfig struct {
 	ProjectID       string                 `json:"-"`
 	TeamID          string                 `json:"-"`
+	BotIDEnabled    bool                   `json:"botIdEnabled,omitempty"`
 	Enabled         bool                   `json:"firewallEnabled"`
 	ManagedRulesets map[string]ManagedRule `json:"managedRules,omitempty"`
 
@@ -127,7 +128,24 @@ func (c *Client) PutFirewallConfig(ctx context.Context, cfg FirewallConfig) (Fir
 	}, &res)
 	res.Active.ProjectID = cfg.ProjectID
 	res.Active.TeamID = teamId
-	return res.Active, err
+	if err != nil {
+		return res.Active, err
+	}
+	// PUT currently drops botIdEnabled, even when it is supplied in the body.
+	// Restore Deep Analysis through the supported toggle before reading state.
+	if cfg.BotIDEnabled && !res.Active.BotIDEnabled {
+		err = c.UpdateFirewallConfig(ctx, UpdateFirewallConfigRequest{
+			ProjectID: cfg.ProjectID,
+			TeamID:    teamId,
+			Action:    "botId.toggle",
+			Value:     true,
+		})
+		if err != nil {
+			return res.Active, fmt.Errorf("enabling BotID after replacing firewall config: %w", err)
+		}
+		return c.GetFirewallConfig(ctx, cfg.ProjectID, teamId)
+	}
+	return res.Active, nil
 }
 
 func (c *Client) UpdateFirewallConfig(ctx context.Context, request UpdateFirewallConfigRequest) error {
