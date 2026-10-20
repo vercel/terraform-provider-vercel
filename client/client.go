@@ -3,15 +3,18 @@ package client
 import (
 	"context"
 	"net/http"
+	"sync"
 	"time"
 )
 
 // Client is an API wrapper, providing a high-level interface to the Vercel API.
 type Client struct {
-	token   string
-	client  *http.Client
-	team    Team
-	baseURL string
+	token       string
+	client      *http.Client
+	team        Team
+	baseURL     string
+	sharedEnvMu sync.Mutex
+	sharedEnvs  map[sharedEnvKey]*sharedEnvEntry
 }
 
 func (c *Client) http() *http.Client {
@@ -28,10 +31,13 @@ func (c *Client) http() *http.Client {
 
 // New creates a new instace of Client for a given API token.
 func New(token string) *Client {
-	return &Client{
+	c := &Client{
 		token:   token,
 		baseURL: "https://api.vercel.com",
 	}
+	// Initialize before resources start making concurrent requests.
+	c.http()
+	return c
 }
 
 func (c *Client) WithTeam(team Team) *Client {

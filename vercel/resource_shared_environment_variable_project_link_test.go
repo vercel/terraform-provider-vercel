@@ -12,7 +12,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
-func testCheckSharedEnvironmentVariableProjectUnlinked(testClient *client.Client, envVarName, projectName, teamID string) resource.TestCheckFunc {
+func testCheckSharedEnvironmentVariableProjectUnlinked(t *testing.T, envVarName, projectName, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		envVar, ok := s.RootModule().Resources[envVarName]
 		if !ok {
@@ -23,7 +23,7 @@ func testCheckSharedEnvironmentVariableProjectUnlinked(testClient *client.Client
 			return fmt.Errorf("project not found: %s", projectName)
 		}
 
-		resp, err := testClient.GetSharedEnvironmentVariable(context.TODO(), teamID, envVar.Primary.Attributes["id"])
+		resp, err := client.New(apiToken(t)).GetSharedEnvironmentVariable(context.TODO(), teamID, envVar.Primary.Attributes["id"])
 		if err != nil {
 			return err
 		}
@@ -34,7 +34,7 @@ func testCheckSharedEnvironmentVariableProjectUnlinked(testClient *client.Client
 	}
 }
 
-func testCheckSharedEnvironmentVariableProjectLinked(testClient *client.Client, envVarName, projectName, teamID string) resource.TestCheckFunc {
+func testCheckSharedEnvironmentVariableProjectLinked(t *testing.T, envVarName, projectName, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		envVar, ok := s.RootModule().Resources[envVarName]
 		if !ok {
@@ -45,7 +45,7 @@ func testCheckSharedEnvironmentVariableProjectLinked(testClient *client.Client, 
 			return fmt.Errorf("project not found: %s", projectName)
 		}
 
-		resp, err := testClient.GetSharedEnvironmentVariable(context.TODO(), teamID, envVar.Primary.Attributes["id"])
+		resp, err := client.New(apiToken(t)).GetSharedEnvironmentVariable(context.TODO(), teamID, envVar.Primary.Attributes["id"])
 		if err != nil {
 			return err
 		}
@@ -61,32 +61,32 @@ func TestAcc_SharedEnvironmentVariableProjectLink(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testCheckSharedEnvironmentVariableProjectUnlinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
-			testCheckSharedEnvironmentVariableProjectUnlinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
-			testCheckSharedEnvironmentVariableProjectUnlinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test2", testTeam(t)),
+			testCheckSharedEnvironmentVariableProjectUnlinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
+			testCheckSharedEnvironmentVariableProjectUnlinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
+			testCheckSharedEnvironmentVariableProjectUnlinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test2", testTeam(t)),
 		),
 		Steps: []resource.TestStep{
 			{
 				Config: cfg(testAccSharedEnvironmentVariableProjectLinkSetup(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
-					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
+					testCheckSharedEnvironmentVariableProjectLinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
+					testCheckSharedEnvironmentVariableProjectLinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
 				),
 			},
 			{
 				Config: cfg(testAccSharedEnvironmentVariableProjectLinkAdd1(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
-					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
-					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test2", testTeam(t)),
+					testCheckSharedEnvironmentVariableProjectLinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
+					testCheckSharedEnvironmentVariableProjectLinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
+					testCheckSharedEnvironmentVariableProjectLinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test2", testTeam(t)),
 				),
 			},
 			{
 				Config: cfg(testAccSharedEnvironmentVariableProjectLinkDrop1(name)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
-					testCheckSharedEnvironmentVariableProjectLinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
-					testCheckSharedEnvironmentVariableProjectUnlinked(testClient(t), "data.vercel_shared_environment_variable.test", "vercel_project.test2", testTeam(t)),
+					testCheckSharedEnvironmentVariableProjectLinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test0", testTeam(t)),
+					testCheckSharedEnvironmentVariableProjectLinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test1", testTeam(t)),
+					testCheckSharedEnvironmentVariableProjectUnlinked(t, "data.vercel_shared_environment_variable.test", "vercel_project.test2", testTeam(t)),
 				),
 			},
 		},
