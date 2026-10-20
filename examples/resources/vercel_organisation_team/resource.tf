@@ -11,6 +11,8 @@ resource "vercel_organisation_team" "product" {
 
 resource "vercel_team_config" "product" {
   id                         = vercel_organisation_team.product.id
+  name                       = vercel_organisation_team.product.name
+  slug                       = vercel_organisation_team.product.slug
   default_build_machine_type = "standard"
 }
 

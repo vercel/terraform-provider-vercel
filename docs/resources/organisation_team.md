@@ -3,13 +3,13 @@
 page_title: "vercel_organisation_team Resource - terraform-provider-vercel"
 subcategory: ""
 description: |-
-  Creates and manages a team within an existing Vercel organisation. The organisation must already have Enterprise Flex billing configured. Use the returned id with vercel_team_config and other team-scoped resources. Do not manage name or slug in both this resource and vercel_team_config. Requires a user access token with organisation administrator permissions.
+  Creates and manages a team within an existing Vercel organisation. The organisation must already have Enterprise Flex billing configured. Use the returned id with vercel_team_config and other team-scoped resources. When using vercel_team_config, reference this resource's name and slug so both resources stay consistent. Requires a user access token with organisation administrator permissions.
   Destroying this resource deletes the team, including its projects; it does not detach it. The API currently refuses self-service deletion of Enterprise child teams. Deletion failures retain the resource in state. Consider lifecycle { prevent_destroy = true } for teams that should not be deleted. Changing organisation_id or billing_plan requires replacement, which is also subject to these deletion restrictions.
 ---
 
 # vercel_organisation_team (Resource)
 
-Creates and manages a team within an existing Vercel organisation. The organisation must already have Enterprise Flex billing configured. Use the returned id with vercel_team_config and other team-scoped resources. Do not manage name or slug in both this resource and vercel_team_config. Requires a user access token with organisation administrator permissions.
+Creates and manages a team within an existing Vercel organisation. The organisation must already have Enterprise Flex billing configured. Use the returned id with vercel_team_config and other team-scoped resources. When using vercel_team_config, reference this resource's name and slug so both resources stay consistent. Requires a user access token with organisation administrator permissions.
 
 Destroying this resource deletes the team, including its projects; it does not detach it. The API currently refuses self-service deletion of Enterprise child teams. Deletion failures retain the resource in state. Consider lifecycle { prevent_destroy = true } for teams that should not be deleted. Changing organisation_id or billing_plan requires replacement, which is also subject to these deletion restrictions.
 
@@ -29,6 +29,8 @@ resource "vercel_organisation_team" "product" {
 
 resource "vercel_team_config" "product" {
   id                         = vercel_organisation_team.product.id
+  name                       = vercel_organisation_team.product.name
+  slug                       = vercel_organisation_team.product.slug
   default_build_machine_type = "standard"
 }
 

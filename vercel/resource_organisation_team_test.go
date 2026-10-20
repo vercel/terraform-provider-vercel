@@ -14,19 +14,23 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
-// The fixture must be an existing Enterprise Flex organisation accessible to
+// The fixture must be an existing test-mode Enterprise Flex organisation accessible to
 // VERCEL_API_TOKEN. Platform children can be deleted; Enterprise children cannot.
 func TestAcc_OrganisationTeamResource(t *testing.T) {
 	organisationID := os.Getenv("VERCEL_TERRAFORM_TESTING_ORGANISATION")
 	if organisationID == "" {
 		t.Skip("VERCEL_TERRAFORM_TESTING_ORGANISATION is required for organisation team acceptance tests")
 	}
+	if token := os.Getenv("VERCEL_ORGANISATION_API_TOKEN"); token != "" {
+		t.Setenv("VERCEL_API_TOKEN", token)
+	}
+	organisationClient := client.New(os.Getenv("VERCEL_API_TOKEN"))
 	suffix := acctest.RandString(16)
-	slug := "test-acc-org-" + suffix
+	slug := "test-acc-org-vtest314-" + suffix
 	const resourceName = "vercel_organisation_team.test"
 	var teamID string
 	config := func(name, slug, description string) string {
-		return cfg(fmt.Sprintf(`
+		return fmt.Sprintf(`
 resource "vercel_organisation_team" "test" {
  organisation_id = %q
  name = %q
@@ -35,13 +39,15 @@ resource "vercel_organisation_team" "test" {
 }
 resource "vercel_team_config" "test" {
  id = vercel_organisation_team.test.id
+ name = vercel_organisation_team.test.name
+ slug = vercel_organisation_team.test.slug
  description = %q
 }
 resource "vercel_project" "test" {
  team_id = vercel_organisation_team.test.id
  name = %q
 }
-`, organisationID, name, slug, description, "test-acc-org-project-"+suffix))
+`, organisationID, name, slug, description, "test-acc-org-project-"+suffix)
 	}
 	check := func(name, slug, description string) resource.TestCheckFunc {
 		return resource.ComposeAggregateTestCheckFunc(
@@ -60,7 +66,7 @@ resource "vercel_project" "test" {
 					return fmt.Errorf("team was replaced during an in-place update")
 				}
 				teamID = rs.Primary.ID
-				team, err := testClient(t).GetTeam(context.Background(), teamID)
+				team, err := organisationClient.GetTeam(context.Background(), teamID)
 				if err != nil {
 					return err
 				}
@@ -71,17 +77,17 @@ resource "vercel_project" "test" {
 			},
 		)
 	}
-	updated := config("Renamed Product", slug+"-updated", "Updated by acceptance test")
+	updated := config("Renamed Product vtest314", slug+"-updated", "Updated by acceptance test")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			if teamID == "" {
 				return nil
 			}
-			// Team deletion is asynchronous; verify the team itself disappears, not just its org link.
+			// The root-scoped token loses access to a child after deletion, so check the organisation link.
 			deadline := time.Now().Add(time.Minute)
 			for {
-				_, err := testClient(t).GetTeam(context.Background(), teamID)
+				_, err := organisationClient.GetOrganisationTeam(context.Background(), organisationID, teamID)
 				if client.NotFound(err) {
 					return nil
 				}
@@ -95,17 +101,17 @@ resource "vercel_project" "test" {
 			}
 		},
 		Steps: []resource.TestStep{
-			{Config: config("Product", slug, "Created by acceptance test"), Check: check("Product", slug, "Created by acceptance test")},
-			{Config: updated, Check: check("Renamed Product", slug+"-updated", "Updated by acceptance test")},
+			{Config: config("Product vtest314", slug, "Created by acceptance test"), Check: check("Product vtest314", slug, "Created by acceptance test")},
+			{Config: updated, Check: check("Renamed Product vtest314", slug+"-updated", "Updated by acceptance test")},
 			{ResourceName: resourceName, ImportState: true, ImportStateVerify: true, ImportStateIdFunc: func(s *terraform.State) (string, error) {
 				return organisationID + "/" + teamID, nil
 			}},
 			{PreConfig: func() {
-				_, err := testClient(t).UpdateTeam(context.Background(), client.UpdateTeamRequest{TeamID: teamID, Name: "Changed outside Terraform"})
+				_, err := organisationClient.UpdateTeam(context.Background(), client.UpdateTeamRequest{TeamID: teamID, Name: "Changed outside Terraform"})
 				if err != nil {
 					t.Fatal(err)
 				}
-			}, Config: updated, Check: check("Renamed Product", slug+"-updated", "Updated by acceptance test")},
+			}, Config: updated, Check: check("Renamed Product vtest314", slug+"-updated", "Updated by acceptance test")},
 		},
 	})
 }

@@ -136,7 +136,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "Configuration for SAML authentication.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"enforced": schema.BoolAttribute{
 						Description:   "Indicates if SAML is enforced for the team.",
@@ -230,7 +230,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "Enables the Vercel Toolbar on your preview deployments: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.OneOf("default", "on", "off"),
 				},
@@ -239,7 +239,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "Enables the Vercel Toolbar on your production deployments: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.OneOf("default", "on", "off"),
 				},
@@ -247,13 +247,13 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 			"hide_ip_addresses": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				Description:   "Indicates if ip addresses should be accessible in o11y tooling.",
 			},
 			"hide_ip_addresses_in_log_drains": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				Description:   "Indicates if ip addresses should be accessible in log drains.",
 			},
 		},
