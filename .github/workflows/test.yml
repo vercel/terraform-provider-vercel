@@ -14,6 +14,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
+  VERCEL_TERRAFORM_TESTING_ORGANISATION: ${{ vars.VERCEL_TERRAFORM_TESTING_ORGANISATION }}
   ACCEPTANCE_GENERAL_SHARDS: "4"
 
 jobs:
