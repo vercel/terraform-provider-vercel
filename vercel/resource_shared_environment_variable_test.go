@@ -12,7 +12,7 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
-func testAccSharedEnvironmentVariableExists(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
+func testAccSharedEnvironmentVariableExists(t *testing.T, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -23,7 +23,7 @@ func testAccSharedEnvironmentVariableExists(testClient *client.Client, n, teamID
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient.GetSharedEnvironmentVariable(context.TODO(), teamID, rs.Primary.ID)
+		_, err := client.New(apiToken(t)).GetSharedEnvironmentVariable(context.TODO(), teamID, rs.Primary.ID)
 		return err
 	}
 }
@@ -39,7 +39,7 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 			{
 				Config: cfg(testAccSharedEnvironmentVariablesConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.example", testTeam(t)),
+					testAccSharedEnvironmentVariableExists(t, "vercel_shared_environment_variable.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", fmt.Sprintf("test_acc_foo_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "value", "bar"),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "comment", "Test comment for example"),
@@ -47,14 +47,14 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.example", "target.*", "production"),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "sensitive", "true"),
 
-					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.sensitive_example", testTeam(t)),
+					testAccSharedEnvironmentVariableExists(t, "vercel_shared_environment_variable.sensitive_example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "key", fmt.Sprintf("test_acc_foo_sensitive_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "value", "bar"),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "comment", "Test comment for sensitive example"),
 					resource.TestCheckTypeSetElemAttr("vercel_shared_environment_variable.sensitive_example", "target.*", "production"),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.sensitive_example", "sensitive", "true"),
 
-					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.no_comment_example", testTeam(t)),
+					testAccSharedEnvironmentVariableExists(t, "vercel_shared_environment_variable.no_comment_example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.no_comment_example", "key", fmt.Sprintf("test_acc_foo_no_comment_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.no_comment_example", "value", "baz"),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.no_comment_example", "comment", ""),
@@ -65,7 +65,7 @@ func TestAcc_SharedEnvironmentVariables(t *testing.T) {
 			{
 				Config: cfg(testAccSharedEnvironmentVariablesConfigUpdated(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.example", testTeam(t)),
+					testAccSharedEnvironmentVariableExists(t, "vercel_shared_environment_variable.example", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "key", fmt.Sprintf("test_acc_foo_%s", nameSuffix)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "value", "updated-bar"),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example", "apply_to_all_custom_environments", "false"),
@@ -237,7 +237,7 @@ func TestAcc_SharedEnvironmentVariables_ValueWO(t *testing.T) {
 			{
 				Config: cfg(testAccSharedEnvironmentVariablesConfigValueWO(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.example_value_wo", testTeam(t)),
+					testAccSharedEnvironmentVariableExists(t, "vercel_shared_environment_variable.example_value_wo", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example_value_wo", "key", fmt.Sprintf("test_acc_foo_wo_%s", nameSuffix)),
 					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value_wo"),
 					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value"),
@@ -248,7 +248,7 @@ func TestAcc_SharedEnvironmentVariables_ValueWO(t *testing.T) {
 			{
 				Config: cfg(testAccSharedEnvironmentVariablesConfigValueWOUpdated(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.example_value_wo", testTeam(t)),
+					testAccSharedEnvironmentVariableExists(t, "vercel_shared_environment_variable.example_value_wo", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.example_value_wo", "key", fmt.Sprintf("test_acc_foo_wo_%s", nameSuffix)),
 					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value_wo"),
 					resource.TestCheckNoResourceAttr("vercel_shared_environment_variable.example_value_wo", "value"),
@@ -371,7 +371,7 @@ func TestAcc_SharedEnvironmentVariables_CustomOnly_OmitTarget(t *testing.T) {
 			{
 				Config: cfg(testAccSharedEnvironmentVariablesCustomOnlyOmitTargetConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.custom_only_omit", testTeam(t)),
+					testAccSharedEnvironmentVariableExists(t, "vercel_shared_environment_variable.custom_only_omit", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.custom_only_omit", "apply_to_all_custom_environments", "true"),
 					testAccCheckSetEmpty("vercel_shared_environment_variable.custom_only_omit", "target.#"),
 				),
@@ -391,7 +391,7 @@ func TestAcc_SharedEnvironmentVariables_CustomOnly_EmptyTarget(t *testing.T) {
 			{
 				Config: cfg(testAccSharedEnvironmentVariablesCustomOnlyEmptyTargetConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.custom_only_empty", testTeam(t)),
+					testAccSharedEnvironmentVariableExists(t, "vercel_shared_environment_variable.custom_only_empty", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.custom_only_empty", "apply_to_all_custom_environments", "true"),
 					testAccCheckSetEmpty("vercel_shared_environment_variable.custom_only_empty", "target.#"),
 				),
@@ -467,7 +467,7 @@ func TestAcc_SharedEnvironmentVariables_ComputedCustomOnly(t *testing.T) {
 			{
 				Config: cfg(testAccSharedEnvironmentVariablesComputedCustomOnlyConfig(nameSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccSharedEnvironmentVariableExists(testClient(t), "vercel_shared_environment_variable.computed_custom", testTeam(t)),
+					testAccSharedEnvironmentVariableExists(t, "vercel_shared_environment_variable.computed_custom", testTeam(t)),
 					resource.TestCheckResourceAttr("vercel_shared_environment_variable.computed_custom", "apply_to_all_custom_environments", "true"),
 					testAccCheckSetEmpty("vercel_shared_environment_variable.computed_custom", "target.#"),
 				),

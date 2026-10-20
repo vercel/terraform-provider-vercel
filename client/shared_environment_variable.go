@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -100,6 +101,12 @@ func (c *Client) CreateSharedEnvironmentVariable(ctx context.Context, request Cr
 
 // DeleteSharedEnvironmentVariable will remove a shared environment variable from Vercel.
 func (c *Client) DeleteSharedEnvironmentVariable(ctx context.Context, teamID, variableID string) error {
+	entry, err := c.lockSharedEnv(ctx, teamID, variableID)
+	if err != nil {
+		return err
+	}
+	defer entry.unlockAfterWrite()
+
 	url := fmt.Sprintf("%s/v1/env", c.baseURL)
 	if c.TeamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
@@ -123,6 +130,23 @@ func (c *Client) DeleteSharedEnvironmentVariable(ctx context.Context, teamID, va
 }
 
 func (c *Client) GetSharedEnvironmentVariable(ctx context.Context, teamID, envID string) (e SharedEnvironmentVariableResponse, err error) {
+	entry, err := c.lockSharedEnv(ctx, teamID, envID)
+	if err != nil {
+		return e, err
+	}
+	defer entry.unlock()
+	if time.Now().Before(entry.expires) {
+		return entry.value.clone(), nil
+	}
+	e, err = c.fetchSharedEnvironmentVariable(ctx, teamID, envID)
+	if err == nil {
+		entry.value = e.clone()
+		entry.expires = time.Now().Add(sharedEnvCacheTTL)
+	}
+	return e, err
+}
+
+func (c *Client) fetchSharedEnvironmentVariable(ctx context.Context, teamID, envID string) (e SharedEnvironmentVariableResponse, err error) {
 	url := fmt.Sprintf("%s/v1/env/%s", c.baseURL, envID)
 	if c.TeamID(teamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(teamID))
@@ -212,6 +236,12 @@ type UpdateSharedEnvironmentVariableRequest struct {
 }
 
 func (c *Client) UpdateSharedEnvironmentVariable(ctx context.Context, request UpdateSharedEnvironmentVariableRequest) (e SharedEnvironmentVariableResponse, err error) {
+	entry, err := c.lockSharedEnv(ctx, request.TeamID, request.EnvID)
+	if err != nil {
+		return e, err
+	}
+	defer entry.unlockAfterWrite()
+
 	url := fmt.Sprintf("%s/v1/env", c.baseURL)
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
