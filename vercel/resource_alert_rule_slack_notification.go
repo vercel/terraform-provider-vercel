@@ -76,6 +76,7 @@ func (r *alertRuleSlackNotificationResource) Schema(_ context.Context, _ resourc
 	attributes["minimum_severity_level"] = alertRuleNotificationMinimumSeverityLevelAttribute()
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a link between a Vercel alert rule and one Slack channel.",
+		DeprecationMessage:  "Alert rules were renamed to monitors. Use the `vercel_monitor_slack_notification` resource instead. This resource will be removed in a future major version of this provider.",
 		Attributes:          attributes,
 	}
 }
