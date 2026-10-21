@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,21 +11,30 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 	"github.com/vercel/terraform-provider-vercel/v5/vercel"
 )
 
 func importedDeploymentCheck(t *testing.T) (resource.Resource, tfsdk.State) {
+	return importedDeploymentCheckWithSource(t, client.ProjectDeploymentCheckSource{Kind: "webhook", WebhookID: "hook_123"})
+}
+
+func importedDeploymentCheckWithSource(t *testing.T, source client.ProjectDeploymentCheckSource) (resource.Resource, tfsdk.State) {
 	t.Helper()
 	ctx := context.Background()
+	requires := "deployment-url"
+	if source.Kind == "vercel" && source.SubKind == "vercel-ci-check" {
+		requires = "none"
+	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodGet || req.URL.Path != "/v2/projects/my-project/checks/check_123" || req.URL.Query().Get("teamId") != "team_123" {
 			t.Errorf("unexpected request: %s %s", req.Method, req.URL)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(client.ProjectDeploymentCheck{ID: "check_123", ProjectID: "prj_123", OwnerID: "team_123", Name: "Check", Requires: "deployment-url", Targets: []string{"production"}, Source: client.ProjectDeploymentCheckSource{Kind: "webhook", WebhookID: "hook_123"}})
+		_ = json.NewEncoder(w).Encode(client.ProjectDeploymentCheck{ID: "check_123", ProjectID: "prj_123", OwnerID: "team_123", Name: "Check", Requires: requires, Targets: []string{"production"}, Source: source})
 	}))
 	t.Cleanup(server.Close)
 	for _, factory := range vercel.New().Resources(ctx) {
@@ -62,6 +72,41 @@ func TestProjectDeploymentCheckImportPreservesProjectName(t *testing.T) {
 		if got != want {
 			t.Errorf("%s = %q, want %q", name, got, want)
 		}
+	}
+}
+
+func TestProjectDeploymentCheckImportPreservesVercelCISource(t *testing.T) {
+	filters := []string{"vercel-docs"}
+	failIfNoMatch := true
+	_, state := importedDeploymentCheckWithSource(t, client.ProjectDeploymentCheckSource{
+		Kind: "vercel", SubKind: "vercel-ci-check", Origin: "api",
+		Selection: &client.ProjectDeploymentCheckSourceSelection{
+			Kind: "turborepo", Job: "Turborepo", Task: "e2e:ci",
+			Filters: &filters, FailIfNoMatch: &failIfNoMatch,
+		},
+	})
+	ctx := context.Background()
+	var model vercel.ProjectDeploymentCheck
+	if diags := state.Get(ctx, &model); diags.HasError() {
+		t.Fatalf("state diagnostics: %v", diags)
+	}
+	var source vercel.ProjectDeploymentCheckSource
+	if diags := model.Source.As(ctx, &source, basetypes.ObjectAsOptions{}); diags.HasError() {
+		t.Fatalf("source diagnostics: %v", diags)
+	}
+	var selection vercel.ProjectDeploymentCheckSourceSelection
+	if diags := source.Selection.As(ctx, &selection, basetypes.ObjectAsOptions{}); diags.HasError() {
+		t.Fatalf("selection diagnostics: %v", diags)
+	}
+	var gotFilters []string
+	if diags := selection.Filters.ElementsAs(ctx, &gotFilters, false); diags.HasError() {
+		t.Fatalf("filter diagnostics: %v", diags)
+	}
+	if source.Kind.ValueString() != "vercel" || source.SubKind.ValueString() != "vercel-ci-check" || source.Origin.ValueString() != "api" {
+		t.Errorf("source = %#v", source)
+	}
+	if selection.Kind.ValueString() != "turborepo" || selection.Task.ValueString() != "e2e:ci" || !selection.FailIfNoMatch.ValueBool() || fmt.Sprint(gotFilters) != fmt.Sprint(filters) {
+		t.Errorf("selection = %#v, filters = %v", selection, gotFilters)
 	}
 }
 

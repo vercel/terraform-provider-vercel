@@ -71,3 +71,58 @@ func TestProjectDeploymentCheckCRUD(t *testing.T) {
 		t.Fatalf("methods = %v, want %v", methods, want)
 	}
 }
+
+func TestCreateProjectDeploymentCheckVercelCISource(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		source, ok := body["source"].(map[string]any)
+		if !ok {
+			t.Fatalf("source = %#v", body["source"])
+		}
+		if source["kind"] != "vercel" || source["subKind"] != "vercel-ci-check" || source["origin"] != "api" {
+			t.Fatalf("source = %#v", source)
+		}
+		selection, ok := source["selection"].(map[string]any)
+		if !ok || selection["kind"] != "turborepo" || selection["job"] != "Turborepo" || selection["task"] != "e2e:ci" || selection["failIfNoMatch"] != true {
+			t.Fatalf("selection = %#v", source["selection"])
+		}
+		filters, ok := selection["filters"].([]any)
+		if !ok || len(filters) != 1 || filters[0] != "vercel-docs" {
+			t.Fatalf("filters = %#v", selection["filters"])
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id": "check_123", "name": "E2E", "ownerId": "team_123", "projectId": "prj_123",
+			"requires": "none", "source": source, "targets": []string{"production"},
+		})
+	}))
+	t.Cleanup(server.Close)
+
+	filters := []string{"vercel-docs"}
+	failIfNoMatch := true
+	source := client.ProjectDeploymentCheckSource{
+		Kind:    "vercel",
+		SubKind: "vercel-ci-check",
+		Origin:  "api",
+		Selection: &client.ProjectDeploymentCheckSourceSelection{
+			Kind: "turborepo", Job: "Turborepo", Task: "e2e:ci",
+			Filters: &filters, FailIfNoMatch: &failIfNoMatch,
+		},
+	}
+	created, err := client.New("TOKEN").WithBaseURL(server.URL).CreateProjectDeploymentCheck(
+		context.Background(),
+		client.CreateProjectDeploymentCheckRequest{
+			ProjectID: "prj_123", TeamID: "team_123", Name: "E2E",
+			Requires: "none", Source: &source,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Source.Selection == nil || created.Source.Selection.Task != "e2e:ci" {
+		t.Fatalf("created source = %#v", created.Source)
+	}
+}

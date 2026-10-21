@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
@@ -80,7 +82,24 @@ func (r *projectDeploymentCheckResource) Schema(_ context.Context, _ resource.Sc
 					objectplanmodifier.UseNonNullStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
-					"kind":                 schema.StringAttribute{Required: true, MarkdownDescription: "The source kind. New checks support `git-provider`, `integration`, and `webhook`; `vercel` is response-only.", Validators: []validator.String{stringvalidator.OneOf("git-provider", "integration", "webhook", "vercel")}, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
+					"kind":     schema.StringAttribute{Required: true, MarkdownDescription: "The source kind. New checks support `git-provider`, `integration`, `webhook`, and `vercel`.", Validators: []validator.String{stringvalidator.OneOf("git-provider", "integration", "webhook", "vercel")}, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
+					"sub_kind": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Vercel source subtype. Set to `vercel-ci-check` for a Vercel CI check.", Validators: []validator.String{stringvalidator.OneOf("vercel-ci-check")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"origin":   schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Vercel source origin. Vercel CI checks use `api`; the provider supplies this value when omitted.", Validators: []validator.String{stringvalidator.OneOf("api")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"selection": schema.SingleNestedAttribute{
+						Optional:            true,
+						Computed:            true,
+						MarkdownDescription: "Selects the Vercel CI deployment or filtered Turborepo task that supplies the check.",
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseNonNullStateForUnknown(),
+							objectplanmodifier.RequiresReplace(),
+						},
+						Attributes: map[string]schema.Attribute{
+							"kind":             schema.StringAttribute{Required: true, MarkdownDescription: "The selection kind: `deployment` or `turborepo`.", Validators: []validator.String{stringvalidator.OneOf("deployment", "turborepo")}},
+							"task":             schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Turborepo task name.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()}},
+							"filters":          schema.ListAttribute{Optional: true, Computed: true, ElementType: types.StringType, MarkdownDescription: "Turborepo package filters used to select task runs.", Validators: []validator.List{listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1), validateStringIsTrimmed())}, PlanModifiers: []planmodifier.List{listplanmodifier.UseNonNullStateForUnknown()}},
+							"fail_if_no_match": schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether the check fails when no Turborepo task matches the selection.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()}},
+						},
+					},
 					"external_check_name":  schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The external check name. Required for a `git-provider` source.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
 					"provider":             schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Git provider. New git-provider checks currently support `github`; imported checks may report `gitlab` or `bitbucket`.", Validators: []validator.String{stringvalidator.OneOf("github", "gitlab", "bitbucket")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
 					"webhook_id":           schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The webhook ID for a `webhook` source.", Validators: []validator.String{stringvalidator.LengthAtLeast(1), validateStringIsTrimmed()}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
@@ -106,14 +125,31 @@ type ProjectDeploymentCheck struct {
 
 type ProjectDeploymentCheckSource struct {
 	Kind               types.String `tfsdk:"kind"`
+	SubKind            types.String `tfsdk:"sub_kind"`
+	Origin             types.String `tfsdk:"origin"`
+	Selection          types.Object `tfsdk:"selection"`
 	ExternalCheckName  types.String `tfsdk:"external_check_name"`
 	Provider           types.String `tfsdk:"provider"`
 	WebhookID          types.String `tfsdk:"webhook_id"`
 	ExternalResourceID types.String `tfsdk:"external_resource_id"`
 }
 
+type ProjectDeploymentCheckSourceSelection struct {
+	Kind          types.String `tfsdk:"kind"`
+	Task          types.String `tfsdk:"task"`
+	Filters       types.List   `tfsdk:"filters"`
+	FailIfNoMatch types.Bool   `tfsdk:"fail_if_no_match"`
+}
+
+var projectDeploymentCheckSourceSelectionAttrTypes = map[string]attr.Type{
+	"kind": types.StringType, "task": types.StringType,
+	"filters": types.ListType{ElemType: types.StringType}, "fail_if_no_match": types.BoolType,
+}
+
 var projectDeploymentCheckSourceAttrTypes = map[string]attr.Type{
-	"kind": types.StringType, "external_check_name": types.StringType, "provider": types.StringType,
+	"kind": types.StringType, "sub_kind": types.StringType, "origin": types.StringType,
+	"selection":           types.ObjectType{AttrTypes: projectDeploymentCheckSourceSelectionAttrTypes},
+	"external_check_name": types.StringType, "provider": types.StringType,
 	"webhook_id": types.StringType, "external_resource_id": types.StringType,
 }
 
@@ -166,8 +202,60 @@ func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req
 			resp.Diagnostics.AddAttributeError(path.Root("source").AtName(field.name), "Invalid source attribute", fmt.Sprintf("source.%s can only be configured for a %s source.", field.name, field.kind))
 		}
 	}
-	if source.Kind.ValueString() == "vercel" {
-		resp.Diagnostics.AddError("Unsupported source.kind", "Vercel-managed Deployment Checks can be imported, but cannot be created by this resource.")
+	if source.Kind.ValueString() != "vercel" {
+		for _, field := range []struct {
+			name       string
+			configured bool
+		}{
+			{"sub_kind", !source.SubKind.IsNull()},
+			{"origin", !source.Origin.IsNull()},
+			{"selection", !source.Selection.IsNull()},
+		} {
+			if field.configured {
+				resp.Diagnostics.AddAttributeError(path.Root("source").AtName(field.name), "Invalid source attribute", fmt.Sprintf("source.%s can only be configured for a vercel source.", field.name))
+			}
+		}
+		return
+	}
+	if !config.Requires.IsUnknown() && config.Requires.ValueString() != "none" {
+		resp.Diagnostics.AddAttributeError(path.Root("requires"), "Invalid Vercel CI requirement stage", "Vercel CI Deployment Checks require requires to be none.")
+	}
+	if !config.IsRerequestable.IsNull() && !config.IsRerequestable.IsUnknown() && config.IsRerequestable.ValueBool() {
+		resp.Diagnostics.AddAttributeError(path.Root("is_rerequestable"), "Unsupported Vercel CI rerun setting", "Vercel CI Deployment Checks cannot be rerequestable. Set is_rerequestable to false or omit it.")
+	}
+	if source.SubKind.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("source").AtName("sub_kind"), "Missing Vercel source subtype", "source.sub_kind must be set to vercel-ci-check for a vercel source.")
+	}
+	if source.Selection.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("source").AtName("selection"), "Missing Vercel CI selection", "source.selection is required for a vercel source.")
+		return
+	}
+	if source.Selection.IsUnknown() {
+		return
+	}
+	var selection ProjectDeploymentCheckSourceSelection
+	resp.Diagnostics.Append(source.Selection.As(ctx, &selection, basetypes.ObjectAsOptions{})...)
+	if resp.Diagnostics.HasError() || selection.Kind.IsUnknown() {
+		return
+	}
+	requireSelectionField := func(name string, value attr.Value) {
+		if value.IsNull() {
+			resp.Diagnostics.AddAttributeError(path.Root("source").AtName("selection").AtName(name), "Missing Vercel CI selection attribute", fmt.Sprintf("source.selection.%s is required when source.selection.kind is %s.", name, selection.Kind.ValueString()))
+		}
+	}
+	rejectSelectionField := func(name string, value attr.Value) {
+		if !value.IsNull() {
+			resp.Diagnostics.AddAttributeError(path.Root("source").AtName("selection").AtName(name), "Invalid Vercel CI selection attribute", fmt.Sprintf("source.selection.%s cannot be configured when source.selection.kind is %s.", name, selection.Kind.ValueString()))
+		}
+	}
+	switch selection.Kind.ValueString() {
+	case "deployment":
+		rejectSelectionField("task", selection.Task)
+		rejectSelectionField("filters", selection.Filters)
+		rejectSelectionField("fail_if_no_match", selection.FailIfNoMatch)
+	case "turborepo":
+		requireSelectionField("task", selection.Task)
+		requireSelectionField("filters", selection.Filters)
 	}
 }
 
@@ -203,17 +291,68 @@ func (r *projectDeploymentCheckResource) ModifyPlan(ctx context.Context, req res
 func projectDeploymentCheckSourceToClient(ctx context.Context, value types.Object) (client.ProjectDeploymentCheckSource, diag.Diagnostics) {
 	var source ProjectDeploymentCheckSource
 	diags := value.As(ctx, &source, basetypes.ObjectAsOptions{})
-	return client.ProjectDeploymentCheckSource{
-		Kind: source.Kind.ValueString(), ExternalCheckName: source.ExternalCheckName.ValueString(), Provider: source.Provider.ValueString(),
+	result := client.ProjectDeploymentCheckSource{
+		Kind: source.Kind.ValueString(), SubKind: source.SubKind.ValueString(), Origin: source.Origin.ValueString(),
+		ExternalCheckName: source.ExternalCheckName.ValueString(), Provider: source.Provider.ValueString(),
 		WebhookID: source.WebhookID.ValueString(), ExternalResourceID: source.ExternalResourceID.ValueString(),
-	}, diags
+	}
+	if result.Kind == "vercel" {
+		result.SubKind = "vercel-ci-check"
+		result.Origin = "api"
+	}
+	if !source.Selection.IsNull() && !source.Selection.IsUnknown() {
+		var selection ProjectDeploymentCheckSourceSelection
+		diags.Append(source.Selection.As(ctx, &selection, basetypes.ObjectAsOptions{})...)
+		result.Selection = &client.ProjectDeploymentCheckSourceSelection{
+			Kind: selection.Kind.ValueString(),
+			Task: selection.Task.ValueString(),
+		}
+		if result.Selection.Kind == "turborepo" {
+			result.Selection.Job = "Turborepo"
+		}
+		if !selection.Filters.IsNull() && !selection.Filters.IsUnknown() {
+			var filters []string
+			diags.Append(selection.Filters.ElementsAs(ctx, &filters, false)...)
+			result.Selection.Filters = &filters
+		}
+		if !selection.FailIfNoMatch.IsNull() && !selection.FailIfNoMatch.IsUnknown() {
+			failIfNoMatch := selection.FailIfNoMatch.ValueBool()
+			result.Selection.FailIfNoMatch = &failIfNoMatch
+		}
+	}
+	return result, diags
 }
 
 func projectDeploymentCheckSourceFromClient(ctx context.Context, source client.ProjectDeploymentCheckSource) (types.Object, diag.Diagnostics) {
-	return types.ObjectValueFrom(ctx, projectDeploymentCheckSourceAttrTypes, ProjectDeploymentCheckSource{
-		Kind: types.StringValue(source.Kind), ExternalCheckName: optionalStringValue(source.ExternalCheckName), Provider: optionalStringValue(source.Provider),
+	selection := types.ObjectNull(projectDeploymentCheckSourceSelectionAttrTypes)
+	var diags diag.Diagnostics
+	if source.Selection != nil {
+		filters := types.ListNull(types.StringType)
+		if source.Selection.Filters != nil {
+			var filterDiags diag.Diagnostics
+			filters, filterDiags = types.ListValueFrom(ctx, types.StringType, *source.Selection.Filters)
+			diags.Append(filterDiags...)
+		}
+		failIfNoMatch := types.BoolNull()
+		if source.Selection.FailIfNoMatch != nil {
+			failIfNoMatch = types.BoolValue(*source.Selection.FailIfNoMatch)
+		}
+		var selectionDiags diag.Diagnostics
+		selection, selectionDiags = types.ObjectValueFrom(ctx, projectDeploymentCheckSourceSelectionAttrTypes, ProjectDeploymentCheckSourceSelection{
+			Kind:          types.StringValue(source.Selection.Kind),
+			Task:          optionalStringValue(source.Selection.Task),
+			Filters:       filters,
+			FailIfNoMatch: failIfNoMatch,
+		})
+		diags.Append(selectionDiags...)
+	}
+	result, resultDiags := types.ObjectValueFrom(ctx, projectDeploymentCheckSourceAttrTypes, ProjectDeploymentCheckSource{
+		Kind: types.StringValue(source.Kind), SubKind: optionalStringValue(source.SubKind), Origin: optionalStringValue(source.Origin),
+		Selection: selection, ExternalCheckName: optionalStringValue(source.ExternalCheckName), Provider: optionalStringValue(source.Provider),
 		WebhookID: optionalStringValue(source.WebhookID), ExternalResourceID: optionalStringValue(source.ExternalResourceID),
 	})
+	diags.Append(resultDiags...)
+	return result, diags
 }
 
 func optionalStringValue(value string) types.String {

@@ -111,6 +111,32 @@ resource "vercel_project_deployment_check" "integration" {
 }
 ```
 
+### Vercel CI checks
+
+Vercel CI checks select a deployment or filtered Turborepo task from a Vercel CI invocation. They require `requires = "none"` and cannot be rerequestable. Blocking checks use `blocks = "deployment-alias"`; `blocks = "none"` additionally requires the team's Vercel CI non-blocking checks feature flag. Creating these checks requires the corresponding Vercel CI feature flags for the team. The provider sets the API source origin and the `Turborepo` job automatically.
+
+```terraform
+resource "vercel_project_deployment_check" "vercel_ci" {
+  project_id = vercel_project.example.id
+  name       = "E2E tests"
+  requires   = "none"
+  blocks     = "deployment-alias"
+  targets    = ["production"]
+
+  source = {
+    kind     = "vercel"
+    sub_kind = "vercel-ci-check"
+
+    selection = {
+      kind             = "turborepo"
+      task             = "e2e:ci"
+      filters          = ["vercel-docs"]
+      fail_if_no_match = true
+    }
+  }
+}
+```
+
 ## Choosing check behavior
 
 - `requires` selects when the check can run: `build-ready`, `deployment-url`, or `none`.
@@ -148,14 +174,30 @@ Changing `project_id`, an explicitly configured `team_id`, or a configured sourc
 
 Required:
 
-- `kind` (String) The source kind. New checks support `git-provider`, `integration`, and `webhook`; `vercel` is response-only.
+- `kind` (String) The source kind. New checks support `git-provider`, `integration`, `webhook`, and `vercel`.
 
 Optional:
 
 - `external_check_name` (String) The external check name. Required for a `git-provider` source.
 - `external_resource_id` (String) An optional external resource ID for an `integration` source. Creating integration checks requires an integration token; the API derives integration IDs from that token.
+- `origin` (String) The Vercel source origin. Vercel CI checks use `api`; the provider supplies this value when omitted.
 - `provider` (String) The Git provider. New git-provider checks currently support `github`; imported checks may report `gitlab` or `bitbucket`.
+- `selection` (Attributes) Selects the Vercel CI deployment or filtered Turborepo task that supplies the check. (see [below for nested schema](#nestedatt--source--selection))
+- `sub_kind` (String) The Vercel source subtype. Set to `vercel-ci-check` for a Vercel CI check.
 - `webhook_id` (String) The webhook ID for a `webhook` source.
+
+<a id="nestedatt--source--selection"></a>
+### Nested Schema for `source.selection`
+
+Required:
+
+- `kind` (String) The selection kind: `deployment` or `turborepo`.
+
+Optional:
+
+- `fail_if_no_match` (Boolean) Whether the check fails when no Turborepo task matches the selection.
+- `filters` (List of String) Turborepo package filters used to select task runs.
+- `task` (String) The Turborepo task name.
 
 ## Import
 
@@ -187,6 +229,6 @@ resource "vercel_project_deployment_check" "existing" {
 }
 ```
 
-Match `name` and `requires` to the existing check before applying. Omit `source` to preserve an imported source, including Vercel-managed checks and Git-provider variants that this resource cannot create. Likewise, omit `blocks` to preserve an API value outside the configurable `deployment-alias` and `none` values. Inspect the imported state with `terraform state show` before configuring additional fields.
+Match `name` and `requires` to the existing check before applying. Omit `source` to preserve an imported source that this resource cannot create, including native Vercel checks and Git-provider variants other than GitHub. Likewise, omit `blocks` to preserve an API value outside the configurable `deployment-alias` and `none` values. Inspect the imported state with `terraform state show` before configuring additional fields.
 
 A source is required for new checks. For an imported check with an omitted source, configuring a different source replaces it. Supply a writable source before changing `requires` to `none`; response-only sources cannot be recreated by this resource.
