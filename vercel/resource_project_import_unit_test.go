@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,106 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
+
+func TestProjectImportPasswordProtectionUpdate(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		password string
+		disable  bool
+		wantJSON string
+	}{
+		{name: "preserve imported password", wantJSON: `{"deploymentType":"all"}`},
+		{name: "replace password", password: "replacement-password", wantJSON: `{"deploymentType":"all","password":"replacement-password"}`},
+		{name: "disable protection", disable: true, wantJSON: `null`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			updates := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				protection := `{"deploymentType":"all"}`
+				name := "example"
+				switch {
+				case req.Method == http.MethodGet && req.URL.Path == "/v10/projects/prj_123":
+				case req.Method == http.MethodPatch && req.URL.Path == "/v9/projects/prj_123":
+					updates++
+					var body map[string]json.RawMessage
+					if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+						t.Error(err)
+						http.Error(w, "invalid JSON", http.StatusBadRequest)
+						return
+					}
+					if got := string(body["passwordProtection"]); got != tc.wantJSON {
+						t.Errorf("passwordProtection = %s, want %s", got, tc.wantJSON)
+					}
+					if got := string(body["name"]); got != `"renamed"` {
+						t.Errorf("name = %s, want renamed", got)
+					}
+					name = "renamed"
+					if tc.disable {
+						protection = "null"
+					}
+				default:
+					t.Errorf("unexpected request: %s %s", req.Method, req.URL)
+					http.NotFound(w, req)
+					return
+				}
+				fmt.Fprintf(w, `{"id":"prj_123","name":%q,"accountId":"team_123","nodeVersion":"22.x","passwordProtection":%s}`, name, protection)
+			}))
+			defer server.Close()
+
+			ctx := context.Background()
+			r := &projectResource{client: client.New("test").WithBaseURL(server.URL)}
+			var schemaResp resource.SchemaResponse
+			r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+			importResp := resource.ImportStateResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+			r.ImportState(ctx, resource.ImportStateRequest{ID: "prj_123"}, &importResp)
+			if importResp.Diagnostics.HasError() {
+				t.Fatal(importResp.Diagnostics)
+			}
+			var password types.String
+			passwordPath := path.Root("password_protection").AtName("password")
+			if diags := importResp.State.GetAttribute(ctx, passwordPath, &password); diags.HasError() {
+				t.Fatal(diags)
+			}
+			if !password.Equal(types.StringValue("")) {
+				t.Fatalf("imported password = %s, want empty placeholder", password)
+			}
+
+			// ignore_changes carries the imported password into the update plan.
+			plan := tfsdk.Plan{Schema: schemaResp.Schema, Raw: importResp.State.Raw}
+			if diags := plan.SetAttribute(ctx, path.Root("name"), types.StringValue("renamed")); diags.HasError() {
+				t.Fatal(diags)
+			}
+			if tc.disable {
+				if diags := plan.SetAttribute(ctx, path.Root("password_protection"), types.ObjectNull(passwordProtectionWithPasswordAttrType.AttrTypes)); diags.HasError() {
+					t.Fatal(diags)
+				}
+			} else if tc.password != "" {
+				if diags := plan.SetAttribute(ctx, passwordPath, types.StringValue(tc.password)); diags.HasError() {
+					t.Fatal(diags)
+				}
+			}
+			updateResp := resource.UpdateResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+			r.Update(ctx, resource.UpdateRequest{State: importResp.State, Plan: plan}, &updateResp)
+			if updateResp.Diagnostics.HasError() {
+				t.Fatal(updateResp.Diagnostics)
+			}
+			if updates != 1 {
+				t.Fatalf("updates = %d, want 1", updates)
+			}
+			var protection types.Object
+			if diags := updateResp.State.GetAttribute(ctx, path.Root("password_protection"), &protection); diags.HasError() {
+				t.Fatal(diags)
+			}
+			if tc.disable {
+				if !protection.IsNull() {
+					t.Fatalf("password protection = %s, want null", protection)
+				}
+			} else if !protection.Attributes()["password"].Equal(types.StringValue(tc.password)) {
+				t.Fatalf("password = %s, want %q", protection.Attributes()["password"], tc.password)
+			}
+		})
+	}
+}
 
 func TestProjectImportTeamOwnership(t *testing.T) {
 	for _, tc := range []struct {
