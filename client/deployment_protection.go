@@ -9,7 +9,7 @@ type PasswordProtection struct {
 }
 type PasswordProtectionWithPassword struct {
 	DeploymentType string `json:"deploymentType"`
-	Password       string `json:"password"`
+	Password       string `json:"password,omitempty"`
 }
 
 type TrustedIpAddress struct {
