@@ -24,6 +24,8 @@ builds:
     ignore:
       - goos: darwin
         goarch: "386"
+      - goos: windows
+        goarch: arm
     binary: "{{ .ProjectName }}_v{{ .Version }}"
 archives:
   - format: zip
@@ -47,6 +49,7 @@ signs:
       - "--detach-sign"
       - "${artifact}"
 release:
+  make_latest: false
   extra_files:
     - glob: "terraform-registry-manifest.json"
       name_template: "{{ .ProjectName }}_{{ .Version }}_manifest.json"

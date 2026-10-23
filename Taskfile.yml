@@ -32,7 +32,7 @@ tasks:
   install-goreleaser:
     desc: "Install goreleaser"
     cmds:
-      - go install github.com/goreleaser/goreleaser/v2@latest
+      - go install github.com/goreleaser/goreleaser/v2@v2.14.3
     status:
       - which goreleaser
 
@@ -55,14 +55,14 @@ tasks:
   install-staticcheck:
     desc: "Install the staticheck tool"
     cmds:
-      - go install honnef.co/go/tools/cmd/staticcheck@2025.1
+      - go install honnef.co/go/tools/cmd/staticcheck@2026.1
     status:
       - which staticcheck
 
   install-providerlint:
     desc: "Install tfproviderlint tool"
     cmds:
-      - go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@latest
+      - go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.31.0
     status:
       - which tfproviderlint
 
