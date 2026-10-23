@@ -2,14 +2,11 @@
 lockfile = true
 
 [tools]
-go = "1.26"
+go = "1.27.3"
 terraform = "1.14.9"
 goreleaser = "2.14"
-staticcheck = "2026.1"
+staticcheck = "2026.2.2"
 "go:github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs" = { version = "v0.25.0", depends = [
-  "go",
-] }
-"go:github.com/bflad/tfproviderlint/cmd/tfproviderlint" = { version = "v0.31.0", depends = [
   "go",
 ] }
 
@@ -33,7 +30,8 @@ run = [
 
 [tasks.lint]
 description = "Run linters against the provider"
-run = ["staticcheck -tags it ./...", "tfproviderlint -R018=false ./...", '''
+# The separate tools module gives tfproviderlint a Go 1.27-compatible x/tools dependency.
+run = ["staticcheck -tags it ./...", '"$(go -C tools/lint tool -n tfproviderlint)" -R018=false ./...', '''
   badfmt="$(gofmt -s -l .)"
   if [ -n "$badfmt" ]; then
     printf 'invalid gofmt:\n%s\n' "$badfmt"
