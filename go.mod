@@ -1,8 +1,6 @@
 module github.com/vercel/terraform-provider-vercel/v3
 
-go 1.24.0
-
-toolchain go1.24.3
+go 1.26.10
 
 require (
 	github.com/hashicorp/terraform-plugin-framework v1.16.1
