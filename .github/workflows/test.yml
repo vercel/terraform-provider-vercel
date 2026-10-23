@@ -50,8 +50,11 @@ jobs:
           test -z "$BADDOCS" || (echo -e "documentation needs regenerating using mise run docs: $BADDOCS"; exit 1)
 
   unit:
-    name: Unit Test
-    runs-on: ubuntu-latest
+    name: Unit Test (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
       - name: Checkout code
