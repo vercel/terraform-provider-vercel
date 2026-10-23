@@ -40,11 +40,21 @@ func TestGetPaths(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			root := t.TempDir()
 			workingDirectory, err := filepath.Abs(".")
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			// Relative paths require the fixture and working directory to share a drive on Windows.
+			root, err := os.MkdirTemp(workingDirectory, "test-get-paths-")
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := os.RemoveAll(root); err != nil {
+					t.Error(err)
+				}
+			})
 
 			for _, name := range test.files {
 				path := filepath.Join(root, name)
