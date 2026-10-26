@@ -7,6 +7,7 @@ description: |-
   ~> For Log Drain integrations, please see the Integration Log Drain docs https://vercel.com/docs/observability/log-drains#log-drains-integration.
   Log Drains collect all of your logs using a service specializing in storing app logs.
   Teams on Pro and Enterprise plans can subscribe to log drains that are generic and configurable from the Vercel dashboard without creating an integration. This allows you to use a HTTP service to receive logs through Vercel's log drains.
+  -> Note: Write-Only argument secret_wo is available in place of secret to keep the signing secret out of Terraform plan and state artifacts. Write-Only arguments require HashiCorp Terraform 1.11.0 or later.
   ~> Only Pro and Enterprise teams can create Configurable Log Drains.
 ---
 
@@ -20,6 +21,8 @@ Log Drains collect all of your logs using a service specializing in storing app 
 
 Teams on Pro and Enterprise plans can subscribe to log drains that are generic and configurable from the Vercel dashboard without creating an integration. This allows you to use a HTTP service to receive logs through Vercel's log drains.
 
+-> **Note:** Write-Only argument `secret_wo` is available in place of `secret` to keep the signing secret out of Terraform plan and state artifacts. Write-Only arguments require HashiCorp Terraform 1.11.0 or later.
+
 ~> Only Pro and Enterprise teams can create Configurable Log Drains.
 
 ## Example Usage
@@ -30,17 +33,24 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 data "vercel_endpoint_verification" "example" {
 }
 
+ephemeral "random_password" "log_drain_secret" {
+  length  = 64
+  special = false
+}
+
 resource "vercel_log_drain" "example" {
   delivery_format = "json"
   environments    = ["production"]
   headers = {
     some-key = "some-value"
   }
-  project_ids   = [vercel_project.example.id]
-  sampling_rate = 0.8
-  secret        = "a_very_long_and_very_well_specified_secret"
-  sources       = ["static"]
-  endpoint      = "https://example.com/my-log-drain-endpoint"
+  project_ids       = [vercel_project.example.id]
+  sampling_rate     = 0.8
+  secret_wo         = ephemeral.random_password.log_drain_secret.result
+  # Optional: increment to replace the Log Drain when rotating the secret.
+  secret_wo_version = 1
+  sources           = ["static"]
+  endpoint          = "https://example.com/my-log-drain-endpoint"
 }
 
 resource "vercel_project" "example" {
@@ -61,10 +71,14 @@ resource "vercel_project" "example" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `headers` (Map of String, Sensitive) Custom headers to include in requests to the log drain endpoint.
 - `project_ids` (Set of String) A list of project IDs that the log drain should be associated with. Logs from these projects will be sent log events to the specified endpoint. If omitted, logs will be sent for all projects.
 - `sampling_rate` (Number) A ratio of logs matching the sampling rate will be sent to your log drain. Should be a value between 0 and 1. If unspecified, all logs are sent.
-- `secret` (String, Sensitive) A custom secret to be used for signing log events. You can use this secret to verify that log events are coming from Vercel and are not tampered with. See https://vercel.com/docs/observability/log-drains/log-drains-reference#secure-log-drains for full info.
+- `secret` (String, Sensitive) A custom secret to be used for signing log events. This value is persisted in Terraform state. Use `secret_wo` to omit the signing secret from plan and state artifacts. See https://vercel.com/docs/observability/log-drains/log-drains-reference#secure-log-drains for full info.
+- `secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) A write-only custom secret used to sign log events. The value is sent to Vercel during creation and is not persisted in Terraform plan or state artifacts.
+- `secret_wo_version` (Number) An optional persisted, non-secret version used to rotate `secret_wo`. Incrementing this value replaces the Log Drain.
 - `team_id` (String) The ID of the team the Log Drain should exist under. Required when configuring a team resource if a default team has not been set in the provider.
 
 ### Read-Only
@@ -83,8 +97,13 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 # - log_drain_id can be found by querying the Vercel REST API (https://vercel.com/docs/rest-api/endpoints/logDrains#retrieves-a-list-of-all-the-log-drains).
 terraform import vercel_log_drain.example ld_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# Alternatively, you can import via the team_id and edge_config_id.
+# Alternatively, you can import via the team_id and log_drain_id.
 # - team_id can be found in the team `settings` tab in the Vercel UI.
 # - log_drain_id can be found by querying the Vercel REST API (https://vercel.com/docs/rest-api/endpoints/logDrains#retrieves-a-list-of-all-the-log-drains).
 terraform import vercel_log_drain.example team_xxxxxxxxxxxxxxxxxxxxxxxx/ld_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Prefix either import format with "write-only:" to omit the existing signing
+# secret from Terraform state. Configure secret_wo after import. To replace the
+# drain with that secret, also configure secret_wo_version or use -replace.
+terraform import vercel_log_drain.example write-only:team_xxxxxxxxxxxxxxxxxxxxxxxx/ld_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```

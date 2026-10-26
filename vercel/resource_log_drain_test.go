@@ -88,6 +88,12 @@ func TestAcc_LogDrainResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vercel_log_drain.maximal", "endpoint"),
 					resource.TestCheckResourceAttrSet("vercel_log_drain.maximal", "id"),
 					resource.TestCheckResourceAttrSet("vercel_log_drain.maximal", "team_id"),
+
+					testCheckLogDrainExists(testClient(t), testTeam(t), "vercel_log_drain.write_only"),
+					resource.TestCheckResourceAttr("vercel_log_drain.write_only", "delivery_format", "ndjson"),
+					resource.TestCheckNoResourceAttr("vercel_log_drain.write_only", "secret_wo_version"),
+					resource.TestCheckNoResourceAttr("vercel_log_drain.write_only", "secret"),
+					resource.TestCheckNoResourceAttr("vercel_log_drain.write_only", "secret_wo"),
 				),
 			},
 		},
@@ -122,6 +128,15 @@ resource "vercel_log_drain" "maximal" {
     sampling_rate           = 0.8
     secret                  = "a_very_long_and_very_well_specified_secret"
     sources                 = ["static", "edge", "external", "build", "lambda", "firewall", "redirect"]
+    endpoint = "https://verify-test-rouge.vercel.app/api?${data.vercel_endpoint_verification.test.verification_code}"
+}
+
+resource "vercel_log_drain" "write_only" {
+    name                    = "write-only-%[1]s"
+    delivery_format         = "ndjson"
+    environments            = ["production"]
+    secret_wo               = "a_write_only_secret_that_must_not_reach_state"
+    sources                 = ["static"]
     endpoint = "https://verify-test-rouge.vercel.app/api?${data.vercel_endpoint_verification.test.verification_code}"
 }
 `, name)
