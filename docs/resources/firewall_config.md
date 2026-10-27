@@ -283,7 +283,7 @@ Read-Only:
 
 Optional:
 
-- `ai_bots` (Block, Optional) Configure AI Crawlers and AI Assistants separately. Without a legacy action, both categories default to active with action log. Category support must be enabled for your team. Once categories are configured, you cannot return to a ruleset-level action. (see [below for nested schema](#nestedblock--managed_rulesets--ai_bots))
+- `ai_bots` (Block, Optional) Configure AI Crawlers and AI Assistants separately. Without a legacy action, both categories default to active with action log. Once categories are configured, you cannot return to a ruleset-level action. (see [below for nested schema](#nestedblock--managed_rulesets--ai_bots))
 - `bot_filter` (Block, Optional, Deprecated) DEPRECATED: Use bot_protection instead. This block will be removed in a future release. (see [below for nested schema](#nestedblock--managed_rulesets--bot_filter))
 - `bot_protection` (Block, Optional) Enable the bot_protection managed ruleset and select action (see [below for nested schema](#nestedblock--managed_rulesets--bot_protection))
 - `owasp` (Block, Optional) Enable the owasp managed rulesets and select ruleset behaviors (see [below for nested schema](#nestedblock--managed_rulesets--owasp))

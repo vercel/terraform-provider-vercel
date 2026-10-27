@@ -219,7 +219,7 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 						},
 					},
 					"ai_bots": schema.SingleNestedBlock{
-						Description: "Configure AI Crawlers and AI Assistants separately. Without a legacy action, both categories default to active with action log. Category support must be enabled for your team. Once categories are configured, you cannot return to a ruleset-level action.",
+						Description: "Configure AI Crawlers and AI Assistants separately. Without a legacy action, both categories default to active with action log. Once categories are configured, you cannot return to a ruleset-level action.",
 						Attributes: map[string]schema.Attribute{
 							"active": schema.BoolAttribute{
 								Optional: true,
