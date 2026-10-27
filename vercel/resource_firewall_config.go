@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -218,14 +219,24 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 						},
 					},
 					"ai_bots": schema.SingleNestedBlock{
-						Description: "Enable the ai_bots managed ruleset and select action",
+						Description: "Configure AI Crawlers and AI Assistants separately. Without a legacy action, both categories default to active with action log. Category support must be enabled for your team. Once categories are configured, you cannot return to a ruleset-level action.",
 						Attributes: map[string]schema.Attribute{
 							"active": schema.BoolAttribute{
 								Optional: true,
 							},
 							"action": schema.StringAttribute{
-								Optional: true,
+								Optional:           true,
+								Description:        "Legacy action for the entire AI Bots ruleset. Conflicts with ai_crawlers and ai_assistants.",
+								DeprecationMessage: "Use ai_crawlers and ai_assistants instead. Remove action when migrating to categories.",
+								Validators: []validator.String{
+									stringvalidator.ConflictsWith(
+										path.MatchRelative().AtParent().AtName("ai_crawlers"),
+										path.MatchRelative().AtParent().AtName("ai_assistants"),
+									),
+								},
 							},
+							"ai_crawlers":   aiBotsCategorySchema("AI bots that crawl content for indexing and training."),
+							"ai_assistants": aiBotsCategorySchema("AI bots that assist a user, such as search or fetching content."),
 						},
 					},
 				},
@@ -455,8 +466,9 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 		},
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "The unique identifier for this resource. Format: team_id/project_id.",
-				Computed:    true,
+				Description:   "The unique identifier for this resource. Format: team_id/project_id.",
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
 				Description:   "The ID of the project this configuration belongs to.",
@@ -642,9 +654,109 @@ type BotFilterConfig struct {
 	Action types.String `tfsdk:"action"`
 }
 
+func aiBotsCategorySchema(description string) schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Optional:      true,
+		Computed:      true,
+		Description:   description + " Omitted categories start active with action log and retain their API values on subsequent updates.",
+		PlanModifiers: []planmodifier.Object{aiBotsCategoryDefault{}},
+		Attributes: map[string]schema.Attribute{
+			"active": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
+				Description: "Whether this category is active. Set to false to allow this category. Defaults to true.",
+			},
+			"action": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("log"),
+				Description: "Action for this category. Either log or deny. Defaults to log.",
+				Validators:  []validator.String{stringvalidator.OneOf("log", "deny")},
+			},
+		},
+	}
+}
+
+type aiBotsCategoryDefault struct{}
+
+func (aiBotsCategoryDefault) Description(context.Context) string {
+	return "Use existing category settings or default to active with action log unless a legacy action is configured."
+}
+
+func (m aiBotsCategoryDefault) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (aiBotsCategoryDefault) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
+	if !req.ConfigValue.IsNull() || !req.PlanValue.IsUnknown() {
+		return
+	}
+	var action types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, req.Path.ParentPath().AtName("action"), &action)...)
+	if resp.Diagnostics.HasError() || action.IsUnknown() {
+		return
+	}
+	// Legacy configurations must not gain categories until the top-level action is removed.
+	if !action.IsNull() {
+		resp.PlanValue = types.ObjectNull(req.PlanValue.AttributeTypes(ctx))
+		return
+	}
+	if !req.StateValue.IsNull() && !req.StateValue.IsUnknown() {
+		resp.PlanValue = req.StateValue
+		return
+	}
+	resp.PlanValue = types.ObjectValueMust(req.PlanValue.AttributeTypes(ctx), map[string]attr.Value{
+		"active": types.BoolValue(true),
+		"action": types.StringValue("log"),
+	})
+}
+
 type AiBotsConfig struct {
-	Active types.Bool   `tfsdk:"active"`
-	Action types.String `tfsdk:"action"`
+	Active       types.Bool     `tfsdk:"active"`
+	Action       types.String   `tfsdk:"action"`
+	AiCrawlers   *CRSRuleConfig `tfsdk:"ai_crawlers"`
+	AiAssistants *CRSRuleConfig `tfsdk:"ai_assistants"`
+}
+
+func (a *AiBotsConfig) toClient() client.ManagedRule {
+	rule := client.ManagedRule{Active: a.Active.ValueBool()}
+	if !a.Action.IsNull() {
+		rule.Action = a.Action.ValueString()
+		return rule
+	}
+	rule.RuleGroups = make(map[string]client.CoreRuleSet, 2)
+	for id, category := range map[string]*CRSRuleConfig{"ai_crawlers": a.AiCrawlers, "ai_assistants": a.AiAssistants} {
+		group := client.CoreRuleSet{Active: true, Action: "log"}
+		if category != nil {
+			group.Active = category.Active.IsNull() || category.Active.ValueBool()
+			if !category.Action.IsNull() {
+				group.Action = category.Action.ValueString()
+			}
+		}
+		rule.RuleGroups[id] = group
+	}
+	return rule
+}
+
+func fromAiBots(rule client.ManagedRule, ref *AiBotsConfig, mode firewallFlattenMode) *AiBotsConfig {
+	cfg := &AiBotsConfig{Active: types.BoolValue(rule.Active), Action: types.StringNull()}
+	if mode == preserveConfiguredShape && ref != nil && ref.Active.IsNull() && !rule.Active {
+		cfg.Active = types.BoolNull()
+	}
+	if len(rule.RuleGroups) == 0 {
+		cfg.Action = types.StringValue(rule.Action)
+		if rule.Action == "" && (mode == canonicalImportShape || ref != nil && ref.Action.IsNull()) {
+			cfg.Action = types.StringNull()
+		}
+		return cfg
+	}
+	for id, target := range map[string]**CRSRuleConfig{"ai_crawlers": &cfg.AiCrawlers, "ai_assistants": &cfg.AiAssistants} {
+		if group, ok := rule.RuleGroups[id]; ok {
+			*target = &CRSRuleConfig{Active: types.BoolValue(group.Active), Action: types.StringValue(group.Action)}
+		}
+	}
+	return cfg
 }
 
 type FirewallRules struct {
@@ -1041,7 +1153,7 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig, mode firewallF
 			managedRulesets.BotProtection = &BotProtectionConfig{Active: types.BoolValue(rule.Active), Action: types.StringValue(rule.Action)}
 		}
 		if rule, ok := conf.ManagedRulesets["ai_bots"]; ok {
-			managedRulesets.AiBots = &AiBotsConfig{Active: types.BoolValue(rule.Active), Action: types.StringValue(rule.Action)}
+			managedRulesets.AiBots = fromAiBots(rule, nil, mode)
 		}
 		// CRS categories also exist when OWASP is disabled; only its marker enables them.
 		if owasp, ok := conf.ManagedRulesets["owasp"]; ok && owasp.Active {
@@ -1067,7 +1179,11 @@ func fromClient(conf client.FirewallConfig, state FirewallConfig, mode firewallF
 			}
 		}
 		if rule, ok := conf.ManagedRulesets["ai_bots"]; ok {
-			cfg.ManagedRulesets.AiBots = &AiBotsConfig{Active: types.BoolValue(rule.Active), Action: types.StringValue(rule.Action)}
+			var ref *AiBotsConfig
+			if state.ManagedRulesets != nil {
+				ref = state.ManagedRulesets.AiBots
+			}
+			cfg.ManagedRulesets.AiBots = fromAiBots(rule, ref, mode)
 		}
 		if state.ManagedRulesets == nil && cfg.ManagedRulesets.OWASP == nil && cfg.ManagedRulesets.BotProtection == nil && cfg.ManagedRulesets.BotFilter == nil && cfg.ManagedRulesets.AiBots == nil {
 			cfg.ManagedRulesets = nil
@@ -1119,10 +1235,7 @@ func (f *FirewallConfig) toClient() (client.FirewallConfig, error) {
 
 		aiBots := f.ManagedRulesets.AiBots
 		if aiBots != nil {
-			conf.ManagedRulesets["ai_bots"] = client.ManagedRule{
-				Active: aiBots.Active.ValueBool(),
-				Action: aiBots.Action.ValueString(),
-			}
+			conf.ManagedRulesets["ai_bots"] = aiBots.toClient()
 		}
 	}
 	if f.Rules != nil && len(f.Rules.Rules) > 0 {

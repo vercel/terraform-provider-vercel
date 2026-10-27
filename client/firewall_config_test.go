@@ -61,6 +61,52 @@ func TestPutFirewallConfigPreservesIdentity(t *testing.T) {
 	}
 }
 
+func TestFirewallConfigAiBotsCategories(t *testing.T) {
+	t.Parallel()
+	groups := map[string]vercelclient.CoreRuleSet{
+		"ai_crawlers":   {Active: true, Action: "deny"},
+		"ai_assistants": {Active: false, Action: "log"},
+	}
+	c := newFeatureFlagTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "PUT" {
+			assertRequest(t, r, "PUT", "/v1/security/firewall/config", "team_123", map[string]any{
+				"firewallEnabled": true,
+				"managedRules": map[string]any{"ai_bots": map[string]any{
+					"active":     true,
+					"ruleGroups": groups,
+				}},
+			})
+			fmt.Fprint(w, `{"active":{"firewallEnabled":true,"managedRules":{"ai_bots":{"active":true,"ruleGroups":{"ai_crawlers":{"active":true,"action":"deny"},"ai_assistants":{"active":false,"action":"log"}}}}}}`)
+			return
+		}
+		assertRequest(t, r, "GET", "/v1/security/firewall/config/active", "team_123", nil)
+		fmt.Fprint(w, `{"firewallEnabled":true,"managedRules":{"ai_bots":{"active":true,"ruleGroups":{"ai_crawlers":{"active":true,"action":"deny"},"ai_assistants":{"active":false,"action":"log"}}}}}`)
+	})
+	cfg := vercelclient.FirewallConfig{
+		ProjectID: "prj_123", TeamID: "team_123", Enabled: true,
+		ManagedRulesets: map[string]vercelclient.ManagedRule{"ai_bots": {Active: true, RuleGroups: groups}},
+	}
+	created, err := c.PutFirewallConfig(context.Background(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	read, err := c.GetFirewallConfig(context.Background(), cfg.ProjectID, cfg.TeamID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, result := range []vercelclient.FirewallConfig{created, read} {
+		rule := result.ManagedRulesets["ai_bots"]
+		if rule.Action != "" || !rule.Active || len(rule.RuleGroups) != 2 {
+			t.Fatalf("unexpected AI Bots config: %+v", rule)
+		}
+		for id, want := range groups {
+			if rule.RuleGroups[id] != want {
+				t.Errorf("%s = %+v, want %+v", id, rule.RuleGroups[id], want)
+			}
+		}
+	}
+}
+
 func TestUpdateFirewallConfig(t *testing.T) {
 	t.Parallel()
 
