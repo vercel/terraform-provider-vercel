@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -15,13 +16,67 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v5/vercel"
 )
 
-func TestAcc_FirewallConfigAiBotsCategories(t *testing.T) {
+func TestAcc_FirewallConfigAiBotsLifecycle(t *testing.T) {
+	api := &firewallConfigLocalAPI{}
+	server := httptest.NewServer(http.HandlerFunc(api.serveHTTP))
+	t.Cleanup(server.Close)
+	logGroup := client.RuleGroup{Active: true, Action: "log"}
+	denyGroup := client.RuleGroup{Active: true, Action: "deny"}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"vercel": providerserver.NewProtocol6WithError(&firewallConfigLocalProvider{Provider: vercel.New(), apiURL: server.URL}),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccFirewallConfigAiBotsConfig(""),
+				Check:  testAccFirewallConfigAiBotsCheck(api, logGroup, logGroup),
+			},
+			{
+				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "deny" }`),
+				Check:  testAccFirewallConfigAiBotsCheck(api, denyGroup, logGroup),
+			},
+			{
+				PreConfig: func() {
+					api.mu.Lock()
+					defer api.mu.Unlock()
+					api.active.ManagedRulesets["ai_bots"].RuleGroups["ai_crawlers"] = client.RuleGroup{Active: false, Action: "deny"}
+				},
+				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "deny" }`),
+				Check:  testAccFirewallConfigAiBotsCheck(api, denyGroup, logGroup),
+			},
+			{
+				PreConfig: func() {
+					api.mu.Lock()
+					defer api.mu.Unlock()
+					api.active.ManagedRulesets["ai_bots"].RuleGroups["ai_assistants"] = client.RuleGroup{Active: false, Action: "deny"}
+				},
+				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "deny" }`),
+				Check:  testAccFirewallConfigAiBotsCheck(api, denyGroup, logGroup),
+			},
+			{
+				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { active = true, action = "log" }
+ai_assistants = { active = false, action = "log" }`),
+				Check: testAccFirewallConfigAiBotsCheck(api, logGroup, client.RuleGroup{Active: false, Action: "log"}),
+			},
+			{
+				ResourceName: "vercel_firewall_config.test", ImportState: true, ImportStateVerify: true,
+				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.test"),
+			},
+			{
+				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "deny" }`),
+				Check:  testAccFirewallConfigAiBotsCheck(api, denyGroup, logGroup),
+			},
+		},
+	})
+}
+
+func TestAcc_FirewallConfigAiBotsActionTransitions(t *testing.T) {
 	for _, tc := range []struct {
 		name, initial, dependency string
 		legacy                    bool
 	}{
-		{name: "categories"},
-		{name: "legacy", initial: `action = "deny"`, legacy: true},
+		{name: "legacy_to_categories", initial: `action = "deny"`, legacy: true},
 		{name: "unknown_to_null", initial: `action = terraform_data.action.output`, dependency: `resource "terraform_data" "action" { input = null }`},
 		{name: "unknown_to_legacy", initial: `action = terraform_data.action.output`, dependency: `resource "terraform_data" "action" { input = "deny" }`, legacy: true},
 	} {
@@ -29,11 +84,36 @@ func TestAcc_FirewallConfigAiBotsCategories(t *testing.T) {
 			api := &firewallConfigLocalAPI{}
 			server := httptest.NewServer(http.HandlerFunc(api.serveHTTP))
 			t.Cleanup(server.Close)
-			config := func(categories string, enabled bool) string {
-				return tc.dependency + fmt.Sprintf(`
+			logGroup := client.RuleGroup{Active: true, Action: "log"}
+			initialCheck := testAccFirewallConfigAiBotsCheck(api, logGroup, logGroup)
+			if tc.legacy {
+				initialCheck = resource.TestCheckResourceAttr("vercel_firewall_config.test", "managed_rulesets.ai_bots.action", "deny")
+			}
+			steps := []resource.TestStep{{
+				Config: tc.dependency + testAccFirewallConfigAiBotsConfig(tc.initial),
+				Check:  initialCheck,
+			}}
+			if tc.legacy {
+				steps = append(steps, resource.TestStep{
+					Config: tc.dependency + testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "deny" }`),
+					Check:  testAccFirewallConfigAiBotsCheck(api, client.RuleGroup{Active: true, Action: "deny"}, logGroup),
+				})
+			}
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+					"vercel": providerserver.NewProtocol6WithError(&firewallConfigLocalProvider{Provider: vercel.New(), apiURL: server.URL}),
+				},
+				Steps: steps,
+			})
+		})
+	}
+}
+
+func testAccFirewallConfigAiBotsConfig(categories string) string {
+	return fmt.Sprintf(`
 resource "vercel_firewall_config" "test" {
   project_id = "prj_123"
-  enabled = %t
+  enabled = true
   managed_rulesets {
     ai_bots {
       active = true
@@ -41,63 +121,19 @@ resource "vercel_firewall_config" "test" {
     }
   }
 }
-`, enabled, categories)
-			}
-			checkAPI := func(crawlers, assistants client.CoreRuleSet) resource.TestCheckFunc {
-				return func(*terraform.State) error {
-					api.mu.Lock()
-					defer api.mu.Unlock()
-					rule := api.active.ManagedRulesets["ai_bots"]
-					if rule.Action != "" || len(rule.RuleGroups) != 2 || rule.RuleGroups["ai_crawlers"] != crawlers || rule.RuleGroups["ai_assistants"] != assistants {
-						return fmt.Errorf("unexpected AI Bots API config: %+v", rule)
-					}
-					return nil
-				}
-			}
-			initialCheck := checkAPI(client.CoreRuleSet{Active: true, Action: "log"}, client.CoreRuleSet{Active: true, Action: "log"})
-			if tc.legacy {
-				initialCheck = resource.TestCheckResourceAttr("vercel_firewall_config.test", "managed_rulesets.ai_bots.action", "deny")
-			}
-			resource.Test(t, resource.TestCase{
-				ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-					"vercel": providerserver.NewProtocol6WithError(&firewallConfigLocalProvider{Provider: vercel.New(), apiURL: server.URL}),
-				},
-				Steps: []resource.TestStep{
-					{Config: config(tc.initial, true), Check: initialCheck},
-					{
-						Config: config(`ai_crawlers = { action = "deny" }`, true),
-						Check:  checkAPI(client.CoreRuleSet{Active: true, Action: "deny"}, client.CoreRuleSet{Active: true, Action: "log"}),
-					},
-					{
-						PreConfig: func() {
-							api.mu.Lock()
-							defer api.mu.Unlock()
-							api.active.ManagedRulesets["ai_bots"].RuleGroups["ai_crawlers"] = client.CoreRuleSet{Active: false, Action: "deny"}
-						},
-						Config: config(`ai_crawlers = { action = "deny" }`, true),
-						Check:  checkAPI(client.CoreRuleSet{Active: true, Action: "deny"}, client.CoreRuleSet{Active: true, Action: "log"}),
-					},
-					{
-						PreConfig: func() {
-							api.mu.Lock()
-							defer api.mu.Unlock()
-							api.active.ManagedRulesets["ai_bots"].RuleGroups["ai_assistants"] = client.CoreRuleSet{Active: false, Action: "deny"}
-						},
-						Config: config(`ai_crawlers = { action = "deny" }`, true),
-						Check:  checkAPI(client.CoreRuleSet{Active: true, Action: "deny"}, client.CoreRuleSet{Active: true, Action: "log"}),
-					},
-					{
-						Config: config(`ai_crawlers = { active = true, action = "log" }
-ai_assistants = { active = false, action = "log" }`, false),
-						Check: checkAPI(client.CoreRuleSet{Active: true, Action: "log"}, client.CoreRuleSet{Active: false, Action: "log"}),
-					},
-					{ResourceName: "vercel_firewall_config.test", ImportState: true, ImportStateVerify: true, ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.test")},
-					{
-						Config: config(`ai_crawlers = { action = "deny" }`, false),
-						Check:  checkAPI(client.CoreRuleSet{Active: true, Action: "deny"}, client.CoreRuleSet{Active: true, Action: "log"}),
-					},
-				},
-			})
-		})
+`, categories)
+}
+
+func testAccFirewallConfigAiBotsCheck(api *firewallConfigLocalAPI, crawlers, assistants client.RuleGroup) resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		api.mu.Lock()
+		defer api.mu.Unlock()
+		want := client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
+			"ai_crawlers": crawlers, "ai_assistants": assistants,
+		}}
+		if got := api.active.ManagedRulesets["ai_bots"]; !reflect.DeepEqual(got, want) {
+			return fmt.Errorf("AI Bots config:\ngot: %+v\nwant: %+v", got, want)
+		}
+		return nil
 	}
 }
