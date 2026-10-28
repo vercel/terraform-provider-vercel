@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -466,9 +465,8 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 		},
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description:   "The unique identifier for this resource. Format: team_id/project_id.",
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description: "The unique identifier for this resource. Format: team_id/project_id.",
+				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
 				Description:   "The ID of the project this configuration belongs to.",
@@ -656,60 +654,20 @@ type BotFilterConfig struct {
 
 func aiBotsCategorySchema(description string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
-		Optional:      true,
-		Computed:      true,
-		Description:   description + " Omitted categories start active with action log and retain their API values on subsequent updates.",
-		PlanModifiers: []planmodifier.Object{aiBotsCategoryDefault{}},
+		Optional:    true,
+		Description: description + " Omitted categories default to active with action log.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(true),
 				Description: "Whether this category is active. Set to false to allow this category. Defaults to true.",
 			},
 			"action": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("log"),
-				Description: "Action for this category. Either log or deny. Defaults to log.",
+				Required:    true,
+				Description: "Action for this category. Either log or deny.",
 				Validators:  []validator.String{stringvalidator.OneOf("log", "deny")},
 			},
 		},
 	}
-}
-
-type aiBotsCategoryDefault struct{}
-
-func (aiBotsCategoryDefault) Description(context.Context) string {
-	return "Use existing category settings or default to active with action log unless a legacy action is configured."
-}
-
-func (m aiBotsCategoryDefault) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-func (aiBotsCategoryDefault) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
-	if !req.ConfigValue.IsNull() || !req.PlanValue.IsUnknown() {
-		return
-	}
-	var action types.String
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, req.Path.ParentPath().AtName("action"), &action)...)
-	if resp.Diagnostics.HasError() || action.IsUnknown() {
-		return
-	}
-	// Legacy configurations must not gain categories until the top-level action is removed.
-	if !action.IsNull() {
-		resp.PlanValue = types.ObjectNull(req.PlanValue.AttributeTypes(ctx))
-		return
-	}
-	if !req.StateValue.IsNull() && !req.StateValue.IsUnknown() {
-		resp.PlanValue = req.StateValue
-		return
-	}
-	resp.PlanValue = types.ObjectValueMust(req.PlanValue.AttributeTypes(ctx), map[string]attr.Value{
-		"active": types.BoolValue(true),
-		"action": types.StringValue("log"),
-	})
 }
 
 type AiBotsConfig struct {
@@ -725,14 +683,12 @@ func (a *AiBotsConfig) toClient() client.ManagedRule {
 		rule.Action = a.Action.ValueString()
 		return rule
 	}
-	rule.RuleGroups = make(map[string]client.CoreRuleSet, 2)
+	rule.RuleGroups = make(map[string]client.RuleGroup, 2)
 	for id, category := range map[string]*CRSRuleConfig{"ai_crawlers": a.AiCrawlers, "ai_assistants": a.AiAssistants} {
-		group := client.CoreRuleSet{Active: true, Action: "log"}
+		group := client.RuleGroup{Active: true, Action: "log"}
 		if category != nil {
 			group.Active = category.Active.IsNull() || category.Active.ValueBool()
-			if !category.Action.IsNull() {
-				group.Action = category.Action.ValueString()
-			}
+			group.Action = category.Action.ValueString()
 		}
 		rule.RuleGroups[id] = group
 	}
@@ -751,11 +707,25 @@ func fromAiBots(rule client.ManagedRule, ref *AiBotsConfig, mode firewallFlatten
 		}
 		return cfg
 	}
-	for id, target := range map[string]**CRSRuleConfig{"ai_crawlers": &cfg.AiCrawlers, "ai_assistants": &cfg.AiAssistants} {
-		if group, ok := rule.RuleGroups[id]; ok {
-			*target = &CRSRuleConfig{Active: types.BoolValue(group.Active), Action: types.StringValue(group.Action)}
-		}
+	if ref == nil {
+		ref = &AiBotsConfig{}
 	}
+	set := func(id string, ref *CRSRuleConfig, target **CRSRuleConfig) {
+		group, ok := rule.RuleGroups[id]
+		if !ok {
+			return
+		}
+		if mode == preserveConfiguredShape && ref == nil && group.Active && group.Action == "log" {
+			return
+		}
+		category := &CRSRuleConfig{Active: types.BoolValue(group.Active), Action: types.StringValue(group.Action)}
+		if mode == preserveConfiguredShape && ref != nil && ref.Active.IsNull() && group.Active {
+			category.Active = types.BoolNull()
+		}
+		*target = category
+	}
+	set("ai_crawlers", ref.AiCrawlers, &cfg.AiCrawlers)
+	set("ai_assistants", ref.AiAssistants, &cfg.AiAssistants)
 	return cfg
 }
 

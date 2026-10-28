@@ -72,17 +72,30 @@ resource "vercel_firewall_config" "test" {
 						PreConfig: func() {
 							api.mu.Lock()
 							defer api.mu.Unlock()
-							api.active.ManagedRulesets["ai_bots"].RuleGroups["ai_assistants"] = client.CoreRuleSet{Active: false, Action: "deny"}
+							api.active.ManagedRulesets["ai_bots"].RuleGroups["ai_crawlers"] = client.CoreRuleSet{Active: false, Action: "deny"}
 						},
-						Config: config(`ai_crawlers = { action = "deny" }`, false),
-						Check:  checkAPI(client.CoreRuleSet{Active: true, Action: "deny"}, client.CoreRuleSet{Active: false, Action: "deny"}),
+						Config: config(`ai_crawlers = { action = "deny" }`, true),
+						Check:  checkAPI(client.CoreRuleSet{Active: true, Action: "deny"}, client.CoreRuleSet{Active: true, Action: "log"}),
 					},
 					{
-						Config: config(`ai_crawlers = { action = "log" }
-ai_assistants = { active = false }`, false),
+						PreConfig: func() {
+							api.mu.Lock()
+							defer api.mu.Unlock()
+							api.active.ManagedRulesets["ai_bots"].RuleGroups["ai_assistants"] = client.CoreRuleSet{Active: false, Action: "deny"}
+						},
+						Config: config(`ai_crawlers = { action = "deny" }`, true),
+						Check:  checkAPI(client.CoreRuleSet{Active: true, Action: "deny"}, client.CoreRuleSet{Active: true, Action: "log"}),
+					},
+					{
+						Config: config(`ai_crawlers = { active = true, action = "log" }
+ai_assistants = { active = false, action = "log" }`, false),
 						Check: checkAPI(client.CoreRuleSet{Active: true, Action: "log"}, client.CoreRuleSet{Active: false, Action: "log"}),
 					},
 					{ResourceName: "vercel_firewall_config.test", ImportState: true, ImportStateVerify: true, ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.test")},
+					{
+						Config: config(`ai_crawlers = { action = "deny" }`, false),
+						Check:  checkAPI(client.CoreRuleSet{Active: true, Action: "deny"}, client.CoreRuleSet{Active: true, Action: "log"}),
+					},
 				},
 			})
 		})
