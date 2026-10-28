@@ -19,7 +19,7 @@ type FirewallConfig struct {
 type ManagedRule struct {
 	Active     bool                   `json:"active"`
 	Action     string                 `json:"action,omitempty"`
-	RuleGroups map[string]CoreRuleSet `json:"ruleGroups,omitempty"`
+	RuleGroups map[string]RuleGroup   `json:"ruleGroups,omitempty"`
 }
 
 type FirewallRule struct {
@@ -74,10 +74,11 @@ type IPRule struct {
 	Action   string `json:"action"`
 }
 
-type CoreRuleSet struct {
+type RuleGroup struct {
 	Active bool   `json:"active"`
 	Action string `json:"action"`
 }
+type CoreRuleSet = RuleGroup
 
 type UpdateFirewallConfigRequest struct {
 	ProjectID string `json:"-"`
