@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -15,6 +16,47 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 	"github.com/vercel/terraform-provider-vercel/v5/vercel"
 )
+
+func TestFirewallConfigAiBotsValidation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		t.Error("schema validation contacted the API")
+	}))
+	t.Cleanup(server.Close)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"vercel": providerserver.NewProtocol6WithError(&firewallConfigLocalProvider{Provider: vercel.New(), apiURL: server.URL}),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccFirewallConfigAiBotsConfig(`ai_crawlers = {}`),
+				ExpectError: regexp.MustCompile(`attribute "ai_crawlers": attribute "action" is\s+required`),
+			},
+			{
+				Config:      testAccFirewallConfigAiBotsConfig(`ai_assistants = {}`),
+				ExpectError: regexp.MustCompile(`attribute "ai_assistants": attribute "action" is\s+required`),
+			},
+			{
+				Config:      testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "challenge" }`),
+				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Value Match.*ai_crawlers\.action`),
+			},
+			{
+				Config:      testAccFirewallConfigAiBotsConfig(`ai_assistants = { action = "allow" }`),
+				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Value Match.*ai_assistants\.action`),
+			},
+			{
+				Config: testAccFirewallConfigAiBotsConfig(`action = "deny"
+ai_crawlers = { action = "log" }`),
+				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Combination.*ai_crawlers`),
+			},
+			{
+				Config: testAccFirewallConfigAiBotsConfig(`action = "deny"
+ai_assistants = { action = "log" }`),
+				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Combination.*ai_assistants`),
+			},
+		},
+	})
+}
 
 func TestAcc_FirewallConfigAiBotsLifecycle(t *testing.T) {
 	api := &firewallConfigLocalAPI{}
