@@ -670,11 +670,16 @@ func aiBotsCategorySchema(description string) schema.SingleNestedAttribute {
 	}
 }
 
+type RuleGroup struct {
+	Active types.Bool   `tfsdk:"active"`
+	Action types.String `tfsdk:"action"`
+}
+
 type AiBotsConfig struct {
-	Active       types.Bool     `tfsdk:"active"`
-	Action       types.String   `tfsdk:"action"`
-	AiCrawlers   *CRSRuleConfig `tfsdk:"ai_crawlers"`
-	AiAssistants *CRSRuleConfig `tfsdk:"ai_assistants"`
+	Active       types.Bool   `tfsdk:"active"`
+	Action       types.String `tfsdk:"action"`
+	AiCrawlers   *RuleGroup   `tfsdk:"ai_crawlers"`
+	AiAssistants *RuleGroup   `tfsdk:"ai_assistants"`
 }
 
 func (a *AiBotsConfig) toClient() client.ManagedRule {
@@ -684,7 +689,7 @@ func (a *AiBotsConfig) toClient() client.ManagedRule {
 		return rule
 	}
 	rule.RuleGroups = make(map[string]client.RuleGroup, 2)
-	for id, category := range map[string]*CRSRuleConfig{"ai_crawlers": a.AiCrawlers, "ai_assistants": a.AiAssistants} {
+	for id, category := range map[string]*RuleGroup{"ai_crawlers": a.AiCrawlers, "ai_assistants": a.AiAssistants} {
 		group := client.RuleGroup{Active: true, Action: "log"}
 		if category != nil {
 			group.Active = category.Active.IsNull() || category.Active.ValueBool()
@@ -710,7 +715,7 @@ func fromAiBots(rule client.ManagedRule, ref *AiBotsConfig, mode firewallFlatten
 	if ref == nil {
 		ref = &AiBotsConfig{}
 	}
-	set := func(id string, ref *CRSRuleConfig, target **CRSRuleConfig) {
+	set := func(id string, ref *RuleGroup, target **RuleGroup) {
 		group, ok := rule.RuleGroups[id]
 		if !ok {
 			return
@@ -718,7 +723,7 @@ func fromAiBots(rule client.ManagedRule, ref *AiBotsConfig, mode firewallFlatten
 		if mode == preserveConfiguredShape && ref == nil && group.Active && group.Action == "log" {
 			return
 		}
-		category := &CRSRuleConfig{Active: types.BoolValue(group.Active), Action: types.StringValue(group.Action)}
+		category := &RuleGroup{Active: types.BoolValue(group.Active), Action: types.StringValue(group.Action)}
 		if mode == preserveConfiguredShape && ref != nil && ref.Active.IsNull() && group.Active {
 			category.Active = types.BoolNull()
 		}

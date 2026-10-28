@@ -28,9 +28,9 @@ func TestAiBotsPlanning(t *testing.T) {
 		invalid bool
 	}{
 		{"default categories", AiBotsConfig{Active: types.BoolValue(true)}, false},
-		{"missing crawler action", AiBotsConfig{Active: types.BoolValue(true), AiCrawlers: &CRSRuleConfig{}}, true},
-		{"missing assistant action", AiBotsConfig{Active: types.BoolValue(true), AiAssistants: &CRSRuleConfig{Active: types.BoolValue(false)}}, true},
-		{"separate actions", AiBotsConfig{Active: types.BoolValue(true), AiCrawlers: &CRSRuleConfig{Action: types.StringValue("deny")}, AiAssistants: &CRSRuleConfig{Active: types.BoolValue(false), Action: types.StringValue("log")}}, false},
+		{"missing crawler action", AiBotsConfig{Active: types.BoolValue(true), AiCrawlers: &RuleGroup{}}, true},
+		{"missing assistant action", AiBotsConfig{Active: types.BoolValue(true), AiAssistants: &RuleGroup{Active: types.BoolValue(false)}}, true},
+		{"separate actions", AiBotsConfig{Active: types.BoolValue(true), AiCrawlers: &RuleGroup{Action: types.StringValue("deny")}, AiAssistants: &RuleGroup{Active: types.BoolValue(false), Action: types.StringValue("log")}}, false},
 		{"legacy action", AiBotsConfig{Active: types.BoolValue(true), Action: types.StringValue("challenge")}, false},
 		{"unknown legacy action", AiBotsConfig{Active: types.BoolValue(true), Action: types.StringUnknown()}, false},
 	} {
@@ -79,7 +79,7 @@ func TestAiBotsPlanning(t *testing.T) {
 			if diags := plan.Get(ctx, &decoded); diags.HasError() {
 				t.Fatalf("plan must decode for Create and Update: %v", diags)
 			}
-			for name, ref := range map[string]*CRSRuleConfig{"ai_crawlers": tc.bots.AiCrawlers, "ai_assistants": tc.bots.AiAssistants} {
+			for name, ref := range map[string]*RuleGroup{"ai_crawlers": tc.bots.AiCrawlers, "ai_assistants": tc.bots.AiAssistants} {
 				var category types.Object
 				if diags := plan.GetAttribute(ctx, path.Root("managed_rulesets").AtName("ai_bots").AtName(name), &category); diags.HasError() {
 					t.Fatal(diags)
@@ -90,7 +90,7 @@ func TestAiBotsPlanning(t *testing.T) {
 					}
 					continue
 				}
-				var got CRSRuleConfig
+				var got RuleGroup
 				if diags := category.As(ctx, &got, basetypes.ObjectAsOptions{}); diags.HasError() {
 					t.Fatal(diags)
 				}
@@ -111,23 +111,23 @@ func TestAiBotsToClient(t *testing.T) {
 		{
 			name:   "default categories",
 			config: AiBotsConfig{Active: types.BoolValue(true)},
-			want: client.ManagedRule{Active: true, RuleGroups: map[string]client.CoreRuleSet{
+			want: client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
 				"ai_crawlers":   {Active: true, Action: "log"},
 				"ai_assistants": {Active: true, Action: "log"},
 			}},
 		},
 		{
 			name:   "one category leaves the other at log",
-			config: AiBotsConfig{Active: types.BoolValue(true), AiCrawlers: &CRSRuleConfig{Action: types.StringValue("deny")}},
-			want: client.ManagedRule{Active: true, RuleGroups: map[string]client.CoreRuleSet{
+			config: AiBotsConfig{Active: types.BoolValue(true), AiCrawlers: &RuleGroup{Action: types.StringValue("deny")}},
+			want: client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
 				"ai_crawlers":   {Active: true, Action: "deny"},
 				"ai_assistants": {Active: true, Action: "log"},
 			}},
 		},
 		{
 			name:   "disabled category allows assistants",
-			config: AiBotsConfig{Active: types.BoolValue(true), AiAssistants: &CRSRuleConfig{Active: types.BoolValue(false), Action: types.StringValue("deny")}},
-			want: client.ManagedRule{Active: true, RuleGroups: map[string]client.CoreRuleSet{
+			config: AiBotsConfig{Active: types.BoolValue(true), AiAssistants: &RuleGroup{Active: types.BoolValue(false), Action: types.StringValue("deny")}},
+			want: client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
 				"ai_crawlers":   {Active: true, Action: "log"},
 				"ai_assistants": {Active: false, Action: "deny"},
 			}},
@@ -135,7 +135,7 @@ func TestAiBotsToClient(t *testing.T) {
 		{
 			name:   "disabled ruleset still sends categories",
 			config: AiBotsConfig{Active: types.BoolValue(false)},
-			want: client.ManagedRule{RuleGroups: map[string]client.CoreRuleSet{
+			want: client.ManagedRule{RuleGroups: map[string]client.RuleGroup{
 				"ai_crawlers":   {Active: true, Action: "log"},
 				"ai_assistants": {Active: true, Action: "log"},
 			}},
@@ -164,11 +164,11 @@ func TestAiBotsRoundTripConfiguredShape(t *testing.T) {
 		{Active: types.BoolValue(true)},
 		{Active: types.BoolValue(false)},
 		{Active: types.BoolNull()},
-		{Active: types.BoolValue(true), AiCrawlers: &CRSRuleConfig{Action: types.StringValue("deny")}},
-		{Active: types.BoolValue(true), AiAssistants: &CRSRuleConfig{Action: types.StringValue("log")}},
-		{Active: types.BoolValue(true), AiCrawlers: &CRSRuleConfig{Active: types.BoolValue(true), Action: types.StringValue("deny")}},
-		{Active: types.BoolValue(true), AiAssistants: &CRSRuleConfig{Active: types.BoolValue(false), Action: types.StringValue("log")}},
-		{Active: types.BoolValue(true), AiCrawlers: &CRSRuleConfig{Active: types.BoolValue(true), Action: types.StringValue("deny")}, AiAssistants: &CRSRuleConfig{Active: types.BoolValue(true), Action: types.StringValue("log")}},
+		{Active: types.BoolValue(true), AiCrawlers: &RuleGroup{Action: types.StringValue("deny")}},
+		{Active: types.BoolValue(true), AiAssistants: &RuleGroup{Action: types.StringValue("log")}},
+		{Active: types.BoolValue(true), AiCrawlers: &RuleGroup{Active: types.BoolValue(true), Action: types.StringValue("deny")}},
+		{Active: types.BoolValue(true), AiAssistants: &RuleGroup{Active: types.BoolValue(false), Action: types.StringValue("log")}},
+		{Active: types.BoolValue(true), AiCrawlers: &RuleGroup{Active: types.BoolValue(true), Action: types.StringValue("deny")}, AiAssistants: &RuleGroup{Active: types.BoolValue(true), Action: types.StringValue("log")}},
 		{Active: types.BoolValue(true), Action: types.StringValue("deny")},
 	} {
 		cfg := FirewallConfig{ManagedRulesets: &FirewallManagedRulesets{AiBots: &config}}
@@ -202,7 +202,7 @@ func TestAiBotsRoundTripConfiguredShape(t *testing.T) {
 }
 
 func TestAiBotsImportCategories(t *testing.T) {
-	rule := client.ManagedRule{Active: true, Action: "deny", RuleGroups: map[string]client.CoreRuleSet{
+	rule := client.ManagedRule{Active: true, Action: "deny", RuleGroups: map[string]client.RuleGroup{
 		"ai_crawlers":   {Active: true, Action: "deny"},
 		"ai_assistants": {Active: false, Action: "log"},
 	}}
@@ -223,12 +223,12 @@ func TestAiBotsImportCategories(t *testing.T) {
 
 func TestAiBotsReadCategoryDrift(t *testing.T) {
 	for _, ref := range []*AiBotsConfig{
-		{Active: types.BoolValue(true), AiCrawlers: &CRSRuleConfig{Action: types.StringValue("log")}},
-		{Active: types.BoolValue(true), AiCrawlers: &CRSRuleConfig{Active: types.BoolValue(true), Action: types.StringValue("log")}},
+		{Active: types.BoolValue(true), AiCrawlers: &RuleGroup{Action: types.StringValue("log")}},
+		{Active: types.BoolValue(true), AiCrawlers: &RuleGroup{Active: types.BoolValue(true), Action: types.StringValue("log")}},
 		{Active: types.BoolNull()},
 		{Active: types.BoolValue(true), Action: types.StringValue("log")},
 	} {
-		got := fromAiBots(client.ManagedRule{Active: true, RuleGroups: map[string]client.CoreRuleSet{"ai_crawlers": {Active: false, Action: "deny"}}}, ref, preserveConfiguredShape)
+		got := fromAiBots(client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{"ai_crawlers": {Active: false, Action: "deny"}}}, ref, preserveConfiguredShape)
 		if got.AiCrawlers == nil || got.AiCrawlers.Active.ValueBool() || got.AiCrawlers.Action.ValueString() != "deny" {
 			t.Fatalf("category drift not reflected: %+v", got.AiCrawlers)
 		}
@@ -262,9 +262,9 @@ func TestAiBotsCategorySchema(t *testing.T) {
 		}
 		cfg := FirewallConfig{ManagedRulesets: &FirewallManagedRulesets{AiBots: &AiBotsConfig{Action: types.StringValue("deny")}}}
 		if name == "ai_crawlers" {
-			cfg.ManagedRulesets.AiBots.AiCrawlers = &CRSRuleConfig{}
+			cfg.ManagedRulesets.AiBots.AiCrawlers = &RuleGroup{}
 		} else {
-			cfg.ManagedRulesets.AiBots.AiAssistants = &CRSRuleConfig{}
+			cfg.ManagedRulesets.AiBots.AiAssistants = &RuleGroup{}
 		}
 		state, _ := firewallConfigStateAndPlan(t, &firewallConfigResource{}, cfg, cfg)
 		validation := &validator.StringResponse{}
