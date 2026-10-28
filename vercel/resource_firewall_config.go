@@ -218,14 +218,14 @@ Define Custom Rules to shape the way your traffic is handled by the Vercel Edge 
 						},
 					},
 					"ai_bots": schema.SingleNestedBlock{
-						Description: "Configure the AI Bots managed ruleset with separate categories for AI Crawlers and AI Assistants.",
+						Description: "Configure AI Bots managed ruleset and block AI Crawlers or AI Assistants.",
 						Attributes: map[string]schema.Attribute{
 							"active": schema.BoolAttribute{
 								Optional: true,
 							},
 							"action": schema.StringAttribute{
 								Optional:           true,
-								Description:        "DEPRECATED: Legacy action for the entire AI Bots ruleset. This is now split into separate actions for ai_crawlers and ai_assistants.",
+								Description:        "Legacy action for the entire AI Bots ruleset. You should use ai_assistants and ai_crawlers rule groups below.",
 								DeprecationMessage: "Use ai_crawlers and ai_assistants rule groups instead. Remove action when migrating to those categories.",
 								Validators: []validator.String{
 									stringvalidator.ConflictsWith(

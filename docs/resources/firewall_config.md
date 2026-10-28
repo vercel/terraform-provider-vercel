@@ -309,6 +309,7 @@ Optional:
 
 - `active` (Boolean) Whether this category is active. Set to false to allow this category. Defaults to true.
 
+
 <a id="nestedatt--managed_rulesets--ai_bots--ai_crawlers"></a>
 ### Nested Schema for `managed_rulesets.ai_bots.ai_crawlers`
 
@@ -319,6 +320,7 @@ Required:
 Optional:
 
 - `active` (Boolean) Whether this category is active. Set to false to allow this category. Defaults to true.
+
 
 
 <a id="nestedblock--managed_rulesets--bot_filter"></a>
