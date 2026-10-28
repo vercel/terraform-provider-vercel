@@ -9,142 +9,124 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
-func TestAiBotsToClientDefaults(t *testing.T) {
-	config := AiBotsConfig{Active: types.BoolValue(true)}
-	got := config.toClient()
-	want := client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
-		"ai_crawlers":   {Active: true, Action: "log"},
-		"ai_assistants": {Active: true, Action: "log"},
-	}}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("AI Bots config:\ngot: %+v\nwant: %+v", got, want)
+func aiBotsRuleGroups(crawlers, assistants client.RuleGroup) map[string]client.RuleGroup {
+	return map[string]client.RuleGroup{"ai_crawlers": crawlers, "ai_assistants": assistants}
+}
+
+func TestAiBotsToClient(t *testing.T) {
+	logGroup := client.RuleGroup{Active: true, Action: "log"}
+	tests := []struct {
+		name   string
+		config AiBotsConfig
+		want   client.ManagedRule
+	}{
+		{
+			name:   "defaults",
+			config: AiBotsConfig{Active: types.BoolValue(true)},
+			want:   client.ManagedRule{Active: true, RuleGroups: aiBotsRuleGroups(logGroup, logGroup)},
+		},
+		{
+			name:   "omitted assistants",
+			config: AiBotsConfig{Active: types.BoolValue(true), AiCrawlers: &RuleGroup{Action: types.StringValue("deny")}},
+			want:   client.ManagedRule{Active: true, RuleGroups: aiBotsRuleGroups(client.RuleGroup{Active: true, Action: "deny"}, logGroup)},
+		},
+		{
+			name: "disabled assistants",
+			config: AiBotsConfig{
+				Active:       types.BoolValue(true),
+				AiAssistants: &RuleGroup{Active: types.BoolValue(false), Action: types.StringValue("deny")},
+			},
+			want: client.ManagedRule{Active: true, RuleGroups: aiBotsRuleGroups(logGroup, client.RuleGroup{Active: false, Action: "deny"})},
+		},
+		{
+			name:   "disabled ruleset",
+			config: AiBotsConfig{Active: types.BoolValue(false)},
+			want:   client.ManagedRule{Active: false, RuleGroups: aiBotsRuleGroups(logGroup, logGroup)},
+		},
+		{
+			name:   "legacy action",
+			config: AiBotsConfig{Active: types.BoolValue(true), Action: types.StringValue("challenge")},
+			want:   client.ManagedRule{Active: true, Action: "challenge"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.config.toClient(); !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("toClient():\ngot: %+v\nwant: %+v", got, tc.want)
+			}
+		})
 	}
 }
 
-func TestAiBotsToClientDefaultsOmittedAssistants(t *testing.T) {
-	config := AiBotsConfig{
-		Active:     types.BoolValue(true),
-		AiCrawlers: &RuleGroup{Action: types.StringValue("deny")},
+func TestFromAiBots(t *testing.T) {
+	logGroup := client.RuleGroup{Active: true, Action: "log"}
+	tests := []struct {
+		name string
+		rule client.ManagedRule
+		ref  *AiBotsConfig
+		want *AiBotsConfig
+	}{
+		{
+			name: "preserves omitted values",
+			rule: client.ManagedRule{Active: false, RuleGroups: aiBotsRuleGroups(client.RuleGroup{Active: true, Action: "deny"}, logGroup)},
+			ref:  &AiBotsConfig{AiCrawlers: &RuleGroup{Action: types.StringValue("deny")}},
+			want: &AiBotsConfig{AiCrawlers: &RuleGroup{Action: types.StringValue("deny")}},
+		},
+		{
+			name: "preserves explicit defaults",
+			rule: client.ManagedRule{Active: false, RuleGroups: aiBotsRuleGroups(logGroup, logGroup)},
+			ref: &AiBotsConfig{
+				Active:     types.BoolValue(false),
+				AiCrawlers: &RuleGroup{Active: types.BoolValue(true), Action: types.StringValue("log")},
+			},
+			want: &AiBotsConfig{
+				Active:     types.BoolValue(false),
+				AiCrawlers: &RuleGroup{Active: types.BoolValue(true), Action: types.StringValue("log")},
+			},
+		},
+		{
+			name: "preserves legacy action",
+			rule: client.ManagedRule{Active: true, Action: "deny"},
+			ref:  &AiBotsConfig{Active: types.BoolValue(true), Action: types.StringValue("deny")},
+			want: &AiBotsConfig{Active: types.BoolValue(true), Action: types.StringValue("deny")},
+		},
+		{
+			name: "detects legacy migration",
+			rule: client.ManagedRule{Active: true, RuleGroups: aiBotsRuleGroups(client.RuleGroup{Active: true, Action: "deny"}, logGroup)},
+			ref:  &AiBotsConfig{Active: types.BoolValue(true), Action: types.StringValue("log")},
+			want: &AiBotsConfig{
+				Active:     types.BoolValue(true),
+				AiCrawlers: &RuleGroup{Active: types.BoolValue(true), Action: types.StringValue("deny")},
+			},
+		},
+		{
+			name: "detects drift",
+			rule: client.ManagedRule{Active: true, RuleGroups: aiBotsRuleGroups(
+				client.RuleGroup{Active: false, Action: "deny"},
+				client.RuleGroup{Active: false, Action: "deny"},
+			)},
+			ref: &AiBotsConfig{AiCrawlers: &RuleGroup{Action: types.StringValue("log")}},
+			want: &AiBotsConfig{
+				Active:       types.BoolValue(true),
+				AiCrawlers:   &RuleGroup{Active: types.BoolValue(false), Action: types.StringValue("deny")},
+				AiAssistants: &RuleGroup{Active: types.BoolValue(false), Action: types.StringValue("deny")},
+			},
+		},
 	}
-	got := config.toClient()
-	want := client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
-		"ai_crawlers":   {Active: true, Action: "deny"},
-		"ai_assistants": {Active: true, Action: "log"},
-	}}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("AI Bots config:\ngot: %+v\nwant: %+v", got, want)
-	}
-}
-
-func TestAiBotsToClientDisabledAssistants(t *testing.T) {
-	config := AiBotsConfig{
-		Active:       types.BoolValue(true),
-		AiAssistants: &RuleGroup{Active: types.BoolValue(false), Action: types.StringValue("deny")},
-	}
-	got := config.toClient()
-	want := client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
-		"ai_crawlers":   {Active: true, Action: "log"},
-		"ai_assistants": {Active: false, Action: "deny"},
-	}}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("AI Bots config:\ngot: %+v\nwant: %+v", got, want)
-	}
-}
-
-func TestAiBotsToClientDisabledRuleset(t *testing.T) {
-	config := AiBotsConfig{Active: types.BoolValue(false)}
-	got := config.toClient()
-	want := client.ManagedRule{Active: false, RuleGroups: map[string]client.RuleGroup{
-		"ai_crawlers":   {Active: true, Action: "log"},
-		"ai_assistants": {Active: true, Action: "log"},
-	}}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("AI Bots config:\ngot: %+v\nwant: %+v", got, want)
-	}
-}
-
-func TestAiBotsToClientLegacyAction(t *testing.T) {
-	config := AiBotsConfig{Active: types.BoolValue(true), Action: types.StringValue("challenge")}
-	got := config.toClient()
-	want := client.ManagedRule{Active: true, Action: "challenge"}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("AI Bots config:\ngot: %+v\nwant: %+v", got, want)
-	}
-}
-
-func TestAiBotsReadPreservesOmittedValues(t *testing.T) {
-	ref := &AiBotsConfig{AiCrawlers: &RuleGroup{Action: types.StringValue("deny")}}
-	rule := client.ManagedRule{Active: false, RuleGroups: map[string]client.RuleGroup{
-		"ai_crawlers":   {Active: true, Action: "deny"},
-		"ai_assistants": {Active: true, Action: "log"},
-	}}
-	got := fromAiBots(rule, ref, preserveConfiguredShape)
-	if !reflect.DeepEqual(got, ref) {
-		t.Fatalf("omitted values changed:\ngot: %+v\nwant: %+v", got, ref)
-	}
-}
-
-func TestAiBotsReadPreservesExplicitDefaults(t *testing.T) {
-	ref := &AiBotsConfig{
-		Active:     types.BoolValue(false),
-		AiCrawlers: &RuleGroup{Active: types.BoolValue(true), Action: types.StringValue("log")},
-	}
-	rule := client.ManagedRule{Active: false, RuleGroups: map[string]client.RuleGroup{
-		"ai_crawlers":   {Active: true, Action: "log"},
-		"ai_assistants": {Active: true, Action: "log"},
-	}}
-	got := fromAiBots(rule, ref, preserveConfiguredShape)
-	if !reflect.DeepEqual(got, ref) {
-		t.Fatalf("explicit defaults changed:\ngot: %+v\nwant: %+v", got, ref)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := fromAiBots(tc.rule, tc.ref, preserveConfiguredShape); !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("fromAiBots():\ngot: %+v\nwant: %+v", got, tc.want)
+			}
+		})
 	}
 }
 
-func TestAiBotsReadPreservesLegacyAction(t *testing.T) {
-	ref := &AiBotsConfig{Active: types.BoolValue(true), Action: types.StringValue("deny")}
-	got := fromAiBots(client.ManagedRule{Active: true, Action: "deny"}, ref, preserveConfiguredShape)
-	if !reflect.DeepEqual(got, ref) {
-		t.Fatalf("legacy config changed:\ngot: %+v\nwant: %+v", got, ref)
-	}
-}
-
-func TestAiBotsReadDetectsLegacyMigration(t *testing.T) {
-	ref := &AiBotsConfig{Active: types.BoolValue(true), Action: types.StringValue("log")}
-	rule := client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
-		"ai_crawlers":   {Active: true, Action: "deny"},
-		"ai_assistants": {Active: true, Action: "log"},
-	}}
-	got := fromAiBots(rule, ref, preserveConfiguredShape)
-	want := &AiBotsConfig{
-		Active:     types.BoolValue(true),
-		AiCrawlers: &RuleGroup{Active: types.BoolValue(true), Action: types.StringValue("deny")},
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("legacy migration not reflected:\ngot: %+v\nwant: %+v", got, want)
-	}
-}
-
-func TestAiBotsReadDetectsDrift(t *testing.T) {
-	ref := &AiBotsConfig{AiCrawlers: &RuleGroup{Action: types.StringValue("log")}}
-	rule := client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
-		"ai_crawlers":   {Active: false, Action: "deny"},
-		"ai_assistants": {Active: false, Action: "deny"},
-	}}
-	got := fromAiBots(rule, ref, preserveConfiguredShape)
-	want := &AiBotsConfig{
-		Active:       types.BoolValue(true),
-		AiCrawlers:   &RuleGroup{Active: types.BoolValue(false), Action: types.StringValue("deny")},
-		AiAssistants: &RuleGroup{Active: types.BoolValue(false), Action: types.StringValue("deny")},
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("drift not reflected:\ngot: %+v\nwant: %+v", got, want)
-	}
-}
-
-func TestAiBotsImportCategories(t *testing.T) {
-	rule := client.ManagedRule{Active: true, Action: "deny", RuleGroups: map[string]client.RuleGroup{
-		"ai_crawlers":   {Active: true, Action: "deny"},
-		"ai_assistants": {Active: false, Action: "log"},
-	}}
+func TestCanonicalImportAiBots(t *testing.T) {
+	rule := client.ManagedRule{Active: true, Action: "deny", RuleGroups: aiBotsRuleGroups(
+		client.RuleGroup{Active: true, Action: "deny"},
+		client.RuleGroup{Active: false, Action: "log"},
+	)}
 	got := importFirewallConfig(t, client.FirewallConfig{ManagedRulesets: map[string]client.ManagedRule{"ai_bots": rule}})
 	want := &AiBotsConfig{
 		Active:       types.BoolValue(true),
