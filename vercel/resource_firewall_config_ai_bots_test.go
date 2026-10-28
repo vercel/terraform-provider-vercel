@@ -17,41 +17,43 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v5/vercel"
 )
 
-func TestFirewallConfigAiBotsValidation(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-		t.Error("schema validation contacted the API")
-	}))
-	t.Cleanup(server.Close)
+var (
+	activeLog  = client.RuleGroup{Active: true, Action: "log"}
+	activeDeny = client.RuleGroup{Active: true, Action: "deny"}
+)
+
+func TestFirewallConfigAiBotsRejectsInvalidConfig(t *testing.T) {
+	_, providers := newFakeFirewallAPI(t)
 
 	resource.UnitTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"vercel": providerserver.NewProtocol6WithError(&firewallConfigLocalProvider{Provider: vercel.New(), apiURL: server.URL}),
-		},
+		ProtoV6ProviderFactories: providers,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccFirewallConfigAiBotsConfig(`ai_crawlers = {}`),
+				Config:      createAiBotsConfig(`ai_crawlers = {}`),
 				ExpectError: regexp.MustCompile(`attribute "ai_crawlers": attribute "action" is\s+required`),
 			},
 			{
-				Config:      testAccFirewallConfigAiBotsConfig(`ai_assistants = {}`),
+				Config:      createAiBotsConfig(`ai_assistants = {}`),
 				ExpectError: regexp.MustCompile(`attribute "ai_assistants": attribute "action" is\s+required`),
 			},
 			{
-				Config:      testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "challenge" }`),
+				Config:      createAiBotsConfig(`ai_crawlers = { action = "challenge" }`),
 				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Value Match.*ai_crawlers\.action`),
 			},
 			{
-				Config:      testAccFirewallConfigAiBotsConfig(`ai_assistants = { action = "allow" }`),
+				Config:      createAiBotsConfig(`ai_assistants = { action = "allow" }`),
 				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Value Match.*ai_assistants\.action`),
 			},
 			{
-				Config: testAccFirewallConfigAiBotsConfig(`action = "deny"
-ai_crawlers = { action = "log" }`),
+				Config: createAiBotsConfig(`
+      action      = "deny"
+      ai_crawlers = { action = "log" }`),
 				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Combination.*ai_crawlers`),
 			},
 			{
-				Config: testAccFirewallConfigAiBotsConfig(`action = "deny"
-ai_assistants = { action = "log" }`),
+				Config: createAiBotsConfig(`
+      action        = "deny"
+      ai_assistants = { action = "log" }`),
 				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Combination.*ai_assistants`),
 			},
 		},
@@ -59,117 +61,108 @@ ai_assistants = { action = "log" }`),
 }
 
 func TestAcc_FirewallConfigAiBotsLifecycle(t *testing.T) {
-	api := &firewallConfigLocalAPI{}
-	server := httptest.NewServer(http.HandlerFunc(api.serveHTTP))
-	t.Cleanup(server.Close)
-	logGroup := client.RuleGroup{Active: true, Action: "log"}
-	denyGroup := client.RuleGroup{Active: true, Action: "deny"}
+	api, providers := newFakeFirewallAPI(t)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"vercel": providerserver.NewProtocol6WithError(&firewallConfigLocalProvider{Provider: vercel.New(), apiURL: server.URL}),
-		},
+		ProtoV6ProviderFactories: providers,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccFirewallConfigAiBotsConfig(""),
-				Check:  testAccFirewallConfigAiBotsCheck(api, logGroup, logGroup),
+				Config: createAiBotsConfig(""),
+				Check:  expectAiBotsInAPI(api, aiBotsCategories{crawlers: activeLog, assistants: activeLog}),
 			},
 			{
-				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "deny" }`),
-				Check:  testAccFirewallConfigAiBotsCheck(api, denyGroup, logGroup),
+				Config: createAiBotsConfig(`ai_crawlers = { action = "deny" }`),
+				Check:  expectAiBotsInAPI(api, aiBotsCategories{crawlers: activeDeny, assistants: activeLog}),
 			},
 			{
-				PreConfig: func() {
-					api.mu.Lock()
-					defer api.mu.Unlock()
-					api.active.ManagedRulesets["ai_bots"].RuleGroups["ai_crawlers"] = client.RuleGroup{Active: false, Action: "deny"}
-				},
-				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "deny" }`),
-				Check:  testAccFirewallConfigAiBotsCheck(api, denyGroup, logGroup),
+				Config: createAiBotsConfig(`
+      ai_crawlers   = { active = true, action = "log" }
+      ai_assistants = { active = false, action = "log" }`),
+				Check: expectAiBotsInAPI(api, aiBotsCategories{crawlers: activeLog, assistants: client.RuleGroup{Active: false, Action: "log"}}),
 			},
 			{
-				PreConfig: func() {
-					api.mu.Lock()
-					defer api.mu.Unlock()
-					api.active.ManagedRulesets["ai_bots"].RuleGroups["ai_assistants"] = client.RuleGroup{Active: false, Action: "deny"}
-				},
-				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "deny" }`),
-				Check:  testAccFirewallConfigAiBotsCheck(api, denyGroup, logGroup),
-			},
-			{
-				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { active = true, action = "log" }
-ai_assistants = { active = false, action = "log" }`),
-				Check: testAccFirewallConfigAiBotsCheck(api, logGroup, client.RuleGroup{Active: false, Action: "log"}),
-			},
-			{
-				ResourceName: "vercel_firewall_config.test", ImportState: true, ImportStateVerify: true,
+				ResourceName:      "vercel_firewall_config.test",
+				ImportState:       true,
+				ImportStateVerify: true,
 				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.test"),
 			},
 			{
-				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "deny" }`),
-				Check:  testAccFirewallConfigAiBotsCheck(api, denyGroup, logGroup),
+				// Removing ai_assistants from the config resets it to the default
+				// instead of keeping the disabled setting from the previous step.
+				Config: createAiBotsConfig(`ai_crawlers = { action = "deny" }`),
+				Check:  expectAiBotsInAPI(api, aiBotsCategories{crawlers: activeDeny, assistants: activeLog}),
 			},
 		},
 	})
 }
 
-func TestAcc_FirewallConfigAiBotsLegacyMigration(t *testing.T) {
-	api := &firewallConfigLocalAPI{}
-	server := httptest.NewServer(http.HandlerFunc(api.serveHTTP))
-	t.Cleanup(server.Close)
+// Each step changes a category outside of Terraform, and the apply has to put
+// back what the config says.
+func TestAcc_FirewallConfigAiBotsDrift(t *testing.T) {
+	api, providers := newFakeFirewallAPI(t)
+	config := createAiBotsConfig(`ai_crawlers = { action = "deny" }`)
+	want := aiBotsCategories{crawlers: activeDeny, assistants: activeLog}
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"vercel": providerserver.NewProtocol6WithError(&firewallConfigLocalProvider{Provider: vercel.New(), apiURL: server.URL}),
+		ProtoV6ProviderFactories: providers,
+		Steps: []resource.TestStep{
+			{Config: config, Check: expectAiBotsInAPI(api, want)},
+			{
+				PreConfig: changeCategoryInAPI(api, "ai_crawlers", client.RuleGroup{Active: false, Action: "deny"}),
+				Config:    config,
+				Check:     expectAiBotsInAPI(api, want),
+			},
+			{
+				// ai_assistants isn't in the config, so drift on it is reset to the default.
+				PreConfig: changeCategoryInAPI(api, "ai_assistants", client.RuleGroup{Active: false, Action: "deny"}),
+				Config:    config,
+				Check:     expectAiBotsInAPI(api, want),
+			},
 		},
+	})
+}
+
+func TestAcc_FirewallConfigAiBotsSwitchFromActionToCategories(t *testing.T) {
+	api, providers := newFakeFirewallAPI(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: providers,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccFirewallConfigAiBotsConfig(`action = "deny"`),
+				Config: createAiBotsConfig(`action = "deny"`),
 				Check:  resource.TestCheckResourceAttr("vercel_firewall_config.test", "managed_rulesets.ai_bots.action", "deny"),
 			},
 			{
-				Config: testAccFirewallConfigAiBotsConfig(`ai_crawlers = { action = "deny" }`),
-				Check: testAccFirewallConfigAiBotsCheck(api,
-					client.RuleGroup{Active: true, Action: "deny"},
-					client.RuleGroup{Active: true, Action: "log"},
-				),
+				Config: createAiBotsConfig(`ai_crawlers = { action = "deny" }`),
+				Check:  expectAiBotsInAPI(api, aiBotsCategories{crawlers: activeDeny, assistants: activeLog}),
 			},
 		},
 	})
 }
 
-func TestAcc_FirewallConfigAiBotsUnknownActionBecomesNull(t *testing.T) {
-	api := &firewallConfigLocalAPI{}
-	server := httptest.NewServer(http.HandlerFunc(api.serveHTTP))
-	t.Cleanup(server.Close)
-	config := `resource "terraform_data" "action" { input = null }` +
-		testAccFirewallConfigAiBotsConfig(`action = terraform_data.action.output`)
-	logGroup := client.RuleGroup{Active: true, Action: "log"}
+// terraform_data.output is unknown until apply, so these tests plan with an
+// unknown legacy action and check what it resolves to.
+func TestAcc_FirewallConfigAiBotsNullActionFromAnotherResource(t *testing.T) {
+	api, providers := newFakeFirewallAPI(t)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"vercel": providerserver.NewProtocol6WithError(&firewallConfigLocalProvider{Provider: vercel.New(), apiURL: server.URL}),
-		},
+		ProtoV6ProviderFactories: providers,
 		Steps: []resource.TestStep{{
-			Config: config,
-			Check:  testAccFirewallConfigAiBotsCheck(api, logGroup, logGroup),
+			Config: `resource "terraform_data" "action" { input = null }` +
+				createAiBotsConfig(`action = terraform_data.action.output`),
+			Check: expectAiBotsInAPI(api, aiBotsCategories{crawlers: activeLog, assistants: activeLog}),
 		}},
 	})
 }
 
-func TestAcc_FirewallConfigAiBotsUnknownActionBecomesLegacy(t *testing.T) {
-	api := &firewallConfigLocalAPI{}
-	server := httptest.NewServer(http.HandlerFunc(api.serveHTTP))
-	t.Cleanup(server.Close)
-	config := `resource "terraform_data" "action" { input = "deny" }` +
-		testAccFirewallConfigAiBotsConfig(`action = terraform_data.action.output`)
+func TestAcc_FirewallConfigAiBotsActionFromAnotherResource(t *testing.T) {
+	_, providers := newFakeFirewallAPI(t)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"vercel": providerserver.NewProtocol6WithError(&firewallConfigLocalProvider{Provider: vercel.New(), apiURL: server.URL}),
-		},
+		ProtoV6ProviderFactories: providers,
 		Steps: []resource.TestStep{{
-			Config: config,
+			Config: `resource "terraform_data" "action" { input = "deny" }` +
+				createAiBotsConfig(`action = terraform_data.action.output`),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("vercel_firewall_config.test", "managed_rulesets.ai_bots.action", "deny"),
 				resource.TestCheckNoResourceAttr("vercel_firewall_config.test", "managed_rulesets.ai_bots.ai_crawlers.action"),
@@ -179,7 +172,16 @@ func TestAcc_FirewallConfigAiBotsUnknownActionBecomesLegacy(t *testing.T) {
 	})
 }
 
-func testAccFirewallConfigAiBotsConfig(categories string) string {
+func newFakeFirewallAPI(t *testing.T) (*firewallConfigLocalAPI, map[string]func() (tfprotov6.ProviderServer, error)) {
+	api := &firewallConfigLocalAPI{}
+	server := httptest.NewServer(http.HandlerFunc(api.serveHTTP))
+	t.Cleanup(server.Close)
+	return api, map[string]func() (tfprotov6.ProviderServer, error){
+		"vercel": providerserver.NewProtocol6WithError(&firewallConfigLocalProvider{Provider: vercel.New(), apiURL: server.URL}),
+	}
+}
+
+func createAiBotsConfig(categories string) string {
 	return fmt.Sprintf(`
 resource "vercel_firewall_config" "test" {
   project_id = "prj_123"
@@ -194,16 +196,29 @@ resource "vercel_firewall_config" "test" {
 `, categories)
 }
 
-func testAccFirewallConfigAiBotsCheck(api *firewallConfigLocalAPI, crawlers, assistants client.RuleGroup) resource.TestCheckFunc {
+// aiBotsCategories is the AI Bots config the fake API should have received.
+type aiBotsCategories struct {
+	crawlers, assistants client.RuleGroup
+}
+
+func expectAiBotsInAPI(api *firewallConfigLocalAPI, want aiBotsCategories) resource.TestCheckFunc {
 	return func(*terraform.State) error {
 		api.mu.Lock()
 		defer api.mu.Unlock()
-		want := client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
-			"ai_crawlers": crawlers, "ai_assistants": assistants,
+		wantRule := client.ManagedRule{Active: true, RuleGroups: map[string]client.RuleGroup{
+			"ai_crawlers": want.crawlers, "ai_assistants": want.assistants,
 		}}
-		if got := api.active.ManagedRulesets["ai_bots"]; !reflect.DeepEqual(got, want) {
-			return fmt.Errorf("AI Bots config:\ngot: %+v\nwant: %+v", got, want)
+		if got := api.active.ManagedRulesets["ai_bots"]; !reflect.DeepEqual(got, wantRule) {
+			return fmt.Errorf("AI Bots config:\ngot: %+v\nwant: %+v", got, wantRule)
 		}
 		return nil
+	}
+}
+
+func changeCategoryInAPI(api *firewallConfigLocalAPI, category string, group client.RuleGroup) func() {
+	return func() {
+		api.mu.Lock()
+		defer api.mu.Unlock()
+		api.active.ManagedRulesets["ai_bots"].RuleGroups[category] = group
 	}
 }
