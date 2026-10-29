@@ -11,6 +11,18 @@ func NotFound(err error) bool {
 	return err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 404
 }
 
+// Transient detects errors returned by the Vercel API that are likely to
+// succeed if the same request is retried, such as conflicts caused by
+// concurrent changes, rate limits, and server errors. Validation and
+// permission failures are never transient.
+func Transient(err error) bool {
+	var apiErr APIError
+	if err == nil || !errors.As(err, &apiErr) {
+		return false
+	}
+	return apiErr.StatusCode == 409 || apiErr.StatusCode == 429 || apiErr.StatusCode >= 500
+}
+
 // MemberNotFound detects the "member_not_found" error returned when a team
 // member cannot be located yet. This is commonly transient immediately after a
 // member is invited, while the membership propagates.

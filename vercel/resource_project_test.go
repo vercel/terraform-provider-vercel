@@ -600,6 +600,40 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectGitRepositoryRelink(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test_relink", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectConfigWithGitRepoRelink(projectSuffix, "github", testGithubRepo(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test_relink", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test_relink", "git_repository.type", "github"),
+					resource.TestCheckResourceAttr("vercel_project.test_relink", "git_repository.repo", testGithubRepo(t)),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithGitRepoRelink(projectSuffix, "bitbucket", testBitbucketRepo(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test_relink", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test_relink", "git_repository.type", "bitbucket"),
+					resource.TestCheckResourceAttr("vercel_project.test_relink", "git_repository.repo", testBitbucketRepo(t)),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithGitRepoRelink(projectSuffix, "github", testGithubRepo(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test_relink", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test_relink", "git_repository.type", "github"),
+					resource.TestCheckResourceAttr("vercel_project.test_relink", "git_repository.repo", testGithubRepo(t)),
+				),
+			},
+		},
+	})
+}
+
 func TestAcc_ProjectWithVercelAuthAndPasswordProtectionAndTrustedIps(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
@@ -1123,6 +1157,18 @@ resource "vercel_project" "test_git" {
   ]
 }
     `, projectSuffix, githubRepo)
+}
+
+func testAccProjectConfigWithGitRepoRelink(projectSuffix, gitType, repo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test_relink" {
+  name = "test-acc-relink-%s"
+  git_repository = {
+    type = "%s"
+    repo = "%s"
+  }
+}
+    `, projectSuffix, gitType, repo)
 }
 
 func testAccProjectConfigWithGitRepoRemoved(projectSuffix string) string {

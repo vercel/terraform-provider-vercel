@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -2634,6 +2635,62 @@ func diffDeployHooks(ctx context.Context, new, old *GitRepository) (toCreate, to
 	return toCreate, toRemove, diags
 }
 
+// gitRepoLinkAttempts bounds how many times a git repository link is attempted
+// when the API keeps failing in a way that is likely to be transient.
+const gitRepoLinkAttempts = 3
+
+// gitRepoLinkRetryDelay is the base delay between git repository link attempts.
+// It is a variable so tests do not have to wait for real backoff.
+var gitRepoLinkRetryDelay = 2 * time.Second
+
+// linkGitRepo links a git repository to a project, retrying a bounded number of
+// times when the API fails transiently, such as a conflict caused by concurrent
+// changes to the same project.
+func (r *projectResource) linkGitRepo(ctx context.Context, request client.LinkGitRepoToProjectRequest) (out client.ProjectResponse, err error) {
+	for attempt := range gitRepoLinkAttempts {
+		out, err = r.client.LinkGitRepoToProject(ctx, request)
+		if err == nil || !client.Transient(err) || attempt == gitRepoLinkAttempts-1 {
+			return out, err
+		}
+		tflog.Warn(ctx, "retrying git repo link after a transient error", map[string]any{
+			"team_id":    request.TeamID,
+			"project_id": request.ProjectID,
+			"attempt":    attempt + 1,
+			"error":      err.Error(),
+		})
+		select {
+		case <-ctx.Done():
+			return out, err
+		case <-time.After(gitRepoLinkRetryDelay * (1 << attempt)):
+		}
+	}
+	return out, err
+}
+
+// restoreGitRepo re-links the git repository a project was previously connected
+// to, so that a failed relink does not leave the project without any git
+// repository.
+func (r *projectResource) restoreGitRepo(ctx context.Context, projectID, teamID string, previous *GitRepository) error {
+	_, err := r.linkGitRepo(ctx, client.LinkGitRepoToProjectRequest{
+		ProjectID: projectID,
+		TeamID:    teamID,
+		Repo:      previous.Repo.ValueString(),
+		Type:      previous.Type.ValueString(),
+	})
+	if err != nil {
+		return err
+	}
+	if previous.ProductionBranch.IsNull() || previous.ProductionBranch.IsUnknown() {
+		return nil
+	}
+	_, err = r.client.UpdateProductionBranch(ctx, client.UpdateProductionBranchRequest{
+		ProjectID: projectID,
+		TeamID:    teamID,
+		Branch:    previous.ProductionBranch.ValueString(),
+	})
+	return err
+}
+
 // Update will update a project and it's associated environment variables via the vercel API.
 // Environment variables are manually diffed and updated individually. Once the environment
 // variables are all updated, the project is updated too.
@@ -2796,20 +2853,39 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 
 		if planGit != nil {
-			out, err = r.client.LinkGitRepoToProject(ctx, client.LinkGitRepoToProjectRequest{
+			out, err = r.linkGitRepo(ctx, client.LinkGitRepoToProjectRequest{
 				ProjectID: plan.ID.ValueString(),
 				TeamID:    plan.TeamID.ValueString(),
 				Repo:      planGit.Repo.ValueString(),
 				Type:      planGit.Type.ValueString(),
 			})
 			if err != nil {
+				rollback := ""
+				stillUnlinked := wasUnlinked
+				if wasUnlinked && stateGit != nil {
+					if restoreErr := r.restoreGitRepo(ctx, plan.ID.ValueString(), plan.TeamID.ValueString(), stateGit); restoreErr != nil {
+						rollback = fmt.Sprintf(
+							" The previous git repo %s could not be restored either, so the project is no longer linked to a git repo: %s",
+							stateGit.Repo.ValueString(),
+							restoreErr,
+						)
+					} else {
+						rollback = fmt.Sprintf(" The previous git repo %s was restored.", stateGit.Repo.ValueString())
+						stillUnlinked = false
+					}
+				}
+				if stillUnlinked && !resp.State.Raw.IsNull() {
+					// The project has no git repo, so state must not claim otherwise.
+					resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("git_repository"), types.ObjectNull(gitRepositoryAttrType.AttrTypes))...)
+				}
 				resp.Diagnostics.AddError(
 					"Error updating project",
 					fmt.Sprintf(
-						"Could not update project git repo %s %s, unexpected error: %s",
+						"Could not update project git repo %s %s, unexpected error: %s.%s",
 						state.TeamID.ValueString(),
 						state.ID.ValueString(),
 						err,
+						rollback,
 					),
 				)
 				return
