@@ -1003,6 +1003,16 @@ func (g *GitProviderOptions) toUpdateProjectRequest(ctx context.Context) (*clien
 	if g == nil {
 		return nil, nil
 	}
+	var requireVerifiedCommits *bool
+	if !g.RequireVerifiedCommits.IsNull() && !g.RequireVerifiedCommits.IsUnknown() {
+		val := g.RequireVerifiedCommits.ValueBool()
+		requireVerifiedCommits = &val
+	}
+	var gitCommitStatus *bool
+	if !g.GitCommitStatus.IsNull() && !g.GitCommitStatus.IsUnknown() {
+		val := g.GitCommitStatus.ValueBool()
+		gitCommitStatus = &val
+	}
 	var createDeployments *string
 	if !g.CreateDeployments.IsNull() && !g.CreateDeployments.IsUnknown() {
 		val := "disabled"
@@ -1028,11 +1038,14 @@ func (g *GitProviderOptions) toUpdateProjectRequest(ctx context.Context) (*clien
 			PropagateFailures: c.PropagateFailures.ValueBool(),
 		}
 	}
+	if requireVerifiedCommits == nil && gitCommitStatus == nil && createDeployments == nil && disableRepositoryDispatchEvents == nil && consolidated == nil {
+		return nil, nil
+	}
 	return &client.GitProviderOptions{
-		RequireVerifiedCommits:          g.RequireVerifiedCommits.ValueBoolPointer(),
+		RequireVerifiedCommits:          requireVerifiedCommits,
 		CreateDeployments:               createDeployments,
 		DisableRepositoryDispatchEvents: disableRepositoryDispatchEvents,
-		GitCommitStatus:                 g.GitCommitStatus.ValueBoolPointer(),
+		GitCommitStatus:                 gitCommitStatus,
 		ConsolidatedGitCommitStatus:     consolidated,
 	}, nil
 }

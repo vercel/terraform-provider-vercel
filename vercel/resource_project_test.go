@@ -1390,6 +1390,86 @@ func TestAcc_ProjectGitProviderOptions(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectGitProviderOptionsUnsetOptionsArePreserved(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccProjectConfigWithoutGitProviderOptions(projectSuffix, testGithubRepo(t))),
+				Check:  testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithPartialGitProviderOptions(projectSuffix, testGithubRepo(t), "")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.create_deployments", "false"),
+					testAccCheckResourceAttrNot("vercel_project.test", "git_provider_options.git_commit_status", "false"),
+					testAccCheckResourceAttrNot("vercel_project.test", "git_provider_options.require_verified_commits", "false"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithPartialGitProviderOptions(projectSuffix, testGithubRepo(t), "npm run build")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
+					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.create_deployments", "false"),
+					testAccCheckResourceAttrNot("vercel_project.test", "git_provider_options.git_commit_status", "false"),
+					testAccCheckResourceAttrNot("vercel_project.test", "git_provider_options.require_verified_commits", "false"),
+				),
+			},
+		},
+	})
+}
+
+// testAccCheckResourceAttrNot passes when an attribute is unset, or set to anything other than the given value.
+func testAccCheckResourceAttrNot(resourceName, key, unwanted string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+		if value, ok := rs.Primary.Attributes[key]; ok && value == unwanted {
+			return fmt.Errorf("%s.%s = %s, want any value other than %s", resourceName, key, value, unwanted)
+		}
+		return nil
+	}
+}
+
+func testAccProjectConfigWithoutGitProviderOptions(projectSuffix, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-git-provider-opts-unset-%s"
+  git_repository = {
+    type = "github"
+    repo = "%s"
+  }
+}
+`, projectSuffix, githubRepo)
+}
+
+func testAccProjectConfigWithPartialGitProviderOptions(projectSuffix, githubRepo, buildCommand string) string {
+	build := ""
+	if buildCommand != "" {
+		build = fmt.Sprintf("build_command = %q", buildCommand)
+	}
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-git-provider-opts-unset-%s"
+  %s
+  git_repository = {
+    type = "github"
+    repo = "%s"
+  }
+  git_provider_options = {
+    create_deployments = false
+  }
+}
+`, projectSuffix, build, githubRepo)
+}
+
 func testAccProjectConfigWithGitProviderOptions(projectSuffix, githubRepo string) string {
 	return fmt.Sprintf(`
 resource "vercel_project" "test" {
