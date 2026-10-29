@@ -2178,7 +2178,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 
 // gitProviderOptionsFromResponse converts the git provider options returned by the API into
 // terraform state. Create, Read and Update only call this when the block is present in the
-// plan, as populating it otherwise would produce a perpetual diff for unconfigured projects.
+// plan, so a configuration that omits the block keeps it absent from state.
 func gitProviderOptionsFromResponse(response *client.GitProviderOptionsResponse) types.Object {
 	if response == nil {
 		return types.ObjectNull(gitProviderOptionsAttrType.AttrTypes)
@@ -3002,8 +3002,9 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		)
 		return
 	}
-	// There is no prior configuration to guard against a perpetual diff on import, so take
-	// the live git provider options instead of leaving them out of state.
+	// Import has no prior plan to take the block from, so record the live options. The
+	// attribute is optional and computed, so a configuration that omits the block keeps these
+	// values without planning a change, and one that sets them plans against the live values.
 	result.GitProviderOptions = gitProviderOptionsFromResponse(out.GitProviderOptions)
 	tflog.Info(ctx, "imported project", map[string]any{
 		"team_id":    result.TeamID.ValueString(),

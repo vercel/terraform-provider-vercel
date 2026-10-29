@@ -135,7 +135,8 @@ data "vercel_project" "passport" {
 			{Config: config(enabled, ""), Check: checkEnabled("all")},
 			{Config: config(enabled, ""), PlanOnly: true},
 			{Config: config(preview, ""), Check: checkEnabled("preview")},
-			{ResourceName: "vercel_project.passport", ImportState: true, ImportStateVerify: true, ImportStateIdFunc: func(*terraform.State) (string, error) { return testTeam(t) + "/" + projectID, nil }},
+			// Import reads the live git provider options, which this configuration never set, so they are absent from the applied state.
+			{ResourceName: "vercel_project.passport", ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"git_provider_options"}, ImportStateIdFunc: func(*terraform.State) (string, error) { return testTeam(t) + "/" + projectID, nil }},
 			{PreConfig: func() {
 				passportFixtureRequest(t, http.MethodPatch, "/v9/projects/"+url.PathEscape(projectID), map[string]any{"passport": nil}, nil)
 			}, Config: config(preview, ""), Check: checkEnabled("preview")},

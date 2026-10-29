@@ -717,7 +717,8 @@ func TestAcc_ProjectImport(t *testing.T) {
 				ImportStateVerify: true,
 				// public_source is deprecated and no longer backed by the API, so
 				// its configured value cannot be recovered on import.
-				ImportStateVerifyIgnore: []string{"public_source"},
+				// Import reads the live git provider options, which this configuration never set, so they are absent from the applied state.
+				ImportStateVerifyIgnore: []string{"public_source", "git_provider_options"},
 				ImportStateIdFunc:       getProjectImportID("vercel_project.test"),
 			},
 		},

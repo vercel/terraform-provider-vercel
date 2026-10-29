@@ -10,9 +10,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
@@ -165,6 +168,147 @@ func TestProjectImportGitProviderOptions(t *testing.T) {
 		if !got.Equal(types.BoolValue(true)) {
 			t.Errorf("imported git_provider_options.consolidated_git_commit_status.%s = %s, want true", attribute, got)
 		}
+	}
+}
+
+// A project that never configured git_provider_options still gets the live options in state
+// on import, so check that Terraform does not then plan a change for an absent configuration.
+func TestProjectImportGitProviderOptionsPlansNoChange(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Method != http.MethodGet || req.URL.Path != "/v10/projects/prj_123" {
+			t.Errorf("unexpected request: %s %s", req.Method, req.URL)
+			http.NotFound(w, req)
+			return
+		}
+		// gitProviderOptions holds the defaults the API reports for a project that never set them.
+		fmt.Fprint(w, `{"id":"prj_123","name":"example","accountId":"team_123","nodeVersion":"22.x","autoAssignCustomDomains":true,"gitForkProtection":true,"gitProviderOptions":{"createDeployments":"disabled","disableRepositoryDispatchEvents":true}}`)
+	}))
+	defer server.Close()
+
+	ctx := context.Background()
+	r := &projectResource{client: client.New("test").WithBaseURL(server.URL)}
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	importResp := resource.ImportStateResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+	r.ImportState(ctx, resource.ImportStateRequest{ID: "prj_123"}, &importResp)
+	if importResp.Diagnostics.HasError() {
+		t.Fatal(importResp.Diagnostics)
+	}
+	var importedOptions types.Object
+	if diags := importResp.State.GetAttribute(ctx, path.Root("git_provider_options"), &importedOptions); diags.HasError() {
+		t.Fatal(diags)
+	}
+	if importedOptions.IsNull() {
+		t.Fatal("import left git_provider_options out of state")
+	}
+
+	objectType, ok := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+	if !ok {
+		t.Fatalf("unexpected schema type %T", schemaResp.Schema.Type().TerraformType(ctx))
+	}
+	configAttributes := map[string]tftypes.Value{}
+	for attribute, attributeType := range objectType.AttributeTypes {
+		configAttributes[attribute] = tftypes.NewValue(attributeType, nil)
+	}
+	configAttributes["name"] = tftypes.NewValue(tftypes.String, "example")
+	config, err := tfprotov6.NewDynamicValue(objectType, tftypes.NewValue(objectType, configAttributes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := tfprotov6.NewDynamicValue(objectType, importResp.State.Raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	providerServer, err := providerserver.NewProtocol6WithError(New())()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Terraform keeps the prior state for an optional and computed attribute that the
+	// configuration omits, so the proposed new state is the imported state.
+	planResp, err := providerServer.PlanResourceChange(ctx, &tfprotov6.PlanResourceChangeRequest{
+		TypeName:         "vercel_project",
+		PriorState:       &state,
+		ProposedNewState: &state,
+		Config:           &config,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, diagnostic := range planResp.Diagnostics {
+		if diagnostic.Severity == tfprotov6.DiagnosticSeverityError {
+			t.Fatalf("plan error: %s: %s", diagnostic.Summary, diagnostic.Detail)
+		}
+	}
+	planned, err := planResp.PlannedState.Unmarshal(objectType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var plannedOptions types.Object
+	plannedState := tfsdk.State{Schema: schemaResp.Schema, Raw: planned}
+	if diags := plannedState.GetAttribute(ctx, path.Root("git_provider_options"), &plannedOptions); diags.HasError() {
+		t.Fatal(diags)
+	}
+	if !plannedOptions.Equal(importedOptions) {
+		t.Errorf("planned git_provider_options = %s, want the imported %s", plannedOptions, importedOptions)
+	}
+	if !planned.Equal(importResp.State.Raw) {
+		t.Error("planning an unchanged configuration after import produced a diff")
+	}
+}
+
+// Changing another attribute of an imported project whose configuration omits
+// git_provider_options leaves the block unknown in the plan, so the update must not send any
+// git provider options and overwrite settings the configuration says nothing about.
+func TestProjectUpdateOmitsUnknownGitProviderOptions(t *testing.T) {
+	updates := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		switch {
+		case req.Method == http.MethodGet && req.URL.Path == "/v10/projects/prj_123":
+		case req.Method == http.MethodPatch && req.URL.Path == "/v9/projects/prj_123":
+			updates++
+			var body map[string]json.RawMessage
+			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+				t.Error(err)
+				http.Error(w, "invalid JSON", http.StatusBadRequest)
+				return
+			}
+			if options, ok := body["gitProviderOptions"]; ok {
+				t.Errorf("update sent gitProviderOptions = %s, want it omitted", options)
+			}
+		default:
+			t.Errorf("unexpected request: %s %s", req.Method, req.URL)
+			http.NotFound(w, req)
+			return
+		}
+		fmt.Fprint(w, `{"id":"prj_123","name":"example","accountId":"team_123","nodeVersion":"22.x","gitProviderOptions":{"createDeployments":"disabled","disableRepositoryDispatchEvents":true}}`)
+	}))
+	defer server.Close()
+
+	ctx := context.Background()
+	r := &projectResource{client: client.New("test").WithBaseURL(server.URL)}
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	importResp := resource.ImportStateResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+	r.ImportState(ctx, resource.ImportStateRequest{ID: "prj_123"}, &importResp)
+	if importResp.Diagnostics.HasError() {
+		t.Fatal(importResp.Diagnostics)
+	}
+
+	plan := tfsdk.Plan{Schema: schemaResp.Schema, Raw: importResp.State.Raw}
+	if diags := plan.SetAttribute(ctx, path.Root("name"), types.StringValue("renamed")); diags.HasError() {
+		t.Fatal(diags)
+	}
+	if diags := plan.SetAttribute(ctx, path.Root("git_provider_options"), types.ObjectUnknown(gitProviderOptionsAttrType.AttrTypes)); diags.HasError() {
+		t.Fatal(diags)
+	}
+	updateResp := resource.UpdateResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+	r.Update(ctx, resource.UpdateRequest{State: importResp.State, Plan: plan}, &updateResp)
+	if updateResp.Diagnostics.HasError() {
+		t.Fatal(updateResp.Diagnostics)
+	}
+	if updates != 1 {
+		t.Fatalf("updates = %d, want 1", updates)
 	}
 }
 
