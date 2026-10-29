@@ -590,6 +590,21 @@ func TestAcc_ProjectWithGitRepository(t *testing.T) {
 				),
 			},
 			{
+				Config: cfg(testAccProjectConfigWithGitRepoEmptyDeployHooks(projectSuffix, testGithubRepo(t))),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test_git", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test_git", "git_repository.deploy_hooks.#", "0"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithGitRepoEmptyDeployHooks(projectSuffix, testGithubRepo(t))),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			{
 				Config: cfg(testAccProjectConfigWithGitRepoRemoved(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccProjectExists(testClient(t), "vercel_project.test_git", testTeam(t)),
@@ -1111,6 +1126,30 @@ resource "vercel_project" "test_git" {
             name = "some other hook"
         }
     ]
+  }
+  environment = [
+    {
+      key        = "foo"
+      value      = "bar2"
+      target     = ["preview"]
+      sensitive  = true
+      comment    = "some updated comment"
+    }
+  ]
+}
+    `, projectSuffix, githubRepo)
+}
+
+func testAccProjectConfigWithGitRepoEmptyDeployHooks(projectSuffix, githubRepo string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test_git" {
+  name = "test-acc-two-%s"
+  public_source = false
+  git_repository = {
+    type = "github"
+    repo = "%s"
+    production_branch = "production"
+    deploy_hooks = []
   }
   environment = [
     {

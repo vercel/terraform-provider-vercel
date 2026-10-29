@@ -1926,9 +1926,11 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 
 	gitRepoObj := types.ObjectNull(gitRepositoryAttrType.AttrTypes)
 	if repo := response.Repository(); repo != nil {
+		// A configured set of deploy hooks is read back even when the project has
+		// none, so an empty set stays an empty set instead of reverting to null.
 		deployHooks := types.SetNull(deployHookType)
-		if repo.DeployHooks != nil && planGit != nil && !planGit.DeployHooks.IsNull() {
-			var dh []deployHook
+		if planGit != nil && !planGit.DeployHooks.IsNull() {
+			dh := make([]deployHook, 0, len(repo.DeployHooks))
 			for _, h := range repo.DeployHooks {
 				dh = append(dh, deployHook{
 					Name: h.Name,
