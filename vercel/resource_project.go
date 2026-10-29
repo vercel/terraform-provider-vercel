@@ -128,6 +128,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						path.MatchRoot("resource_config").AtName("function_default_regions"),
 					),
 				},
+				PlanModifiers: []planmodifier.String{serverlessFunctionRegionPlanModifier{}},
 			},
 			"node_version": schema.StringAttribute{
 				Optional:      true,
@@ -579,6 +580,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					path.MatchRoot("preview_comments"),
 					path.MatchRoot("enable_preview_feedback"),
 				)},
+				PlanModifiers: []planmodifier.Bool{mirrorBoolPlanModifier{counterpart: enablePreviewFeedbackPath}},
 			},
 			"enable_preview_feedback": schema.BoolAttribute{
 				Description: "Enables the Vercel Toolbar on your preview deployments.",
@@ -588,6 +590,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					path.MatchRoot("preview_comments"),
 					path.MatchRoot("enable_preview_feedback"),
 				)},
+				PlanModifiers: []planmodifier.Bool{mirrorBoolPlanModifier{counterpart: previewCommentsPath}},
 			},
 			"enable_production_feedback": schema.BoolAttribute{
 				Description:   "Enables the Vercel Toolbar on your production deployments: one of on, off or default.",
@@ -657,9 +660,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				},
 			},
 			"resource_config": schema.SingleNestedAttribute{
-				Description: "Resource Configuration for the project.",
-				Optional:    true,
-				Computed:    true,
+				Description:   "Resource Configuration for the project.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Object{resourceConfigPlanModifier{}},
 				Attributes: map[string]schema.Attribute{
 					// This is actually "function_default_memory_type" in the API schema, but for better convention, we use "cpu" and do translation in the provider.
 					"function_default_cpu_type": schema.StringAttribute{
@@ -695,6 +699,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 								path.MatchRoot("resource_config").AtName("function_default_regions"),
 							),
 						},
+						PlanModifiers: []planmodifier.Set{functionDefaultRegionsPlanModifier{}},
 					},
 					"fluid": schema.BoolAttribute{
 						Description:   "Enable fluid compute for your Vercel Functions to automatically manage concurrency and optimize performance. Vercel will handle the defaults to ensure the best experience for your workload.",

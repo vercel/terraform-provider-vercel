@@ -321,6 +321,118 @@ func TestAcc_ProjectFunctionDefaultRegions(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectDeprecatedAttributeStability(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	name := fmt.Sprintf("test-acc-deprecated-%s", projectSuffix)
+
+	deprecatedConfig := func(buildCommand, previewComments, region string) string {
+		return cfg(fmt.Sprintf(`
+                resource "vercel_project" "test" {
+                    name = "%[1]s"
+                    %[2]s
+                    preview_comments = %[3]s
+                    serverless_function_region = "%[4]s"
+                }
+                `, name, buildCommand, previewComments, region))
+	}
+	modernConfig := cfg(fmt.Sprintf(`
+                resource "vercel_project" "test" {
+                    name = "%[1]s"
+                    build_command = "npm run build"
+                    enable_preview_feedback = true
+                    resource_config = {
+                        function_default_regions = ["sfo1"]
+                    }
+                }
+                `, name))
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				// deprecated attributes are reflected as configured, and mirrored into their modern counterparts
+				Config: deprecatedConfig("", "false", "iad1"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "iad1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.#", "1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.0", "iad1"),
+				),
+			},
+			{
+				// an unrelated change does not make the modern counterparts known after apply
+				Config: deprecatedConfig(`build_command = "npm run build"`, "false", "iad1"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectKnownValue(
+							"vercel_project.test",
+							tfjsonpath.New("enable_preview_feedback"),
+							knownvalue.Bool(false),
+						),
+						plancheck.ExpectKnownValue(
+							"vercel_project.test",
+							tfjsonpath.New("resource_config").AtMapKey("function_default_regions"),
+							knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("iad1")}),
+						),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "false"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.0", "iad1"),
+				),
+			},
+			{
+				// the deprecated form is stable: replanning the same config is a no-op
+				Config:   deprecatedConfig(`build_command = "npm run build"`, "false", "iad1"),
+				PlanOnly: true,
+			},
+			{
+				// changing the deprecated attributes applies the configured values
+				Config: deprecatedConfig(`build_command = "npm run build"`, "true", "sfo1"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "serverless_function_region", "sfo1"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.0", "sfo1"),
+				),
+			},
+			{
+				// switching to the modern attributes leaves the deprecated region null and keeps preview_comments known
+				Config: modernConfig,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectKnownValue(
+							"vercel_project.test",
+							tfjsonpath.New("preview_comments"),
+							knownvalue.Bool(true),
+						),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"vercel_project.test",
+						tfjsonpath.New("serverless_function_region"),
+						knownvalue.Null(),
+					),
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "preview_comments", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "enable_preview_feedback", "true"),
+					resource.TestCheckResourceAttr("vercel_project.test", "resource_config.function_default_regions.0", "sfo1"),
+				),
+			},
+			{
+				// the modern form is stable too
+				Config:   modernConfig,
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 func TestAcc_ProjectAddingEnvAfterInitialCreation(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
