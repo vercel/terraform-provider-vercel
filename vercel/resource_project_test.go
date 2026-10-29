@@ -557,6 +557,38 @@ func TestAcc_ProjectBuildMachineTypeElastic(t *testing.T) {
 	})
 }
 
+// `ash` is a framework that existing Vercel projects legitimately use, but
+// the public frameworks endpoint omits it, so the provider used to reject it
+// and left those projects unmanageable from Terraform.
+func TestAcc_ProjectFrameworkAsh(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config:      cfg(testAccProjectConfigWithFramework(projectSuffix, "notexist")),
+				ExpectError: regexp.MustCompile("Invalid Framework"),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithFramework(projectSuffix, "ash")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					resource.TestCheckResourceAttr("vercel_project.test", "framework", "ash"),
+				),
+			},
+			{
+				Config: cfg(testAccProjectConfigWithFramework(projectSuffix, "ash")),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func TestAcc_ProjectWithGitRepository(t *testing.T) {
 	projectSuffix := acctest.RandString(16)
 	resource.Test(t, resource.TestCase{
@@ -812,6 +844,15 @@ resource "vercel_project" "test" {
   }
 }
 `, projectSuffix)
+}
+
+func testAccProjectConfigWithFramework(projectSuffix, framework string) string {
+	return fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-framework-%s"
+  framework = %q
+}
+`, projectSuffix, framework)
 }
 
 func testAccProjectConfigWithBuildMachineType(projectSuffix, buildMachineType string) string {

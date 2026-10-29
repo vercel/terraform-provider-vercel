@@ -11,11 +11,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
+const frameworksAPIURL = "https://api-frameworks.zeit.sh/"
+
+// extraFrameworks are frameworks that Vercel supports on projects and
+// deployments, but that the public frameworks endpoint does not list.
+var extraFrameworks = []string{"ash"}
+
 func validateFramework() validatorFramework {
-	return validatorFramework{}
+	return validatorFramework{url: frameworksAPIURL}
 }
 
 type validatorFramework struct {
+	url        string
 	frameworks map[string]struct{}
 }
 
@@ -38,7 +45,7 @@ func (v validatorFramework) ValidateString(ctx context.Context, req validator.St
 		return
 	}
 
-	apires, err := http.Get("https://api-frameworks.zeit.sh/")
+	apires, err := http.Get(v.url)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
@@ -78,11 +85,14 @@ func (v validatorFramework) ValidateString(ctx context.Context, req validator.St
 		)
 		return
 	}
+	if v.frameworks == nil {
+		v.frameworks = map[string]struct{}{}
+	}
 	for _, fw := range fwList {
-		if v.frameworks == nil {
-			v.frameworks = map[string]struct{}{}
-		}
 		v.frameworks[fw.Slug] = struct{}{}
+	}
+	for _, fw := range extraFrameworks {
+		v.frameworks[fw] = struct{}{}
 	}
 
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
