@@ -116,6 +116,58 @@ func TestProjectImportPasswordProtectionUpdate(t *testing.T) {
 	}
 }
 
+func TestProjectImportGitProviderOptions(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Method != http.MethodGet || req.URL.Path != "/v10/projects/prj_123" {
+			t.Errorf("unexpected request: %s %s", req.Method, req.URL)
+			http.NotFound(w, req)
+			return
+		}
+		fmt.Fprint(w, `{"id":"prj_123","name":"example","accountId":"team_123","nodeVersion":"22.x","gitProviderOptions":{"requireVerifiedCommits":true,"createDeployments":"enabled","disableRepositoryDispatchEvents":false,"gitCommitStatus":true,"consolidatedGitCommitStatus":{"enabled":true,"propagateFailures":true}}}`)
+	}))
+	defer server.Close()
+
+	ctx := context.Background()
+	r := &projectResource{client: client.New("test").WithBaseURL(server.URL)}
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	resp := resource.ImportStateResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+	r.ImportState(ctx, resource.ImportStateRequest{ID: "prj_123"}, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatal(resp.Diagnostics)
+	}
+
+	for _, tc := range []struct {
+		attribute string
+		want      types.Bool
+	}{
+		{attribute: "require_verified_commits", want: types.BoolValue(true)},
+		{attribute: "create_deployments", want: types.BoolValue(true)},
+		{attribute: "repository_dispatch_events", want: types.BoolValue(true)},
+		{attribute: "git_commit_status", want: types.BoolValue(true)},
+	} {
+		var got types.Bool
+		attributePath := path.Root("git_provider_options").AtName(tc.attribute)
+		if diags := resp.State.GetAttribute(ctx, attributePath, &got); diags.HasError() {
+			t.Fatal(diags)
+		}
+		if !got.Equal(tc.want) {
+			t.Errorf("imported git_provider_options.%s = %s, want %s", tc.attribute, got, tc.want)
+		}
+	}
+
+	for _, attribute := range []string{"enabled", "propagate_failures"} {
+		var got types.Bool
+		attributePath := path.Root("git_provider_options").AtName("consolidated_git_commit_status").AtName(attribute)
+		if diags := resp.State.GetAttribute(ctx, attributePath, &got); diags.HasError() {
+			t.Fatal(diags)
+		}
+		if !got.Equal(types.BoolValue(true)) {
+			t.Errorf("imported git_provider_options.consolidated_git_commit_status.%s = %s, want true", attribute, got)
+		}
+	}
+}
+
 func TestProjectImportTeamOwnership(t *testing.T) {
 	for _, tc := range []struct {
 		name         string

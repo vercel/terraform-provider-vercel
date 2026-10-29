@@ -1386,6 +1386,12 @@ func TestAcc_ProjectGitProviderOptions(t *testing.T) {
 					resource.TestCheckResourceAttr("vercel_project.test", "git_provider_options.consolidated_git_commit_status.propagate_failures", "false"),
 				),
 			},
+			{
+				ResourceName:      "vercel_project.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getProjectImportID("vercel_project.test"),
+			},
 		},
 	})
 }

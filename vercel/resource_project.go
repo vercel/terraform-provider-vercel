@@ -2113,29 +2113,8 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	gitProviderOptions := types.ObjectNull(gitProviderOptionsAttrType.AttrTypes)
-	if response.GitProviderOptions != nil && !plan.GitProviderOptions.IsNull() && !plan.GitProviderOptions.IsUnknown() {
-		createDeployments := types.BoolNull()
-		if response.GitProviderOptions.CreateDeployments != nil {
-			createDeployments = types.BoolValue(*response.GitProviderOptions.CreateDeployments == "enabled")
-		}
-		repositoryDispatchEvents := types.BoolNull()
-		if response.GitProviderOptions.DisableRepositoryDispatchEvents != nil {
-			repositoryDispatchEvents = types.BoolValue(!*response.GitProviderOptions.DisableRepositoryDispatchEvents)
-		}
-		consolidated := types.ObjectNull(consolidatedGitCommitStatusAttrType.AttrTypes)
-		if response.GitProviderOptions.ConsolidatedGitCommitStatus != nil {
-			consolidated = types.ObjectValueMust(consolidatedGitCommitStatusAttrType.AttrTypes, map[string]attr.Value{
-				"enabled":            types.BoolValue(response.GitProviderOptions.ConsolidatedGitCommitStatus.Enabled),
-				"propagate_failures": types.BoolValue(response.GitProviderOptions.ConsolidatedGitCommitStatus.PropagateFailures),
-			})
-		}
-		gitProviderOptions = types.ObjectValueMust(gitProviderOptionsAttrType.AttrTypes, map[string]attr.Value{
-			"require_verified_commits":       types.BoolPointerValue(response.GitProviderOptions.RequireVerifiedCommits),
-			"create_deployments":             createDeployments,
-			"repository_dispatch_events":     repositoryDispatchEvents,
-			"git_commit_status":              types.BoolPointerValue(response.GitProviderOptions.GitCommitStatus),
-			"consolidated_git_commit_status": consolidated,
-		})
+	if !plan.GitProviderOptions.IsNull() && !plan.GitProviderOptions.IsUnknown() {
+		gitProviderOptions = gitProviderOptionsFromResponse(response.GitProviderOptions)
 	}
 
 	serverlessFunctionRegion := types.StringNull()
@@ -2195,6 +2174,37 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		OnDemandConcurrentBuilds:          onDemandConcurrentBuilds,
 		BuildMachineType:                  buildMachineType,
 	}, nil
+}
+
+// gitProviderOptionsFromResponse converts the git provider options returned by the API into
+// terraform state. Create, Read and Update only call this when the block is present in the
+// plan, as populating it otherwise would produce a perpetual diff for unconfigured projects.
+func gitProviderOptionsFromResponse(response *client.GitProviderOptionsResponse) types.Object {
+	if response == nil {
+		return types.ObjectNull(gitProviderOptionsAttrType.AttrTypes)
+	}
+	createDeployments := types.BoolNull()
+	if response.CreateDeployments != nil {
+		createDeployments = types.BoolValue(*response.CreateDeployments == "enabled")
+	}
+	repositoryDispatchEvents := types.BoolNull()
+	if response.DisableRepositoryDispatchEvents != nil {
+		repositoryDispatchEvents = types.BoolValue(!*response.DisableRepositoryDispatchEvents)
+	}
+	consolidated := types.ObjectNull(consolidatedGitCommitStatusAttrType.AttrTypes)
+	if response.ConsolidatedGitCommitStatus != nil {
+		consolidated = types.ObjectValueMust(consolidatedGitCommitStatusAttrType.AttrTypes, map[string]attr.Value{
+			"enabled":            types.BoolValue(response.ConsolidatedGitCommitStatus.Enabled),
+			"propagate_failures": types.BoolValue(response.ConsolidatedGitCommitStatus.PropagateFailures),
+		})
+	}
+	return types.ObjectValueMust(gitProviderOptionsAttrType.AttrTypes, map[string]attr.Value{
+		"require_verified_commits":       types.BoolPointerValue(response.RequireVerifiedCommits),
+		"create_deployments":             createDeployments,
+		"repository_dispatch_events":     repositoryDispatchEvents,
+		"git_commit_status":              types.BoolPointerValue(response.GitCommitStatus),
+		"consolidated_git_commit_status": consolidated,
+	})
 }
 
 func trustedSourcesObjectFromResponse(response client.TrustedSources) types.Object {
@@ -2992,6 +3002,9 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		)
 		return
 	}
+	// There is no prior configuration to guard against a perpetual diff on import, so take
+	// the live git provider options instead of leaving them out of state.
+	result.GitProviderOptions = gitProviderOptionsFromResponse(out.GitProviderOptions)
 	tflog.Info(ctx, "imported project", map[string]any{
 		"team_id":    result.TeamID.ValueString(),
 		"project_id": result.ID.ValueString(),
