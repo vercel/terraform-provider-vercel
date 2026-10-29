@@ -754,6 +754,88 @@ func TestAcc_ProjectEnablingAffectedProjectDeployments(t *testing.T) {
 	})
 }
 
+func TestAcc_ProjectFunctionFailover(t *testing.T) {
+	projectSuffix := acctest.RandString(16)
+	config := func(attributes string) string {
+		return cfg(fmt.Sprintf(`
+resource "vercel_project" "test" {
+  name = "test-acc-failover-%[1]s"
+  %[2]s
+}
+`, projectSuffix, attributes))
+	}
+	var inherited string
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.test", testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				// an unconfigured attribute takes whatever the project already has
+				Config: config(""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccProjectExists(testClient(t), "vercel_project.test", testTeam(t)),
+					recordProjectAttribute("vercel_project.test", "function_failover", &inherited),
+				),
+			},
+			{
+				// updating another attribute must not reset the live value
+				Config: config(`build_command = "npm run build"`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run build"),
+					checkProjectAttributeMatches("vercel_project.test", "function_failover", &inherited),
+				),
+			},
+			{
+				// an explicit value is still applied
+				Config: config("function_failover = true"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "function_failover", "true"),
+				),
+			},
+			{
+				// removing the attribute keeps the value that was applied
+				Config: config(`build_command = "npm run other"`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "build_command", "npm run other"),
+					resource.TestCheckResourceAttr("vercel_project.test", "function_failover", "true"),
+				),
+			},
+			{
+				// an explicit false is still applied
+				Config: config("function_failover = false"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vercel_project.test", "function_failover", "false"),
+				),
+			},
+		},
+	})
+}
+
+func recordProjectAttribute(n, attribute string, out *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("not found: %s", n)
+		}
+		*out = rs.Primary.Attributes[attribute]
+		return nil
+	}
+}
+
+func checkProjectAttributeMatches(n, attribute string, want *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("not found: %s", n)
+		}
+		if got := rs.Primary.Attributes[attribute]; got != *want {
+			return fmt.Errorf("%s = %q, want %q", attribute, got, *want)
+		}
+		return nil
+	}
+}
+
 func testAccProjectExists(testClient *client.Client, n, teamID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]

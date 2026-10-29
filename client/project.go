@@ -204,7 +204,7 @@ type ProjectResponse struct {
 	PreviewDeploymentsDisabled           bool                        `json:"previewDeploymentsDisabled"`
 	AutoAssignCustomDomains              bool                        `json:"autoAssignCustomDomains"`
 	GitLFS                               bool                        `json:"gitLFS"`
-	ServerlessFunctionZeroConfigFailover bool                        `json:"serverlessFunctionZeroConfigFailover"`
+	ServerlessFunctionZeroConfigFailover *bool                       `json:"serverlessFunctionZeroConfigFailover"`
 	CustomerSupportCodeVisibility        bool                        `json:"customerSupportCodeVisibility"`
 	GitForkProtection                    bool                        `json:"gitForkProtection"`
 	ProductionDeploymentsFastLane        bool                        `json:"productionDeploymentsFastLane"`
@@ -378,7 +378,7 @@ type UpdateProjectRequest struct {
 	PreviewDeploymentsDisabled           bool                            `json:"previewDeploymentsDisabled"`
 	AutoAssignCustomDomains              bool                            `json:"autoAssignCustomDomains"`
 	GitLFS                               bool                            `json:"gitLFS"`
-	ServerlessFunctionZeroConfigFailover bool                            `json:"serverlessFunctionZeroConfigFailover"`
+	ServerlessFunctionZeroConfigFailover *bool                           `json:"serverlessFunctionZeroConfigFailover,omitempty"`
 	CustomerSupportCodeVisibility        bool                            `json:"customerSupportCodeVisibility"`
 	GitForkProtection                    bool                            `json:"gitForkProtection"`
 	ProductionDeploymentsFastLane        bool                            `json:"productionDeploymentsFastLane"`

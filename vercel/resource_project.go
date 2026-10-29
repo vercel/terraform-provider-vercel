@@ -1117,6 +1117,15 @@ func knownBool(v types.Bool) bool {
 	return !v.IsNull() && !v.IsUnknown()
 }
 
+// knownBoolPointer returns nil for null or unknown values so that they are
+// omitted from an update request instead of being sent as false.
+func knownBoolPointer(v types.Bool) *bool {
+	if !knownBool(v) {
+		return nil
+	}
+	return v.ValueBoolPointer()
+}
+
 func knownString(v types.String) bool {
 	return !v.IsNull() && !v.IsUnknown()
 }
@@ -1193,7 +1202,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		PreviewDeploymentsDisabled:           p.PreviewDeploymentsDisabled.ValueBool(),
 		AutoAssignCustomDomains:              p.AutoAssignCustomDomains.ValueBool(),
 		GitLFS:                               p.GitLFS.ValueBool(),
-		ServerlessFunctionZeroConfigFailover: p.FunctionFailover.ValueBool(),
+		ServerlessFunctionZeroConfigFailover: knownBoolPointer(p.FunctionFailover),
 		CustomerSupportCodeVisibility:        p.CustomerSuccessCodeVisibility.ValueBool(),
 		ProtectedSourcemaps:                  p.ProtectedSourcemaps.ValueBool(),
 		GitForkProtection:                    p.GitForkProtection.ValueBool(),
@@ -2143,6 +2152,14 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		serverlessFunctionRegion = types.StringPointerValue(response.ServerlessFunctionRegion)
 	}
 
+	// The API omits serverlessFunctionZeroConfigFailover for projects that inherit
+	// the platform default, so a missing field must not be read as an explicit
+	// false: keep any value already known to Terraform instead.
+	functionFailover := types.BoolPointerValue(response.ServerlessFunctionZeroConfigFailover)
+	if functionFailover.IsNull() && knownBool(plan.FunctionFailover) {
+		functionFailover = plan.FunctionFailover
+	}
+
 	onDemandConcurrentBuilds := types.BoolNull()
 	buildMachineType := types.StringNull()
 	if response.ResourceConfig != nil {
@@ -2181,7 +2198,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		PreviewDeploymentsDisabled:        types.BoolValue(response.PreviewDeploymentsDisabled),
 		AutoAssignCustomDomains:           types.BoolValue(response.AutoAssignCustomDomains),
 		GitLFS:                            types.BoolValue(response.GitLFS),
-		FunctionFailover:                  types.BoolValue(response.ServerlessFunctionZeroConfigFailover),
+		FunctionFailover:                  functionFailover,
 		CustomerSuccessCodeVisibility:     types.BoolValue(response.CustomerSupportCodeVisibility),
 		ProtectedSourcemaps:               types.BoolValue(response.ProtectedSourcemaps),
 		GitForkProtection:                 types.BoolValue(response.GitForkProtection),
