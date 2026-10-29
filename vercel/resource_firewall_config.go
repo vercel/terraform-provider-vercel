@@ -683,21 +683,22 @@ type AiBotsConfig struct {
 }
 
 func (a *AiBotsConfig) toClient() client.ManagedRule {
-	rule := client.ManagedRule{Active: a.Active.ValueBool()}
-	if !a.Action.IsNull() {
-		rule.Action = a.Action.ValueString()
+	rule := client.ManagedRule{Active: a.Active.ValueBool(), Action: a.Action.ValueString()}
+	if a.AiCrawlers == nil && a.AiAssistants == nil {
 		return rule
 	}
-	rule.RuleGroups = make(map[string]client.RuleGroup, 2)
-	for id, category := range map[string]*RuleGroup{"ai_crawlers": a.AiCrawlers, "ai_assistants": a.AiAssistants} {
-		group := client.RuleGroup{Active: true, Action: "log"}
-		if category != nil {
-			group.Active = category.Active.IsNull() || category.Active.ValueBool()
-			group.Action = category.Action.ValueString()
-		}
-		rule.RuleGroups[id] = group
+	rule.RuleGroups = map[string]client.RuleGroup{
+		"ai_crawlers":   a.AiCrawlers.toClient(),
+		"ai_assistants": a.AiAssistants.toClient(),
 	}
 	return rule
+}
+
+func (g *RuleGroup) toClient() client.RuleGroup {
+	if g == nil {
+		return client.RuleGroup{Active: true, Action: "log"}
+	}
+	return client.RuleGroup{Active: g.Active.IsNull() || g.Active.ValueBool(), Action: g.Action.ValueString()}
 }
 
 func fromAiBots(rule client.ManagedRule, ref *AiBotsConfig, mode firewallFlattenMode) *AiBotsConfig {

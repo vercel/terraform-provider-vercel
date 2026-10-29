@@ -68,7 +68,7 @@ func TestAcc_FirewallConfigAiBotsLifecycle(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: createAiBotsConfig(""),
-				Check:  expectAiBotsInAPI(api, aiBotsCategories{crawlers: activeLog, assistants: activeLog}),
+				Check:  expectNoAiBotsCategoriesInAPI(api),
 			},
 			{
 				Config: createAiBotsConfig(`ai_crawlers = { action = "deny" }`),
@@ -150,7 +150,7 @@ func TestAcc_FirewallConfigAiBotsNullActionFromAnotherResource(t *testing.T) {
 		Steps: []resource.TestStep{{
 			Config: `resource "terraform_data" "action" { input = null }` +
 				createAiBotsConfig(`action = terraform_data.action.output`),
-			Check: expectAiBotsInAPI(api, aiBotsCategories{crawlers: activeLog, assistants: activeLog}),
+			Check: expectNoAiBotsCategoriesInAPI(api),
 		}},
 	})
 }
@@ -210,6 +210,17 @@ func expectAiBotsInAPI(api *firewallConfigLocalAPI, want aiBotsCategories) resou
 		}}
 		if got := api.active.ManagedRulesets["ai_bots"]; !reflect.DeepEqual(got, wantRule) {
 			return fmt.Errorf("AI Bots config:\ngot: %+v\nwant: %+v", got, wantRule)
+		}
+		return nil
+	}
+}
+
+func expectNoAiBotsCategoriesInAPI(api *firewallConfigLocalAPI) resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		api.mu.Lock()
+		defer api.mu.Unlock()
+		if got := api.active.ManagedRulesets["ai_bots"]; len(got.RuleGroups) != 0 {
+			return fmt.Errorf("expected no AI Bots categories, got: %+v", got)
 		}
 		return nil
 	}

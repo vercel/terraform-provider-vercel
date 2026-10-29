@@ -21,9 +21,9 @@ func TestAiBotsToClient(t *testing.T) {
 		want   client.ManagedRule
 	}{
 		{
-			name:   "defaults",
+			name:   "no categories",
 			config: AiBotsConfig{Active: types.BoolValue(true)},
-			want:   client.ManagedRule{Active: true, RuleGroups: aiBotsRuleGroups(logGroup, logGroup)},
+			want:   client.ManagedRule{Active: true},
 		},
 		{
 			name:   "omitted assistants",
@@ -41,7 +41,7 @@ func TestAiBotsToClient(t *testing.T) {
 		{
 			name:   "disabled ruleset",
 			config: AiBotsConfig{Active: types.BoolValue(false)},
-			want:   client.ManagedRule{Active: false, RuleGroups: aiBotsRuleGroups(logGroup, logGroup)},
+			want:   client.ManagedRule{Active: false},
 		},
 		{
 			name:   "legacy action",
