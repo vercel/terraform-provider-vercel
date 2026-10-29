@@ -655,7 +655,7 @@ type BotFilterConfig struct {
 func aiBotsCategorySchema(description string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		Optional:    true,
-		Description: description + " Omitted categories default to active with action log.",
+		Description: description + " When only one category is set, the other defaults to active with action log.",
 		Attributes: map[string]schema.Attribute{
 			"active": schema.BoolAttribute{
 				Optional:    true,

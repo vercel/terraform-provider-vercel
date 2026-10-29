@@ -295,8 +295,8 @@ Optional:
 
 - `action` (String, Deprecated) Legacy action for the entire AI Bots ruleset. You should use ai_assistants and ai_crawlers rule groups below.
 - `active` (Boolean)
-- `ai_assistants` (Attributes) AI bots that assist a user, such as search or fetching content. Omitted categories default to active with action log. (see [below for nested schema](#nestedatt--managed_rulesets--ai_bots--ai_assistants))
-- `ai_crawlers` (Attributes) AI bots that crawl content for indexing and training. Omitted categories default to active with action log. (see [below for nested schema](#nestedatt--managed_rulesets--ai_bots--ai_crawlers))
+- `ai_assistants` (Attributes) AI bots that assist a user, such as search or fetching content. When only one category is set, the other defaults to active with action log. (see [below for nested schema](#nestedatt--managed_rulesets--ai_bots--ai_assistants))
+- `ai_crawlers` (Attributes) AI bots that crawl content for indexing and training. When only one category is set, the other defaults to active with action log. (see [below for nested schema](#nestedatt--managed_rulesets--ai_bots--ai_crawlers))
 
 <a id="nestedatt--managed_rulesets--ai_bots--ai_assistants"></a>
 ### Nested Schema for `managed_rulesets.ai_bots.ai_assistants`
