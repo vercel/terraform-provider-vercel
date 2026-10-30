@@ -3,6 +3,7 @@ package vercel_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -14,6 +15,10 @@ import (
 )
 
 func TestAcc_FeatureFlagConnectionResource(t *testing.T) {
+	if os.Getenv("VERCEL_TERRAFORM_TESTING_FLAGS_CONNECTIONS") == "" {
+		t.Skip("VERCEL_TERRAFORM_TESTING_FLAGS_CONNECTIONS must be set for a team with Flags project connections enabled")
+	}
+
 	projectSuffix := strings.ToLower(acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
