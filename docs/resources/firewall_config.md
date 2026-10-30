@@ -201,8 +201,9 @@ resource "vercel_firewall_config" "managed" {
     }
 
     ai_bots {
-      action = "log"
-      active = true
+      active        = true
+      ai_crawlers   = { action = "deny" }
+      ai_assistants = { action = "log" }
     }
   }
 }
@@ -282,7 +283,7 @@ Read-Only:
 
 Optional:
 
-- `ai_bots` (Block, Optional) Enable the ai_bots managed ruleset and select action (see [below for nested schema](#nestedblock--managed_rulesets--ai_bots))
+- `ai_bots` (Block, Optional) Configure AI Bots managed ruleset and block AI Crawlers or AI Assistants. (see [below for nested schema](#nestedblock--managed_rulesets--ai_bots))
 - `bot_filter` (Block, Optional, Deprecated) DEPRECATED: Use bot_protection instead. This block will be removed in a future release. (see [below for nested schema](#nestedblock--managed_rulesets--bot_filter))
 - `bot_protection` (Block, Optional) Enable the bot_protection managed ruleset and select action (see [below for nested schema](#nestedblock--managed_rulesets--bot_protection))
 - `owasp` (Block, Optional) Enable the owasp managed rulesets and select ruleset behaviors (see [below for nested schema](#nestedblock--managed_rulesets--owasp))
@@ -292,8 +293,34 @@ Optional:
 
 Optional:
 
-- `action` (String)
+- `action` (String, Deprecated) Legacy action for the entire AI Bots ruleset. You should use ai_assistants and ai_crawlers rule groups below.
 - `active` (Boolean)
+- `ai_assistants` (Attributes) AI bots that assist a user, such as search or fetching content. When only one category is set, the other defaults to active with action log. (see [below for nested schema](#nestedatt--managed_rulesets--ai_bots--ai_assistants))
+- `ai_crawlers` (Attributes) AI bots that crawl content for indexing and training. When only one category is set, the other defaults to active with action log. (see [below for nested schema](#nestedatt--managed_rulesets--ai_bots--ai_crawlers))
+
+<a id="nestedatt--managed_rulesets--ai_bots--ai_assistants"></a>
+### Nested Schema for `managed_rulesets.ai_bots.ai_assistants`
+
+Required:
+
+- `action` (String) Action for this category. Either log or deny.
+
+Optional:
+
+- `active` (Boolean) Whether this category is active. Set to false to allow this category. Defaults to true.
+
+
+<a id="nestedatt--managed_rulesets--ai_bots--ai_crawlers"></a>
+### Nested Schema for `managed_rulesets.ai_bots.ai_crawlers`
+
+Required:
+
+- `action` (String) Action for this category. Either log or deny.
+
+Optional:
+
+- `active` (Boolean) Whether this category is active. Set to false to allow this category. Defaults to true.
+
 
 
 <a id="nestedblock--managed_rulesets--bot_filter"></a>

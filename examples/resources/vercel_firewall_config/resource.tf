@@ -186,8 +186,9 @@ resource "vercel_firewall_config" "managed" {
     }
 
     ai_bots {
-      action = "log"
-      active = true
+      active        = true
+      ai_crawlers   = { action = "deny" }
+      ai_assistants = { action = "log" }
     }
   }
 }
