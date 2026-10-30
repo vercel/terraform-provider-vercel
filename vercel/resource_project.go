@@ -139,6 +139,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 						"20.x",
 						"22.x",
 						"24.x",
+						"26.x",
 					),
 				},
 				Description: "The version of Node.js that is used in the Build Step and for Serverless Functions. A new Deployment is required for your changes to take effect.",
