@@ -488,3 +488,72 @@ func featureFlagSegmentRequestData(data FeatureFlagSegmentData) map[string]any {
 	}
 	return body
 }
+
+type FeatureFlagConnection struct {
+	SourceProjectID   string `json:"sourceProjectId"`
+	ConsumerProjectID string `json:"consumerProjectId"`
+	CreatedBy         string `json:"createdBy"`
+	CreatedAt         int64  `json:"createdAt"`
+}
+
+type CreateFeatureFlagConnectionRequest struct {
+	ProjectID         string `json:"-"`
+	TeamID            string `json:"-"`
+	ConsumerProjectID string `json:"consumerProjectId"`
+}
+
+type ListFeatureFlagConnectionsRequest struct {
+	ProjectID string
+	TeamID    string
+}
+
+type DeleteFeatureFlagConnectionRequest struct {
+	ProjectID         string
+	ConsumerProjectID string
+	TeamID            string
+}
+
+func (c *Client) CreateFeatureFlagConnection(ctx context.Context, request CreateFeatureFlagConnectionRequest) (r FeatureFlagConnection, err error) {
+	url := featureFlagScopedURL(c, request.ProjectID, "connections", request.TeamID)
+	payload := string(mustMarshal(request))
+	tflog.Info(ctx, "creating feature flag connection", map[string]any{
+		"url":     url,
+		"payload": payload,
+	})
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "PUT",
+		url:    url,
+		body:   payload,
+	}, &r)
+	return r, err
+}
+
+// ListFeatureFlagConnections lists the projects connected to the flags of the given source project.
+func (c *Client) ListFeatureFlagConnections(ctx context.Context, request ListFeatureFlagConnectionsRequest) (r []FeatureFlagConnection, err error) {
+	url := featureFlagScopedURL(c, request.ProjectID, "connections", request.TeamID)
+	tflog.Info(ctx, "listing feature flag connections", map[string]any{
+		"url": url,
+	})
+	var response struct {
+		Data []FeatureFlagConnection `json:"data"`
+	}
+	err = c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "GET",
+		url:    url,
+	}, &response)
+	return response.Data, err
+}
+
+func (c *Client) DeleteFeatureFlagConnection(ctx context.Context, request DeleteFeatureFlagConnectionRequest) error {
+	url := featureFlagScopedURL(c, request.ProjectID, fmt.Sprintf("connections/%s", request.ConsumerProjectID), request.TeamID)
+	tflog.Info(ctx, "deleting feature flag connection", map[string]any{
+		"url": url,
+	})
+	return c.doRequest(clientRequest{
+		ctx:    ctx,
+		method: "DELETE",
+		url:    url,
+	}, nil)
+}

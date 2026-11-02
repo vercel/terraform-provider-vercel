@@ -867,6 +867,85 @@ func TestDeleteFeatureFlagSDKKey(t *testing.T) {
 	}
 }
 
+func TestCreateFeatureFlagConnection(t *testing.T) {
+	t.Parallel()
+
+	request := vercelclient.CreateFeatureFlagConnectionRequest{
+		ProjectID:         "prj_source",
+		TeamID:            "team_123",
+		ConsumerProjectID: "prj_consumer",
+	}
+
+	client := newFeatureFlagTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		assertRequest(t, r, "PUT", "/v1/projects/prj_source/feature-flags/connections", "team_123", request)
+		_, _ = w.Write([]byte(`{
+			"sourceProjectId":"prj_source",
+			"consumerProjectId":"prj_consumer",
+			"createdBy":"user_123",
+			"createdAt":1
+		}`))
+	})
+
+	connection, err := client.CreateFeatureFlagConnection(context.Background(), request)
+	if err != nil {
+		t.Fatalf("CreateFeatureFlagConnection returned error: %v", err)
+	}
+
+	if connection.SourceProjectID != "prj_source" {
+		t.Fatalf("expected source project prj_source, got %q", connection.SourceProjectID)
+	}
+	if connection.ConsumerProjectID != "prj_consumer" {
+		t.Fatalf("expected consumer project prj_consumer, got %q", connection.ConsumerProjectID)
+	}
+}
+
+func TestListFeatureFlagConnections(t *testing.T) {
+	t.Parallel()
+
+	client := newFeatureFlagTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		assertRequest(t, r, "GET", "/v1/projects/prj_source/feature-flags/connections", "team_123", nil)
+		_, _ = w.Write([]byte(`{
+			"data":[
+				{"sourceProjectId":"prj_source","consumerProjectId":"prj_a","createdBy":"user_123","createdAt":1},
+				{"sourceProjectId":"prj_source","consumerProjectId":"prj_b","createdBy":"team_123","createdAt":2}
+			]
+		}`))
+	})
+
+	connections, err := client.ListFeatureFlagConnections(context.Background(), vercelclient.ListFeatureFlagConnectionsRequest{
+		ProjectID: "prj_source",
+		TeamID:    "team_123",
+	})
+	if err != nil {
+		t.Fatalf("ListFeatureFlagConnections returned error: %v", err)
+	}
+
+	if len(connections) != 2 {
+		t.Fatalf("expected 2 connections, got %d", len(connections))
+	}
+	if connections[1].ConsumerProjectID != "prj_b" {
+		t.Fatalf("expected second consumer prj_b, got %q", connections[1].ConsumerProjectID)
+	}
+}
+
+func TestDeleteFeatureFlagConnection(t *testing.T) {
+	t.Parallel()
+
+	client := newFeatureFlagTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		assertRequest(t, r, "DELETE", "/v1/projects/prj_source/feature-flags/connections/prj_consumer", "team_123", nil)
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	err := client.DeleteFeatureFlagConnection(context.Background(), vercelclient.DeleteFeatureFlagConnectionRequest{
+		ProjectID:         "prj_source",
+		ConsumerProjectID: "prj_consumer",
+		TeamID:            "team_123",
+	})
+	if err != nil {
+		t.Fatalf("DeleteFeatureFlagConnection returned error: %v", err)
+	}
+}
+
 func newFeatureFlagTestClient(t *testing.T, handler http.HandlerFunc) *vercelclient.Client {
 	t.Helper()
 
