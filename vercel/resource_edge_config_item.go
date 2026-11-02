@@ -11,10 +11,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/dynamicplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -106,16 +106,14 @@ An Edge Config Item is a value within an Edge Config.
 				},
 			},
 			"value": schema.StringAttribute{
-				Description:   "The value you want to assign to the key when using a string.",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured()},
+				Description: "The value you want to assign to the key when using a string. Changing this updates the item in place.",
+				Optional:    true,
+				Computed:    true,
 			},
 			"value_json": schema.DynamicAttribute{
-				Description:   "Structured JSON value to assign to the key (object/array/number/bool/null).",
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.Dynamic{dynamicplanmodifier.RequiresReplaceIfConfigured()},
+				Description: "Structured JSON value to assign to the key (object/array/number/bool/null). Changing this updates the item in place.",
+				Optional:    true,
+				Computed:    true,
 			},
 		},
 	}
@@ -368,20 +366,16 @@ func parseRawToState(ctx context.Context, out client.EdgeConfigItem) (EdgeConfig
 	return res, nil
 }
 
-// Create will create an edgeConfigToken within Vercel.
-// This is called automatically by the provider when a new resource should be created.
-func (r *edgeConfigItemResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan EdgeConfigItem
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+// upsertEdgeConfigItem writes the planned value for an item to the Edge Config.
+// The Vercel API performs this as an upsert, so the same call is used for both
+// Create and Update. action ("creating"/"updating") is only used in diagnostics.
+func (r *edgeConfigItemResource) upsertEdgeConfigItem(ctx context.Context, plan EdgeConfigItem, action string) (EdgeConfigItem, diag.Diagnostics) {
+	var diags diag.Diagnostics
 
 	raw, err := buildJSONRaw(ctx, plan.Value, plan.ValueJSON)
 	if err != nil {
-		resp.Diagnostics.AddError("Invalid value for Edge Config Item", err.Error())
-		return
+		diags.AddError("Invalid value for Edge Config Item", err.Error())
+		return EdgeConfigItem{}, diags
 	}
 
 	out, err := r.client.CreateEdgeConfigItem(ctx, client.CreateEdgeConfigItemRequest{
@@ -391,16 +385,34 @@ func (r *edgeConfigItemResource) Create(ctx context.Context, req resource.Create
 		Value:        raw,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error creating Edge Config Item",
-			"Could not create Edge Config Item, unexpected error: "+err.Error(),
+		diags.AddError(
+			fmt.Sprintf("Error %s Edge Config Item", action),
+			fmt.Sprintf("Could not %s Edge Config Item, unexpected error: %s", action, err.Error()),
 		)
-		return
+		return EdgeConfigItem{}, diags
 	}
 
 	result, err := parseRawToState(ctx, out)
 	if err != nil {
-		resp.Diagnostics.AddError("Error parsing Edge Config Item", err.Error())
+		diags.AddError("Error parsing Edge Config Item", err.Error())
+		return EdgeConfigItem{}, diags
+	}
+	return result, diags
+}
+
+// Create will create an Edge Config Item within Vercel.
+// This is called automatically by the provider when a new resource should be created.
+func (r *edgeConfigItemResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan EdgeConfigItem
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	result, diags := r.upsertEdgeConfigItem(ctx, plan, "creating")
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 	tflog.Info(ctx, "created Edge Config Item", map[string]any{
@@ -464,12 +476,33 @@ func (r *edgeConfigItemResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 }
 
-// Update is the same as Create
+// Update changes the value of an existing Edge Config Item in place.
+// The Vercel API upserts the key, so the item is never absent between the old
+// and new value, unlike a delete-then-create replacement. Changes to
+// edge_config_id or key still force a replacement via their plan modifiers.
 func (r *edgeConfigItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError(
-		"Updating an Edge Config Item is not supported. If you see this error, this is a bug in the provider.",
-		"Updating an Edge Config Item is not supported. If you see this error, this is a bug in the provider.",
-	)
+	var plan EdgeConfigItem
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	result, diags := r.upsertEdgeConfigItem(ctx, plan, "updating")
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "updated Edge Config Item", map[string]any{
+		"edge_config_id": plan.EdgeConfigID.ValueString(),
+		"key":            result.Key.ValueString(),
+	})
+
+	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Delete deletes an Edge Config Item.

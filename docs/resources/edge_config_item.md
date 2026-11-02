@@ -44,8 +44,8 @@ resource "vercel_edge_config_item" "example" {
 ### Optional
 
 - `team_id` (String) The ID of the team the Edge Config should exist under. Required when configuring a team resource if a default team has not been set in the provider.
-- `value` (String) The value you want to assign to the key when using a string.
-- `value_json` (Dynamic) Structured JSON value to assign to the key (object/array/number/bool/null).
+- `value` (String) The value you want to assign to the key when using a string. Changing this updates the item in place.
+- `value_json` (Dynamic) Structured JSON value to assign to the key (object/array/number/bool/null). Changing this updates the item in place.
 
 ### Read-Only
 
