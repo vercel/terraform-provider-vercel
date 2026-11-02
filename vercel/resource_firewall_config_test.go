@@ -394,6 +394,18 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"managed_rulesets.ai_bots.active",
 						"true"),
 					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.aibotscategories",
+						"managed_rulesets.ai_bots.ai_crawlers.action",
+						"deny"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.aibotscategories",
+						"managed_rulesets.ai_bots.ai_assistants.active",
+						"false"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.aibotscategories",
+						"managed_rulesets.ai_bots.ai_assistants.action",
+						"log"),
+					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.existence",
 						"rules.rule.0.name",
 						"test_existence"),
@@ -431,6 +443,11 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 				ImportState:       true,
 				ResourceName:      "vercel_firewall_config.aibots",
 				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.aibots"),
+			},
+			{
+				ImportState:       true,
+				ResourceName:      "vercel_firewall_config.aibotscategories",
+				ImportStateIdFunc: getFirewallImportID("vercel_firewall_config.aibotscategories"),
 			},
 			{
 				ImportState:       true,
@@ -601,6 +618,13 @@ func TestAcc_FirewallConfigResource(t *testing.T) {
 						"vercel_firewall_config.aibots",
 						"managed_rulesets.ai_bots.active",
 						"false"),
+					resource.TestCheckResourceAttr(
+						"vercel_firewall_config.aibotscategories",
+						"managed_rulesets.ai_bots.ai_crawlers.action",
+						"log"),
+					resource.TestCheckNoResourceAttr(
+						"vercel_firewall_config.aibotscategories",
+						"managed_rulesets.ai_bots.ai_assistants.action"),
 					resource.TestCheckResourceAttr(
 						"vercel_firewall_config.existence",
 						"rules.rule.0.name",
@@ -810,6 +834,22 @@ resource "vercel_firewall_config" "aibots" {
         ai_bots {
             action = "challenge"
             active = true
+        }
+    }
+}
+
+resource "vercel_project" "aibotscategories" {
+    name = "test-acc-%[1]s-aibotscategories"
+}
+
+resource "vercel_firewall_config" "aibotscategories" {
+    project_id = vercel_project.aibotscategories.id
+
+    managed_rulesets {
+        ai_bots {
+            active = true
+            ai_crawlers = { active = true, action = "deny" }
+            ai_assistants = { active = false, action = "log" }
         }
     }
 }
@@ -1048,6 +1088,21 @@ resource "vercel_firewall_config" "aibots" {
         ai_bots {
             action = "deny"
             active = false
+        }
+    }
+}
+
+resource "vercel_project" "aibotscategories" {
+    name = "test-acc-%[1]s-aibotscategories"
+}
+
+resource "vercel_firewall_config" "aibotscategories" {
+    project_id = vercel_project.aibotscategories.id
+
+    managed_rulesets {
+        ai_bots {
+            active = true
+            ai_crawlers = { action = "log" }
         }
     }
 }
