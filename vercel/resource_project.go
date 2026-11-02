@@ -516,8 +516,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.",
 			},
 			"git_comments": schema.SingleNestedAttribute{
-				Description: "Configuration for Git Comments.",
-				Optional:    true,
+				Description:   "Configuration for Git Comments. When omitted, existing settings are preserved.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"on_pull_request": schema.BoolAttribute{
 						Description: "Whether Pull Request comments are enabled",
@@ -2102,7 +2104,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	gitComments := types.ObjectNull(gitCommentsAttrTypes)
-	if response.GitComments != nil && !plan.GitComments.IsNull() {
+	if response.GitComments != nil {
 		var diags diag.Diagnostics
 		gitComments, diags = types.ObjectValueFrom(ctx, gitCommentsAttrTypes, &GitComments{
 			OnPullRequest: types.BoolValue(response.GitComments.OnPullRequest),
