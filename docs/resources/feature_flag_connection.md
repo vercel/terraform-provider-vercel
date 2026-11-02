@@ -4,17 +4,17 @@ page_title: "vercel_feature_flag_connection Resource - terraform-provider-vercel
 subcategory: ""
 description: |-
   Provides a Feature Flag Connection resource.
-  A connection lets a consumer project in the same team read the flags of a source project. The consumer reads the source project's flags with its own deployment identity by naming the source project in the Flags SDK. Deleting the connection revokes access immediately, without a redeploy.
-  Vercel Flags must be enabled on the source project before other projects can be connected to it.
+  A connection lets a consumer project in the same team read the flags of a source project. The consumer reads the source project's flags with its own deployment identity by naming the source project in the Flags SDK. Deleting the connection revokes access without a redeploy.
+  Vercel Flags must be enabled on the source project before other projects can be connected to it, for example by creating a vercel_feature_flag_definition on it first.
 ---
 
 # vercel_feature_flag_connection (Resource)
 
 Provides a Feature Flag Connection resource.
 
-A connection lets a consumer project in the same team read the flags of a source project. The consumer reads the source project's flags with its own deployment identity by naming the source project in the Flags SDK. Deleting the connection revokes access immediately, without a redeploy.
+A connection lets a consumer project in the same team read the flags of a source project. The consumer reads the source project's flags with its own deployment identity by naming the source project in the Flags SDK. Deleting the connection revokes access without a redeploy.
 
-Vercel Flags must be enabled on the source project before other projects can be connected to it.
+Vercel Flags must be enabled on the source project before other projects can be connected to it, for example by creating a `vercel_feature_flag_definition` on it first.
 
 ## Example Usage
 
@@ -27,10 +27,30 @@ resource "vercel_project" "consumer" {
   name = "feature-flag-connection-consumer"
 }
 
+# Flags must be enabled on the source project before other projects can be
+# connected to it. Creating a flag enables Flags on the project.
+resource "vercel_feature_flag_definition" "example" {
+  project_id = vercel_project.source.id
+  key        = "checkout-redesign"
+  kind       = "boolean"
+  variant = [
+    {
+      id         = "off"
+      value_bool = false
+    },
+    {
+      id         = "on"
+      value_bool = true
+    },
+  ]
+}
+
 # Lets the consumer project read the flags of the source project.
 resource "vercel_feature_flag_connection" "example" {
   project_id          = vercel_project.source.id
   consumer_project_id = vercel_project.consumer.id
+
+  depends_on = [vercel_feature_flag_definition.example]
 }
 ```
 

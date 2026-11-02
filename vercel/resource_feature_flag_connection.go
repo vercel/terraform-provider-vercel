@@ -61,9 +61,9 @@ func (r *featureFlagConnectionResource) Schema(_ context.Context, req resource.S
 		Description: `
 Provides a Feature Flag Connection resource.
 
-A connection lets a consumer project in the same team read the flags of a source project. The consumer reads the source project's flags with its own deployment identity by naming the source project in the Flags SDK. Deleting the connection revokes access immediately, without a redeploy.
+A connection lets a consumer project in the same team read the flags of a source project. The consumer reads the source project's flags with its own deployment identity by naming the source project in the Flags SDK. Deleting the connection revokes access without a redeploy.
 
-Vercel Flags must be enabled on the source project before other projects can be connected to it.
+Vercel Flags must be enabled on the source project before other projects can be connected to it, for example by creating a ` + "`vercel_feature_flag_definition`" + ` on it first.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
