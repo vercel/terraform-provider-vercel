@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
@@ -125,4 +126,114 @@ resource "vercel_log_drain" "maximal" {
     endpoint = "https://verify-test-rouge.vercel.app/api?${data.vercel_endpoint_verification.test.verification_code}"
 }
 `, name)
+}
+
+func TestAcc_LogDrainResource_WriteOnly(t *testing.T) {
+	name := "write-only-" + acctest.RandString(16)
+	const address = "vercel_log_drain.write_only"
+	const initial = "test-log-drain-initial-secret-at-least-thirty-two-characters"
+	const rotated = "test-log-drain-rotated-secret-at-least-thirty-two-characters"
+	const legacy = "test-log-drain-legacy-secret-at-least-thirty-two-characters"
+	t.Setenv("TF_VAR_log_drain_secret", initial)
+
+	config := func(secretFields string) string {
+		return cfg(fmt.Sprintf(`
+variable "log_drain_secret" {
+  type      = string
+  sensitive = true
+  ephemeral = true
+}
+
+data "vercel_endpoint_verification" "test" {}
+
+resource "vercel_log_drain" "write_only" {
+  name            = %q
+  delivery_format = "ndjson"
+  environments    = ["production"]
+  sources         = ["static"]
+  endpoint        = "https://verify-test-rouge.vercel.app/api?${data.vercel_endpoint_verification.test.verification_code}"
+  %s
+}
+`, name, secretFields))
+	}
+	writeOnly := config("secret_wo = var.log_drain_secret")
+	checkWriteOnly := func(secret string) resource.TestCheckFunc {
+		return resource.ComposeAggregateTestCheckFunc(
+			resource.TestCheckNoResourceAttr(address, "secret"),
+			resource.TestCheckNoResourceAttr(address, "secret_wo"),
+			func(s *terraform.State) error {
+				remote, err := testClient(t).GetLogDrain(context.Background(), s.RootModule().Resources[address].Primary.ID, testTeam(t))
+				if err != nil {
+					return err
+				}
+				if remote.Secret != secret {
+					return fmt.Errorf("remote Log Drain has an unexpected signing secret")
+				}
+				return nil
+			},
+		)
+	}
+	replace := resource.ConfigPlanChecks{
+		PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionReplace)},
+	}
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testCheckLogDrainDeleted(testClient(t), address, testTeam(t)),
+		Steps: []resource.TestStep{
+			{
+				Config: writeOnly,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					checkWriteOnly(initial),
+					resource.TestCheckNoResourceAttr(address, "secret_wo_version"),
+				),
+			},
+			{
+				PreConfig: func() { t.Setenv("TF_VAR_log_drain_secret", rotated) },
+				Config:    writeOnly,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionNoop)},
+				},
+				Check: checkWriteOnly(initial),
+			},
+			{
+				Config:           config("secret_wo = var.log_drain_secret\nsecret_wo_version = 0"),
+				ConfigPlanChecks: replace,
+				Check:            checkWriteOnly(rotated),
+			},
+			{
+				Config:           config("secret_wo = var.log_drain_secret\nsecret_wo_version = 1"),
+				ConfigPlanChecks: replace,
+				Check:            checkWriteOnly(rotated),
+			},
+			{
+				Config:           config(fmt.Sprintf("secret = %q", legacy)),
+				ConfigPlanChecks: replace,
+				Check:            resource.TestCheckResourceAttr(address, "secret", legacy),
+			},
+			{
+				Config:           writeOnly,
+				ConfigPlanChecks: replace,
+				Check:            checkWriteOnly(rotated),
+			},
+			{
+				ResourceName: address,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					return "write-only:" + testTeam(t) + "/" + s.RootModule().Resources[address].Primary.ID, nil
+				},
+				ImportStateVerify: true,
+			},
+			{
+				Config:           config(""),
+				ConfigPlanChecks: replace,
+				Check:            testCheckLogDrainExists(testClient(t), testTeam(t), address),
+			},
+			{
+				Config: config(""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionNoop)},
+				},
+			},
+		},
+	})
 }

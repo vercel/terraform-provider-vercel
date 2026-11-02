@@ -204,17 +204,18 @@ func (c *Client) CreateLogDrain(ctx context.Context, request CreateLogDrainReque
 	}
 
 	body := string(mustMarshal(payload))
+	// The payload can contain the signing secret and custom headers.
 	tflog.Info(ctx, "creating drain", map[string]any{
-		"url":     url,
-		"payload": body,
+		"url": url,
 	})
 
 	var resp drainsResponse
 	err = c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "POST",
-		url:    url,
-		body:   body,
+		ctx:               ctx,
+		method:            "POST",
+		url:               url,
+		body:              body,
+		sensitiveResponse: true,
 	}, &resp)
 	if err != nil {
 		return l, err
@@ -231,9 +232,10 @@ func (c *Client) DeleteLogDrain(ctx context.Context, id, teamID string) error {
 		"url": url,
 	})
 	return c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "DELETE",
-		url:    url,
+		ctx:               ctx,
+		method:            "DELETE",
+		url:               url,
+		sensitiveResponse: true,
 	}, nil)
 }
 
@@ -247,9 +249,10 @@ func (c *Client) GetLogDrain(ctx context.Context, id, teamID string) (l LogDrain
 	})
 	var resp drainsResponse
 	err = c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "GET",
-		url:    url,
+		ctx:               ctx,
+		method:            "GET",
+		url:               url,
+		sensitiveResponse: true,
 	}, &resp)
 	if err != nil {
 		return l, err
