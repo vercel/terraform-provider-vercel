@@ -73,44 +73,55 @@ func TestProjectDeploymentCheckCRUD(t *testing.T) {
 }
 
 func TestCreateProjectDeploymentCheckNativeSource(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var body map[string]any
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			t.Fatal(err)
-		}
-		source, ok := body["source"].(map[string]any)
-		if !ok {
-			t.Fatalf("source = %#v", body["source"])
-		}
-		if source["kind"] != "vercel" || source["subKind"] != "vercel-native-check" || source["origin"] != "api" || source["jobName"] != "flag-definitions-present" {
-			t.Fatalf("source = %#v", source)
-		}
-		if _, ok := source["selection"]; ok {
-			t.Fatalf("unexpected selection = %#v", source["selection"])
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"id": "check_123", "name": "Flag Definitions Present", "ownerId": "team_123", "projectId": "prj_123",
-			"requires": "build-ready", "source": source, "targets": []string{"preview", "production"},
-		})
-	}))
-	t.Cleanup(server.Close)
+	for _, tc := range []struct {
+		name    string
+		jobName string
+		origin  string
+	}{
+		{"Flag Definitions Present", "flag-definitions-present", "api"},
+		{"Microfrontends Config Present", "mfe-config-present", "platform"},
+	} {
+		t.Run(tc.jobName, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var body map[string]any
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Fatal(err)
+				}
+				source, ok := body["source"].(map[string]any)
+				if !ok {
+					t.Fatalf("source = %#v", body["source"])
+				}
+				if source["kind"] != "vercel" || source["subKind"] != "vercel-native-check" || source["origin"] != tc.origin || source["jobName"] != tc.jobName {
+					t.Fatalf("source = %#v", source)
+				}
+				if _, ok := source["selection"]; ok {
+					t.Fatalf("unexpected selection = %#v", source["selection"])
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"id": "check_123", "name": tc.name, "ownerId": "team_123", "projectId": "prj_123",
+					"requires": "build-ready", "source": source, "targets": []string{"preview", "production"},
+				})
+			}))
+			t.Cleanup(server.Close)
 
-	source := client.ProjectDeploymentCheckSource{
-		Kind: "vercel", SubKind: "vercel-native-check", Origin: "api", JobName: "flag-definitions-present",
-	}
-	created, err := client.New("TOKEN").WithBaseURL(server.URL).CreateProjectDeploymentCheck(
-		context.Background(),
-		client.CreateProjectDeploymentCheckRequest{
-			ProjectID: "prj_123", TeamID: "team_123", Name: "Flag Definitions Present",
-			Requires: "build-ready", Source: &source,
-		},
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if created.Source.SubKind != "vercel-native-check" || created.Source.JobName != "flag-definitions-present" {
-		t.Fatalf("created source = %#v", created.Source)
+			source := client.ProjectDeploymentCheckSource{
+				Kind: "vercel", SubKind: "vercel-native-check", Origin: tc.origin, JobName: tc.jobName,
+			}
+			created, err := client.New("TOKEN").WithBaseURL(server.URL).CreateProjectDeploymentCheck(
+				context.Background(),
+				client.CreateProjectDeploymentCheckRequest{
+					ProjectID: "prj_123", TeamID: "team_123", Name: tc.name,
+					Requires: "build-ready", Source: &source,
+				},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if created.Source.SubKind != "vercel-native-check" || created.Source.JobName != tc.jobName {
+				t.Fatalf("created source = %#v", created.Source)
+			}
+		})
 	}
 }
 
