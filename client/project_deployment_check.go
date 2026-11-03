@@ -12,6 +12,7 @@ type ProjectDeploymentCheckSource struct {
 	Kind               string                                 `json:"kind"`
 	SubKind            string                                 `json:"subKind,omitempty"`
 	Origin             string                                 `json:"origin,omitempty"`
+	JobName            string                                 `json:"jobName,omitempty"`
 	Selection          *ProjectDeploymentCheckSourceSelection `json:"selection,omitempty"`
 	ExternalCheckName  string                                 `json:"externalCheckName,omitempty"`
 	Provider           string                                 `json:"provider,omitempty"`

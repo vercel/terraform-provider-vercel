@@ -75,6 +75,27 @@ func TestProjectDeploymentCheckImportPreservesProjectName(t *testing.T) {
 	}
 }
 
+func TestProjectDeploymentCheckImportPreservesNativeSource(t *testing.T) {
+	_, state := importedDeploymentCheckWithSource(t, client.ProjectDeploymentCheckSource{
+		Kind: "vercel", SubKind: "vercel-native-check", Origin: "api", JobName: "flag-definitions-present",
+	})
+	ctx := context.Background()
+	var model vercel.ProjectDeploymentCheck
+	if diags := state.Get(ctx, &model); diags.HasError() {
+		t.Fatalf("state diagnostics: %v", diags)
+	}
+	var source vercel.ProjectDeploymentCheckSource
+	if diags := model.Source.As(ctx, &source, basetypes.ObjectAsOptions{}); diags.HasError() {
+		t.Fatalf("source diagnostics: %v", diags)
+	}
+	if source.Kind.ValueString() != "vercel" || source.SubKind.ValueString() != "vercel-native-check" || source.Origin.ValueString() != "api" || source.JobName.ValueString() != "flag-definitions-present" {
+		t.Errorf("source = %#v", source)
+	}
+	if !source.Selection.IsNull() {
+		t.Errorf("selection = %#v, want null", source.Selection)
+	}
+}
+
 func TestProjectDeploymentCheckImportPreservesVercelCISource(t *testing.T) {
 	filters := []string{"vercel-docs"}
 	failIfNoMatch := true
