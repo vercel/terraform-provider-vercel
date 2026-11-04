@@ -106,6 +106,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newProjectMembersResource,
 		newProjectProtectionBypassResource,
 		newProjectPassportResource,
+		newProjectDeploymentProtectionResource,
 		newProjectRouteResource,
 		newProjectResource,
 		newProjectTracingResource,

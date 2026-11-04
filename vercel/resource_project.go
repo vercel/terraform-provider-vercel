@@ -289,6 +289,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
+			"manage_deployment_protection": schema.BoolAttribute{
+				Description: "Whether this resource manages Vercel Authentication, password protection, and Trusted IPs. Defaults to true. Set false and omit those inline attributes when using the standalone vercel_project_deployment_protection resource. All three fields are then omitted from project requests. Passport, bypasses, and the project lifecycle are unaffected.",
+				Optional:    true, Computed: true, Default: booldefault.StaticBool(true),
+			},
 			"manage_passport": schema.BoolAttribute{
 				Description: "Whether this resource manages Passport. Defaults to true. Set false and omit passport when using the standalone vercel_project_passport resource; project updates then never write Passport. This does not disable Passport. vercel_project still owns the project lifecycle.",
 				Optional:    true, Computed: true, Default: booldefault.StaticBool(true),
@@ -775,11 +779,13 @@ func (r *projectResource) ConfigValidators(ctx context.Context) []resource.Confi
 	return []resource.ConfigValidator{
 		&fluidComputeBasicCPUValidator{},
 		&projectPassportOwnershipValidator{},
+		&projectProtectionOwnershipValidator{},
 	}
 }
 
 // Project reflects the state terraform stores internally for a project.
 type Project struct {
+	ManageDeploymentProtection        types.Bool   `tfsdk:"manage_deployment_protection"`
 	ManagePassport                    types.Bool   `tfsdk:"manage_passport"`
 	Passport                          types.Object `tfsdk:"passport"`
 	BuildCommand                      types.String `tfsdk:"build_command"`
@@ -1069,6 +1075,10 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		return req, diags
 	}
 
+	authentication := vercelAuthentication.toVercelAuthentication()
+	if p.ManageDeploymentProtection.Equal(types.BoolValue(false)) {
+		authentication = nil
+	}
 	return client.CreateProjectRequest{
 		BuildCommand:                      p.BuildCommand.ValueStringPointer(),
 		CommandForIgnoringBuildStep:       p.IgnoreCommand.ValueStringPointer(),
@@ -1086,7 +1096,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		ResourceConfig:                    resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
-		VercelAuthentication:              vercelAuthentication.toVercelAuthentication(),
+		VercelAuthentication:              authentication,
 		PreviewDeploymentsDisabled:        p.PreviewDeploymentsDisabled.ValueBoolPointer(),
 	}, diags
 }
@@ -1179,6 +1189,13 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	if p.ManagePassport.Equal(types.BoolValue(false)) {
 		passport = nil
 	}
+	authentication := vercelAuthentication.toVercelAuthentication()
+	password := pp.toUpdateProjectRequest()
+	trustedIPs := ti.toUpdateProjectRequest()
+	authenticationField, passwordField, trustedIPsField := &authentication, &password, &trustedIPs
+	if p.ManageDeploymentProtection.Equal(types.BoolValue(false)) {
+		authenticationField, passwordField, trustedIPsField = nil, nil, nil
+	}
 	return client.UpdateProjectRequest{
 		Passport:                             passport,
 		BuildCommand:                         p.BuildCommand.ValueStringPointer(),
@@ -1190,9 +1207,9 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		OutputDirectory:                      p.OutputDirectory.ValueStringPointer(),
 		PreviewDeploymentSuffix:              p.PreviewDeploymentSuffix.ValueStringPointer(),
 		RootDirectory:                        p.RootDirectory.ValueStringPointer(),
-		PasswordProtection:                   pp.toUpdateProjectRequest(),
-		VercelAuthentication:                 vercelAuthentication.toVercelAuthentication(),
-		TrustedIps:                           ti.toUpdateProjectRequest(),
+		PasswordProtection:                   passwordField,
+		VercelAuthentication:                 authenticationField,
+		TrustedIps:                           trustedIPsField,
 		TrustedSources:                       tsReq,
 		OIDCTokenConfig:                      oidc.toUpdateProjectRequest(),
 		OptionsAllowlist:                     oal.toUpdateProjectRequest(),
@@ -1980,6 +1997,9 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		})
 	}
 
+	if plan.ManageDeploymentProtection.Equal(types.BoolValue(false)) {
+		passwordObj = types.ObjectNull(passwordProtectionWithPasswordAttrType.AttrTypes)
+	}
 	// Vercel auth
 	va := types.ObjectValueMust(vercelAuthenticationAttrType.AttrTypes, map[string]attr.Value{
 		"deployment_type": types.StringValue("none"),
@@ -2012,6 +2032,9 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 		})
 	}
 
+	if plan.ManageDeploymentProtection.Equal(types.BoolValue(false)) {
+		trustedIpsObj = types.ObjectNull(trustedIpsAttrType.AttrTypes)
+	}
 	// Trusted Sources
 	trustedSourcesObj := types.ObjectNull(trustedSourcesAttrType.AttrTypes)
 	if response.TrustedSources != nil {
@@ -2162,6 +2185,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 
 	return Project{
 		ManagePassport:                    projectManageSetting(plan.ManagePassport),
+		ManageDeploymentProtection:        projectManageSetting(plan.ManageDeploymentProtection),
 		BuildCommand:                      uncoerceString(fields.BuildCommand, types.StringPointerValue(response.BuildCommand)),
 		DevCommand:                        uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
 		Environment:                       environmentEntry,
