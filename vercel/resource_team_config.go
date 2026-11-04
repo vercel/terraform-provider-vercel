@@ -131,7 +131,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Description:   "Hostname that'll be matched with emails on sign-up to automatically join the Team.",
 			},
-			"default_passport": passportResourceSchema("Default Passport configuration for new projects. Existing projects keep their settings."),
+			"default_passport": passportResourceSchema("Default Passport configuration for new projects. Existing projects keep their settings.", ""),
 			"saml": schema.SingleNestedAttribute{
 				Description:   "Configuration for SAML authentication.",
 				Optional:      true,

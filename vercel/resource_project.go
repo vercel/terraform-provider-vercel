@@ -297,7 +297,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "Whether this resource manages Passport. Defaults to true. Set false and omit passport when using the standalone vercel_project_passport resource; project updates then never write Passport. This does not disable Passport. vercel_project still owns the project lifecycle.",
 				Optional:    true, Computed: true, Default: booldefault.StaticBool(true),
 			},
-			"passport": passportResourceSchema("Protect deployments with your own identity provider using an existing Vercel Connect OAuth application."),
+			"passport": passportResourceSchema("Protect deployments with your own identity provider using an existing Vercel Connect OAuth application.", "manage_passport"),
 			"password_protection": schema.SingleNestedAttribute{
 				Description: "Ensures visitors of your Preview Deployments must enter a password in order to gain access.",
 				Optional:    true,
