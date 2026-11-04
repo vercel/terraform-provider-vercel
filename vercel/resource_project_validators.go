@@ -81,3 +81,26 @@ func (*projectPassportOwnershipValidator) ValidateResource(ctx context.Context, 
 		resp.Diagnostics.AddAttributeError(path.Root("passport"), "Conflicting Passport ownership", "Omit passport when manage_passport is false. Manage it with vercel_project_passport instead.")
 	}
 }
+
+type projectProtectionOwnershipValidator struct{}
+
+func (*projectProtectionOwnershipValidator) Description(context.Context) string {
+	return "Omit inline deployment protection when manage_deployment_protection is false."
+}
+func (v *projectProtectionOwnershipValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+func (*projectProtectionOwnershipValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var managed types.Bool
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("manage_deployment_protection"), &managed)...)
+	if !managed.Equal(types.BoolValue(false)) {
+		return
+	}
+	for _, name := range []string{"vercel_authentication", "password_protection", "trusted_ips"} {
+		var value types.Object
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(name), &value)...)
+		if !value.IsNull() {
+			resp.Diagnostics.AddAttributeError(path.Root(name), "Conflicting deployment protection ownership", "Omit this attribute when manage_deployment_protection is false. Use vercel_project_deployment_protection instead.")
+		}
+	}
+}

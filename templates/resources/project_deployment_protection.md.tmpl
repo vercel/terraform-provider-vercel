@@ -1,0 +1,79 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.RenderedProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+### Password protection without storing the password
+
+{{ tffile "examples/resources/vercel_project_deployment_protection/password.tf" }}
+
+Supply `password_wo` and `password_wo_version` together when first enabling password protection. To rotate the password, change the input and increment the version. The version is stored in state; the password is not. Changing only the write-only input does not trigger an update. Terraform 1.11 or later is required for write-only arguments; an ephemeral variable also keeps the credential out of saved plans.
+
+The API never returns the password, so password drift cannot be detected. If password protection is already enabled, you may omit both password arguments to adopt the existing password and manage only its deployment scope. Import never rotates it. Updates to other methods do not resend the password.
+
+## Standalone ownership and coexistence
+
+This resource works with a project created outside Terraform: no `vercel_project` resource or project import is required. Presence of each nested object enables that method; there is no `enabled` flag. Other protection methods remain untouched until they are configured or imported into this resource.
+
+If Terraform also manages the project itself:
+
+```terraform
+resource "vercel_project" "app" {
+  name                         = "existing-app"
+  manage_deployment_protection = false
+  # Omit vercel_authentication, password_protection, and trusted_ips here.
+  # Keep your other existing project configuration.
+}
+
+resource "vercel_project_deployment_protection" "app" {
+  project_id = vercel_project.app.id
+  vercel_authentication = {
+    deployment_type = "all"
+  }
+}
+```
+
+Set `manage_deployment_protection = false` before delegating ownership. It omits all three methods from project requests, including follow-up requests during project creation. It leaves their live configuration unchanged. `ignore_changes` alone does not stop broad project updates from writing observed settings. The project resource still owns the project's lifecycle and can delete it. Passport has its own independent `manage_passport` flag and standalone resource.
+
+Do not manage the same settings through multiple standalone resources, multiple Terraform states, or inline attributes. Bypasses, shareable links, and public URL exceptions remain separate resources and can allow access even while these methods are enabled. This resource does not assert effective access policy or continuous team-wide enforcement.
+
+## Adoption and removal
+
+For **partial adoption**, add this standalone resource without an import block, configuring only the methods you want to manage. Applying it patches those methods on the existing project and leaves the rest alone. If you configure password protection without password arguments, an existing password is retained.
+
+Import is the **adopt-all** path. Import reads all enabled Vercel Authentication, password, and Trusted IP methods. It never enables or disables them during import. Include each imported method you want to retain in the resource configuration: omitting an imported method plans to disable it. Review the complete plan before applying. This also applies when moving from inline protection: set the project's opt-out, remove its inline attributes, and import the existing settings into the standalone resource.
+
+Removing a previously managed object disables that method. An object never configured or imported remains unmanaged. Destroying this resource disables only the methods in its state; it never deletes the project. To retain protection and stop managing it, replace the resource block with:
+
+```terraform
+removed {
+  from = vercel_project_deployment_protection.app
+  lifecycle {
+    destroy = false
+  }
+}
+```
+
+The `removed` block requires Terraform 1.7 or later. Changing the project ID or an explicitly configured team ID replaces the attachment, disabling owned methods on the old project and enabling configured methods on the new project. Avoid `create_before_destroy` for replacements on the same project.
+
+## Scope names and Trusted IP mode
+
+Deployment scopes use API names consistently: `all`, `preview`, `prod_deployment_urls_and_all_previews`, and `all_except_custom_domains`. Trusted IPs also supports `production`. These correspond to the legacy project aliases `all_deployments`, `only_preview_deployments`, `standard_protection`, `standard_protection_new`, and `only_production_deployments` respectively.
+
+Trusted IPs accepts IPv4 addresses and IPv4 CIDR ranges. The public project PATCH schema exposes addresses and deployment scope, but not `protectionMode`. This resource therefore reports `protection_mode` as read-only and does not change it; the server retains or chooses the mode. `additional` requires the allowlist alongside other configured protection; `exclusive` allows allowlisted visitors as an alternative. Review the reported mode when checking access policy.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+{{ codefile "shell" .ImportFile }}
