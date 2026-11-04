@@ -10,6 +10,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vercel/terraform-provider-vercel/v5/client"
@@ -134,5 +136,50 @@ func TestProjectPassportOwnership(t *testing.T) {
 	(&projectPassportOwnershipValidator{}).ValidateResource(ctx, resource.ValidateConfigRequest{Config: config}, &validation)
 	if !validation.Diagnostics.HasError() {
 		t.Fatal("inline passport with manage_passport=false must be rejected")
+	}
+}
+
+func TestProjectDelegatedPassportPlan(t *testing.T) {
+	ctx := context.Background()
+	var schemaResp resource.SchemaResponse
+	newProjectResource().Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	passportSchema := schemaResp.Schema.Attributes["passport"].(schema.SingleNestedAttribute)
+	observed := passportState(&client.Passport{ConnectorID: "scl_existing", DeploymentType: "preview"})
+	for _, tc := range []struct {
+		name       string
+		managed    types.Bool
+		plan, want types.Object
+	}{
+		{"delegated update leaves observed settings unknown", types.BoolValue(false), types.ObjectUnknown(passportAttrTypes), types.ObjectUnknown(passportAttrTypes)},
+		{"delegated no-op retains observed settings", types.BoolValue(false), observed, observed},
+		{"managed update preserves omitted settings", types.BoolValue(true), types.ObjectUnknown(passportAttrTypes), observed},
+		{"unknown ownership leaves observed settings unknown", types.BoolUnknown(), types.ObjectUnknown(passportAttrTypes), types.ObjectUnknown(passportAttrTypes)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			project := projectForUpdateRequestTests()
+			project.Passport = types.ObjectNull(passportAttrTypes)
+			project.ManagePassport = tc.managed
+			configState := tfsdk.State{Schema: schemaResp.Schema}
+			if diags := configState.Set(ctx, &project); diags.HasError() {
+				t.Fatal(diags)
+			}
+			project.Passport = observed
+			state := tfsdk.State{Schema: schemaResp.Schema}
+			if diags := state.Set(ctx, &project); diags.HasError() {
+				t.Fatal(diags)
+			}
+			response := &planmodifier.ObjectResponse{PlanValue: tc.plan}
+			passportSchema.PlanModifiers[0].PlanModifyObject(ctx, planmodifier.ObjectRequest{
+				Config:      tfsdk.Config{Schema: schemaResp.Schema, Raw: configState.Raw},
+				ConfigValue: types.ObjectNull(passportAttrTypes), PlanValue: tc.plan,
+				StateValue: observed, State: state,
+			}, response)
+			if response.Diagnostics.HasError() {
+				t.Fatal(response.Diagnostics)
+			}
+			if !response.PlanValue.Equal(tc.want) {
+				t.Fatalf("Passport plan = %s, want %s", response.PlanValue, tc.want)
+			}
+		})
 	}
 }
