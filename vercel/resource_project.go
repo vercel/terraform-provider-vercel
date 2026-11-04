@@ -276,7 +276,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "Ensures visitors to your Preview Deployments are logged into Vercel and have a minimum of Viewer access on your team.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.Object{projectAuthenticationPlanModifier{}},
 				Attributes: map[string]schema.Attribute{
 					"deployment_type": schema.StringAttribute{
 						Description:   "The deployment environment to protect. When omitted on creation, inherits the team default (Standard Protection when the team has no default). Must be one of `standard_protection_new` (Standard Protection), `standard_protection` (Legacy Standard Protection), `all_deployments`, `only_preview_deployments`, or `none`.",

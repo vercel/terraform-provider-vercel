@@ -13,11 +13,14 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
@@ -278,5 +281,53 @@ func TestStandaloneDeploymentProtectionRejectsUnreadableAllowlist(t *testing.T) 
 	diags := model.read(context.Background(), client.ProjectResponse{ID: "prj_existing", TrustedIps: &client.TrustedIps{DeploymentType: "all"}}, true)
 	if !diags.HasError() {
 		t.Fatal("partial API response must not be imported as an empty allowlist")
+	}
+}
+
+func TestDelegatedAuthenticationPlan(t *testing.T) {
+	ctx := context.Background()
+	observed := types.ObjectValueMust(vercelAuthenticationAttrType.AttrTypes, map[string]attr.Value{"deployment_type": types.StringValue("all_deployments")})
+	unknown := types.ObjectUnknown(vercelAuthenticationAttrType.AttrTypes)
+	var schemaResp resource.SchemaResponse
+	newProjectResource().Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	for _, tc := range []struct {
+		name       string
+		managed    types.Bool
+		plan, want types.Object
+	}{
+		{"managed update preserves scope", types.BoolValue(true), unknown, observed},
+		{"delegated update leaves scope unknown", types.BoolValue(false), unknown, unknown},
+		{"unknown ownership leaves scope unknown", types.BoolUnknown(), unknown, unknown},
+		{"delegated unchanged plan stays known", types.BoolValue(false), observed, observed},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			objectType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+			fields := make(map[string]tftypes.Value)
+			for name, fieldType := range objectType.AttributeTypes {
+				fields[name] = tftypes.NewValue(fieldType, nil)
+			}
+			ownership, err := tc.managed.ToTerraformValue(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			fields["manage_deployment_protection"] = ownership
+			config := tfsdk.Config{Schema: schemaResp.Schema, Raw: tftypes.NewValue(objectType, fields)}
+			observedRaw, err := observed.ToTerraformValue(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			state := tfsdk.State{Raw: observedRaw}
+
+			req := planmodifier.ObjectRequest{Config: config, State: state, Path: path.Root("vercel_authentication"), ConfigValue: types.ObjectNull(vercelAuthenticationAttrType.AttrTypes), StateValue: observed, PlanValue: tc.plan}
+			resp := planmodifier.ObjectResponse{PlanValue: tc.plan}
+			modifier := schemaResp.Schema.Attributes["vercel_authentication"].(interface{ ObjectPlanModifiers() []planmodifier.Object }).ObjectPlanModifiers()[0]
+			modifier.PlanModifyObject(ctx, req, &resp)
+			if resp.Diagnostics.HasError() {
+				t.Fatal(resp.Diagnostics)
+			}
+			if !resp.PlanValue.Equal(tc.want) {
+				t.Fatalf("plan = %s, want %s", resp.PlanValue, tc.want)
+			}
+		})
 	}
 }

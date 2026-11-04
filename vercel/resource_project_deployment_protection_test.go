@@ -14,7 +14,9 @@ func TestAcc_ProjectDeploymentProtection(t *testing.T) {
 	name := "test-acc-standalone-protection-" + acctest.RandString(12)
 	config := func(scope string) string {
 		protection := ""
+		buildCommand := ""
 		if scope != "" {
+			buildCommand = `build_command = "echo protected"`
 			protection = fmt.Sprintf(`resource "vercel_project_deployment_protection" "settings" {
  project_id = vercel_project.existing.id
  vercel_authentication = { deployment_type = %q }
@@ -23,8 +25,9 @@ func TestAcc_ProjectDeploymentProtection(t *testing.T) {
 		return cfg(fmt.Sprintf(`resource "vercel_project" "existing" {
  name = %q
  manage_deployment_protection = false
+ %s
 }
-%s`, name, protection))
+%s`, name, buildCommand, protection))
 	}
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
