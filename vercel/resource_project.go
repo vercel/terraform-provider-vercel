@@ -289,7 +289,11 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 					},
 				},
 			},
-			"passport": passportResourceSchema("Protect deployments with your own identity provider using an existing Vercel Connect OAuth application."),
+			"manage_passport": schema.BoolAttribute{
+				Description: "Whether this resource manages Passport. Defaults to true. Set false and omit passport when using the standalone vercel_project_passport resource; project updates then never write Passport. This does not disable Passport. vercel_project still owns the project lifecycle.",
+				Optional:    true, Computed: true, Default: booldefault.StaticBool(true),
+			},
+			"passport": passportResourceSchema("Protect deployments with your own identity provider using an existing Vercel Connect OAuth application.", "manage_passport"),
 			"password_protection": schema.SingleNestedAttribute{
 				Description: "Ensures visitors of your Preview Deployments must enter a password in order to gain access.",
 				Optional:    true,
@@ -770,11 +774,13 @@ func trustedSourcesEnvMatcherResourceSchema() map[string]schema.Attribute {
 func (r *projectResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		&fluidComputeBasicCPUValidator{},
+		&projectPassportOwnershipValidator{},
 	}
 }
 
 // Project reflects the state terraform stores internally for a project.
 type Project struct {
+	ManagePassport                    types.Bool   `tfsdk:"manage_passport"`
 	Passport                          types.Object `tfsdk:"passport"`
 	BuildCommand                      types.String `tfsdk:"build_command"`
 	DevCommand                        types.String `tfsdk:"dev_command"`
@@ -1169,6 +1175,9 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	diags.Append(passportDiags...)
 	if diags.HasError() {
 		return req, diags
+	}
+	if p.ManagePassport.Equal(types.BoolValue(false)) {
+		passport = nil
 	}
 	return client.UpdateProjectRequest{
 		Passport:                             passport,
@@ -2154,6 +2163,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	return Project{
+		ManagePassport:                    projectManageSetting(plan.ManagePassport),
 		BuildCommand:                      uncoerceString(fields.BuildCommand, types.StringPointerValue(response.BuildCommand)),
 		DevCommand:                        uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
 		Environment:                       environmentEntry,
@@ -3024,4 +3034,11 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+func projectManageSetting(value types.Bool) types.Bool {
+	if value.IsNull() || value.IsUnknown() {
+		return types.BoolValue(true)
+	}
+	return value
 }

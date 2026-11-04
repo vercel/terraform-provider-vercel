@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	datasourceschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -28,12 +29,12 @@ type passportConfig struct {
 	DeploymentType types.String `tfsdk:"deployment_type"`
 }
 
-func passportResourceSchema(description string) schema.SingleNestedAttribute {
+func passportResourceSchema(description, managementAttribute string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		Description:   description + " Requires an eligible Enterprise plan and team owner permissions. Omit this attribute to preserve existing settings; set enabled to false to disable Passport. Disabling does not delete the Connect application or its project connections.",
 		Optional:      true,
 		Computed:      true,
-		PlanModifiers: []planmodifier.Object{passportPlanModifier{}},
+		PlanModifiers: []planmodifier.Object{passportPlanModifier{managementAttribute: managementAttribute}},
 		Validators:    []validator.Object{passportValidator{}},
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
@@ -135,7 +136,9 @@ func (passportValidator) ValidateObject(ctx context.Context, req validator.Objec
 
 // Nested static defaults also run when an optional/computed parent is omitted.
 // Apply defaults only to configured blocks so omission preserves observed state.
-type passportPlanModifier struct{}
+type passportPlanModifier struct {
+	managementAttribute string
+}
 
 func (passportPlanModifier) Description(context.Context) string {
 	return "Defaults configured Passport blocks and preserves omitted settings."
@@ -143,8 +146,17 @@ func (passportPlanModifier) Description(context.Context) string {
 func (m passportPlanModifier) MarkdownDescription(ctx context.Context) string {
 	return m.Description(ctx)
 }
-func (passportPlanModifier) PlanModifyObject(_ context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
+func (m passportPlanModifier) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
 	if req.ConfigValue.IsNull() {
+		if m.managementAttribute != "" {
+			var managed types.Bool
+			resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(m.managementAttribute), &managed)...)
+			// Another resource can change Passport during this apply. Keep the framework
+			// unknown rather than promising the observed value when ownership is delegated.
+			if resp.Diagnostics.HasError() || managed.Equal(types.BoolValue(false)) || managed.IsUnknown() {
+				return
+			}
+		}
 		if !req.State.Raw.IsNull() && !req.StateValue.IsUnknown() {
 			resp.PlanValue = req.StateValue
 		}

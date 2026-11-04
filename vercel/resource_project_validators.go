@@ -3,7 +3,9 @@ package vercel
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var _ resource.ConfigValidator = &fluidComputeBasicCPUValidator{}
@@ -59,4 +61,23 @@ func (v *fluidComputeBasicCPUValidator) ValidateResource(ctx context.Context, re
 		"Error validating project fluid compute configuration",
 		"Fluid compute is only supported with the standard or performance CPU types.",
 	)
+}
+
+// projectPassportOwnershipValidator prevents inline and standalone settings from sharing an owner.
+type projectPassportOwnershipValidator struct{}
+
+func (*projectPassportOwnershipValidator) Description(context.Context) string {
+	return "Omit inline passport when manage_passport is false."
+}
+func (v *projectPassportOwnershipValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+func (*projectPassportOwnershipValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var managed types.Bool
+	var passport types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("manage_passport"), &managed)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("passport"), &passport)...)
+	if managed.Equal(types.BoolValue(false)) && !passport.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("passport"), "Conflicting Passport ownership", "Omit passport when manage_passport is false. Manage it with vercel_project_passport instead.")
+	}
 }
