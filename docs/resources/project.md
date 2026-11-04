@@ -175,10 +175,10 @@ Read-Only:
 <a id="nestedatt--git_comments"></a>
 ### Nested Schema for `git_comments`
 
-Required:
+Optional:
 
-- `on_commit` (Boolean) Whether Commit comments are enabled
-- `on_pull_request` (Boolean) Whether Pull Request comments are enabled
+- `on_commit` (Boolean) Whether Commit comments are enabled. Required when git_comments is configured.
+- `on_pull_request` (Boolean) Whether Pull Request comments are enabled. Required when git_comments is configured.
 
 
 <a id="nestedatt--git_provider_options"></a>

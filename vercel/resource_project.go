@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -520,14 +521,17 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Validators:    []validator.Object{objectvalidator.AlsoRequires(path.MatchRelative().AtName("on_pull_request"), path.MatchRelative().AtName("on_commit"))},
 				Attributes: map[string]schema.Attribute{
 					"on_pull_request": schema.BoolAttribute{
-						Description: "Whether Pull Request comments are enabled",
-						Required:    true,
+						Description: "Whether Pull Request comments are enabled. Required when git_comments is configured.",
+						Optional:    true,
+						Computed:    true,
 					},
 					"on_commit": schema.BoolAttribute{
-						Description: "Whether Commit comments are enabled",
-						Required:    true,
+						Description: "Whether Commit comments are enabled. Required when git_comments is configured.",
+						Optional:    true,
+						Computed:    true,
 					},
 				},
 			},
