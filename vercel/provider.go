@@ -155,6 +155,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newProjectDeploymentRetentionDataSource,
 		newProjectDirectoryDataSource,
 		newProjectMembersDataSource,
+		newProjectProtectionInventoryDataSource,
 		newProjectRoutesDataSource,
 		newShareableLinkDataSource,
 		newSharedEnvironmentVariableDataSource,
