@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -321,30 +322,70 @@ func (c *Client) GetProject(ctx context.Context, projectID, teamID string) (r Pr
 	return r, err
 }
 
-// ListProjects lists the top 100 projects (no pagination) from within Vercel.
-func (c *Client) ListProjects(ctx context.Context, teamID string) (r []ProjectResponse, err error) {
-	url := fmt.Sprintf("%s/v8/projects?limit=100", c.baseURL)
-	if c.TeamID(teamID) != "" {
-		url = fmt.Sprintf("%s&teamId=%s", url, c.TeamID(teamID))
-	}
+// ListProjectsRequest selects a page of projects within an account.
+type ListProjectsRequest struct {
+	TeamID        string
+	RepositoryURL string
+	Limit         int
+	Until         *int64
+}
 
-	pr := struct {
-		Projects []ProjectResponse `json:"projects"`
-	}{}
-	tflog.Info(ctx, "listing projects", map[string]any{
-		"url": url,
-	})
-	err = c.doRequest(clientRequest{
+// ListProjectsResponse contains projects and the cursor for the next page.
+type ListProjectsResponse struct {
+	Projects   []ProjectResponse `json:"projects"`
+	Pagination PageInfo          `json:"pagination"`
+}
+
+// ListProjectsPage reads one page using the default timestamp pagination.
+func (c *Client) ListProjectsPage(ctx context.Context, request ListProjectsRequest) (ListProjectsResponse, error) {
+	query := paginationQuery(url.Values{}, request.Limit, request.Until, nil)
+	if teamID := c.TeamID(request.TeamID); teamID != "" {
+		query.Set("teamId", teamID)
+	}
+	if request.RepositoryURL != "" {
+		query.Set("repoUrl", request.RepositoryURL)
+	}
+	var response ListProjectsResponse
+	err := c.doRequest(clientRequest{
 		ctx:    ctx,
 		method: "GET",
-		url:    url,
-		body:   "",
-	}, &pr)
-	for i := range pr.Projects {
-		pr.Projects[i].TeamID = c.TeamID(teamID)
-		pr.Projects[i].normalizeBuildMachineType()
+		url:    urlWithQuery(c.baseURL+"/v10/projects", query),
+	}, &response)
+	if err != nil {
+		return ListProjectsResponse{}, fmt.Errorf("unable to list projects: %w", err)
 	}
-	return pr.Projects, err
+	for i := range response.Projects {
+		project := &response.Projects[i]
+		project.TeamID = c.TeamID(request.TeamID)
+		if strings.HasPrefix(project.AccountID, "team_") {
+			project.TeamID = project.AccountID
+		} else if project.AccountID != "" {
+			project.TeamID = ""
+		}
+		project.normalizeBuildMachineType()
+	}
+	return response, nil
+}
+
+// ListProjects lists all projects within an account.
+func (c *Client) ListProjects(ctx context.Context, teamID string) ([]ProjectResponse, error) {
+	return c.ListProjectsWithOptions(ctx, ListProjectsRequest{TeamID: teamID})
+}
+
+// ListProjectsWithOptions lists every page matching the supplied account and repository.
+func (c *Client) ListProjectsWithOptions(ctx context.Context, request ListProjectsRequest) ([]ProjectResponse, error) {
+	seen := make(map[int64]bool)
+	return collectPages(func(until *int64) ([]ProjectResponse, PageInfo, error) {
+		if until != nil {
+			if seen[*until] {
+				return nil, PageInfo{}, fmt.Errorf("project pagination cursor repeated")
+			}
+			seen[*until] = true
+		}
+		request.Until = until
+		response, err := c.ListProjectsPage(ctx, request)
+		return response.Projects, response.Pagination, err
+	})
 }
 
 // UpdateProjectRequest defines the possible fields that can be updated within a vercel project.
