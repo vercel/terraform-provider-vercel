@@ -117,7 +117,7 @@ resource "vercel_project" "with_trusted_sources" {
 - `environment` (Attributes Set, Deprecated) A set of Environment Variables that should be configured for the project. Deprecated: use `vercel_project_environment_variables` or `vercel_project_environment_variable` instead. Retained for backwards compatibility. (see [below for nested schema](#nestedatt--environment))
 - `framework` (String) The framework that is being used for this project. If omitted, no framework is selected.
 - `function_failover` (Boolean) Automatically failover Serverless Functions to the nearest region. You can customize regions through vercel.json. A new Deployment is required for your changes to take effect.
-- `git_comments` (Attributes) Configuration for Git Comments. (see [below for nested schema](#nestedatt--git_comments))
+- `git_comments` (Attributes) Configuration for Git Comments. When omitted, existing settings are preserved. (see [below for nested schema](#nestedatt--git_comments))
 - `git_fork_protection` (Boolean) Ensures that pull requests targeting your Git repository must be authorized by a member of your Team before deploying if your Project has Environment Variables or if the pull request includes a change to vercel.json. Defaults to `true`.
 - `git_lfs` (Boolean) Enables Git LFS support. Git LFS replaces large files such as audio samples, videos, datasets, and graphics with text pointers inside Git, while storing the file contents on a remote server like GitHub.com or GitHub Enterprise.
 - `git_provider_options` (Attributes) Git provider options (see [below for nested schema](#nestedatt--git_provider_options))
@@ -176,10 +176,10 @@ Read-Only:
 <a id="nestedatt--git_comments"></a>
 ### Nested Schema for `git_comments`
 
-Required:
+Optional:
 
-- `on_commit` (Boolean) Whether Commit comments are enabled
-- `on_pull_request` (Boolean) Whether Pull Request comments are enabled
+- `on_commit` (Boolean) Whether Commit comments are enabled. Required when git_comments is configured.
+- `on_pull_request` (Boolean) Whether Pull Request comments are enabled. Required when git_comments is configured.
 
 
 <a id="nestedatt--git_provider_options"></a>

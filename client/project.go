@@ -426,7 +426,7 @@ type UpdateProjectRequest struct {
 	DirectoryListing                     bool                            `json:"directoryListing"`
 	ProtectedSourcemaps                  bool                            `json:"protectedSourcemaps"`
 	SkewProtectionMaxAge                 int                             `json:"skewProtectionMaxAge"`
-	GitComments                          *GitComments                    `json:"gitComments"`
+	GitComments                          *GitComments                    `json:"gitComments,omitempty"`
 	GitProviderOptions                   *GitProviderOptions             `json:"gitProviderOptions,omitempty"`
 	ResourceConfig                       *ResourceConfig                 `json:"resourceConfig,omitempty"`
 	NodeVersion                          string                          `json:"nodeVersion,omitempty"`
