@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -245,6 +246,57 @@ data "vercel_team_config" "passport" {
 				func(*terraform.State) error { return checkUnchanged(inherited) },
 			)},
 			{Config: config(`{ enabled = false }`), PlanOnly: true},
+		},
+	})
+}
+
+func TestAcc_StandaloneProjectPassport(t *testing.T) {
+	application := testAccPassportApplication(t)
+	name := "test-acc-standalone-passport-" + acctest.RandString(12)
+	config := func(scope string) string {
+		protection := ""
+		if scope != "" {
+			protection = fmt.Sprintf(`resource "vercel_project_passport" "settings" {
+ project_id = vercel_project.existing.id
+ connector_id = %q
+ deployment_type = %q
+}`, application.ID, scope)
+		}
+		return cfg(fmt.Sprintf(`resource "vercel_project" "existing" {
+ name = %q
+ manage_passport = false
+}
+%s`, name, protection))
+	}
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectDestroy(testClient(t), "vercel_project.existing", testTeam(t)),
+		Steps: []resource.TestStep{
+			{Config: cfg(fmt.Sprintf(`resource "vercel_project" "existing" {
+ name = %q
+ passport = { connector_id = %q, deployment_type = "all" }
+}`, name, application.ID))},
+			{Config: config("all") + `
+import {
+ to = vercel_project_passport.settings
+ id = vercel_project.existing.id
+}
+`, Check: resource.TestCheckResourceAttr("vercel_project_passport.settings", "deployment_type", "all")},
+			{ResourceName: "vercel_project_passport.settings", ImportState: true, ImportStateVerify: true, ImportStateIdFunc: func(s *terraform.State) (string, error) {
+				return testTeam(t) + "/" + s.RootModule().Resources["vercel_project.existing"].Primary.ID, nil
+			}},
+			{Config: config("preview"), Check: resource.TestCheckResourceAttr("vercel_project_passport.settings", "deployment_type", "preview")},
+			{Config: strings.Replace(config("preview"), "manage_passport = false", "manage_passport = false\n build_command = \"echo build\"", 1), Check: resource.TestCheckResourceAttr("vercel_project_passport.settings", "deployment_type", "preview")},
+			{Config: config(""), Check: func(s *terraform.State) error {
+				project, err := testClient(t).GetProject(context.Background(), s.RootModule().Resources["vercel_project.existing"].Primary.ID, testTeam(t))
+				if err != nil {
+					return err
+				}
+				if project.Passport != nil {
+					return fmt.Errorf("Passport remained enabled after destroying the settings attachment")
+				}
+				return nil
+			}},
 		},
 	})
 }
