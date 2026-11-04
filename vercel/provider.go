@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/list"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
+
+var _ provider.ProviderWithListResources = &vercelProvider{}
 
 type vercelProvider struct{}
 
@@ -124,6 +127,10 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 	}
 }
 
+func (p *vercelProvider) ListResources(context.Context) []func() list.ListResource {
+	return []func() list.ListResource{newProjectListResource}
+}
+
 func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		newAccessGroupDataSource,
@@ -154,6 +161,7 @@ func (p *vercelProvider) DataSources(_ context.Context) []func() datasource.Data
 		newNetworkDataSource,
 		newPrebuiltProjectDataSource,
 		newProjectDataSource,
+		newProjectsDataSource,
 		newProjectDeploymentRetentionDataSource,
 		newProjectDirectoryDataSource,
 		newProjectMembersDataSource,
@@ -244,4 +252,5 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 
 	resp.DataSourceData = vercelClient
 	resp.ResourceData = vercelClient
+	resp.ListResourceData = vercelClient
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -524,16 +525,21 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.",
 			},
 			"git_comments": schema.SingleNestedAttribute{
-				Description: "Configuration for Git Comments.",
-				Optional:    true,
+				Description:   "Configuration for Git Comments. When omitted, existing settings are preserved.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Validators:    []validator.Object{objectvalidator.AlsoRequires(path.MatchRelative().AtName("on_pull_request"), path.MatchRelative().AtName("on_commit"))},
 				Attributes: map[string]schema.Attribute{
 					"on_pull_request": schema.BoolAttribute{
-						Description: "Whether Pull Request comments are enabled",
-						Required:    true,
+						Description: "Whether Pull Request comments are enabled. Required when git_comments is configured.",
+						Optional:    true,
+						Computed:    true,
 					},
 					"on_commit": schema.BoolAttribute{
-						Description: "Whether Commit comments are enabled",
-						Required:    true,
+						Description: "Whether Commit comments are enabled. Required when git_comments is configured.",
+						Optional:    true,
+						Computed:    true,
 					},
 				},
 			},
@@ -2134,7 +2140,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 
 	gitComments := types.ObjectNull(gitCommentsAttrTypes)
-	if response.GitComments != nil && !plan.GitComments.IsNull() {
+	if response.GitComments != nil {
 		var diags diag.Diagnostics
 		gitComments, diags = types.ObjectValueFrom(ctx, gitCommentsAttrTypes, &GitComments{
 			OnPullRequest: types.BoolValue(response.GitComments.OnPullRequest),
@@ -2180,7 +2186,9 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	buildMachineType := types.StringNull()
 	if response.ResourceConfig != nil {
 		onDemandConcurrentBuilds = types.BoolValue(response.ResourceConfig.ElasticConcurrencyEnabled)
-		buildMachineType = types.StringValue(response.ResourceConfig.BuildMachineType)
+		if response.ResourceConfig.BuildMachineType != "" {
+			buildMachineType = types.StringValue(response.ResourceConfig.BuildMachineType)
+		}
 	}
 
 	return Project{
@@ -2405,6 +2413,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		"project":    result,
 	})
 	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(setProjectIdentity(ctx, resp.Identity, result)...)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -2448,6 +2457,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			return
 		}
 		diags = resp.State.Set(ctx, result)
+		resp.Diagnostics.Append(setProjectIdentity(ctx, resp.Identity, result)...)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -2489,6 +2499,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			"project_id": result.ID.ValueString(),
 		})
 		diags = resp.State.Set(ctx, result)
+		resp.Diagnostics.Append(setProjectIdentity(ctx, resp.Identity, result)...)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -2532,6 +2543,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	})
 
 	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(setProjectIdentity(ctx, resp.Identity, result)...)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -2587,6 +2599,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	})
 
 	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(setProjectIdentity(ctx, resp.Identity, result)...)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -2947,6 +2960,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	})
 
 	diags = resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(setProjectIdentity(ctx, resp.Identity, result)...)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -2989,13 +3003,25 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 // ImportState takes an identifier and reads all the project information from the Vercel API.
 // Note that environment variables are also read. The results are then stored in terraform state.
 func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	teamID, projectID, ok := splitInto1Or2(req.ID)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Error importing project",
-			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id\" or \"project_id\"", req.ID),
-		)
-		return
+	var teamID, projectID string
+	if req.Identity != nil && !req.Identity.Raw.IsNull() {
+		var identity projectIdentity
+		resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if identity.ProjectID.IsNull() || identity.ProjectID.IsUnknown() || identity.ProjectID.ValueString() == "" || identity.TeamID.IsUnknown() {
+			resp.Diagnostics.AddError("Error importing project", "project_id must be a known, non-empty project ID and team_id must be known when provided.")
+			return
+		}
+		projectID, teamID = identity.ProjectID.ValueString(), identity.TeamID.ValueString()
+	} else {
+		var ok bool
+		teamID, projectID, ok = splitInto1Or2(req.ID)
+		if !ok {
+			resp.Diagnostics.AddError("Error importing project", fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id\" or \"project_id\"", req.ID))
+			return
+		}
 	}
 
 	out, err := r.client.GetProject(ctx, projectID, teamID)
@@ -3033,6 +3059,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 	})
 
 	diags := resp.State.Set(ctx, result)
+	resp.Diagnostics.Append(setProjectIdentity(ctx, resp.Identity, result)...)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
