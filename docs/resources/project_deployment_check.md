@@ -139,7 +139,7 @@ resource "vercel_project_deployment_check" "vercel_ci" {
 
 ### Native Vercel checks
 
-Native Vercel checks run first-party Vercel validations. The `flag-definitions-present` and `mfe-config-present` native checks require `requires = "build-ready"` and cannot be rerequestable. The provider supplies the API source origin by default; configure `origin = "platform"` for native checks whose API response uses the platform origin.
+Native Vercel checks run first-party Vercel validations. The `flag-definitions-present` and `mfe-config-present` native checks require `requires = "build-ready"` and cannot be rerequestable. The provider supplies the API source origin by default.
 
 ```terraform
 resource "vercel_project_deployment_check" "native_flag_definitions" {
@@ -169,7 +169,6 @@ resource "vercel_project_deployment_check" "native_mfe_config" {
     kind     = "vercel"
     sub_kind = "vercel-native-check"
     job_name = "mfe-config-present"
-    origin   = "platform"
   }
 }
 ```
@@ -218,7 +217,7 @@ Optional:
 - `external_check_name` (String) The external check name. Required for a `git-provider` source.
 - `external_resource_id` (String) An optional external resource ID for an `integration` source. Creating integration checks requires an integration token; the API derives integration IDs from that token.
 - `job_name` (String) The native Vercel check job name. Currently supported for `flag-definitions-present` and `mfe-config-present` checks.
-- `origin` (String) The Vercel source origin. Vercel CI checks use `api`; native checks use `api` or `platform`. The provider supplies `api` when omitted.
+- `origin` (String) The Vercel source origin. Vercel CI and native checks use `api`; the provider supplies this value when omitted.
 - `provider` (String) The Git provider. New git-provider checks currently support `github`; imported checks may report `gitlab` or `bitbucket`.
 - `selection` (Attributes) Selects the Vercel CI deployment or filtered Turborepo task that supplies the check. (see [below for nested schema](#nestedatt--source--selection))
 - `sub_kind` (String) The Vercel source subtype. Set to `vercel-ci-check` for a Vercel CI check or `vercel-native-check` for a Vercel native check.

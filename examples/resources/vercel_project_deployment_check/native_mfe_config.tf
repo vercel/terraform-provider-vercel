@@ -9,6 +9,5 @@ resource "vercel_project_deployment_check" "native_mfe_config" {
     kind     = "vercel"
     sub_kind = "vercel-native-check"
     job_name = "mfe-config-present"
-    origin   = "platform"
   }
 }

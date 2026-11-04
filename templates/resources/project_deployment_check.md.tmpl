@@ -34,7 +34,7 @@ Vercel CI checks select a deployment or filtered Turborepo task from a Vercel CI
 
 ### Native Vercel checks
 
-Native Vercel checks run first-party Vercel validations. The `flag-definitions-present` and `mfe-config-present` native checks require `requires = "build-ready"` and cannot be rerequestable. The provider supplies the API source origin by default; configure `origin = "platform"` for native checks whose API response uses the platform origin.
+Native Vercel checks run first-party Vercel validations. The `flag-definitions-present` and `mfe-config-present` native checks require `requires = "build-ready"` and cannot be rerequestable. The provider supplies the API source origin by default.
 
 {{ tffile "examples/resources/vercel_project_deployment_check/native_flag_definitions.tf" }}
 

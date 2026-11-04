@@ -84,7 +84,7 @@ func (r *projectDeploymentCheckResource) Schema(_ context.Context, _ resource.Sc
 				Attributes: map[string]schema.Attribute{
 					"kind":     schema.StringAttribute{Required: true, MarkdownDescription: "The source kind. New checks support `git-provider`, `integration`, `webhook`, and `vercel`.", Validators: []validator.String{stringvalidator.OneOf("git-provider", "integration", "webhook", "vercel")}, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
 					"sub_kind": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Vercel source subtype. Set to `vercel-ci-check` for a Vercel CI check or `vercel-native-check` for a Vercel native check.", Validators: []validator.String{stringvalidator.OneOf("vercel-ci-check", "vercel-native-check")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
-					"origin":   schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Vercel source origin. Vercel CI checks use `api`; native checks use `api` or `platform`. The provider supplies `api` when omitted.", Validators: []validator.String{stringvalidator.OneOf("api", "platform")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"origin":   schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Vercel source origin. Vercel CI and native checks use `api`; the provider supplies this value when omitted.", Validators: []validator.String{stringvalidator.OneOf("api")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
 					"job_name": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The native Vercel check job name. Currently supported for `flag-definitions-present` and `mfe-config-present` checks.", Validators: []validator.String{stringvalidator.OneOf("flag-definitions-present", "mfe-config-present")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
 					"selection": schema.SingleNestedAttribute{
 						Optional:            true,
@@ -220,9 +220,11 @@ func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req
 		}
 		return
 	}
-	if source.SubKind.IsNull() {
-		resp.Diagnostics.AddAttributeError(path.Root("source").AtName("sub_kind"), "Missing Vercel source subtype", "source.sub_kind must be set for a vercel source.")
+	if source.SubKind.IsUnknown() {
 		return
+	}
+	if source.SubKind.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("source").AtName("sub_kind"), "Missing Vercel source subtype", "source.sub_kind must be set to vercel-ci-check or vercel-native-check for a vercel source.")
 	}
 	subKind := source.SubKind.ValueString()
 	if subKind == "vercel-native-check" {

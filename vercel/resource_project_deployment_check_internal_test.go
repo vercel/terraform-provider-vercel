@@ -54,7 +54,7 @@ func TestProjectDeploymentCheckNativeSourceToClient(t *testing.T) {
 		wantOrigin string
 	}{
 		{"flag-definitions-present", types.StringNull(), "api"},
-		{"mfe-config-present", types.StringValue("platform"), "platform"},
+		{"mfe-config-present", types.StringNull(), "api"},
 	} {
 		t.Run(tc.jobName, func(t *testing.T) {
 			ctx := context.Background()

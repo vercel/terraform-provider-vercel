@@ -79,7 +79,7 @@ func TestCreateProjectDeploymentCheckNativeSource(t *testing.T) {
 		origin  string
 	}{
 		{"Flag Definitions Present", "flag-definitions-present", "api"},
-		{"Microfrontends Config Present", "mfe-config-present", "platform"},
+		{"Microfrontends Config Present", "mfe-config-present", "api"},
 	} {
 		t.Run(tc.jobName, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
