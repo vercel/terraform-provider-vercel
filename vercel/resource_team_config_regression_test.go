@@ -156,7 +156,7 @@ func TestTeamConfigDescriptionPatch(t *testing.T) {
 				t.Fatal(diags)
 			}
 			config.Description = tc.value
-			request, diags := config.toUpdateTeamRequest(context.Background(), "", types.StringNull())
+			request, diags := config.initialTeamSettings(context.Background(), "")
 			if diags.HasError() {
 				t.Fatal(diags)
 			}

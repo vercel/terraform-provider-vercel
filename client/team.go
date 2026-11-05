@@ -172,7 +172,7 @@ type UpdateSamlConfigRole struct {
 }
 
 type UpdateSamlConfig struct {
-	Enforced bool                            `json:"enforced"`
+	Enforced *bool                           `json:"enforced,omitempty"`
 	Roles    map[string]UpdateSamlConfigRole `json:"roles"`
 }
 
@@ -193,27 +193,31 @@ func (r *UpdateSamlConfig) MarshalJSON() ([]byte, error) {
 		}
 
 	}
-	return json.Marshal(map[string]any{
-		"enforced": r.Enforced,
-		"roles":    roles,
-	})
+	fields := map[string]any{}
+	if r.Enforced != nil {
+		fields["enforced"] = r.Enforced
+	}
+	if r.Roles != nil {
+		fields["roles"] = roles
+	}
+	return json.Marshal(fields)
 }
 
 type UpdateTeamRequest struct {
 	DefaultPassport                    **Passport                   `json:"defaultPassport,omitempty"`
 	DefaultDeploymentProtection        *DefaultDeploymentProtection `json:"defaultDeploymentProtection,omitempty"`
 	TeamID                             string                       `json:"-"`
-	Avatar                             string                       `json:"avatar,omitempty"`
+	Avatar                             *string                      `json:"avatar,omitempty"`
 	Description                        *string                      `json:"description,omitempty"`
-	EmailDomain                        string                       `json:"emailDomain,omitempty"`
-	Name                               string                       `json:"name,omitempty"`
-	PreviewDeploymentSuffix            string                       `json:"previewDeploymentSuffix,omitempty"`
+	EmailDomain                        *string                      `json:"emailDomain,omitempty"`
+	Name                               *string                      `json:"name,omitempty"`
+	PreviewDeploymentSuffix            *string                      `json:"previewDeploymentSuffix,omitempty"`
 	Saml                               *UpdateSamlConfig            `json:"saml,omitempty"`
-	Slug                               string                       `json:"slug,omitempty"`
-	EnablePreviewFeedback              string                       `json:"enablePreviewFeedback,omitempty"`
-	EnableProductionFeedback           string                       `json:"enableProductionFeedback,omitempty"`
-	SensitiveEnvironmentVariablePolicy string                       `json:"sensitiveEnvironmentVariablePolicy,omitempty"`
-	DisjunctiveProductionSecretPolicy  string                       `json:"disjunctiveProductionSecretPolicy,omitempty"`
+	Slug                               *string                      `json:"slug,omitempty"`
+	EnablePreviewFeedback              *string                      `json:"enablePreviewFeedback,omitempty"`
+	EnableProductionFeedback           *string                      `json:"enableProductionFeedback,omitempty"`
+	SensitiveEnvironmentVariablePolicy *string                      `json:"sensitiveEnvironmentVariablePolicy,omitempty"`
+	DisjunctiveProductionSecretPolicy  *string                      `json:"disjunctiveProductionSecretPolicy,omitempty"`
 	RemoteCaching                      *RemoteCaching               `json:"remoteCaching,omitempty"`
 	HideIPAddresses                    *bool                        `json:"hideIpAddresses,omitempty"`
 	HideIPAddressesInLogDrains         *bool                        `json:"hideIpAddressesInLogDrains,omitempty"`

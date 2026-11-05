@@ -40,7 +40,7 @@ func TestPassportPatchSemantics(t *testing.T) {
 				t.Fatal(diags)
 			}
 			team := TeamConfig{DefaultPassport: tc.value, RemoteCaching: types.ObjectNull(remoteCachingAttrTypes), Saml: types.ObjectNull(samlAttrTypes)}
-			teamRequest, diags := team.toUpdateTeamRequest(ctx, "", types.StringNull())
+			teamRequest, diags := team.initialTeamSettings(ctx, "")
 			if diags.HasError() {
 				t.Fatal(diags)
 			}

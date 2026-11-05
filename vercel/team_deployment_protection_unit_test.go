@@ -31,7 +31,7 @@ func TestTeamDefaultDeploymentProtection(t *testing.T) {
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
-			request, diags := config.toUpdateTeamRequest(context.Background(), "", types.StringNull())
+			request, diags := config.initialTeamSettings(context.Background(), "")
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
