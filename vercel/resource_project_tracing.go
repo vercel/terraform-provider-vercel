@@ -118,7 +118,7 @@ type ProjectTracing struct {
 }
 
 func responseToProjectTracing(ctx context.Context, out client.ProjectTracing, preferredSamplingRules types.List) (ProjectTracing, diag.Diagnostics) {
-	samplingRules, diags := traceDrainSamplingRulesFromAPI(ctx, out.SamplingRules, preferredSamplingRules)
+	samplingRules, diags := drainSamplingRulesFromAPI(ctx, out.SamplingRules, preferredSamplingRules)
 	if diags.HasError() {
 		return ProjectTracing{}, diags
 	}
@@ -131,7 +131,7 @@ func responseToProjectTracing(ctx context.Context, out client.ProjectTracing, pr
 }
 
 func (r *projectTracingResource) apply(ctx context.Context, plan ProjectTracing, respDiagnostics *diag.Diagnostics) (ProjectTracing, bool) {
-	samplingRules, diags := traceDrainSamplingRulesToClient(ctx, plan.SamplingRules)
+	samplingRules, diags := drainSamplingRulesToClient(ctx, plan.SamplingRules)
 	respDiagnostics.Append(diags...)
 	if respDiagnostics.HasError() {
 		return ProjectTracing{}, false
@@ -270,7 +270,7 @@ func (r *projectTracingResource) ImportState(ctx context.Context, req resource.I
 		)
 		return
 	}
-	result, diags := responseToProjectTracing(ctx, out, types.ListNull(traceDrainSamplingRuleAttrType))
+	result, diags := responseToProjectTracing(ctx, out, types.ListNull(drainSamplingRuleAttrType))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

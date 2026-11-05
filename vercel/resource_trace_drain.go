@@ -175,7 +175,7 @@ func responseToTraceDrain(ctx context.Context, out client.TraceDrain, secret typ
 		return TraceDrain{}, diags
 	}
 
-	samplingRules, diags := traceDrainSamplingRulesFromAPI(ctx, out.SamplingRules, preferredSamplingRules)
+	samplingRules, diags := drainSamplingRulesFromAPI(ctx, out.SamplingRules, preferredSamplingRules)
 	if diags.HasError() {
 		return TraceDrain{}, diags
 	}
@@ -219,7 +219,7 @@ func (r *traceDrainResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	samplingRules, diags := traceDrainSamplingRulesToClient(ctx, plan.SamplingRules)
+	samplingRules, diags := drainSamplingRulesToClient(ctx, plan.SamplingRules)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -369,7 +369,7 @@ func (r *traceDrainResource) ImportState(ctx context.Context, req resource.Impor
 		return
 	}
 
-	result, diags := responseToTraceDrain(ctx, out, types.StringNull(), types.ListNull(traceDrainSamplingRuleAttrType))
+	result, diags := responseToTraceDrain(ctx, out, types.StringNull(), types.ListNull(drainSamplingRuleAttrType))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

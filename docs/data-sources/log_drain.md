@@ -43,5 +43,15 @@ data "vercel_log_drain" "example" {
 - `headers` (Map of String, Sensitive) Custom headers to include in requests to the log drain endpoint.
 - `name` (String) The human-readable name of the Log Drain.
 - `project_ids` (Set of String) A list of project IDs that the log drain should be associated with. Logs from these projects will be sent log events to the specified endpoint. If omitted, logs will be sent for all projects.
-- `sampling_rate` (Number) A ratio of logs matching the sampling rate will be sent to your log drain. Should be a value between 0 and 1. If unspecified, all logs are sent.
+- `sampling_rate` (Number) The sampling rate when the drain has exactly one unconditional sampling rule. Null otherwise; use sampling_rules for the full configuration.
+- `sampling_rules` (Attributes List) Ordered sampling rules for logs sent to this drain. (see [below for nested schema](#nestedatt--sampling_rules))
 - `sources` (Set of String) A set of sources that the log drain should send logs for. Valid values are `static`, `edge`, `external`, `build`, `lambda`, `firewall`, and `redirect`.
+
+<a id="nestedatt--sampling_rules"></a>
+### Nested Schema for `sampling_rules`
+
+Read-Only:
+
+- `environment` (String) Environment this sampling rule applies to.
+- `rate` (Number) Sampling rate from 0 to 1.
+- `request_path` (String) Request path prefix this sampling rule applies to.

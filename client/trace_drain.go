@@ -19,11 +19,7 @@ type TraceDrain struct {
 	Endpoint       string                   `json:"url"`
 }
 
-type TraceDrainSamplingRule struct {
-	Rate        float64 `json:"rate"`
-	Environment string  `json:"env,omitempty"`
-	RequestPath string  `json:"requestPath,omitempty"`
-}
+type TraceDrainSamplingRule = DrainSamplingRule
 
 type CreateTraceDrainRequest struct {
 	TeamID         string                   `json:"-"`

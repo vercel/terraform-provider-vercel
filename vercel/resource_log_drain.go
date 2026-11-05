@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/float64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
@@ -130,8 +132,36 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				ElementType:   types.StringType,
 				PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()},
 			},
+			"sampling_rules": schema.ListNestedAttribute{
+				Description:   "Ordered sampling rules for logs sent to this drain. The first matching rule applies; logs matching no rule are dropped. Conflicts with sampling_rate.",
+				Optional:      true,
+				PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplace()},
+				Validators: []validator.List{
+					listvalidator.SizeAtMost(10),
+					listvalidator.ConflictsWith(path.MatchRoot("sampling_rate")),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"rate": schema.Float64Attribute{
+							Description: "Sampling rate from 0 to 1.",
+							Required:    true,
+							Validators:  []validator.Float64{float64validator.Between(0, 1)},
+						},
+						"environment": schema.StringAttribute{
+							Description: "Environment to apply this sampling rule to. Can be `production` or `preview`.",
+							Optional:    true,
+							Validators:  []validator.String{stringvalidator.OneOf("production", "preview")},
+						},
+						"request_path": schema.StringAttribute{
+							Description: "Request path prefix to apply this sampling rule to. Omit to match any path.",
+							Optional:    true,
+							Validators:  []validator.String{stringvalidator.LengthAtLeast(1)},
+						},
+					},
+				},
+			},
 			"sampling_rate": schema.Float64Attribute{
-				Description:   "A ratio of logs matching the sampling rate will be sent to your log drain. Should be a value between 0 and 1. If unspecified, all logs are sent.",
+				Description:   "A ratio of logs matching the sampling rate will be sent to your log drain. Should be a value between 0 and 1. If unspecified, all logs are sent. Conflicts with sampling_rules.",
 				Optional:      true,
 				PlanModifiers: []planmodifier.Float64{float64planmodifier.RequiresReplace()},
 				Validators: []validator.Float64{
@@ -234,6 +264,7 @@ type LogDrain struct {
 	Headers         types.Map     `tfsdk:"headers"`
 	ProjectIDs      types.Set     `tfsdk:"project_ids"`
 	SamplingRate    types.Float64 `tfsdk:"sampling_rate"`
+	SamplingRules   types.List    `tfsdk:"sampling_rules"`
 	Secret          types.String  `tfsdk:"secret"`
 	SecretWO        types.String  `tfsdk:"secret_wo"`
 	SecretWOVersion types.Int64   `tfsdk:"secret_wo_version"`
@@ -241,7 +272,7 @@ type LogDrain struct {
 	Endpoint        types.String  `tfsdk:"endpoint"`
 }
 
-func responseToLogDrain(ctx context.Context, out client.LogDrain, secret types.String, secretWOVersion types.Int64, isWriteOnly bool) (LogDrain, diag.Diagnostics) {
+func responseToLogDrain(ctx context.Context, out client.LogDrain, secret types.String, secretWOVersion types.Int64, isWriteOnly bool, preferredRules types.List) (LogDrain, diag.Diagnostics) {
 	projectIDs, diags := types.SetValueFrom(ctx, types.StringType, out.ProjectIDs)
 	if diags.HasError() {
 		return LogDrain{}, diags
@@ -262,6 +293,18 @@ func responseToLogDrain(ctx context.Context, out client.LogDrain, secret types.S
 		return LogDrain{}, diags
 	}
 
+	samplingRules, diags := drainSamplingRulesFromAPI(ctx, out.SamplingRules, preferredRules)
+	if diags.HasError() {
+		return LogDrain{}, diags
+	}
+	samplingRate := types.Float64PointerValue(out.SamplingRate)
+	if !preferredRules.IsNull() && !preferredRules.IsUnknown() {
+		samplingRate = types.Float64Null()
+	} else if out.SamplingRate != nil {
+		// Keep existing scalar configurations stable across refreshes.
+		samplingRules = types.ListNull(drainSamplingRuleAttrType)
+	}
+
 	if isWriteOnly {
 		secret = types.StringNull()
 	} else if secret.IsNull() || secret.IsUnknown() {
@@ -273,7 +316,8 @@ func responseToLogDrain(ctx context.Context, out client.LogDrain, secret types.S
 		TeamID:          toTeamID(out.TeamID),
 		Name:            types.StringValue(out.Name),
 		DeliveryFormat:  types.StringValue(out.DeliveryFormat),
-		SamplingRate:    types.Float64PointerValue(out.SamplingRate),
+		SamplingRate:    samplingRate,
+		SamplingRules:   samplingRules,
 		Secret:          secret,
 		SecretWO:        types.StringNull(),
 		SecretWOVersion: secretWOVersion,
@@ -341,6 +385,12 @@ func (r *logDrainResource) Create(ctx context.Context, req resource.CreateReques
 		secret = secretWO
 	}
 
+	samplingRules, diags := drainSamplingRulesToClient(ctx, plan.SamplingRules)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	out, err := r.client.CreateLogDrain(ctx, client.CreateLogDrainRequest{
 		TeamID:         plan.TeamID.ValueString(),
 		Name:           plan.Name.ValueString(),
@@ -348,7 +398,8 @@ func (r *logDrainResource) Create(ctx context.Context, req resource.CreateReques
 		Environments:   environments,
 		Headers:        headers,
 		ProjectIDs:     projectIDs,
-		SamplingRate:   plan.SamplingRate.ValueFloat64(),
+		SamplingRate:   plan.SamplingRate.ValueFloat64Pointer(),
+		SamplingRules:  samplingRules,
 		Secret:         secret.ValueString(),
 		Sources:        sources,
 		Endpoint:       plan.Endpoint.ValueString(),
@@ -361,7 +412,7 @@ func (r *logDrainResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	result, diags := responseToLogDrain(ctx, out, plan.Secret, plan.SecretWOVersion, !secretWO.IsNull())
+	result, diags := responseToLogDrain(ctx, out, plan.Secret, plan.SecretWOVersion, !secretWO.IsNull(), plan.SamplingRules)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -408,7 +459,7 @@ func (r *logDrainResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	result, diags := responseToLogDrain(ctx, out, state.Secret, state.SecretWOVersion, state.Secret.IsNull())
+	result, diags := responseToLogDrain(ctx, out, state.Secret, state.SecretWOVersion, state.Secret.IsNull(), state.SamplingRules)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -496,7 +547,7 @@ func (r *logDrainResource) ImportState(ctx context.Context, req resource.ImportS
 		return
 	}
 
-	result, diags := responseToLogDrain(ctx, out, types.StringNull(), types.Int64Null(), writeOnly)
+	result, diags := responseToLogDrain(ctx, out, types.StringNull(), types.Int64Null(), writeOnly, types.ListNull(drainSamplingRuleAttrType))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

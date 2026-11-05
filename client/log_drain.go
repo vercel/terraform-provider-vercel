@@ -10,32 +10,34 @@ import (
 // LogDrain represents a simplified drain shape used by the provider
 // regardless of the underlying API representation.
 type LogDrain struct {
-	ID             string            `json:"id"`
-	TeamID         string            `json:"ownerId"`
-	Name           string            `json:"name"`
-	DeliveryFormat string            `json:"deliveryFormat"`
-	Environments   []string          `json:"environments"`
-	Headers        map[string]string `json:"headers"`
-	ProjectIDs     []string          `json:"projectIds"`
-	SamplingRate   *float64          `json:"samplingRate"`
-	Secret         string            `json:"secret"`
-	Sources        []string          `json:"sources"`
-	Endpoint       string            `json:"url"`
+	ID             string              `json:"id"`
+	TeamID         string              `json:"ownerId"`
+	Name           string              `json:"name"`
+	DeliveryFormat string              `json:"deliveryFormat"`
+	Environments   []string            `json:"environments"`
+	Headers        map[string]string   `json:"headers"`
+	ProjectIDs     []string            `json:"projectIds"`
+	SamplingRate   *float64            `json:"samplingRate"`
+	SamplingRules  []DrainSamplingRule `json:"samplingRules"`
+	Secret         string              `json:"secret"`
+	Sources        []string            `json:"sources"`
+	Endpoint       string              `json:"url"`
 }
 
 // CreateLogDrainRequest is the provider-level request used to create drains.
 // It maps to the new /v1/drains API payload internally.
 type CreateLogDrainRequest struct {
-	TeamID         string            `json:"-"`
-	Name           string            `json:"name"`
-	DeliveryFormat string            `json:"deliveryFormat"`
-	Environments   []string          `json:"environments"`
-	Headers        map[string]string `json:"headers,omitempty"`
-	ProjectIDs     []string          `json:"projectIds,omitempty"`
-	SamplingRate   float64           `json:"samplingRate,omitempty"`
-	Secret         string            `json:"secret,omitempty"`
-	Sources        []string          `json:"sources"`
-	Endpoint       string            `json:"url"`
+	TeamID         string              `json:"-"`
+	Name           string              `json:"name"`
+	DeliveryFormat string              `json:"deliveryFormat"`
+	Environments   []string            `json:"environments"`
+	Headers        map[string]string   `json:"headers,omitempty"`
+	ProjectIDs     []string            `json:"projectIds,omitempty"`
+	SamplingRate   *float64            `json:"samplingRate,omitempty"`
+	SamplingRules  []DrainSamplingRule `json:"samplingRules,omitempty"`
+	Secret         string              `json:"secret,omitempty"`
+	Sources        []string            `json:"sources"`
+	Endpoint       string              `json:"url"`
 }
 
 // Internal request/response shapes for /v1/drains
@@ -124,10 +126,14 @@ type drainsResponse struct {
 
 func drainsRespToLogDrain(r drainsResponse) LogDrain {
 	var sampling *float64
-	if len(r.Sampling) > 0 {
-		// Use the first sampling rule's rate if present
+	if len(r.Sampling) == 1 && r.Sampling[0].Env == "" && r.Sampling[0].RequestPath == "" {
 		rate := r.Sampling[0].Rate
 		sampling = &rate
+	}
+
+	rules := make([]DrainSamplingRule, 0, len(r.Sampling))
+	for _, rule := range r.Sampling {
+		rules = append(rules, DrainSamplingRule{Rate: rule.Rate, Environment: rule.Env, RequestPath: rule.RequestPath})
 	}
 
 	var environments []string
@@ -148,6 +154,7 @@ func drainsRespToLogDrain(r drainsResponse) LogDrain {
 		Headers:        r.Delivery.Headers,
 		ProjectIDs:     r.ProjectIDs,
 		SamplingRate:   sampling,
+		SamplingRules:  rules,
 		Secret:         r.Delivery.Secret,
 		Sources:        sources,
 		Endpoint:       r.Delivery.Endpoint,
@@ -199,8 +206,13 @@ func (c *Client) CreateLogDrain(ctx context.Context, request CreateLogDrainReque
 		},
 		Source: drainsSource{Kind: "self-served"},
 	}
-	if request.SamplingRate > 0 {
-		payload.Sampling = []drainsSampling{{Type: "head_sampling", Rate: request.SamplingRate}}
+	for _, rule := range request.SamplingRules {
+		payload.Sampling = append(payload.Sampling, drainsSampling{
+			Type: "head_sampling", Rate: rule.Rate, Env: rule.Environment, RequestPath: rule.RequestPath,
+		})
+	}
+	if request.SamplingRules == nil && request.SamplingRate != nil {
+		payload.Sampling = []drainsSampling{{Type: "head_sampling", Rate: *request.SamplingRate}}
 	}
 
 	body := string(mustMarshal(payload))
