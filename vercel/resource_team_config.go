@@ -103,8 +103,9 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 			"description": schema.StringAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
-				Description:   "A description of the team.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description:   "A description of the team, up to 140 characters. Set to an empty string to clear it.",
+				Validators:    []validator.String{stringvalidator.UTF8LengthAtMost(140)},
 			},
 			"sensitive_environment_variable_policy": schema.StringAttribute{
 				Description:        "Ensures that all environment variables created by members of this team will be created as Sensitive Environment Variables which can only be decrypted by Vercel's deployment system. One of `on`, `off`, or `default`.",
@@ -188,7 +189,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "Deployment Protection defaults copied to new projects. Existing projects are unaffected. Removing this attribute leaves the team default unchanged.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
 				Attributes: map[string]schema.Attribute{
 					"vercel_authentication": schema.SingleNestedAttribute{
 						Required:    true,
@@ -230,7 +231,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "Enables the Vercel Toolbar on your preview deployments: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.OneOf("default", "on", "off"),
 				},
@@ -239,7 +240,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 				Description:   "Enables the Vercel Toolbar on your production deployments: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Validators: []validator.String{
 					stringvalidator.OneOf("default", "on", "off"),
 				},
@@ -462,6 +463,10 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 	if passportDiags.HasError() {
 		return client.UpdateTeamRequest{}, passportDiags
 	}
+	var description *string
+	if !t.Description.IsNull() && !t.Description.IsUnknown() {
+		description = t.Description.ValueStringPointer()
+	}
 	return client.UpdateTeamRequest{
 		DefaultPassport:                    passport,
 		DefaultDeploymentProtection:        protection,
@@ -469,7 +474,7 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 		Avatar:                             avatar,
 		EmailDomain:                        t.EmailDomain.ValueString(),
 		Name:                               t.Name.ValueString(),
-		Description:                        t.Description.ValueString(),
+		Description:                        description,
 		PreviewDeploymentSuffix:            t.PreviewDeploymentSuffix.ValueString(),
 		Slug:                               slug,
 		EnablePreviewFeedback:              t.EnablePreviewFeedback.ValueString(),

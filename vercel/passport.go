@@ -49,7 +49,7 @@ func passportResourceSchema(description, managementAttribute string) schema.Sing
 				Validators:  []validator.String{stringvalidator.LengthAtLeast(1)},
 			},
 			"deployment_type": schema.StringAttribute{
-				Description: "Deployments to protect: all, preview, prod_deployment_urls_and_all_previews, or all_except_custom_domains. Defaults to all.",
+				Description: "Deployments to protect: all, preview, prod_deployment_urls_and_all_previews, or all_except_custom_domains. Defaults to all when enabled; omit when disabled.",
 				Optional:    true,
 				Computed:    true,
 				Validators:  []validator.String{stringvalidator.OneOf("all", "preview", "prod_deployment_urls_and_all_previews", "all_except_custom_domains")},
@@ -65,7 +65,7 @@ func passportDataSourceSchema(description string) datasourceschema.SingleNestedA
 		Attributes: map[string]datasourceschema.Attribute{
 			"enabled":         datasourceschema.BoolAttribute{Computed: true, Description: "Whether Passport is enabled."},
 			"connector_id":    datasourceschema.StringAttribute{Computed: true, Description: "The stable ID of the Vercel Connect OAuth application. Null when disabled."},
-			"deployment_type": datasourceschema.StringAttribute{Computed: true, Description: "The deployment scope protected when Passport is enabled. Reports all when disabled as a default value; Passport does not protect any deployments when enabled is false."},
+			"deployment_type": datasourceschema.StringAttribute{Computed: true, Description: "The deployment scope protected when Passport is enabled. Null when disabled."},
 		},
 	}
 }
@@ -89,17 +89,18 @@ func passportUpdate(ctx context.Context, value types.Object) (**client.Passport,
 
 func passportState(passport *client.Passport) types.Object {
 	connectorID := types.StringNull()
-	deploymentType := "all"
+	deploymentType := types.StringNull()
 	if passport != nil {
 		connectorID = types.StringValue(passport.ConnectorID)
+		deploymentType = types.StringValue("all")
 		if passport.DeploymentType != "" {
-			deploymentType = passport.DeploymentType
+			deploymentType = types.StringValue(passport.DeploymentType)
 		}
 	}
 	return types.ObjectValueMust(passportAttrTypes, map[string]attr.Value{
 		"enabled":         types.BoolValue(passport != nil),
 		"connector_id":    connectorID,
-		"deployment_type": types.StringValue(deploymentType),
+		"deployment_type": deploymentType,
 	})
 }
 
@@ -129,8 +130,8 @@ func (passportValidator) ValidateObject(ctx context.Context, req validator.Objec
 	if !config.ConnectorID.IsNull() && !config.ConnectorID.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(req.Path.AtName("connector_id"), "Disabled Passport Connector", "Omit connector_id when enabled is false.")
 	}
-	if !config.DeploymentType.IsNull() && !config.DeploymentType.IsUnknown() && config.DeploymentType.ValueString() != "all" {
-		resp.Diagnostics.AddAttributeError(req.Path.AtName("deployment_type"), "Disabled Passport Scope", "Omit deployment_type or use all when enabled is false.")
+	if !config.DeploymentType.IsNull() && !config.DeploymentType.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(req.Path.AtName("deployment_type"), "Disabled Passport Scope", "Omit deployment_type when enabled is false.")
 	}
 }
 
@@ -170,7 +171,11 @@ func (m passportPlanModifier) PlanModifyObject(ctx context.Context, req planmodi
 		values["enabled"] = types.BoolValue(true)
 	}
 	if values["deployment_type"].IsNull() {
-		values["deployment_type"] = types.StringValue("all")
+		if values["enabled"].IsUnknown() {
+			values["deployment_type"] = types.StringUnknown()
+		} else if values["enabled"].Equal(types.BoolValue(true)) {
+			values["deployment_type"] = types.StringValue("all")
+		}
 	}
 	resp.PlanValue = types.ObjectValueMust(passportAttrTypes, values)
 }

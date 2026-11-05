@@ -83,6 +83,12 @@ func TestPassportReadAndSchemaDecoding(t *testing.T) {
 			if !got.Equal(passportState(passport)) {
 				t.Fatalf("Passport read = %s", got)
 			}
+			if passport == nil {
+				attrs := got.Attributes()
+				if !attrs["enabled"].Equal(types.BoolValue(false)) || !attrs["connector_id"].IsNull() || !attrs["deployment_type"].IsNull() {
+					t.Fatalf("disabled Passport must have no connector or protected scope: %s", got)
+				}
+			}
 		}
 	}
 	// Exercise full schema/model decoding so resource-only fields cannot break data sources.
@@ -134,6 +140,7 @@ func TestPassportValidation(t *testing.T) {
 		{"disabled", types.BoolValue(false), types.StringNull(), types.StringNull(), false},
 		{"disabled connector", types.BoolValue(false), types.StringValue("scl_oidc"), types.StringNull(), true},
 		{"disabled scope", types.BoolValue(false), types.StringNull(), types.StringValue("preview"), true},
+		{"disabled all scope", types.BoolValue(false), types.StringNull(), types.StringValue("all"), true},
 		{"unknown enabled", types.BoolUnknown(), types.StringNull(), types.StringNull(), false},
 		{"unknown connector", types.BoolValue(true), types.StringUnknown(), types.StringNull(), false},
 	} {
@@ -189,6 +196,7 @@ func TestPassportDefaultsPreserveOmittedBlocks(t *testing.T) {
 		{"omitted keeps disabled", types.ObjectNull(passportAttrTypes), passportState(nil), passportState(nil)},
 		{"configured defaults", configValue, configValue, passportState(&client.Passport{ConnectorID: "scl_oidc", DeploymentType: "all"})},
 		{"disabled clears computed connector", types.ObjectValueMust(passportAttrTypes, map[string]attr.Value{"enabled": types.BoolValue(false), "connector_id": types.StringNull(), "deployment_type": types.StringNull()}), stateValue, passportState(nil)},
+		{"unknown enabled leaves scope unknown", types.ObjectValueMust(passportAttrTypes, map[string]attr.Value{"enabled": types.BoolUnknown(), "connector_id": types.StringUnknown(), "deployment_type": types.StringNull()}), stateValue, types.ObjectValueMust(passportAttrTypes, map[string]attr.Value{"enabled": types.BoolUnknown(), "connector_id": types.StringUnknown(), "deployment_type": types.StringUnknown()})},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			stateRaw, err := tc.plan.ToTerraformValue(ctx)

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -69,15 +70,17 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				Description: "The team ID the project exists beneath. Required when configuring a team resource if a default team has not been set in the provider.",
 			},
 			"name": schema.StringAttribute{
-				Required: true,
+				Optional: true,
+				Computed: true,
 				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(path.MatchRoot("id")),
 					stringvalidator.LengthBetween(1, 52),
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-z0-9\-]{0,100}$`),
 						"The name of a Project can only contain up to 100 alphanumeric lowercase characters and hyphens",
 					),
 				},
-				Description: "The name of the project.",
+				Description: "The name of the project. Specify exactly one of name or id.",
 			},
 			"build_command": schema.StringAttribute{
 				Computed:    true,
@@ -326,7 +329,10 @@ For more detailed information, please see the [Vercel documentation](https://ver
 				},
 			},
 			"id": schema.StringAttribute{
-				Computed: true,
+				Optional:    true,
+				Computed:    true,
+				Description: "The stable ID of the project. Specify exactly one of name or id.",
+				Validators:  []validator.String{stringvalidator.LengthAtLeast(1)},
 			},
 			"install_command": schema.StringAttribute{
 				Computed:    true,
@@ -725,13 +731,17 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	out, err := d.client.GetProject(ctx, config.Name.ValueString(), config.TeamID.ValueString())
+	identifier := config.ID.ValueString()
+	if identifier == "" {
+		identifier = config.Name.ValueString()
+	}
+	out, err := d.client.GetProject(ctx, identifier, config.TeamID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading project",
 			fmt.Sprintf("Could not read project %s %s, unexpected error: %s",
 				config.TeamID.ValueString(),
-				config.Name.ValueString(),
+				identifier,
 				err,
 			),
 		)
