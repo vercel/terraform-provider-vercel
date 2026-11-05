@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"regexp"
@@ -19,9 +20,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = &projectProtectionBypassResource{}
-	_ resource.ResourceWithConfigure   = &projectProtectionBypassResource{}
-	_ resource.ResourceWithImportState = &projectProtectionBypassResource{}
+	_ resource.Resource                 = &projectProtectionBypassResource{}
+	_ resource.ResourceWithConfigure    = &projectProtectionBypassResource{}
+	_ resource.ResourceWithImportState  = &projectProtectionBypassResource{}
+	_ resource.ResourceWithUpgradeState = &projectProtectionBypassResource{}
 )
 
 func newProjectProtectionBypassResource() resource.Resource {
@@ -55,6 +57,7 @@ func (r *projectProtectionBypassResource) Configure(ctx context.Context, req res
 
 func (r *projectProtectionBypassResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version: 1,
 		Description: `
 Provides a Project Protection Bypass resource.
 
@@ -140,9 +143,15 @@ type ProjectProtectionBypass struct {
 	CreatedBy types.String `tfsdk:"created_by"`
 }
 
+func projectProtectionBypassID(projectID, secret string) types.String {
+	// The API keys bypasses by their secret, but Terraform prints resource IDs.
+	secretHash := sha256.Sum256([]byte(secret))
+	return types.StringValue(fmt.Sprintf("%s/%x", projectID, secretHash))
+}
+
 func convertBypass(projectID, teamID, secret string, bypass client.ProtectionBypass) ProjectProtectionBypass {
 	return ProjectProtectionBypass{
-		ID:        types.StringValue(fmt.Sprintf("%s/%s", projectID, secret)),
+		ID:        projectProtectionBypassID(projectID, secret),
 		ProjectID: types.StringValue(projectID),
 		TeamID:    toTeamID(teamID),
 		Secret:    types.StringValue(secret),
@@ -151,6 +160,29 @@ func convertBypass(projectID, teamID, secret string, bypass client.ProtectionByp
 		Scope:     types.StringValue(bypass.Scope),
 		CreatedAt: types.Int64Value(bypass.CreatedAt),
 		CreatedBy: types.StringValue(bypass.CreatedBy),
+	}
+}
+
+func (r *projectProtectionBypassResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	// Version 0 has the same attribute types; only the ID format changes.
+	priorSchema := schemaResp.Schema
+	priorSchema.Version = 0
+	return map[int64]resource.StateUpgrader{
+		0: {
+			PriorSchema: &priorSchema,
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var state ProjectProtectionBypass
+				resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				// Upgrade before refresh so progress output cannot print the old ID.
+				state.ID = projectProtectionBypassID(state.ProjectID.ValueString(), state.Secret.ValueString())
+				resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+			},
+		},
 	}
 }
 
@@ -374,7 +406,7 @@ func (r *projectProtectionBypassResource) ImportState(ctx context.Context, req r
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing project protection bypass",
-			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/project_id/secret\" or \"project_id/secret\"", req.ID),
+			"Invalid import ID: expected \"team_id/project_id/secret\" or \"project_id/secret\".",
 		)
 		return
 	}
