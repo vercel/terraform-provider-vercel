@@ -83,8 +83,9 @@ func (r *projectDeploymentCheckResource) Schema(_ context.Context, _ resource.Sc
 				},
 				Attributes: map[string]schema.Attribute{
 					"kind":     schema.StringAttribute{Required: true, MarkdownDescription: "The source kind. New checks support `git-provider`, `integration`, `webhook`, and `vercel`.", Validators: []validator.String{stringvalidator.OneOf("git-provider", "integration", "webhook", "vercel")}, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
-					"sub_kind": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Vercel source subtype. Set to `vercel-ci-check` for a Vercel CI check.", Validators: []validator.String{stringvalidator.OneOf("vercel-ci-check")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
-					"origin":   schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Vercel source origin. Vercel CI checks use `api`; the provider supplies this value when omitted.", Validators: []validator.String{stringvalidator.OneOf("api")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"sub_kind": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Vercel source subtype. Set to `vercel-ci-check` for a Vercel CI check or `vercel-native-check` for a Vercel native check.", Validators: []validator.String{stringvalidator.OneOf("vercel-ci-check", "vercel-native-check")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"origin":   schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The Vercel source origin. Vercel CI and native checks use `api`; the provider supplies this value when omitted.", Validators: []validator.String{stringvalidator.OneOf("api")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
+					"job_name": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "The native Vercel check job name. Currently supported for `flag-definitions-present` and `mfe-config-present` checks.", Validators: []validator.String{stringvalidator.OneOf("flag-definitions-present", "mfe-config-present")}, PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()}},
 					"selection": schema.SingleNestedAttribute{
 						Optional:            true,
 						Computed:            true,
@@ -127,6 +128,7 @@ type ProjectDeploymentCheckSource struct {
 	Kind               types.String `tfsdk:"kind"`
 	SubKind            types.String `tfsdk:"sub_kind"`
 	Origin             types.String `tfsdk:"origin"`
+	JobName            types.String `tfsdk:"job_name"`
 	Selection          types.Object `tfsdk:"selection"`
 	ExternalCheckName  types.String `tfsdk:"external_check_name"`
 	Provider           types.String `tfsdk:"provider"`
@@ -147,7 +149,7 @@ var projectDeploymentCheckSourceSelectionAttrTypes = map[string]attr.Type{
 }
 
 var projectDeploymentCheckSourceAttrTypes = map[string]attr.Type{
-	"kind": types.StringType, "sub_kind": types.StringType, "origin": types.StringType,
+	"kind": types.StringType, "sub_kind": types.StringType, "origin": types.StringType, "job_name": types.StringType,
 	"selection":           types.ObjectType{AttrTypes: projectDeploymentCheckSourceSelectionAttrTypes},
 	"external_check_name": types.StringType, "provider": types.StringType,
 	"webhook_id": types.StringType, "external_resource_id": types.StringType,
@@ -197,6 +199,7 @@ func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req
 		{"provider", "git-provider", source.Provider},
 		{"webhook_id", "webhook", source.WebhookID},
 		{"external_resource_id", "integration", source.ExternalResourceID},
+		{"job_name", "vercel", source.JobName},
 	} {
 		if !field.value.IsNull() && source.Kind.ValueString() != field.kind {
 			resp.Diagnostics.AddAttributeError(path.Root("source").AtName(field.name), "Invalid source attribute", fmt.Sprintf("source.%s can only be configured for a %s source.", field.name, field.kind))
@@ -217,17 +220,39 @@ func (r *projectDeploymentCheckResource) ValidateConfig(ctx context.Context, req
 		}
 		return
 	}
+	if source.SubKind.IsUnknown() {
+		return
+	}
+	if source.SubKind.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("source").AtName("sub_kind"), "Missing Vercel source subtype", "source.sub_kind must be set to vercel-ci-check or vercel-native-check for a vercel source.")
+	}
+	subKind := source.SubKind.ValueString()
+	if subKind == "vercel-native-check" {
+		if !config.Requires.IsUnknown() && config.Requires.ValueString() != "build-ready" {
+			resp.Diagnostics.AddAttributeError(path.Root("requires"), "Invalid Vercel native requirement stage", "Vercel native Deployment Checks require requires to be build-ready.")
+		}
+		if !config.IsRerequestable.IsNull() && !config.IsRerequestable.IsUnknown() && config.IsRerequestable.ValueBool() {
+			resp.Diagnostics.AddAttributeError(path.Root("is_rerequestable"), "Unsupported Vercel native rerun setting", "Vercel native Deployment Checks cannot be rerequestable. Set is_rerequestable to false or omit it.")
+		}
+		if source.JobName.IsNull() {
+			resp.Diagnostics.AddAttributeError(path.Root("source").AtName("job_name"), "Missing Vercel native job name", "source.job_name is required when source.sub_kind is vercel-native-check.")
+		}
+		if !source.Selection.IsNull() {
+			resp.Diagnostics.AddAttributeError(path.Root("source").AtName("selection"), "Invalid Vercel native selection", "source.selection can only be configured when source.sub_kind is vercel-ci-check.")
+		}
+		return
+	}
+	if !source.JobName.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("source").AtName("job_name"), "Invalid Vercel CI job name", "source.job_name can only be configured when source.sub_kind is vercel-native-check.")
+	}
 	if !config.Requires.IsUnknown() && config.Requires.ValueString() != "none" {
 		resp.Diagnostics.AddAttributeError(path.Root("requires"), "Invalid Vercel CI requirement stage", "Vercel CI Deployment Checks require requires to be none.")
 	}
 	if !config.IsRerequestable.IsNull() && !config.IsRerequestable.IsUnknown() && config.IsRerequestable.ValueBool() {
 		resp.Diagnostics.AddAttributeError(path.Root("is_rerequestable"), "Unsupported Vercel CI rerun setting", "Vercel CI Deployment Checks cannot be rerequestable. Set is_rerequestable to false or omit it.")
 	}
-	if source.SubKind.IsNull() {
-		resp.Diagnostics.AddAttributeError(path.Root("source").AtName("sub_kind"), "Missing Vercel source subtype", "source.sub_kind must be set to vercel-ci-check for a vercel source.")
-	}
 	if source.Selection.IsNull() {
-		resp.Diagnostics.AddAttributeError(path.Root("source").AtName("selection"), "Missing Vercel CI selection", "source.selection is required for a vercel source.")
+		resp.Diagnostics.AddAttributeError(path.Root("source").AtName("selection"), "Missing Vercel CI selection", "source.selection is required when source.sub_kind is vercel-ci-check.")
 		return
 	}
 	if source.Selection.IsUnknown() {
@@ -292,12 +317,11 @@ func projectDeploymentCheckSourceToClient(ctx context.Context, value types.Objec
 	var source ProjectDeploymentCheckSource
 	diags := value.As(ctx, &source, basetypes.ObjectAsOptions{})
 	result := client.ProjectDeploymentCheckSource{
-		Kind: source.Kind.ValueString(), SubKind: source.SubKind.ValueString(), Origin: source.Origin.ValueString(),
+		Kind: source.Kind.ValueString(), SubKind: source.SubKind.ValueString(), Origin: source.Origin.ValueString(), JobName: source.JobName.ValueString(),
 		ExternalCheckName: source.ExternalCheckName.ValueString(), Provider: source.Provider.ValueString(),
 		WebhookID: source.WebhookID.ValueString(), ExternalResourceID: source.ExternalResourceID.ValueString(),
 	}
-	if result.Kind == "vercel" {
-		result.SubKind = "vercel-ci-check"
+	if result.Kind == "vercel" && result.Origin == "" {
 		result.Origin = "api"
 	}
 	if !source.Selection.IsNull() && !source.Selection.IsUnknown() {
@@ -347,7 +371,7 @@ func projectDeploymentCheckSourceFromClient(ctx context.Context, source client.P
 		diags.Append(selectionDiags...)
 	}
 	result, resultDiags := types.ObjectValueFrom(ctx, projectDeploymentCheckSourceAttrTypes, ProjectDeploymentCheckSource{
-		Kind: types.StringValue(source.Kind), SubKind: optionalStringValue(source.SubKind), Origin: optionalStringValue(source.Origin),
+		Kind: types.StringValue(source.Kind), SubKind: optionalStringValue(source.SubKind), Origin: optionalStringValue(source.Origin), JobName: optionalStringValue(source.JobName),
 		Selection: selection, ExternalCheckName: optionalStringValue(source.ExternalCheckName), Provider: optionalStringValue(source.Provider),
 		WebhookID: optionalStringValue(source.WebhookID), ExternalResourceID: optionalStringValue(source.ExternalResourceID),
 	})
