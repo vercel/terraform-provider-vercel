@@ -204,7 +204,7 @@ type UpdateTeamRequest struct {
 	DefaultDeploymentProtection        *DefaultDeploymentProtection `json:"defaultDeploymentProtection,omitempty"`
 	TeamID                             string                       `json:"-"`
 	Avatar                             string                       `json:"avatar,omitempty"`
-	Description                        string                       `json:"description,omitempty"`
+	Description                        *string                      `json:"description,omitempty"`
 	EmailDomain                        string                       `json:"emailDomain,omitempty"`
 	Name                               string                       `json:"name,omitempty"`
 	PreviewDeploymentSuffix            string                       `json:"previewDeploymentSuffix,omitempty"`

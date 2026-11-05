@@ -262,7 +262,7 @@ Required:
 Optional:
 
 - `connector_id` (String) The stable ID of an existing Vercel Connect OAuth application, available from the vercel_connect_application data source. Required when enabled; omit when disabled.
-- `deployment_type` (String) Deployments to protect: all, preview, prod_deployment_urls_and_all_previews, or all_except_custom_domains. Defaults to all.
+- `deployment_type` (String) Deployments to protect: all, preview, prod_deployment_urls_and_all_previews, or all_except_custom_domains. Defaults to all when enabled; omit when disabled.
 - `enabled` (Boolean) Whether Passport is enabled. Defaults to true.
 
 
