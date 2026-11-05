@@ -1873,7 +1873,7 @@ func uncoerceString(plan, res types.String) types.String {
 	return res
 }
 func uncoerceBool(plan, res types.Bool) types.Bool {
-	if !plan.ValueBool() && !plan.IsNull() && res.IsNull() {
+	if knownBool(plan) && !plan.ValueBool() && res.IsNull() {
 		return plan
 	}
 	return res

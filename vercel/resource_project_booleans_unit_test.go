@@ -3,10 +3,18 @@ package vercel
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
 func TestProjectBooleanRequestPayloads(t *testing.T) {
@@ -90,6 +98,75 @@ func TestProjectBooleanRequestPayloads(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestProjectAffectedDeploymentsResponse(t *testing.T) {
+	for _, planValue := range []types.Bool{types.BoolUnknown(), types.BoolNull(), types.BoolValue(false), types.BoolValue(true)} {
+		for _, responseValue := range []types.Bool{types.BoolNull(), types.BoolValue(false), types.BoolValue(true)} {
+			t.Run(planValue.String()+"/"+responseValue.String(), func(t *testing.T) {
+				plan := projectForReadTests()
+				plan.EnableAffectedProjectsDeployments = planValue
+				result, err := convertResponseToProject(context.Background(), client.ProjectResponse{
+					EnableAffectedProjectsDeployments: responseValue.ValueBoolPointer(),
+				}, plan, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				want := responseValue
+				if responseValue.IsNull() && planValue.Equal(types.BoolValue(false)) {
+					want = planValue
+				}
+				if !result.EnableAffectedProjectsDeployments.Equal(want) {
+					t.Fatalf("EnableAffectedProjectsDeployments = %s, want %s", result.EnableAffectedProjectsDeployments, want)
+				}
+			})
+		}
+	}
+}
+
+func TestProjectNullBooleansLifecycle(t *testing.T) {
+	name := "example"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		switch req.Method {
+		case http.MethodDelete:
+			w.WriteHeader(http.StatusNoContent)
+			return
+		case http.MethodPost, http.MethodPatch:
+			var body map[string]json.RawMessage
+			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+				t.Error(err)
+				return
+			}
+			for _, key := range []string{"enableAffectedProjectsDeployments", "enableProductionFeedback", "enablePreviewFeedback"} {
+				if value, ok := body[key]; ok {
+					t.Errorf("unexpected write to %s: %s", key, value)
+				}
+			}
+			if value, ok := body["name"]; ok {
+				if err := json.Unmarshal(value, &name); err != nil {
+					t.Error(err)
+				}
+			}
+		}
+		fmt.Fprintf(w, `{"id":"prj_123","name":%q,"accountId":"team_123","nodeVersion":"22.x","autoAssignCustomDomains":true,"gitForkProtection":true,"enableAffectedProjectsDeployments":null,"enableProductionFeedback":null,"enablePreviewFeedback":null}`, name)
+	}))
+	defer server.Close()
+	factories := map[string]func() (tfprotov6.ProviderServer, error){
+		"vercel": providerserver.NewProtocol6WithError(&customAlertMockProvider{
+			Provider: New(),
+			client:   client.New("test").WithBaseURL(server.URL).WithTeam(client.Team{ID: "team_123"}),
+		}),
+	}
+	config := func(name string) string {
+		return fmt.Sprintf(`resource "vercel_project" "test" {
+name = %q
+node_version = "22.x"
+}`, name)
+	}
+	tfresource.UnitTest(t, tfresource.TestCase{ProtoV6ProviderFactories: factories, Steps: []tfresource.TestStep{
+		{Config: config("example")},
+		{Config: config("renamed")},
+	}})
 }
 
 func projectBooleanRequestJSON(t *testing.T, request any) map[string]json.RawMessage {
