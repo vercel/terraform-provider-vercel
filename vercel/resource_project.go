@@ -1048,10 +1048,10 @@ func (g *GitProviderOptions) toUpdateProjectRequest(ctx context.Context) (*clien
 		}
 	}
 	return &client.GitProviderOptions{
-		RequireVerifiedCommits:          g.RequireVerifiedCommits.ValueBoolPointer(),
+		RequireVerifiedCommits:          knownBoolPointer(g.RequireVerifiedCommits),
 		CreateDeployments:               createDeployments,
 		DisableRepositoryDispatchEvents: disableRepositoryDispatchEvents,
-		GitCommitStatus:                 g.GitCommitStatus.ValueBoolPointer(),
+		GitCommitStatus:                 knownBoolPointer(g.GitCommitStatus),
 		ConsolidatedGitCommitStatus:     consolidated,
 	}, nil
 }
@@ -1089,7 +1089,7 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		BuildCommand:                      p.BuildCommand.ValueStringPointer(),
 		CommandForIgnoringBuildStep:       p.IgnoreCommand.ValueStringPointer(),
 		DevCommand:                        p.DevCommand.ValueStringPointer(),
-		EnableAffectedProjectsDeployments: p.EnableAffectedProjectsDeployments.ValueBoolPointer(),
+		EnableAffectedProjectsDeployments: knownBoolPointer(p.EnableAffectedProjectsDeployments),
 		EnvironmentVariables:              clientEnvs,
 		Framework:                         p.Framework.ValueStringPointer(),
 		GitRepository:                     gr.toCreateProjectRequest(),
@@ -1101,9 +1101,9 @@ func (p *Project) toCreateProjectRequest(ctx context.Context, envs []Environment
 		RootDirectory:                     p.RootDirectory.ValueStringPointer(),
 		ResourceConfig:                    resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
 		EnablePreviewFeedback:             oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
-		EnableProductionFeedback:          p.EnableProductionFeedback.ValueBoolPointer(),
+		EnableProductionFeedback:          knownBoolPointer(p.EnableProductionFeedback),
 		VercelAuthentication:              authentication,
-		PreviewDeploymentsDisabled:        p.PreviewDeploymentsDisabled.ValueBoolPointer(),
+		PreviewDeploymentsDisabled:        knownBoolPointer(p.PreviewDeploymentsDisabled),
 	}, diags
 }
 
@@ -1134,6 +1134,13 @@ func oneBoolPointer(a, b types.Bool) *bool {
 		return b.ValueBoolPointer()
 	}
 	return nil
+}
+
+func knownBoolPointer(v types.Bool) *bool {
+	if !knownBool(v) {
+		return nil
+	}
+	return v.ValueBoolPointer()
 }
 
 func knownBool(v types.Bool) bool {
@@ -1219,19 +1226,19 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		TrustedSources:                       tsReq,
 		OIDCTokenConfig:                      oidc.toUpdateProjectRequest(),
 		OptionsAllowlist:                     oal.toUpdateProjectRequest(),
-		AutoExposeSystemEnvVars:              p.AutoExposeSystemEnvVars.ValueBool(),
+		AutoExposeSystemEnvVars:              knownBoolPointer(p.AutoExposeSystemEnvVars),
 		EnablePreviewFeedback:                oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
-		EnableProductionFeedback:             p.EnableProductionFeedback.ValueBoolPointer(),
-		EnableAffectedProjectsDeployments:    p.EnableAffectedProjectsDeployments.ValueBoolPointer(),
-		PreviewDeploymentsDisabled:           p.PreviewDeploymentsDisabled.ValueBool(),
-		AutoAssignCustomDomains:              p.AutoAssignCustomDomains.ValueBool(),
-		GitLFS:                               p.GitLFS.ValueBool(),
-		ServerlessFunctionZeroConfigFailover: p.FunctionFailover.ValueBool(),
-		CustomerSupportCodeVisibility:        p.CustomerSuccessCodeVisibility.ValueBool(),
-		ProtectedSourcemaps:                  p.ProtectedSourcemaps.ValueBool(),
-		GitForkProtection:                    p.GitForkProtection.ValueBool(),
-		ProductionDeploymentsFastLane:        p.PrioritiseProductionBuilds.ValueBool(),
-		DirectoryListing:                     p.DirectoryListing.ValueBool(),
+		EnableProductionFeedback:             knownBoolPointer(p.EnableProductionFeedback),
+		EnableAffectedProjectsDeployments:    knownBoolPointer(p.EnableAffectedProjectsDeployments),
+		PreviewDeploymentsDisabled:           knownBoolPointer(p.PreviewDeploymentsDisabled),
+		AutoAssignCustomDomains:              knownBoolPointer(p.AutoAssignCustomDomains),
+		GitLFS:                               knownBoolPointer(p.GitLFS),
+		ServerlessFunctionZeroConfigFailover: knownBoolPointer(p.FunctionFailover),
+		CustomerSupportCodeVisibility:        knownBoolPointer(p.CustomerSuccessCodeVisibility),
+		ProtectedSourcemaps:                  knownBoolPointer(p.ProtectedSourcemaps),
+		GitForkProtection:                    knownBoolPointer(p.GitForkProtection),
+		ProductionDeploymentsFastLane:        knownBoolPointer(p.PrioritiseProductionBuilds),
+		DirectoryListing:                     knownBoolPointer(p.DirectoryListing),
 		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
 		GitComments:                          gc.toUpdateProjectRequest(),
 		GitProviderOptions:                   gpoReq,

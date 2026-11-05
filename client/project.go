@@ -412,19 +412,19 @@ type UpdateProjectRequest struct {
 	TrustedSources                       *TrustedSources                  `json:"trustedSources"`
 	OIDCTokenConfig                      *OIDCTokenConfig                 `json:"oidcTokenConfig"`
 	OptionsAllowlist                     *OptionsAllowlist                `json:"optionsAllowlist"`
-	AutoExposeSystemEnvVars              bool                             `json:"autoExposeSystemEnvs"`
-	EnablePreviewFeedback                *bool                            `json:"enablePreviewFeedback"`
-	EnableProductionFeedback             *bool                            `json:"enableProductionFeedback"`
+	AutoExposeSystemEnvVars              *bool                            `json:"autoExposeSystemEnvs,omitempty"`
+	EnablePreviewFeedback                *bool                            `json:"enablePreviewFeedback,omitempty"`
+	EnableProductionFeedback             *bool                            `json:"enableProductionFeedback,omitempty"`
 	EnableAffectedProjectsDeployments    *bool                            `json:"enableAffectedProjectsDeployments,omitempty"`
-	PreviewDeploymentsDisabled           bool                             `json:"previewDeploymentsDisabled"`
-	AutoAssignCustomDomains              bool                             `json:"autoAssignCustomDomains"`
-	GitLFS                               bool                             `json:"gitLFS"`
-	ServerlessFunctionZeroConfigFailover bool                             `json:"serverlessFunctionZeroConfigFailover"`
-	CustomerSupportCodeVisibility        bool                             `json:"customerSupportCodeVisibility"`
-	GitForkProtection                    bool                             `json:"gitForkProtection"`
-	ProductionDeploymentsFastLane        bool                             `json:"productionDeploymentsFastLane"`
-	DirectoryListing                     bool                             `json:"directoryListing"`
-	ProtectedSourcemaps                  bool                             `json:"protectedSourcemaps"`
+	PreviewDeploymentsDisabled           *bool                            `json:"previewDeploymentsDisabled,omitempty"`
+	AutoAssignCustomDomains              *bool                            `json:"autoAssignCustomDomains,omitempty"`
+	GitLFS                               *bool                            `json:"gitLFS,omitempty"`
+	ServerlessFunctionZeroConfigFailover *bool                            `json:"serverlessFunctionZeroConfigFailover,omitempty"`
+	CustomerSupportCodeVisibility        *bool                            `json:"customerSupportCodeVisibility,omitempty"`
+	GitForkProtection                    *bool                            `json:"gitForkProtection,omitempty"`
+	ProductionDeploymentsFastLane        *bool                            `json:"productionDeploymentsFastLane,omitempty"`
+	DirectoryListing                     *bool                            `json:"directoryListing,omitempty"`
+	ProtectedSourcemaps                  *bool                            `json:"protectedSourcemaps,omitempty"`
 	SkewProtectionMaxAge                 int                              `json:"skewProtectionMaxAge"`
 	GitComments                          *GitComments                     `json:"gitComments,omitempty"`
 	GitProviderOptions                   *GitProviderOptions              `json:"gitProviderOptions,omitempty"`
