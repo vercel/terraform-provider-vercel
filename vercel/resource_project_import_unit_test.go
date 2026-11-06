@@ -23,7 +23,7 @@ func TestProjectImportPasswordProtectionUpdate(t *testing.T) {
 		disable  bool
 		wantJSON string
 	}{
-		{name: "preserve imported password", wantJSON: `{"deploymentType":"all"}`},
+		{name: "preserve imported password"},
 		{name: "replace password", password: "replacement-password", wantJSON: `{"deploymentType":"all","password":"replacement-password"}`},
 		{name: "disable protection", disable: true, wantJSON: `null`},
 	} {

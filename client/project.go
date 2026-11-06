@@ -396,22 +396,22 @@ func (c *Client) ListProjectsWithOptions(ctx context.Context, request ListProjec
 // - omitting the value entirely from the request will _not_ update the field.
 type UpdateProjectRequest struct {
 	Passport                             **Passport                       `json:"passport,omitempty"`
-	BuildCommand                         *string                          `json:"buildCommand"`
-	CommandForIgnoringBuildStep          *string                          `json:"commandForIgnoringBuildStep"`
-	DevCommand                           *string                          `json:"devCommand"`
-	Framework                            *string                          `json:"framework"`
-	InstallCommand                       *string                          `json:"installCommand"`
+	BuildCommand                         **string                         `json:"buildCommand,omitempty"`
+	CommandForIgnoringBuildStep          **string                         `json:"commandForIgnoringBuildStep,omitempty"`
+	DevCommand                           **string                         `json:"devCommand,omitempty"`
+	Framework                            **string                         `json:"framework,omitempty"`
+	InstallCommand                       **string                         `json:"installCommand,omitempty"`
 	Name                                 *string                          `json:"name,omitempty"`
-	OutputDirectory                      *string                          `json:"outputDirectory"`
-	PreviewDeploymentSuffix              *string                          `json:"previewDeploymentSuffix"`
-	RootDirectory                        *string                          `json:"rootDirectory"`
+	OutputDirectory                      **string                         `json:"outputDirectory,omitempty"`
+	PreviewDeploymentSuffix              **string                         `json:"previewDeploymentSuffix,omitempty"`
+	RootDirectory                        **string                         `json:"rootDirectory,omitempty"`
 	ServerlessFunctionRegion             string                           `json:"serverlessFunctionRegion,omitempty"`
 	VercelAuthentication                 **VercelAuthentication           `json:"ssoProtection,omitempty"`
 	PasswordProtection                   **PasswordProtectionWithPassword `json:"passwordProtection,omitempty"`
 	TrustedIps                           **TrustedIps                     `json:"trustedIps,omitempty"`
-	TrustedSources                       *TrustedSources                  `json:"trustedSources"`
-	OIDCTokenConfig                      *OIDCTokenConfig                 `json:"oidcTokenConfig"`
-	OptionsAllowlist                     *OptionsAllowlist                `json:"optionsAllowlist"`
+	TrustedSources                       **TrustedSources                 `json:"trustedSources,omitempty"`
+	OIDCTokenConfig                      **OIDCTokenConfig                `json:"oidcTokenConfig,omitempty"`
+	OptionsAllowlist                     **OptionsAllowlist               `json:"optionsAllowlist,omitempty"`
 	AutoExposeSystemEnvVars              *bool                            `json:"autoExposeSystemEnvs,omitempty"`
 	EnablePreviewFeedback                *bool                            `json:"enablePreviewFeedback,omitempty"`
 	EnableProductionFeedback             *bool                            `json:"enableProductionFeedback,omitempty"`
@@ -425,7 +425,7 @@ type UpdateProjectRequest struct {
 	ProductionDeploymentsFastLane        *bool                            `json:"productionDeploymentsFastLane,omitempty"`
 	DirectoryListing                     *bool                            `json:"directoryListing,omitempty"`
 	ProtectedSourcemaps                  *bool                            `json:"protectedSourcemaps,omitempty"`
-	SkewProtectionMaxAge                 int                              `json:"skewProtectionMaxAge"`
+	SkewProtectionMaxAge                 *int                             `json:"skewProtectionMaxAge,omitempty"`
 	GitComments                          *GitComments                     `json:"gitComments,omitempty"`
 	GitProviderOptions                   *GitProviderOptions              `json:"gitProviderOptions,omitempty"`
 	ResourceConfig                       *ResourceConfig                  `json:"resourceConfig,omitempty"`

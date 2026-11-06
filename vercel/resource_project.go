@@ -1211,21 +1211,21 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	}
 	return client.UpdateProjectRequest{
 		Passport:                             passport,
-		BuildCommand:                         p.BuildCommand.ValueStringPointer(),
-		CommandForIgnoringBuildStep:          p.IgnoreCommand.ValueStringPointer(),
-		DevCommand:                           p.DevCommand.ValueStringPointer(),
-		Framework:                            p.Framework.ValueStringPointer(),
-		InstallCommand:                       p.InstallCommand.ValueStringPointer(),
+		BuildCommand:                         projectSetting(p.BuildCommand.ValueStringPointer()),
+		CommandForIgnoringBuildStep:          projectSetting(p.IgnoreCommand.ValueStringPointer()),
+		DevCommand:                           projectSetting(p.DevCommand.ValueStringPointer()),
+		Framework:                            projectSetting(p.Framework.ValueStringPointer()),
+		InstallCommand:                       projectSetting(p.InstallCommand.ValueStringPointer()),
 		Name:                                 name,
-		OutputDirectory:                      p.OutputDirectory.ValueStringPointer(),
-		PreviewDeploymentSuffix:              p.PreviewDeploymentSuffix.ValueStringPointer(),
-		RootDirectory:                        p.RootDirectory.ValueStringPointer(),
+		OutputDirectory:                      projectSetting(p.OutputDirectory.ValueStringPointer()),
+		PreviewDeploymentSuffix:              projectSetting(p.PreviewDeploymentSuffix.ValueStringPointer()),
+		RootDirectory:                        projectSetting(p.RootDirectory.ValueStringPointer()),
 		PasswordProtection:                   passwordField,
 		VercelAuthentication:                 authenticationField,
 		TrustedIps:                           trustedIPsField,
-		TrustedSources:                       tsReq,
-		OIDCTokenConfig:                      oidc.toUpdateProjectRequest(),
-		OptionsAllowlist:                     oal.toUpdateProjectRequest(),
+		TrustedSources:                       projectSetting(tsReq),
+		OIDCTokenConfig:                      projectSetting(oidc.toUpdateProjectRequest()),
+		OptionsAllowlist:                     projectSetting(oal.toUpdateProjectRequest()),
 		AutoExposeSystemEnvVars:              knownBoolPointer(p.AutoExposeSystemEnvVars),
 		EnablePreviewFeedback:                oneBoolPointer(p.EnablePreviewFeedback, p.PreviewComments),
 		EnableProductionFeedback:             knownBoolPointer(p.EnableProductionFeedback),
@@ -1239,7 +1239,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		GitForkProtection:                    knownBoolPointer(p.GitForkProtection),
 		ProductionDeploymentsFastLane:        knownBoolPointer(p.PrioritiseProductionBuilds),
 		DirectoryListing:                     knownBoolPointer(p.DirectoryListing),
-		SkewProtectionMaxAge:                 toSkewProtectionAge(p.SkewProtection),
+		SkewProtectionMaxAge:                 intPointer(toSkewProtectionAge(p.SkewProtection)),
 		GitComments:                          gc.toUpdateProjectRequest(),
 		GitProviderOptions:                   gpoReq,
 		ResourceConfig:                       resourceConfig.toClientResourceConfig(ctx, p.OnDemandConcurrentBuilds, p.BuildMachineType, p.ServerlessFunctionRegion),
@@ -2788,12 +2788,17 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		})
 	}
 
-	updateRequest, diags := plan.toUpdateProjectRequest(ctx, state.Name.ValueString())
+	updateRequest, settings, diags := plan.changedProjectSettings(ctx, state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), updateRequest)
+	var out client.ProjectResponse
+	if updateRequest != (client.UpdateProjectRequest{}) {
+		out, err = r.client.UpdateProject(ctx, state.ID.ValueString(), state.TeamID.ValueString(), updateRequest)
+	} else {
+		out, err = r.client.GetProject(ctx, state.ID.ValueString(), state.TeamID.ValueString())
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
@@ -2967,6 +2972,9 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	})
 
 	diags = resp.State.Set(ctx, result)
+	if !diags.HasError() {
+		diags.Append(settings.retainPlannedValues(ctx, req.Plan, &resp.State)...)
+	}
 	resp.Diagnostics.Append(setProjectIdentity(ctx, resp.Identity, result)...)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

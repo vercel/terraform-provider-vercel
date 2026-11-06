@@ -34,7 +34,7 @@ func TestProjectImportGitCommentsUpdate(t *testing.T) {
 		plan     *types.Object
 		wantJSON string
 	}{
-		{name: "preserve imported settings", apiValue: `{"onPullRequest":false,"onCommit":true}`, wantJSON: `{"onCommit":true,"onPullRequest":false}`},
+		{name: "preserve imported settings", apiValue: `{"onPullRequest":false,"onCommit":true}`},
 		{name: "preserve API default", apiValue: `null`},
 		{name: "omit null from old state", apiValue: `{"onPullRequest":false,"onCommit":true}`, plan: &null},
 		{name: "omit unknown", apiValue: `{"onPullRequest":false,"onCommit":true}`, plan: &unknown},
