@@ -515,13 +515,13 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 			"automatically_expose_system_environment_variables": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				Description:   "Vercel provides a set of Environment Variables that are automatically populated by the System, such as the URL of the Deployment or the name of the Git branch deployed. To expose them to your Deployments, enable this field",
 			},
 			"enable_affected_projects_deployments": schema.BoolAttribute{
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				Description:   "When enabled, Vercel will automatically deploy all projects that are affected by a change to this project.",
 			},
 			"git_comments": schema.SingleNestedAttribute{
@@ -590,15 +590,17 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				DeprecationMessage: "Use `enable_preview_feedback` instead. This attribute will be removed in a future version.",
 				Optional:           true,
 				Computed:           true,
+				PlanModifiers:      []planmodifier.Bool{projectPreviewFeedbackPlanModifier{otherAttribute: "enable_preview_feedback"}},
 				Validators: []validator.Bool{boolvalidator.ConflictsWith(
 					path.MatchRoot("preview_comments"),
 					path.MatchRoot("enable_preview_feedback"),
 				)},
 			},
 			"enable_preview_feedback": schema.BoolAttribute{
-				Description: "Enables the Vercel Toolbar on your preview deployments.",
-				Optional:    true,
-				Computed:    true,
+				Description:   "Enables the Vercel Toolbar on your preview deployments.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.Bool{projectPreviewFeedbackPlanModifier{otherAttribute: "preview_comments"}},
 				Validators: []validator.Bool{boolvalidator.ConflictsWith(
 					path.MatchRoot("preview_comments"),
 					path.MatchRoot("enable_preview_feedback"),
@@ -608,7 +610,7 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description:   "Enables the Vercel Toolbar on your production deployments: one of on, off or default.",
 				Optional:      true,
 				Computed:      true,
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseNonNullStateForUnknown()},
+				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"preview_deployments_disabled": schema.BoolAttribute{
 				Description:   "Disable creation of Preview Deployments for this project.",
