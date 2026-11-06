@@ -71,9 +71,9 @@ func TestProjectTrustedSourcesToUpdateProjectRequest(t *testing.T) {
 		t.Fatal("TrustedSources = nil, want configured trusted sources")
 	}
 
-	sourceProject, ok := request.TrustedSources.Projects["prj_source"]
+	sourceProject, ok := (*request.TrustedSources).Projects["prj_source"]
 	if !ok {
-		t.Fatalf("TrustedSources.Projects is missing prj_source: %#v", request.TrustedSources.Projects)
+		t.Fatalf("TrustedSources.Projects is missing prj_source: %#v", (*request.TrustedSources).Projects)
 	}
 	if sourceProject.Label == nil || *sourceProject.Label != "Source project" {
 		t.Fatalf("source project label = %v, want Source project", sourceProject.Label)
@@ -88,7 +88,7 @@ func TestProjectTrustedSourcesToUpdateProjectRequest(t *testing.T) {
 		t.Fatalf("source project to slugs = %#v, want preview and production", sourceProject.CustomAllow[0].To.Slugs)
 	}
 
-	providers := request.TrustedSources.OIDCProviders["https://token.actions.githubusercontent.com"]
+	providers := (*request.TrustedSources).OIDCProviders["https://token.actions.githubusercontent.com"]
 	if len(providers) != 1 {
 		t.Fatalf("trusted external source entries = %d, want 1", len(providers))
 	}
