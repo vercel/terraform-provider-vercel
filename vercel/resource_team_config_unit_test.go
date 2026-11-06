@@ -38,7 +38,7 @@ func TestTeamConfigBuildMachineDefaultMapping(t *testing.T) {
 		Saml:                    types.ObjectNull(samlAttrTypes),
 		DefaultBuildMachineType: types.StringValue("basic"),
 	}
-	request, diags := config.toUpdateTeamRequest(context.Background(), "", types.StringNull())
+	request, diags := config.initialTeamSettings(context.Background(), "")
 	if diags.HasError() {
 		t.Fatal(diags)
 	}

@@ -157,7 +157,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 									Description:   "The team level role to assign to the user. One of 'MEMBER', 'OWNER', 'VIEWER', 'DEVELOPER', 'BILLING' or 'CONTRIBUTOR'.",
 									Optional:      true,
 									Computed:      true,
-									PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+									PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 									Validators: []validator.String{
 										stringvalidator.OneOf("MEMBER", "OWNER", "VIEWER", "DEVELOPER", "BILLING", "CONTRIBUTOR"),
 									},
@@ -166,7 +166,7 @@ func (r *teamConfigResource) Schema(_ context.Context, req resource.SchemaReques
 									Description:   "The access group id to assign to the user.",
 									Optional:      true,
 									Computed:      true,
-									PlanModifiers: []planmodifier.String{stringplanmodifier.UseNonNullStateForUnknown()},
+									PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 								},
 							},
 						},
@@ -367,7 +367,7 @@ var remoteCachingAttrTypes = map[string]attr.Type{
 }
 
 func (r *RemoteCaching) toUpdateTeamRequest() *client.RemoteCaching {
-	if r == nil {
+	if r == nil || r.Enabled.IsNull() || r.Enabled.IsUnknown() {
 		return nil
 	}
 	return &client.RemoteCaching{
@@ -379,8 +379,22 @@ func (r *Saml) toUpdateTeamRequest() *client.UpdateSamlConfig {
 	if r == nil {
 		return nil
 	}
+	request := &client.UpdateSamlConfig{
+		Enforced: teamBool(r.Enforced),
+		Roles:    samlRolesToClient(r.Roles),
+	}
+	if request.Enforced == nil && request.Roles == nil {
+		return nil
+	}
+	return request
+}
+
+func samlRolesToClient(values map[string]SamlRoles) map[string]client.UpdateSamlConfigRole {
+	if values == nil {
+		return nil
+	}
 	roles := map[string]client.UpdateSamlConfigRole{}
-	for k, v := range r.Roles {
+	for k, v := range values {
 		var role *string
 		if !v.Role.IsNull() && !v.Role.IsUnknown() {
 			role = v.Role.ValueStringPointer()
@@ -390,24 +404,20 @@ func (r *Saml) toUpdateTeamRequest() *client.UpdateSamlConfig {
 			accessGroupID = v.AccessGroupID.ValueStringPointer()
 		}
 		if role == nil && accessGroupID == nil {
-			continue
+			return nil
 		}
 		roles[k] = client.UpdateSamlConfigRole{
 			Role:          role,
 			AccessGroupID: accessGroupID,
 		}
 	}
-	return &client.UpdateSamlConfig{
-		Enforced: r.Enforced.ValueBool(),
-		Roles:    roles,
-	}
+	return roles
 }
 
-func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, stateSlug types.String) (client.UpdateTeamRequest, diag.Diagnostics) {
-	slug := t.Slug.ValueString()
-	if stateSlug.ValueString() == t.Slug.ValueString() {
-		// Prevent updating slug if it hasn't changed, as this has an aggressive rate limit.
-		slug = ""
+func (t *TeamConfig) initialTeamSettings(ctx context.Context, avatar string) (client.UpdateTeamRequest, diag.Diagnostics) {
+	var avatarValue *string
+	if avatar != "" {
+		avatarValue = &avatar
 	}
 	var rc *RemoteCaching
 	diags := t.RemoteCaching.As(ctx, &rc, basetypes.ObjectAsOptions{
@@ -445,42 +455,28 @@ func (t *TeamConfig) toUpdateTeamRequest(ctx context.Context, avatar string, sta
 			},
 		}
 	}
-	var protection *client.DefaultDeploymentProtection
-	if !t.DefaultDeploymentProtection.IsNull() && !t.DefaultDeploymentProtection.IsUnknown() {
-		var defaults DefaultDeploymentProtection
-		diags = t.DefaultDeploymentProtection.As(ctx, &defaults, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return client.UpdateTeamRequest{}, diags
-		}
-		var authentication VercelAuthentication
-		diags = defaults.VercelAuthentication.As(ctx, &authentication, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return client.UpdateTeamRequest{}, diags
-		}
-		protection = &client.DefaultDeploymentProtection{VercelAuthentication: authentication.toVercelAuthentication()}
+	protection, diags := teamDeploymentProtection(ctx, t.DefaultDeploymentProtection)
+	if diags.HasError() {
+		return client.UpdateTeamRequest{}, diags
 	}
 	passport, passportDiags := passportUpdate(ctx, t.DefaultPassport)
 	if passportDiags.HasError() {
 		return client.UpdateTeamRequest{}, passportDiags
 	}
-	var description *string
-	if !t.Description.IsNull() && !t.Description.IsUnknown() {
-		description = t.Description.ValueStringPointer()
-	}
 	return client.UpdateTeamRequest{
 		DefaultPassport:                    passport,
 		DefaultDeploymentProtection:        protection,
 		TeamID:                             t.ID.ValueString(),
-		Avatar:                             avatar,
-		EmailDomain:                        t.EmailDomain.ValueString(),
-		Name:                               t.Name.ValueString(),
-		Description:                        description,
-		PreviewDeploymentSuffix:            t.PreviewDeploymentSuffix.ValueString(),
-		Slug:                               slug,
-		EnablePreviewFeedback:              t.EnablePreviewFeedback.ValueString(),
-		EnableProductionFeedback:           t.EnableProductionFeedback.ValueString(),
-		SensitiveEnvironmentVariablePolicy: t.SensitiveEnvironmentVariablePolicy.ValueString(),
-		DisjunctiveProductionSecretPolicy:  t.DisjunctiveProductionSecretPolicy.ValueString(),
+		Avatar:                             avatarValue,
+		EmailDomain:                        teamString(t.EmailDomain),
+		Name:                               teamString(t.Name),
+		Description:                        teamString(t.Description),
+		PreviewDeploymentSuffix:            teamString(t.PreviewDeploymentSuffix),
+		Slug:                               teamString(t.Slug),
+		EnablePreviewFeedback:              teamString(t.EnablePreviewFeedback),
+		EnableProductionFeedback:           teamString(t.EnableProductionFeedback),
+		SensitiveEnvironmentVariablePolicy: teamString(t.SensitiveEnvironmentVariablePolicy),
+		DisjunctiveProductionSecretPolicy:  teamString(t.DisjunctiveProductionSecretPolicy),
 		RemoteCaching:                      rc.toUpdateTeamRequest(),
 		HideIPAddresses:                    hideIPAddressses,
 		HideIPAddressesInLogDrains:         hideIPAddresssesInLogDrains,
@@ -629,7 +625,7 @@ func (r *teamConfigResource) Create(ctx context.Context, req resource.CreateRequ
 		resp.Diagnostics.Append(diags...)
 		return
 	}
-	request, diags := plan.toUpdateTeamRequest(ctx, avatar, types.StringNull())
+	request, diags := plan.initialTeamSettings(ctx, avatar)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -706,21 +702,22 @@ func (r *teamConfigResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	avatar, diags := r.uploadAvatarIfPresent(ctx, plan)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
+	request, update, diags := plan.changedTeamSettings(ctx, state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-	request, diags := plan.toUpdateTeamRequest(ctx, avatar, state.Slug)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
+	var response client.Team
+	var err error
+	if request == (client.UpdateTeamRequest{TeamID: state.ID.ValueString()}) {
+		response, err = r.client.GetTeam(ctx, state.ID.ValueString())
+	} else {
+		response, err = r.client.UpdateTeam(ctx, request)
 	}
-	response, err := r.client.UpdateTeam(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error creating Team Config",
-			"Could not create Team Configuration, unexpected error: "+err.Error(),
+			"Error updating Team Config",
+			"Could not update Team Configuration, unexpected error: "+err.Error(),
 		)
 		return
 	}
@@ -736,6 +733,9 @@ func (r *teamConfigResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 	diags = resp.State.Set(ctx, teamConfig)
 	resp.Diagnostics.Append(diags...)
+	if !resp.Diagnostics.HasError() {
+		resp.Diagnostics.Append(update.retainPlannedValues(ctx, req.Plan, &resp.State)...)
+	}
 }
 
 func (r *teamConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
