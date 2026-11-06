@@ -51,7 +51,7 @@ func TestProjectProtectedSourcemapsToUpdateProjectRequest(t *testing.T) {
 			if diags.HasError() {
 				t.Fatalf("toUpdateProjectRequest() returned diagnostics: %v", diags)
 			}
-			if request.ProtectedSourcemaps != tc.value {
+			if request.ProtectedSourcemaps == nil || *request.ProtectedSourcemaps != tc.value {
 				t.Fatalf("ProtectedSourcemaps = %v, want %v", request.ProtectedSourcemaps, tc.value)
 			}
 		})

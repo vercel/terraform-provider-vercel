@@ -734,8 +734,7 @@ func TestAcc_ProjectEnablingAffectedProjectDeployments(t *testing.T) {
 			{
 				Config: cfg(testAccProjectConfigWithoutEnableAffectedSet(projectSuffix)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Off by default
-					resource.TestCheckResourceAttr("vercel_project.test", "enable_affected_projects_deployments", "false"),
+					resource.TestCheckNoResourceAttr("vercel_project.test", "enable_affected_projects_deployments"),
 				),
 			},
 			{
