@@ -17,7 +17,7 @@ func TestResponseToProjectTracing(t *testing.T) {
 		SamplingRules: []client.TraceDrainSamplingRule{
 			{Rate: 0.25, Environment: "production", RequestPath: "/api"},
 		},
-	}, types.ListNull(traceDrainSamplingRuleAttrType))
+	}, types.ListNull(drainSamplingRuleAttrType))
 	if diags.HasError() {
 		t.Fatalf("responseToProjectTracing() diagnostics = %v", diags)
 	}
@@ -25,7 +25,7 @@ func TestResponseToProjectTracing(t *testing.T) {
 		t.Fatalf("result = %#v", result)
 	}
 
-	var rules []TraceDrainSamplingRule
+	var rules []DrainSamplingRule
 	diags = result.SamplingRules.ElementsAs(context.Background(), &rules, false)
 	if diags.HasError() {
 		t.Fatalf("ElementsAs() diagnostics = %v", diags)

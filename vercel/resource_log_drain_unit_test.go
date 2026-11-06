@@ -28,6 +28,7 @@ func TestResponseToLogDrainPreservesLegacySecret(t *testing.T) {
 		types.StringNull(),
 		types.Int64Null(),
 		false,
+		types.ListNull(drainSamplingRuleAttrType),
 	)
 	if diags.HasError() {
 		t.Fatal(diags)
@@ -52,6 +53,7 @@ func TestResponseToLogDrainOmitsWriteOnlySecret(t *testing.T) {
 		types.StringValue("configured-secret-that-must-never-enter-terraform-state"),
 		types.Int64Value(7),
 		true,
+		types.ListNull(drainSamplingRuleAttrType),
 	)
 	if diags.HasError() {
 		t.Fatal(diags)
@@ -414,6 +416,7 @@ func logDrainCreatePlanAndConfig(t *testing.T, resourceSchema schema.Schema, sec
 			types.StringValue("prj_123"),
 		}),
 		SamplingRate:    types.Float64Null(),
+		SamplingRules:   types.ListNull(drainSamplingRuleAttrType),
 		Secret:          types.StringUnknown(),
 		SecretWO:        types.StringNull(),
 		SecretWOVersion: types.Int64Null(),

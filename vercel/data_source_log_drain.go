@@ -92,8 +92,19 @@ Teams on Pro and Enterprise plans can subscribe to log drains that are generic a
 				Computed:    true,
 				ElementType: types.StringType,
 			},
+			"sampling_rules": schema.ListNestedAttribute{
+				Description: "Ordered sampling rules for logs sent to this drain.",
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"rate":         schema.Float64Attribute{Description: "Sampling rate from 0 to 1.", Computed: true},
+						"environment":  schema.StringAttribute{Description: "Environment this sampling rule applies to.", Computed: true},
+						"request_path": schema.StringAttribute{Description: "Request path prefix this sampling rule applies to.", Computed: true},
+					},
+				},
+			},
 			"sampling_rate": schema.Float64Attribute{
-				Description: "A ratio of logs matching the sampling rate will be sent to your log drain. Should be a value between 0 and 1. If unspecified, all logs are sent.",
+				Description: "The sampling rate when the drain has exactly one unconditional sampling rule. Null otherwise; use sampling_rules for the full configuration.",
 				Computed:    true,
 			},
 			"sources": schema.SetAttribute{
@@ -118,6 +129,7 @@ type LogDrainWithoutSecret struct {
 	Headers        types.Map     `tfsdk:"headers"`
 	ProjectIDs     types.Set     `tfsdk:"project_ids"`
 	SamplingRate   types.Float64 `tfsdk:"sampling_rate"`
+	SamplingRules  types.List    `tfsdk:"sampling_rules"`
 	Sources        types.Set     `tfsdk:"sources"`
 	Endpoint       types.String  `tfsdk:"endpoint"`
 }
@@ -143,12 +155,18 @@ func responseToLogDrainWithoutSecret(ctx context.Context, out client.LogDrain) (
 		return l, diags
 	}
 
+	samplingRules, diags := drainSamplingRulesFromAPI(ctx, out.SamplingRules, types.ListNull(drainSamplingRuleAttrType))
+	if diags.HasError() {
+		return l, diags
+	}
+
 	return LogDrainWithoutSecret{
 		ID:             types.StringValue(out.ID),
 		TeamID:         toTeamID(out.TeamID),
 		Name:           types.StringValue(out.Name),
 		DeliveryFormat: types.StringValue(out.DeliveryFormat),
 		SamplingRate:   types.Float64PointerValue(out.SamplingRate),
+		SamplingRules:  samplingRules,
 		Endpoint:       types.StringValue(out.Endpoint),
 		Environments:   environments,
 		Headers:        headers,

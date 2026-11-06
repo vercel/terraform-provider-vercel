@@ -133,7 +133,7 @@ func responseToTraceDrainWithoutSecret(ctx context.Context, out client.TraceDrai
 		return l, diags
 	}
 
-	samplingRules, diags := traceDrainSamplingRulesFromAPI(ctx, out.SamplingRules, types.ListValueMust(traceDrainSamplingRuleAttrType, []attr.Value{}))
+	samplingRules, diags := drainSamplingRulesFromAPI(ctx, out.SamplingRules, types.ListValueMust(drainSamplingRuleAttrType, []attr.Value{}))
 	if diags.HasError() {
 		return l, diags
 	}

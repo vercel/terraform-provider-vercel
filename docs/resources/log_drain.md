@@ -75,7 +75,8 @@ resource "vercel_project" "example" {
 
 - `headers` (Map of String, Sensitive) Custom headers to include in requests to the log drain endpoint.
 - `project_ids` (Set of String) A list of project IDs that the log drain should be associated with. Logs from these projects will be sent log events to the specified endpoint. If omitted, logs will be sent for all projects.
-- `sampling_rate` (Number) A ratio of logs matching the sampling rate will be sent to your log drain. Should be a value between 0 and 1. If unspecified, all logs are sent.
+- `sampling_rate` (Number) A ratio of logs matching the sampling rate will be sent to your log drain. Should be a value between 0 and 1. If unspecified, all logs are sent. Conflicts with sampling_rules.
+- `sampling_rules` (Attributes List) Ordered sampling rules for logs sent to this drain. The first matching rule applies; logs matching no rule are dropped. Conflicts with sampling_rate. (see [below for nested schema](#nestedatt--sampling_rules))
 - `secret` (String, Sensitive) A custom secret to be used for signing log events. This value is persisted in Terraform state. Use `secret_wo` to omit the signing secret from state. See https://vercel.com/docs/observability/log-drains/log-drains-reference#secure-log-drains for full info.
 - `secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) A write-only custom secret used to sign log events. The value is sent to Vercel during creation and is not persisted in state. Use an ephemeral input to also keep it out of saved plan configuration.
 - `secret_wo_version` (Number) An optional persisted, non-secret version used to rotate `secret_wo`. Incrementing this value replaces the Log Drain.
@@ -84,6 +85,18 @@ resource "vercel_project" "example" {
 ### Read-Only
 
 - `id` (String) The ID of the Log Drain.
+
+<a id="nestedatt--sampling_rules"></a>
+### Nested Schema for `sampling_rules`
+
+Required:
+
+- `rate` (Number) Sampling rate from 0 to 1.
+
+Optional:
+
+- `environment` (String) Environment to apply this sampling rule to. Can be `production` or `preview`.
+- `request_path` (String) Request path prefix to apply this sampling rule to. Omit to match any path.
 
 ## Import
 

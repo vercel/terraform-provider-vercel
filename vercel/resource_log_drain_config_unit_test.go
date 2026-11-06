@@ -95,3 +95,100 @@ func hasLogDrainError(diags []*tfprotov6.Diagnostic) bool {
 	}
 	return false
 }
+
+func TestLogDrainSamplingConfiguration(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	server := providerserver.NewProtocol6(vercel.New())()
+	schemas, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const resourceName = "vercel_log_drain"
+	typ := schemas.ResourceSchemas[resourceName].ValueType()
+	rootType := typ.(tftypes.Object)
+	rulesType := rootType.AttributeTypes["sampling_rules"].(tftypes.List)
+	type rule struct {
+		rate        any
+		environment any
+		requestPath any
+	}
+	tooManyRules := make([]rule, 11)
+	for i := range tooManyRules {
+		tooManyRules[i] = rule{rate: 0.5}
+	}
+
+	for _, tc := range []struct {
+		name       string
+		rate       any
+		rules      []rule
+		wantErrors bool
+	}{
+		{name: "no sampling"},
+		{name: "legacy rate", rate: 0.5},
+		{name: "legacy zero", rate: 0.0},
+		{name: "empty rules", rules: []rule{}},
+		{
+			name: "ordered rules with zero and fallback",
+			rules: []rule{
+				{rate: 0.0, environment: "production", requestPath: "/health"},
+				{rate: 0.25, environment: "production"},
+				{rate: 1.0},
+			},
+		},
+		{name: "preview rule", rules: []rule{{rate: 0.5, environment: "preview"}}},
+		{name: "rate conflicts with rules", rate: 0.5, rules: []rule{{rate: 0.25}}, wantErrors: true},
+		{name: "rate conflicts with empty rules", rate: 0.0, rules: []rule{}, wantErrors: true},
+		{name: "negative rule rate", rules: []rule{{rate: -0.1}}, wantErrors: true},
+		{name: "rule rate exceeds one", rules: []rule{{rate: 1.1}}, wantErrors: true},
+		{name: "missing rule rate", rules: []rule{{environment: "production"}}, wantErrors: true},
+		{name: "empty request path", rules: []rule{{rate: 0.5, requestPath: ""}}, wantErrors: true},
+		{name: "invalid environment", rules: []rule{{rate: 0.5, environment: "development"}}, wantErrors: true},
+		{name: "more than ten rules", rules: tooManyRules, wantErrors: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config := make(map[string]tftypes.Value, len(rootType.AttributeTypes))
+			for name, attributeType := range rootType.AttributeTypes {
+				config[name] = tftypes.NewValue(attributeType, nil)
+			}
+			config["name"] = tftypes.NewValue(tftypes.String, "sampling-test")
+			config["delivery_format"] = tftypes.NewValue(tftypes.String, "ndjson")
+			config["environments"] = logDrainStringSet(rootType.AttributeTypes["environments"], "production", "preview")
+			config["sources"] = logDrainStringSet(rootType.AttributeTypes["sources"], "lambda")
+			config["endpoint"] = tftypes.NewValue(tftypes.String, "https://example.com/logs")
+			config["sampling_rate"] = tftypes.NewValue(tftypes.Number, tc.rate)
+			if tc.rules != nil {
+				values := make([]tftypes.Value, len(tc.rules))
+				for i, rule := range tc.rules {
+					values[i] = tftypes.NewValue(rulesType.ElementType, map[string]tftypes.Value{
+						"rate":         tftypes.NewValue(tftypes.Number, rule.rate),
+						"environment":  tftypes.NewValue(tftypes.String, rule.environment),
+						"request_path": tftypes.NewValue(tftypes.String, rule.requestPath),
+					})
+				}
+				config["sampling_rules"] = tftypes.NewValue(rulesType, values)
+			}
+			configValue, err := tfprotov6.NewDynamicValue(typ, tftypes.NewValue(typ, config))
+			if err != nil {
+				t.Fatal(err)
+			}
+			validation, err := server.ValidateResourceConfig(ctx, &tfprotov6.ValidateResourceConfigRequest{
+				TypeName: resourceName,
+				Config:   &configValue,
+				ClientCapabilities: &tfprotov6.ValidateResourceConfigClientCapabilities{
+					WriteOnlyAttributesAllowed: true,
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if gotErrors := hasLogDrainError(validation.Diagnostics); gotErrors != tc.wantErrors {
+				for _, diag := range validation.Diagnostics {
+					t.Logf("%s: %s", diag.Summary, diag.Detail)
+				}
+				t.Fatalf("validation errors = %t, want %t", gotErrors, tc.wantErrors)
+			}
+		})
+	}
+}
