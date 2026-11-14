@@ -116,6 +116,7 @@ func (p *vercelProvider) Resources(_ context.Context) []func() resource.Resource
 		newSharedEnvironmentVariableProjectLinkResource,
 		newShareableLinkResource,
 		newSharedEnvironmentVariableResource,
+		newOrganizationTeamResource,
 		newTeamConfigResource,
 		newTeamMemberResource,
 		newTraceDrainResource,

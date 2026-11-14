@@ -19,6 +19,13 @@ func MemberNotFound(err error) bool {
 	return err != nil && errors.As(err, &apiErr) && apiErr.Code == "member_not_found"
 }
 
+// OrganizationTeamNotYetVisible reports index lag for a team whose organization
+// membership has been confirmed by a point read.
+func OrganizationTeamNotYetVisible(err error) bool {
+	var apiErr APIError
+	return errors.As(err, &apiErr) && apiErr.Code == "organization_team_not_yet_visible"
+}
+
 func noContent(err error) bool {
 	var apiErr APIError
 	return err != nil && errors.As(err, &apiErr) && apiErr.StatusCode == 204
