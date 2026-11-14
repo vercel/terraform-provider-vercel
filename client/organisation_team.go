@@ -16,6 +16,12 @@ type OrganisationTeam struct {
 	BillingPlan    string `json:"billingPlan"`
 }
 
+// OrganisationTeamsPage contains one page of an organisation's teams.
+type OrganisationTeamsPage struct {
+	Teams  []OrganisationTeam `json:"teams"`
+	Cursor string             `json:"cursor"`
+}
+
 // CreateOrganisationTeam creates a child team using the organisation's billing setup.
 func (c *Client) CreateOrganisationTeam(ctx context.Context, organisationID, name, slug, billingPlan string) (OrganisationTeam, error) {
 	var team OrganisationTeam
@@ -27,19 +33,23 @@ func (c *Client) CreateOrganisationTeam(ctx context.Context, organisationID, nam
 	return team, err
 }
 
+// ListOrganisationTeams lists one page of teams from the organisation's eventually consistent index.
+func (c *Client) ListOrganisationTeams(ctx context.Context, organisationID, cursor string) (OrganisationTeamsPage, error) {
+	endpoint := fmt.Sprintf("%s/v1/organizations/%s/teams", c.baseURL, url.PathEscape(organisationID))
+	if cursor != "" {
+		endpoint += "?cursor=" + url.QueryEscape(cursor)
+	}
+	var page OrganisationTeamsPage
+	err := c.doRequest(clientRequest{ctx: ctx, method: http.MethodGet, url: endpoint}, &page)
+	return page, err
+}
+
 // GetOrganisationTeam reads a team and its billing profile from the organisation.
 func (c *Client) GetOrganisationTeam(ctx context.Context, organisationID, teamID string) (OrganisationTeam, error) {
 	cursor := ""
 	for {
-		endpoint := fmt.Sprintf("%s/v1/organizations/%s/teams", c.baseURL, url.PathEscape(organisationID))
-		if cursor != "" {
-			endpoint += "?cursor=" + url.QueryEscape(cursor)
-		}
-		var page struct {
-			Teams  []OrganisationTeam `json:"teams"`
-			Cursor string             `json:"cursor"`
-		}
-		if err := c.doRequest(clientRequest{ctx: ctx, method: http.MethodGet, url: endpoint}, &page); err != nil {
+		page, err := c.ListOrganisationTeams(ctx, organisationID, cursor)
+		if err != nil {
 			return OrganisationTeam{}, err
 		}
 		for _, team := range page.Teams {

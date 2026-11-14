@@ -84,15 +84,16 @@ resource "vercel_project" "test" {
 			if teamID == "" {
 				return nil
 			}
-			// The root-scoped token loses access to a child after deletion, so check the organisation link.
+			// Check the organisation list directly: confirming absence through a child
+			// endpoint requires access that a root-scoped token loses after deletion.
 			deadline := time.Now().Add(time.Minute)
 			for {
-				_, err := organisationClient.GetOrganisationTeam(context.Background(), organisationID, teamID)
-				if client.NotFound(err) {
-					return nil
-				}
-				if err != nil && !client.OrganisationTeamNotYetVisible(err) {
+				listed, err := testOrganisationTeamListed(context.Background(), organisationClient, organisationID, teamID)
+				if err != nil {
 					return err
+				}
+				if !listed {
+					return nil
 				}
 				if time.Now().After(deadline) {
 					return fmt.Errorf("team %s still exists after destroy", teamID)
