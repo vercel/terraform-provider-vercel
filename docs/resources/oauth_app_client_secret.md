@@ -47,6 +47,7 @@ resource "vercel_project_environment_variable" "oauth_client_id" {
   key        = "OAUTH_CLIENT_ID"
   value      = vercel_oauth_app.example.id
   target     = ["production", "preview", "development"]
+  sensitive  = false
 }
 
 resource "vercel_project_environment_variable" "oauth_client_secret" {
