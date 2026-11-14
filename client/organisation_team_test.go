@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -35,20 +36,59 @@ func TestGetOrganisationTeamPagination(t *testing.T) {
 }
 
 func TestGetOrganisationTeamMissingAndErrors(t *testing.T) {
-	for _, status := range []int{200, 403, 500} {
-		t.Run(fmt.Sprint(status), func(t *testing.T) {
+	for _, tc := range []struct {
+		name               string
+		listStatus         int
+		organisationStatus int
+		organisationBody   string
+		notFound           bool
+		code               string
+	}{
+		{"index_lag", 200, 200, `{"organizationId":"org_1"}`, false, "organisation_team_not_yet_visible"},
+		{"deleted", 200, 404, `{"error":{"code":"not_found","message":"Team not found"}}`, true, "not_found"},
+		{"detached", 200, 200, `{"organizationId":null}`, true, "organisation_team_not_found"},
+		{"moved", 200, 200, `{"organizationId":"org_other"}`, true, "organisation_team_not_found"},
+		{"organisation_forbidden", 200, 403, `{"error":{"code":"forbidden","message":"failure"}}`, false, "forbidden"},
+		{"organisation_error", 200, 500, `{"error":{"code":"failure","message":"failure"}}`, false, "failure"},
+		{"list_forbidden", 403, 0, "", false, "failure"},
+		{"list_error", 500, 0, "", false, "failure"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			organisationReads := 0
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(status)
-				if status == 200 {
-					fmt.Fprint(w, `{"teams":[]}`)
-				} else {
-					fmt.Fprint(w, `{"error":{"code":"failure","message":"failure"}}`)
+				if r.Method != http.MethodGet || r.URL.RawQuery != "" {
+					t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+				}
+				switch r.URL.Path {
+				case "/v1/organizations/org_1/teams":
+					w.WriteHeader(tc.listStatus)
+					if tc.listStatus == 200 {
+						fmt.Fprint(w, `{"teams":[]}`)
+					} else {
+						fmt.Fprint(w, `{"error":{"code":"failure","message":"failure"}}`)
+					}
+				case "/v1/teams/team_1/organization":
+					organisationReads++
+					if tc.organisationStatus == 0 {
+						t.Error("unexpected organisation lookup after a list error")
+						http.Error(w, "unexpected request", 500)
+						return
+					}
+					w.WriteHeader(tc.organisationStatus)
+					fmt.Fprint(w, tc.organisationBody)
+				default:
+					t.Errorf("unexpected path: %s", r.URL.Path)
+					http.Error(w, "unexpected request", 400)
 				}
 			}))
 			defer server.Close()
-			_, err := New("TOKEN").WithBaseURL(server.URL).GetOrganisationTeam(context.Background(), "org_1", "team_1")
-			if err == nil || NotFound(err) != (status == 200) {
+			_, err := New("TOKEN").WithBaseURL(server.URL).WithTeam(Team{ID: "unrelated"}).GetOrganisationTeam(context.Background(), "org_1", "team_1")
+			var apiErr APIError
+			if !errors.As(err, &apiErr) || NotFound(err) != tc.notFound || apiErr.Code != tc.code {
 				t.Fatalf("unexpected error: %v", err)
+			}
+			if (organisationReads == 1) != (tc.listStatus == 200) {
+				t.Fatalf("organisation reads = %d", organisationReads)
 			}
 		})
 	}

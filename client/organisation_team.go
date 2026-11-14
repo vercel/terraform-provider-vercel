@@ -59,6 +59,24 @@ func (c *Client) GetOrganisationTeam(ctx context.Context, organisationID, teamID
 		}
 		cursor = page.Cursor
 	}
+	// List absence is not proof of deletion because the index is eventually
+	// consistent. Confirm the team's current organisation with a point read.
+	var organisation struct {
+		ID *string `json:"organizationId"`
+	}
+	if err := c.doRequest(clientRequest{
+		ctx: ctx, method: http.MethodGet,
+		url: fmt.Sprintf("%s/v1/teams/%s/organization", c.baseURL, url.PathEscape(teamID)),
+	}, &organisation); err != nil {
+		return OrganisationTeam{}, fmt.Errorf("could not confirm team's organisation: %w", err)
+	}
+	if organisation.ID != nil && *organisation.ID == organisationID {
+		return OrganisationTeam{}, APIError{
+			StatusCode: http.StatusServiceUnavailable,
+			Code:       "organisation_team_not_yet_visible",
+			Message:    "Team is still linked to the organisation but is missing from its teams list. Retry the operation.",
+		}
+	}
 	return OrganisationTeam{}, APIError{StatusCode: http.StatusNotFound, Code: "organisation_team_not_found", Message: "Team not found in organisation"}
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -57,6 +58,8 @@ func TestOrganisationTeamLifecycle(t *testing.T) {
 			fmt.Fprint(w, `{"organizationId":"org_1","teamId":"team_1","billingPlan":"platform"}`)
 		case "GET /v1/organizations/org_1":
 			fmt.Fprint(w, `{"teamId":"team_root"}`)
+		case "GET /v1/teams/team_1/organization":
+			fmt.Fprint(w, `{"organizationId":"org_1","rootTeamId":"team_root","transferStatus":null}`)
 		case "GET /v1/organizations/org_1/teams":
 			reads++
 			if reads == 1 {
@@ -171,6 +174,75 @@ func TestOrganisationTeamValidation(t *testing.T) {
 			}
 			if result.Diagnostics.HasError() == tc.valid {
 				t.Fatalf("valid=%v, diagnostics=%v", tc.valid, result.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestOrganisationTeamNameLength(t *testing.T) {
+	ctx := context.Background()
+	var response resource.SchemaResponse
+	newOrganisationTeamResource().Schema(ctx, resource.SchemaRequest{}, &response)
+	for _, character := range []string{"a", "é"} {
+		for _, length := range []int{128, 129, 256, 257} {
+			t.Run(fmt.Sprintf("%s/%d", character, length), func(t *testing.T) {
+				var result validator.StringResponse
+				for _, v := range response.Schema.Attributes["name"].(schema.StringAttribute).Validators {
+					v.ValidateString(ctx, validator.StringRequest{Path: path.Root("name"), ConfigValue: types.StringValue(strings.Repeat(character, length))}, &result)
+				}
+				if result.Diagnostics.HasError() != (length > 256) {
+					t.Fatalf("unexpected validation result for %d characters: %v", length, result.Diagnostics)
+				}
+			})
+		}
+	}
+}
+
+func TestOrganisationTeamReadMissingFromList(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		status      int
+		body        string
+		removeState bool
+	}{
+		{"index_lag", 200, `{"organizationId":"org_1"}`, false},
+		{"deleted", 404, `{"error":{"code":"not_found","message":"Team not found"}}`, true},
+		{"detached", 200, `{"organizationId":null}`, true},
+		{"moved", 200, `{"organizationId":"org_other"}`, true},
+		{"forbidden", 403, `{"error":{"code":"forbidden","message":"failure"}}`, false},
+		{"server_error", 500, `{"error":{"code":"failure","message":"failure"}}`, false},
+		{"invalid_response", 200, `invalid JSON`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				switch req.URL.Path {
+				case "/v1/organizations/org_1/teams":
+					fmt.Fprint(w, `{"teams":[]}`)
+				case "/v1/teams/team_1/organization":
+					w.WriteHeader(tc.status)
+					fmt.Fprint(w, tc.body)
+				default:
+					t.Errorf("unexpected request: %s %s", req.Method, req.URL)
+					http.Error(w, "unexpected request", 400)
+				}
+			}))
+			defer server.Close()
+			ctx := context.Background()
+			r := &organisationTeamResource{client: client.New("TOKEN").WithBaseURL(server.URL)}
+			var schemaResp resource.SchemaResponse
+			r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+			state := tfsdk.State{Schema: schemaResp.Schema}
+			if diags := state.Set(ctx, &organisationTeam{ID: types.StringValue("team_1"), OrganisationID: types.StringValue("org_1"), Name: types.StringValue("Product"), Slug: types.StringValue("product"), BillingPlan: types.StringValue("enterprise")}); diags.HasError() {
+				t.Fatal(diags)
+			}
+			resp := resource.ReadResponse{State: state}
+			r.Read(ctx, resource.ReadRequest{State: state}, &resp)
+			if tc.removeState {
+				if resp.Diagnostics.HasError() || !resp.State.Raw.IsNull() {
+					t.Fatalf("confirmed removal retained state or returned an error: %v", resp.Diagnostics)
+				}
+			} else if !resp.Diagnostics.HasError() || !resp.State.Raw.Equal(state.Raw) {
+				t.Fatalf("unconfirmed removal lost state or suppressed the error: %v", resp.Diagnostics)
 			}
 		})
 	}

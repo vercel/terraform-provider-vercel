@@ -91,7 +91,7 @@ resource "vercel_project" "test" {
 				if client.NotFound(err) {
 					return nil
 				}
-				if err != nil {
+				if err != nil && !client.OrganisationTeamNotYetVisible(err) {
 					return err
 				}
 				if time.Now().After(deadline) {

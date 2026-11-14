@@ -2,7 +2,6 @@ package vercel
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -71,7 +70,7 @@ func (r *organisationTeamResource) Schema(_ context.Context, _ resource.SchemaRe
 			"name": schema.StringAttribute{
 				Description: "The display name of the team.",
 				Required:    true,
-				Validators:  []validator.String{stringvalidator.LengthBetween(1, 256), stringvalidator.RegexMatches(regexp.MustCompile(`^[À-žA-Za-z0-9_'-](?:[ À-žA-Za-z0-9_'-]*[À-žA-Za-z0-9_'-])?$`), "must contain letters, numbers, spaces, underscores, apostrophes or dashes, without leading or trailing spaces")},
+				Validators:  []validator.String{stringvalidator.UTF8LengthBetween(1, 256), stringvalidator.RegexMatches(regexp.MustCompile(`^[À-žA-Za-z0-9_'-](?:[ À-žA-Za-z0-9_'-]*[À-žA-Za-z0-9_'-])?$`), "must contain letters, numbers, spaces, underscores, apostrophes or dashes, without leading or trailing spaces")},
 			},
 			"slug": schema.StringAttribute{
 				Description: "The team's slug, used in its dashboard URL.",
@@ -112,11 +111,10 @@ func (r *organisationTeamResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 	out, err := r.client.GetOrganisationTeam(ctx, state.OrganisationID.ValueString(), state.ID.ValueString())
-	// The list endpoint uses an eventually consistent index. Do not forget a newly
-	// created team on the first empty result; actual API 404s are not retried.
+	// Retry index lag only when a point read confirms the team is still linked.
+	// Exhausted retries return an error and preserve state; confirmed removals do not retry.
 	for attempt := 0; attempt < 10; attempt++ {
-		var apiErr client.APIError
-		if !errors.As(err, &apiErr) || apiErr.Code != "organisation_team_not_found" {
+		if !client.OrganisationTeamNotYetVisible(err) {
 			break
 		}
 		select {
