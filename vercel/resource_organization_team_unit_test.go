@@ -24,16 +24,16 @@ import (
 	"github.com/vercel/terraform-provider-vercel/v5/client"
 )
 
-type organisationTeamMockProvider struct {
+type organizationTeamMockProvider struct {
 	provider.Provider
 	client *client.Client
 }
 
-func (p *organisationTeamMockProvider) Configure(_ context.Context, _ provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+func (p *organizationTeamMockProvider) Configure(_ context.Context, _ provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	resp.ResourceData = p.client
 }
 
-func TestOrganisationTeamLifecycle(t *testing.T) {
+func TestOrganizationTeamLifecycle(t *testing.T) {
 	var mu sync.Mutex
 	name, slug := "Product", "acme-product"
 	created, deleted, updated := false, false, false
@@ -70,7 +70,7 @@ func TestOrganisationTeamLifecycle(t *testing.T) {
 				fmt.Fprint(w, `{"teams":[]}`)
 				return
 			}
-			json.NewEncoder(w).Encode(map[string]any{"teams": []client.OrganisationTeam{{OrganisationID: "org_1", TeamID: "team_1", Name: name, Slug: slug, BillingPlan: "platform"}}})
+			json.NewEncoder(w).Encode(map[string]any{"teams": []client.OrganizationTeam{{OrganizationID: "org_1", TeamID: "team_1", Name: name, Slug: slug, BillingPlan: "platform"}}})
 		case "PATCH /v2/teams/team_1":
 			var body map[string]string
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -91,13 +91,13 @@ func TestOrganisationTeamLifecycle(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	factories := map[string]func() (tfprotov6.ProviderServer, error){"vercel": providerserver.NewProtocol6WithError(&organisationTeamMockProvider{
+	factories := map[string]func() (tfprotov6.ProviderServer, error){"vercel": providerserver.NewProtocol6WithError(&organizationTeamMockProvider{
 		Provider: New(), client: client.New("TOKEN").WithBaseURL(server.URL).WithTeam(client.Team{ID: "unrelated_provider_team"}),
 	})}
 	config := func(name, slug string) string {
 		return fmt.Sprintf(`
-resource "vercel_organisation_team" "test" {
- organisation_id = "org_1"
+resource "vercel_organization_team" "test" {
+ organization_id = "org_1"
  name = %q
  slug = %q
  billing_plan = "platform"
@@ -106,11 +106,11 @@ resource "vercel_organisation_team" "test" {
 	}
 	tfresource.UnitTest(t, tfresource.TestCase{ProtoV6ProviderFactories: factories, Steps: []tfresource.TestStep{
 		{Config: config("Product", "acme-product"), Check: tfresource.ComposeTestCheckFunc(
-			tfresource.TestCheckResourceAttr("vercel_organisation_team.test", "id", "team_1"),
-			tfresource.TestCheckResourceAttr("vercel_organisation_team.test", "organisation_id", "org_1"),
+			tfresource.TestCheckResourceAttr("vercel_organization_team.test", "id", "team_1"),
+			tfresource.TestCheckResourceAttr("vercel_organization_team.test", "organization_id", "org_1"),
 		)},
 		{Config: config("Renamed", "acme-renamed")},
-		{ResourceName: "vercel_organisation_team.test", ImportState: true, ImportStateId: "org_1/team_1", ImportStateVerify: true},
+		{ResourceName: "vercel_organization_team.test", ImportState: true, ImportStateId: "org_1/team_1", ImportStateVerify: true},
 	}})
 	mu.Lock()
 	defer mu.Unlock()
@@ -119,7 +119,7 @@ resource "vercel_organisation_team" "test" {
 	}
 }
 
-func TestOrganisationTeamReadAndDeleteFailures(t *testing.T) {
+func TestOrganizationTeamReadAndDeleteFailures(t *testing.T) {
 	for _, status := range []int{400, 403, 404, 409, 500} {
 		t.Run(fmt.Sprint(status), func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -128,11 +128,11 @@ func TestOrganisationTeamReadAndDeleteFailures(t *testing.T) {
 			}))
 			defer server.Close()
 			ctx := context.Background()
-			r := &organisationTeamResource{client: client.New("TOKEN").WithBaseURL(server.URL)}
+			r := &organizationTeamResource{client: client.New("TOKEN").WithBaseURL(server.URL)}
 			var schemaResp resource.SchemaResponse
 			r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
 			state := tfsdk.State{Schema: schemaResp.Schema}
-			diags := state.Set(ctx, &organisationTeam{ID: types.StringValue("team_1"), OrganisationID: types.StringValue("org_1"), Name: types.StringValue("Product"), Slug: types.StringValue("product"), BillingPlan: types.StringValue("enterprise")})
+			diags := state.Set(ctx, &organizationTeam{ID: types.StringValue("team_1"), OrganizationID: types.StringValue("org_1"), Name: types.StringValue("Product"), Slug: types.StringValue("product"), BillingPlan: types.StringValue("enterprise")})
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
@@ -154,10 +154,10 @@ func TestOrganisationTeamReadAndDeleteFailures(t *testing.T) {
 	}
 }
 
-func TestOrganisationTeamValidation(t *testing.T) {
+func TestOrganizationTeamValidation(t *testing.T) {
 	ctx := context.Background()
 	var response resource.SchemaResponse
-	newOrganisationTeamResource().Schema(ctx, resource.SchemaRequest{}, &response)
+	newOrganizationTeamResource().Schema(ctx, resource.SchemaRequest{}, &response)
 	for _, tc := range []struct {
 		attribute, value string
 		valid            bool
@@ -165,7 +165,7 @@ func TestOrganisationTeamValidation(t *testing.T) {
 		{"name", "Product", true}, {"name", "Product Team", true}, {"name", " Product ", false}, {"name", " ", false},
 		{"slug", "acme-product", true}, {"slug", "Product", false}, {"slug", " product ", false}, {"slug", "-product", false},
 		{"billing_plan", "platform", true}, {"billing_plan", "enterprise", true}, {"billing_plan", "pro", false},
-		{"organisation_id", "", false},
+		{"organization_id", "", false},
 	} {
 		t.Run(tc.attribute+"="+tc.value, func(t *testing.T) {
 			var result validator.StringResponse
@@ -179,10 +179,10 @@ func TestOrganisationTeamValidation(t *testing.T) {
 	}
 }
 
-func TestOrganisationTeamNameLength(t *testing.T) {
+func TestOrganizationTeamNameLength(t *testing.T) {
 	ctx := context.Background()
 	var response resource.SchemaResponse
-	newOrganisationTeamResource().Schema(ctx, resource.SchemaRequest{}, &response)
+	newOrganizationTeamResource().Schema(ctx, resource.SchemaRequest{}, &response)
 	for _, character := range []string{"a", "é"} {
 		for _, length := range []int{128, 129, 256, 257} {
 			t.Run(fmt.Sprintf("%s/%d", character, length), func(t *testing.T) {
@@ -198,7 +198,7 @@ func TestOrganisationTeamNameLength(t *testing.T) {
 	}
 }
 
-func TestOrganisationTeamReadMissingFromList(t *testing.T) {
+func TestOrganizationTeamReadMissingFromList(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
 		status      int
@@ -228,11 +228,11 @@ func TestOrganisationTeamReadMissingFromList(t *testing.T) {
 			}))
 			defer server.Close()
 			ctx := context.Background()
-			r := &organisationTeamResource{client: client.New("TOKEN").WithBaseURL(server.URL)}
+			r := &organizationTeamResource{client: client.New("TOKEN").WithBaseURL(server.URL)}
 			var schemaResp resource.SchemaResponse
 			r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
 			state := tfsdk.State{Schema: schemaResp.Schema}
-			if diags := state.Set(ctx, &organisationTeam{ID: types.StringValue("team_1"), OrganisationID: types.StringValue("org_1"), Name: types.StringValue("Product"), Slug: types.StringValue("product"), BillingPlan: types.StringValue("enterprise")}); diags.HasError() {
+			if diags := state.Set(ctx, &organizationTeam{ID: types.StringValue("team_1"), OrganizationID: types.StringValue("org_1"), Name: types.StringValue("Product"), Slug: types.StringValue("product"), BillingPlan: types.StringValue("enterprise")}); diags.HasError() {
 				t.Fatal(diags)
 			}
 			resp := resource.ReadResponse{State: state}
@@ -248,12 +248,12 @@ func TestOrganisationTeamReadMissingFromList(t *testing.T) {
 	}
 }
 
-func TestOrganisationTeamImportRejectsRootAndMalformedIDs(t *testing.T) {
+func TestOrganizationTeamImportRejectsRootAndMalformedIDs(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"teamId":"team_root"}`)
 	}))
 	defer server.Close()
-	r := &organisationTeamResource{client: client.New("TOKEN").WithBaseURL(server.URL)}
+	r := &organizationTeamResource{client: client.New("TOKEN").WithBaseURL(server.URL)}
 	for _, id := range []string{"org_1/team_root", "team_1", "org_1/", "/team_1", "org_1/team_1/extra"} {
 		t.Run(id, func(t *testing.T) {
 			var response resource.ImportStateResponse
