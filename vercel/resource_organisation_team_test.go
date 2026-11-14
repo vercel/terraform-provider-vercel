@@ -107,7 +107,8 @@ resource "vercel_project" "test" {
 				return organisationID + "/" + teamID, nil
 			}},
 			{PreConfig: func() {
-				_, err := organisationClient.UpdateTeam(context.Background(), client.UpdateTeamRequest{TeamID: teamID, Name: "Changed outside Terraform"})
+				name := "Changed outside Terraform"
+				_, err := organisationClient.UpdateTeam(context.Background(), client.UpdateTeamRequest{TeamID: teamID, Name: &name})
 				if err != nil {
 					t.Fatal(err)
 				}

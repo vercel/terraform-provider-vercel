@@ -148,7 +148,7 @@ func (r *organisationTeamResource) Update(ctx context.Context, req resource.Upda
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := r.client.UpdateTeam(ctx, client.UpdateTeamRequest{TeamID: plan.ID.ValueString(), Name: plan.Name.ValueString(), Slug: plan.Slug.ValueString()})
+	out, err := r.client.UpdateTeam(ctx, client.UpdateTeamRequest{TeamID: plan.ID.ValueString(), Name: plan.Name.ValueStringPointer(), Slug: plan.Slug.ValueStringPointer()})
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating Organisation Team", "Could not update team: "+err.Error())
 		return
