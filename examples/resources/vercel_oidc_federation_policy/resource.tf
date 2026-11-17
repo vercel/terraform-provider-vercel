@@ -28,3 +28,50 @@ resource "vercel_oidc_federation_policy" "turborepo_github_actions" {
     project_ids = ["*"]
   }
 }
+
+resource "vercel_oidc_federation_policy" "vcr_github_actions" {
+  name       = "Push acme/widgets images from its main branch"
+  client     = "vcr"
+  issuer_url = "https://token.actions.githubusercontent.com"
+
+  claims = [
+    {
+      name = "aud"
+      values = [
+        {
+          value = "https://github.com/acme"
+        }
+      ]
+    },
+    {
+      name = "repository"
+      values = [
+        {
+          value = "acme/widgets"
+        }
+      ]
+    },
+    {
+      name = "ref"
+      values = [
+        {
+          value = "refs/heads/main"
+        }
+      ]
+    },
+    {
+      name = "workflow_ref"
+      values = [
+        {
+          value = "acme/widgets/.github/workflows/image.yml@refs/heads/main"
+        }
+      ]
+    }
+  ]
+
+  permissions = ["read-write:vcr"]
+
+  resources = {
+    project_ids = ["prj_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
+  }
+}

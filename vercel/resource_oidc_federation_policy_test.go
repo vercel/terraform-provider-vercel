@@ -54,6 +54,42 @@ func TestAcc_OIDCFederationPolicyResource(t *testing.T) {
 	})
 }
 
+func TestAcc_OIDCFederationPolicyResourceVCR(t *testing.T) {
+	if os.Getenv("VERCEL_TERRAFORM_TESTING_OIDC_VCR") == "" {
+		t.Skip("VERCEL_TERRAFORM_TESTING_OIDC_VCR must be set for a team with OIDC federation enabled for the Vercel Container Registry")
+	}
+
+	name := acctest.RandString(16)
+	resourceName := "vercel_oidc_federation_policy.test"
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testCheckOIDCFederationPolicyDeleted(testClient(t), resourceName),
+		Steps: []resource.TestStep{
+			{
+				Config: cfg(testAccOIDCFederationPolicyVCRConfig(name, "read-write:vcr")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckOIDCFederationPolicyExists(testClient(t), resourceName),
+					resource.TestCheckResourceAttr(resourceName, "client", "vcr"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "permissions.*", "read-write:vcr"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: oidcFederationPolicyImportID(resourceName),
+			},
+			{
+				Config: cfg(testAccOIDCFederationPolicyVCRConfig(name, "read:vcr")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testCheckOIDCFederationPolicyExists(testClient(t), resourceName),
+					resource.TestCheckTypeSetElemAttr(resourceName, "permissions.*", "read:vcr"),
+				),
+			},
+		},
+	})
+}
+
 func oidcFederationPolicyImportID(resourceName string) resource.ImportStateIdFunc {
 	return func(state *terraform.State) (string, error) {
 		resourceState, ok := state.RootModule().Resources[resourceName]
@@ -123,4 +159,30 @@ resource "vercel_oidc_federation_policy" "test" {
   }
 }
 `, policyName, clientName, name)
+}
+
+func testAccOIDCFederationPolicyVCRConfig(name, permission string) string {
+	return fmt.Sprintf(`
+resource "vercel_oidc_federation_policy" "test" {
+  name       = "test-acc-%[1]s"
+  client     = "vcr"
+  issuer_url = "https://token.actions.githubusercontent.com"
+
+  claims = [
+    {
+      name = "aud"
+      values = [{ value = "https://github.com/vercel" }]
+    },
+    {
+      name = "repository"
+      values = [{ value = "vercel/terraform-provider-vercel-%[1]s" }]
+    }
+  ]
+
+  permissions = [%[2]q]
+  resources = {
+    project_ids = ["*"]
+  }
+}
+`, name, permission)
 }

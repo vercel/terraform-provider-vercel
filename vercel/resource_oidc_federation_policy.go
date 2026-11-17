@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -30,6 +31,7 @@ var (
 	_ resource.ResourceWithConfigure        = &oidcFederationPolicyResource{}
 	_ resource.ResourceWithConfigValidators = &oidcFederationPolicyResource{}
 	_ resource.ResourceWithImportState      = &oidcFederationPolicyResource{}
+	_ resource.ResourceWithValidateConfig   = &oidcFederationPolicyResource{}
 )
 
 func newOIDCFederationPolicyResource() resource.Resource {
@@ -43,9 +45,14 @@ type oidcFederationPolicyResource struct {
 const (
 	oidcFederationClientTurborepo = "turborepo"
 	oidcFederationClientVercel    = "vercel"
+	oidcFederationClientVCR       = "vcr"
 	turborepoCLIClientID          = "cl_kyUx2zVvA4MGptBohkmtYHJly2XltXzD"
 	vercelCLIClientID             = "cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp"
+	vcrClientID                   = "cl_inrfNy8noLlhRrGbPEm0z47woXNcJVZ0"
 )
+
+// The Vercel Container Registry app only accepts these permissions, and no wildcard.
+var oidcFederationVCRPermissions = []string{"read:vcr", "read-write:vcr"}
 
 type oidcFederationPolicyModel struct {
 	ID          types.String                  `tfsdk:"id"`
@@ -103,6 +110,37 @@ func (r *oidcFederationPolicyResource) ConfigValidators(_ context.Context) []res
 	}
 }
 
+// ValidateConfig holds the Vercel Container Registry client to what the API accepts for it,
+// so a policy it would refuse fails at plan time.
+func (r *oidcFederationPolicyResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var clientName types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("client"), &clientName)...)
+	if resp.Diagnostics.HasError() || clientName.IsUnknown() || clientName.ValueString() != oidcFederationClientVCR {
+		return
+	}
+
+	var commands types.Set
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("commands"), &commands)...)
+	if !commands.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("commands"), "Invalid OIDC Federation Policy", "`commands` is only supported for the `vercel` client. Use `permissions` with the `vcr` client.")
+	}
+
+	var permissions types.Set
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("permissions"), &permissions)...)
+	if resp.Diagnostics.HasError() || permissions.IsNull() || permissions.IsUnknown() {
+		return
+	}
+	for _, element := range permissions.Elements() {
+		permission, ok := element.(types.String)
+		if !ok || permission.IsUnknown() {
+			continue
+		}
+		if !slices.Contains(oidcFederationVCRPermissions, permission.ValueString()) {
+			resp.Diagnostics.AddAttributeError(path.Root("permissions"), "Invalid OIDC Federation Policy", fmt.Sprintf("The `vcr` client accepts only `read:vcr` and `read-write:vcr` permissions, not %q.", permission.ValueString()))
+		}
+	}
+}
+
 func (r *oidcFederationPolicyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: `
@@ -110,7 +148,7 @@ Provides an OIDC Federation Policy resource.
 
 OIDC federation policies allow trusted external workloads to exchange an OIDC token for a short-lived Vercel access token. The client selects the Vercel CLI receiving access, while claims constrain the external workload identity.
 
-~> This API currently supports first-party CLI clients enabled for the team, including the Vercel CLI and Turborepo CLI. The API token used by the provider must have permission to manage OIDC federation policies for the team.`,
+~> This API currently supports first-party clients enabled for the team: the Vercel CLI, the Turborepo CLI and the Vercel Container Registry. The API token used by the provider must have permission to manage OIDC federation policies for the team.`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description:   "The ID of the OIDC federation policy.",
@@ -124,11 +162,11 @@ OIDC federation policies allow trusted external workloads to exchange an OIDC to
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIfConfigured(), stringplanmodifier.UseNonNullStateForUnknown()},
 			},
 			"client": schema.StringAttribute{
-				Description:   "The CLI whose access tokens this policy permits the workload to obtain. Valid values are `turborepo` and `vercel`.",
+				Description:   "The client whose access tokens this policy permits the workload to obtain. Valid values are `turborepo` (the Turborepo CLI), `vercel` (the Vercel CLI) and `vcr` (the Vercel Container Registry).",
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				Validators: []validator.String{
-					stringvalidator.OneOf(oidcFederationClientTurborepo, oidcFederationClientVercel),
+					stringvalidator.OneOf(oidcFederationClientTurborepo, oidcFederationClientVercel, oidcFederationClientVCR),
 				},
 			},
 			"issuer_url": schema.StringAttribute{
@@ -190,7 +228,7 @@ OIDC federation policies allow trusted external workloads to exchange an OIDC to
 				},
 			},
 			"permissions": schema.SetAttribute{
-				Description: "Permissions granted to exchanged tokens. For Turborepo remote caching, use `read:remote-cache` for read-only access or `read-write:remote-cache` for read and write access. Use `[\"*\"]` only when the policy should inherit every permission authorized for the selected client. Exactly one of `permissions` or `commands` must be configured.",
+				Description: "Permissions granted to exchanged tokens. For Turborepo remote caching, use `read:remote-cache` for read-only access or `read-write:remote-cache` for read and write access. For the Vercel Container Registry, use `read:vcr` to pull images or `read-write:vcr` to pull and push them; it accepts no other permissions and no wildcard. Use `[\"*\"]` only when the policy should inherit every permission authorized for the selected client. Exactly one of `permissions` or `commands` must be configured.",
 				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,
@@ -228,6 +266,8 @@ func oidcFederationClientID(clientName string) string {
 		return turborepoCLIClientID
 	case oidcFederationClientVercel:
 		return vercelCLIClientID
+	case oidcFederationClientVCR:
+		return vcrClientID
 	default:
 		return ""
 	}
@@ -239,6 +279,8 @@ func oidcFederationClientName(clientID string) (string, bool) {
 		return oidcFederationClientTurborepo, true
 	case vercelCLIClientID:
 		return oidcFederationClientVercel, true
+	case vcrClientID:
+		return oidcFederationClientVCR, true
 	default:
 		return "", false
 	}
