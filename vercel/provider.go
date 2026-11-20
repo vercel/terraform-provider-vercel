@@ -303,6 +303,12 @@ func (p *vercelProvider) Configure(ctx context.Context, req provider.ConfigureRe
 
 	// User must provide an api_token, or an OIDC token to exchange for one, to the provider
 	credentials := config.credentials()
+	if config.APIToken.IsNull() && credentials.apiToken != "" && (os.Getenv(oidcTokenEnv) != "" || os.Getenv(oidcTokenFilePathEnv) != "") {
+		resp.Diagnostics.AddWarning(
+			"Not authenticating with OIDC",
+			fmt.Sprintf("The VERCEL_API_TOKEN environment variable is set, and takes precedence over %s and %s. Unset it to authenticate with OIDC.", oidcTokenEnv, oidcTokenFilePathEnv),
+		)
+	}
 	var vercelClient *client.Client
 	switch {
 	case credentials.useOIDC():

@@ -204,6 +204,10 @@ func sanitizeSensitiveResponseError(err error) error {
 	if err == nil {
 		return nil
 	}
+	// A failed token exchange never contains details of the sensitive response.
+	if errors.Is(err, errOIDCTokenExchange) {
+		return err
+	}
 	var apiErr APIError
 	if errors.As(err, &apiErr) {
 		apiErr.Message = "API request failed; response details omitted to protect secrets"

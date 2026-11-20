@@ -97,10 +97,12 @@ func TestProviderConfigWithoutNetworkAccess(t *testing.T) {
 	typ := schemas.Provider.ValueType()
 
 	for _, tc := range []struct {
-		name               string
-		config             map[string]string
-		wantValidateError  string
-		wantConfigureError string
+		name                 string
+		config               map[string]string
+		env                  map[string]string
+		wantValidateError    string
+		wantConfigureError   string
+		wantConfigureWarning string
 	}{
 		{
 			name:              "API token and OIDC token",
@@ -127,10 +129,24 @@ func TestProviderConfigWithoutNetworkAccess(t *testing.T) {
 			config:             map[string]string{"team": "acme"},
 			wantConfigureError: "Unable to find api_token",
 		},
+		{
+			name: "API token environment",
+			env:  map[string]string{"VERCEL_API_TOKEN": "abcdefghijklmnopqrstuvwx"},
+		},
+		{
+			name:                 "API token environment over OIDC environment",
+			env:                  map[string]string{"VERCEL_API_TOKEN": "abcdefghijklmnopqrstuvwx", oidcTokenEnv: "oidc-token"},
+			wantConfigureWarning: "Not authenticating with OIDC",
+		},
+		{
+			name:   "configured API token over OIDC environment",
+			config: map[string]string{"api_token": "abcdefghijklmnopqrstuvwx"},
+			env:    map[string]string{oidcTokenFilePathEnv: "/token"},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, name := range []string{"VERCEL_API_TOKEN", oidcTokenEnv, oidcTokenFilePathEnv, oidcPolicyIDEnv} {
-				t.Setenv(name, "")
+				t.Setenv(name, tc.env[name])
 			}
 			attributes := map[string]tftypes.Value{}
 			for name, attributeType := range typ.(tftypes.Object).AttributeTypes {
@@ -148,7 +164,7 @@ func TestProviderConfigWithoutNetworkAccess(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := errorSummary(validated.Diagnostics); got != tc.wantValidateError {
+			if got := diagnosticSummary(validated.Diagnostics, tfprotov6.DiagnosticSeverityError); got != tc.wantValidateError {
 				t.Fatalf("validation error = %q, want %q: %v", got, tc.wantValidateError, validated.Diagnostics)
 			}
 			if tc.wantValidateError != "" {
@@ -159,16 +175,19 @@ func TestProviderConfigWithoutNetworkAccess(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := errorSummary(configured.Diagnostics); got != tc.wantConfigureError {
+			if got := diagnosticSummary(configured.Diagnostics, tfprotov6.DiagnosticSeverityError); got != tc.wantConfigureError {
 				t.Fatalf("configure error = %q, want %q: %v", got, tc.wantConfigureError, configured.Diagnostics)
+			}
+			if got := diagnosticSummary(configured.Diagnostics, tfprotov6.DiagnosticSeverityWarning); got != tc.wantConfigureWarning {
+				t.Fatalf("configure warning = %q, want %q: %v", got, tc.wantConfigureWarning, configured.Diagnostics)
 			}
 		})
 	}
 }
 
-func errorSummary(diagnostics []*tfprotov6.Diagnostic) string {
+func diagnosticSummary(diagnostics []*tfprotov6.Diagnostic, severity tfprotov6.DiagnosticSeverity) string {
 	for _, diagnostic := range diagnostics {
-		if diagnostic.Severity == tfprotov6.DiagnosticSeverityError {
+		if diagnostic.Severity == severity {
 			return diagnostic.Summary
 		}
 	}

@@ -20,7 +20,14 @@ const (
 	// oidcTokenRefreshLeeway is how long before it expires an access token is
 	// exchanged again, so requests are not sent with a token about to expire.
 	oidcTokenRefreshLeeway = time.Minute
+	// oidcTokenRefreshRetryInterval is how long to wait after a failed exchange
+	// before trying again, while the current access token is still valid.
+	oidcTokenRefreshRetryInterval = 10 * time.Second
 )
+
+// errOIDCTokenExchange marks an error as a failure to authenticate, which
+// happens before a request is sent, rather than as the failure of a request.
+var errOIDCTokenExchange = errors.New("exchanging OIDC token for a Vercel access token")
 
 // OIDCConfig configures a Client to authenticate by exchanging an OIDC token
 // from an external identity provider for a short-lived Vercel access token.
@@ -43,6 +50,7 @@ type oidcTokenSource struct {
 
 	mu          sync.Mutex
 	accessToken string
+	expiresAt   time.Time
 	refreshAt   time.Time
 }
 
@@ -77,11 +85,23 @@ func (c *Client) accessToken(ctx context.Context) (string, error) {
 	}
 
 	accessToken, expiresIn, err := c.exchangeOIDCToken(ctx)
+	now := time.Now()
 	if err != nil {
-		return "", fmt.Errorf("exchanging OIDC token for a Vercel access token: %w", err)
+		err = fmt.Errorf("%w: %w", errOIDCTokenExchange, err)
+		if c.oidc.accessToken == "" || !now.Before(c.oidc.expiresAt) {
+			return "", err
+		}
+		// The exchange happens ahead of the expiry, so the current access token
+		// is still valid: keep using it, and try again shortly.
+		tflog.Warn(ctx, "could not renew the Vercel access token, using the current one until it expires", map[string]any{
+			"error": err.Error(),
+		})
+		c.oidc.refreshAt = now.Add(min(oidcTokenRefreshRetryInterval, c.oidc.expiresAt.Sub(now)))
+		return c.oidc.accessToken, nil
 	}
 	c.oidc.accessToken = accessToken
-	c.oidc.refreshAt = time.Now().Add(expiresIn - min(oidcTokenRefreshLeeway, expiresIn/2))
+	c.oidc.expiresAt = now.Add(expiresIn)
+	c.oidc.refreshAt = c.oidc.expiresAt.Add(-min(oidcTokenRefreshLeeway, expiresIn/2))
 	return accessToken, nil
 }
 
@@ -140,7 +160,7 @@ func (c *Client) exchangeOIDCToken(ctx context.Context) (accessToken string, exp
 		}
 		if err := json.Unmarshal(body, &oauthErr); err == nil && oauthErr.Code != "" {
 			return "", 0, fmt.Errorf(
-				"%s: %s - %s (the team needs an OIDC federation policy that matches the issuer and claims of the OIDC token, which must not have expired)",
+				"%s: %s - %s (check that the OIDC token has not expired, and that its issuer and claims match a single OIDC federation policy of the team, or the one with the policy ID given)",
 				resp.Status, oauthErr.Code, oauthErr.Description,
 			)
 		}

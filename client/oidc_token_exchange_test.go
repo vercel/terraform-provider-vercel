@@ -122,7 +122,7 @@ func TestOIDCClientReportsFailedExchange(t *testing.T) {
 			name:   "OAuth error",
 			status: http.StatusBadRequest,
 			body:   `{"error":"invalid_request","error_description":"Not authorized."}`,
-			want:   "400 Bad Request: invalid_request - Not authorized. (the team needs an OIDC federation policy that matches the issuer and claims of the OIDC token, which must not have expired)",
+			want:   "400 Bad Request: invalid_request - Not authorized. (check that the OIDC token has not expired, and that its issuer and claims match a single OIDC federation policy of the team, or the one with the policy ID given)",
 		},
 		{
 			name:   "status not mistaken for the resource being missing",
@@ -164,13 +164,63 @@ func TestOIDCClientReportsFailedExchange(t *testing.T) {
 			}
 			c := NewWithOIDC(OIDCConfig{ClientID: "cl_123", Team: "acme", SubjectToken: subjectToken}).WithBaseURL(server.URL)
 
+			want := "exchanging OIDC token for a Vercel access token: " + tt.want
 			_, err := c.GetTeam(context.Background(), "team_123")
-			if want := "exchanging OIDC token for a Vercel access token: " + tt.want; err == nil || err.Error() != want {
+			if err == nil || err.Error() != want {
 				t.Fatalf("GetTeam() error = %v, want %q", err, want)
 			}
 			if NotFound(err) {
 				t.Fatalf("NotFound(%v) = true, want false", err)
 			}
+
+			err = c.doRequest(clientRequest{ctx: context.Background(), method: http.MethodGet, url: server.URL, sensitiveResponse: true}, nil)
+			if err == nil || err.Error() != want {
+				t.Fatalf("doRequest() error for a sensitive response = %v, want %q", err, want)
+			}
 		})
+	}
+}
+
+func TestOIDCClientKeepsAccessTokenUntilItExpiresWhenRenewalFails(t *testing.T) {
+	exchanges := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != oidcTokenExchangePath {
+			if authorization := r.Header.Get("Authorization"); authorization != "Bearer access-1" {
+				t.Errorf("Authorization = %q, want the access token still valid", authorization)
+			}
+			fmt.Fprint(w, `{"id":"team_123"}`)
+			return
+		}
+		exchanges++
+		if exchanges > 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		fmt.Fprint(w, `{"access_token":"access-1","token_type":"Bearer","expires_in":600}`)
+	}))
+	t.Cleanup(server.Close)
+	c := NewWithOIDC(OIDCConfig{
+		ClientID:     "cl_123",
+		Team:         "acme",
+		SubjectToken: func() (string, error) { return "oidc-token", nil },
+	}).WithBaseURL(server.URL)
+	if err := c.Authenticate(context.Background()); err != nil {
+		t.Fatalf("Authenticate() error = %v", err)
+	}
+
+	c.oidc.refreshAt = time.Now()
+	for range 2 {
+		if _, err := c.GetTeam(context.Background(), "team_123"); err != nil {
+			t.Fatalf("GetTeam() error = %v, want none while the access token is valid", err)
+		}
+	}
+	if exchanges != 2 {
+		t.Fatalf("exchanges = %d, want 2: the failed renewal is not retried right away", exchanges)
+	}
+
+	c.oidc.expiresAt, c.oidc.refreshAt = time.Now(), time.Now()
+	_, err := c.GetTeam(context.Background(), "team_123")
+	if want := "exchanging OIDC token for a Vercel access token: 503 Service Unavailable"; err == nil || err.Error() != want {
+		t.Fatalf("GetTeam() error = %v, want %q once the access token expired", err, want)
 	}
 }
