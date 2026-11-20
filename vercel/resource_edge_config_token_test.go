@@ -22,8 +22,8 @@ func testCheckEdgeConfigTokenExists(testClient *client.Client, teamID, n string)
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient.GetEdgeConfigToken(context.TODO(), client.EdgeConfigTokenRequest{
-			Token:        rs.Primary.Attributes["token"],
+		_, err := testClient.GetEdgeConfigTokenByID(context.TODO(), client.EdgeConfigTokenRequest{
+			ID:           rs.Primary.ID,
 			EdgeConfigID: rs.Primary.Attributes["edge_config_id"],
 			TeamID:       teamID,
 		})
@@ -45,8 +45,8 @@ func testCheckEdgeConfigTokenDeleted(testClient *client.Client, n, teamID string
 			return fmt.Errorf("no ID is set")
 		}
 
-		_, err := testClient.GetEdgeConfigToken(context.TODO(), client.EdgeConfigTokenRequest{
-			Token:        rs.Primary.ID,
+		_, err := testClient.GetEdgeConfigTokenByID(context.TODO(), client.EdgeConfigTokenRequest{
+			ID:           rs.Primary.ID,
 			EdgeConfigID: rs.Primary.Attributes["edge_config_id"],
 			TeamID:       teamID,
 		})
