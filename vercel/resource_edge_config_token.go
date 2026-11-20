@@ -167,11 +167,20 @@ func (r *edgeConfigTokenResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	out, err := r.client.GetEdgeConfigToken(ctx, client.EdgeConfigTokenRequest{
+	request := client.EdgeConfigTokenRequest{
 		Token:        state.Token.ValueString(),
+		ID:           state.ID.ValueString(),
 		TeamID:       state.TeamID.ValueString(),
 		EdgeConfigID: state.EdgeConfigID.ValueString(),
-	})
+	}
+	var out client.EdgeConfigToken
+	var err error
+	if request.ID != "" {
+		out, err = r.client.GetEdgeConfigTokenByID(ctx, request)
+		out.Token = request.Token
+	} else {
+		out, err = r.client.GetEdgeConfigToken(ctx, request)
+	}
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -221,6 +230,7 @@ func (r *edgeConfigTokenResource) Delete(ctx context.Context, req resource.Delet
 
 	err := r.client.DeleteEdgeConfigToken(ctx, client.EdgeConfigTokenRequest{
 		Token:        state.Token.ValueString(),
+		ID:           state.ID.ValueString(),
 		TeamID:       state.TeamID.ValueString(),
 		EdgeConfigID: state.EdgeConfigID.ValueString(),
 	})
