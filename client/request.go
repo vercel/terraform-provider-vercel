@@ -130,7 +130,11 @@ func (c *Client) doRequest(req clientRequest, v any) error {
 
 func (c *Client) _doRequest(req *http.Request, v any, errorOnNoContent bool) error {
 	if req.Header.Get("Authorization") == "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
+		token, err := c.accessToken(req.Context())
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}
 	resp, err := c.http().Do(req)
 	if err != nil {
