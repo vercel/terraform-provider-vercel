@@ -177,7 +177,6 @@ func (r *edgeConfigTokenResource) Read(ctx context.Context, req resource.ReadReq
 	var err error
 	if request.ID != "" {
 		out, err = r.client.GetEdgeConfigTokenByID(ctx, request)
-		out.Token = request.Token
 	} else {
 		out, err = r.client.GetEdgeConfigToken(ctx, request)
 	}
@@ -196,6 +195,7 @@ func (r *edgeConfigTokenResource) Read(ctx context.Context, req resource.ReadReq
 		)
 		return
 	}
+	out.Token = request.Token
 
 	result := responseToEdgeConfigToken(out)
 	tflog.Info(ctx, "read edge config token", map[string]any{
@@ -280,10 +280,9 @@ func (r *edgeConfigTokenResource) ImportState(ctx context.Context, req resource.
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing Edge Config Token",
-			fmt.Sprintf("Could not get Edge Config Token %s %s %s, unexpected error: %s",
+			fmt.Sprintf("Could not get Edge Config Token %s %s, unexpected error: %s",
 				teamID,
 				edgeConfigID,
-				token,
 				err,
 			),
 		)

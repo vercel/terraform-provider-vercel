@@ -134,9 +134,10 @@ func (c *Client) GetEdgeConfigToken(ctx context.Context, request EdgeConfigToken
 	})
 
 	err = c.doRequest(clientRequest{
-		ctx:    ctx,
-		method: "GET",
-		url:    url,
+		ctx:               ctx,
+		method:            "GET",
+		url:               url,
+		sensitiveResponse: true,
 	}, &e)
 	// The plaintext `token` on this endpoint's response is deprecated and will
 	// be removed in a future API rollout. It's already part of the request
