@@ -2,6 +2,7 @@ package vercel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -55,7 +56,10 @@ func TestEdgeConfigTokenReadByIDKeepsTokenFromState(t *testing.T) {
 			http.NotFound(w, req)
 			return
 		}
-		fmt.Fprint(w, `[{"id":"tok_1","label":"test token","edgeConfigId":"ecfg_1","partialToken":"s3c********"}]`)
+		if req.URL.Query().Get("teamId") != "team_1" {
+			t.Errorf("unexpected team query: %s", req.URL.RawQuery)
+		}
+		fmt.Fprint(w, `[{"id":"tok_1","label":"updated label","edgeConfigId":"ecfg_1","partialToken":"s3c********","token":"ignored-legacy-token"}]`)
 	})
 
 	resp := resource.ReadResponse{State: tfsdk.State{Schema: schemaResponse.Schema}}
@@ -76,6 +80,63 @@ func TestEdgeConfigTokenReadByIDKeepsTokenFromState(t *testing.T) {
 	}
 	if got.ID.ValueString() != "tok_1" {
 		t.Errorf("id = %q, want tok_1", got.ID.ValueString())
+	}
+	if got.Label.ValueString() != "updated label" {
+		t.Errorf("label = %q, want updated label", got.Label.ValueString())
+	}
+}
+
+func TestEdgeConfigTokenReadErrorsKeepState(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{name: "forbidden", status: http.StatusForbidden, body: `{"error":{"code":"forbidden","message":"Forbidden"}}`},
+		{name: "server error", status: http.StatusInternalServerError, body: `{"error":{"code":"internal","message":"Unavailable"}}`},
+		{name: "invalid list", status: http.StatusOK, body: `{"tokens":[]}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, schemaResponse := edgeConfigTokenTestResource(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tc.status)
+				fmt.Fprint(w, tc.body)
+			})
+			state := edgeConfigTokenTestState(t, schemaResponse, "tok_1")
+			resp := resource.ReadResponse{State: state}
+			r.Read(context.Background(), resource.ReadRequest{State: state}, &resp)
+			if !resp.Diagnostics.HasError() {
+				t.Fatal("expected an error")
+			}
+			if !resp.State.Raw.Equal(state.Raw) {
+				t.Error("state changed after a failed read")
+			}
+		})
+	}
+}
+
+func TestEdgeConfigTokenDeleteByID(t *testing.T) {
+	for _, status := range []int{http.StatusNoContent, http.StatusNotFound, http.StatusForbidden} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			r, schemaResponse := edgeConfigTokenTestResource(t, func(w http.ResponseWriter, req *http.Request) {
+				if req.Method != http.MethodDelete || req.URL.Path != "/v1/edge-config/ecfg_1/tokens" || req.URL.Query().Get("teamId") != "team_1" {
+					t.Errorf("unexpected request: %s %s", req.Method, req.URL)
+				}
+				var body map[string][]string
+				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+					t.Error(err)
+					return
+				}
+				if len(body) != 1 || len(body["ids"]) != 1 || body["ids"][0] != "tok_1" {
+					t.Errorf("expected only the token ID in the delete body, got %v", body)
+				}
+				w.WriteHeader(status)
+			})
+			var resp resource.DeleteResponse
+			r.Delete(context.Background(), resource.DeleteRequest{State: edgeConfigTokenTestState(t, schemaResponse, "tok_1")}, &resp)
+			if resp.Diagnostics.HasError() != (status == http.StatusForbidden) {
+				t.Errorf("unexpected diagnostics: %v", resp.Diagnostics)
+			}
+		})
 	}
 }
 
@@ -122,9 +183,10 @@ func TestEdgeConfigTokenReadWithoutIDLooksUpByToken(t *testing.T) {
 
 func TestEdgeConfigTokenImportErrorsOmitToken(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		handler http.HandlerFunc
-		closed  bool
+		name     string
+		handler  http.HandlerFunc
+		closed   bool
+		importID string
 	}{
 		{
 			name: "api error",
@@ -137,6 +199,16 @@ func TestEdgeConfigTokenImportErrorsOmitToken(t *testing.T) {
 			name:    "network error",
 			handler: func(http.ResponseWriter, *http.Request) {},
 			closed:  true,
+		},
+		{
+			name:     "invalid URL escape",
+			handler:  func(http.ResponseWriter, *http.Request) {},
+			importID: "team_1/ecfg_1/" + testEdgeConfigTokenSecret + "%",
+		},
+		{
+			name:     "invalid import format",
+			handler:  func(http.ResponseWriter, *http.Request) {},
+			importID: "team_1/ecfg_1/" + testEdgeConfigTokenSecret + "/extra",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -151,7 +223,11 @@ func TestEdgeConfigTokenImportErrorsOmitToken(t *testing.T) {
 			r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResponse)
 
 			resp := resource.ImportStateResponse{State: tfsdk.State{Schema: schemaResponse.Schema}}
-			r.ImportState(context.Background(), resource.ImportStateRequest{ID: "team_1/ecfg_1/" + testEdgeConfigTokenSecret}, &resp)
+			importID := tc.importID
+			if importID == "" {
+				importID = "team_1/ecfg_1/" + testEdgeConfigTokenSecret
+			}
+			r.ImportState(context.Background(), resource.ImportStateRequest{ID: importID}, &resp)
 			if !resp.Diagnostics.HasError() {
 				t.Fatal("expected an error")
 			}

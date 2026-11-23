@@ -63,6 +63,9 @@ func (cr *clientRequest) toHTTPRequest() (*http.Request, error) {
 		body,
 	)
 	if err != nil {
+		if cr.sensitiveResponse {
+			err = sanitizeSensitiveResponseError(err)
+		}
 		return nil, err
 	}
 	r.Header.Set("User-Agent", fmt.Sprintf("terraform-provider-vercel/%s", version))

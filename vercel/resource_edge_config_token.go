@@ -263,7 +263,7 @@ func (r *edgeConfigTokenResource) ImportState(ctx context.Context, req resource.
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing edge config token",
-			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/edge_config_id/token\" or \"edge_config_id/token\"", req.ID),
+			"Invalid import ID. Expected format \"team_id/edge_config_id/token\" or \"edge_config_id/token\".",
 		)
 		return
 	}
