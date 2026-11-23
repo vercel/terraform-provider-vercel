@@ -167,11 +167,19 @@ func (r *edgeConfigTokenResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	out, err := r.client.GetEdgeConfigToken(ctx, client.EdgeConfigTokenRequest{
+	request := client.EdgeConfigTokenRequest{
 		Token:        state.Token.ValueString(),
+		ID:           state.ID.ValueString(),
 		TeamID:       state.TeamID.ValueString(),
 		EdgeConfigID: state.EdgeConfigID.ValueString(),
-	})
+	}
+	var out client.EdgeConfigToken
+	var err error
+	if request.ID != "" {
+		out, err = r.client.GetEdgeConfigTokenByID(ctx, request)
+	} else {
+		out, err = r.client.GetEdgeConfigToken(ctx, request)
+	}
 	if client.NotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -187,6 +195,7 @@ func (r *edgeConfigTokenResource) Read(ctx context.Context, req resource.ReadReq
 		)
 		return
 	}
+	out.Token = request.Token
 
 	result := responseToEdgeConfigToken(out)
 	tflog.Info(ctx, "read edge config token", map[string]any{
@@ -221,6 +230,7 @@ func (r *edgeConfigTokenResource) Delete(ctx context.Context, req resource.Delet
 
 	err := r.client.DeleteEdgeConfigToken(ctx, client.EdgeConfigTokenRequest{
 		Token:        state.Token.ValueString(),
+		ID:           state.ID.ValueString(),
 		TeamID:       state.TeamID.ValueString(),
 		EdgeConfigID: state.EdgeConfigID.ValueString(),
 	})
@@ -253,7 +263,7 @@ func (r *edgeConfigTokenResource) ImportState(ctx context.Context, req resource.
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Error importing edge config token",
-			fmt.Sprintf("Invalid id '%s' specified. should be in format \"team_id/edge_config_id/token\" or \"edge_config_id/token\"", req.ID),
+			"Invalid import ID. Expected format \"team_id/edge_config_id/token\" or \"edge_config_id/token\".",
 		)
 		return
 	}
@@ -270,10 +280,9 @@ func (r *edgeConfigTokenResource) ImportState(ctx context.Context, req resource.
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing Edge Config Token",
-			fmt.Sprintf("Could not get Edge Config Token %s %s %s, unexpected error: %s",
+			fmt.Sprintf("Could not get Edge Config Token %s %s, unexpected error: %s",
 				teamID,
 				edgeConfigID,
-				token,
 				err,
 			),
 		)
