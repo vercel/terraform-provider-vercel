@@ -158,7 +158,7 @@ func TestEdgeConfigTokenReadRemovesDeletedToken(t *testing.T) {
 func TestEdgeConfigTokenReadWithoutIDLooksUpByToken(t *testing.T) {
 	ctx := context.Background()
 	r, schemaResponse := edgeConfigTokenTestResource(t, func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path != "/v1/edge-config/ecfg_1/token/"+testEdgeConfigTokenSecret {
+		if req.URL.Path != "/v1/global-config/ecfg_1/token" || req.Header.Get("x-vercel-global-config-token") != testEdgeConfigTokenSecret {
 			t.Errorf("unexpected request to %s", req.URL.Path)
 			http.NotFound(w, req)
 			return

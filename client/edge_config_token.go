@@ -123,8 +123,11 @@ func (c *Client) GetEdgeConfigTokenByID(ctx context.Context, request EdgeConfigT
 	}
 }
 
+// GetEdgeConfigToken looks a token up by its value. The token is sent in a
+// header, so it stays out of the request URL, and the response never includes
+// it, so Token is filled in from the request.
 func (c *Client) GetEdgeConfigToken(ctx context.Context, request EdgeConfigTokenRequest) (e EdgeConfigToken, err error) {
-	url := fmt.Sprintf("%s/v1/edge-config/%s/token/%s", c.baseURL, request.EdgeConfigID, request.Token)
+	url := fmt.Sprintf("%s/v1/global-config/%s/token", c.baseURL, request.EdgeConfigID)
 	if c.TeamID(request.TeamID) != "" {
 		url = fmt.Sprintf("%s?teamId=%s", url, c.TeamID(request.TeamID))
 	}
@@ -137,13 +140,9 @@ func (c *Client) GetEdgeConfigToken(ctx context.Context, request EdgeConfigToken
 		ctx:               ctx,
 		method:            "GET",
 		url:               url,
+		headers:           map[string]string{"x-vercel-global-config-token": request.Token},
 		sensitiveResponse: true,
 	}, &e)
-	// The plaintext `token` on this endpoint's response is deprecated and will
-	// be removed in a future API rollout. It's already part of the request
-	// path, so we repopulate it from the request to keep the returned struct —
-	// and the computed `connection_string` that depends on it — stable across
-	// that response-shape change.
 	e.Token = request.Token
 	e.TeamID = request.TeamID
 	return e, err
