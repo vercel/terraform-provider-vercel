@@ -274,7 +274,10 @@ func (r *edgeConfigTokenResource) ImportState(ctx context.Context, req resource.
 		TeamID:       teamID,
 	})
 	if client.NotFound(err) {
-		resp.State.RemoveResource(ctx)
+		resp.Diagnostics.AddError(
+			"Error importing Edge Config Token",
+			fmt.Sprintf("Edge Config Token not found for edge config %s. Check the team ID, edge config ID and token.", edgeConfigID),
+		)
 		return
 	}
 	if err != nil {

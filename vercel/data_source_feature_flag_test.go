@@ -61,7 +61,7 @@ func TestAcc_FeatureFlagSDKKeyDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair("data.vercel_feature_flag_sdk_key.test", "id", "vercel_feature_flag_sdk_key.test", "id"),
 					resource.TestCheckResourceAttr("data.vercel_feature_flag_sdk_key.test", "environment", "preview"),
-					resource.TestCheckResourceAttr("data.vercel_feature_flag_sdk_key.test", "type", "client"),
+					resource.TestCheckResourceAttr("data.vercel_feature_flag_sdk_key.test", "type", "server"),
 					resource.TestCheckResourceAttr("data.vercel_feature_flag_sdk_key.test", "label", "web-sdk"),
 				),
 			},
@@ -174,7 +174,7 @@ resource "vercel_feature_flag_definition" "bootstrap" {
 resource "vercel_feature_flag_sdk_key" "test" {
   project_id  = vercel_project.test.id
   environment = "preview"
-  type        = "client"
+  type        = "server"
   label       = "web-sdk"
 
   depends_on = [vercel_feature_flag_definition.bootstrap]

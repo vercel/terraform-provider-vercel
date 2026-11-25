@@ -158,7 +158,7 @@ func TestEdgeConfigTokenReadRemovesDeletedToken(t *testing.T) {
 func TestEdgeConfigTokenReadWithoutIDLooksUpByToken(t *testing.T) {
 	ctx := context.Background()
 	r, schemaResponse := edgeConfigTokenTestResource(t, func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path != "/v1/edge-config/ecfg_1/token/"+testEdgeConfigTokenSecret {
+		if req.URL.Path != "/v1/global-config/ecfg_1/token" || req.Header.Get("x-vercel-global-config-token") != testEdgeConfigTokenSecret {
 			t.Errorf("unexpected request to %s", req.URL.Path)
 			http.NotFound(w, req)
 			return
@@ -178,6 +178,23 @@ func TestEdgeConfigTokenReadWithoutIDLooksUpByToken(t *testing.T) {
 	}
 	if got.ID.ValueString() != "tok_1" || got.ConnectionString.ValueString() != testEdgeConfigTokenCS {
 		t.Errorf("unexpected state: id=%q connection_string=%q", got.ID.ValueString(), got.ConnectionString.ValueString())
+	}
+}
+
+func TestEdgeConfigTokenReadWithoutIDRemovesDeletedToken(t *testing.T) {
+	r, schemaResponse := edgeConfigTokenTestResource(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, `{"error":{"code":"not_found","message":"Not found"}}`)
+	})
+
+	state := edgeConfigTokenTestState(t, schemaResponse, "")
+	resp := resource.ReadResponse{State: state}
+	r.Read(context.Background(), resource.ReadRequest{State: state}, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatal(resp.Diagnostics)
+	}
+	if !resp.State.Raw.IsNull() {
+		t.Error("expected the resource to be removed from state")
 	}
 }
 
@@ -201,9 +218,11 @@ func TestEdgeConfigTokenImportErrorsOmitToken(t *testing.T) {
 			closed:  true,
 		},
 		{
-			name:     "invalid URL escape",
-			handler:  func(http.ResponseWriter, *http.Request) {},
-			importID: "team_1/ecfg_1/" + testEdgeConfigTokenSecret + "%",
+			name: "token not found",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, `{"error":{"code":"not_found","message":"no token %s"}}`, testEdgeConfigTokenSecret)
+			},
 		},
 		{
 			name:     "invalid import format",
