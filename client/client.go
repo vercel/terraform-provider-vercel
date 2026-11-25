@@ -10,6 +10,7 @@ import (
 // Client is an API wrapper, providing a high-level interface to the Vercel API.
 type Client struct {
 	token       string
+	oidc        *oidcTokenSource
 	client      *http.Client
 	team        Team
 	baseURL     string
