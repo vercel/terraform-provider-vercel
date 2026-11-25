@@ -181,6 +181,23 @@ func TestEdgeConfigTokenReadWithoutIDLooksUpByToken(t *testing.T) {
 	}
 }
 
+func TestEdgeConfigTokenReadWithoutIDRemovesDeletedToken(t *testing.T) {
+	r, schemaResponse := edgeConfigTokenTestResource(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, `{"error":{"code":"not_found","message":"Not found"}}`)
+	})
+
+	state := edgeConfigTokenTestState(t, schemaResponse, "")
+	resp := resource.ReadResponse{State: state}
+	r.Read(context.Background(), resource.ReadRequest{State: state}, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatal(resp.Diagnostics)
+	}
+	if !resp.State.Raw.IsNull() {
+		t.Error("expected the resource to be removed from state")
+	}
+}
+
 func TestEdgeConfigTokenImportErrorsOmitToken(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
@@ -201,9 +218,11 @@ func TestEdgeConfigTokenImportErrorsOmitToken(t *testing.T) {
 			closed:  true,
 		},
 		{
-			name:     "invalid URL escape",
-			handler:  func(http.ResponseWriter, *http.Request) {},
-			importID: "team_1/ecfg_1/" + testEdgeConfigTokenSecret + "%",
+			name: "token not found",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, `{"error":{"code":"not_found","message":"no token %s"}}`, testEdgeConfigTokenSecret)
+			},
 		},
 		{
 			name:     "invalid import format",
