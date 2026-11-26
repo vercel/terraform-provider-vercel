@@ -61,6 +61,9 @@ func TestImportStateInvalidIDReturnsBeforeClientCall(t *testing.T) {
 		{name: "project rolling release", run: func(resp *resource.ImportStateResponse) {
 			(&projectRollingReleaseResource{}).ImportState(ctx, req, resp)
 		}},
+		{name: "project speed insights", run: func(resp *resource.ImportStateResponse) {
+			(&projectSpeedInsightsResource{}).ImportState(ctx, req, resp)
+		}},
 		{name: "project tracing", run: func(resp *resource.ImportStateResponse) {
 			(&projectTracingResource{}).ImportState(ctx, req, resp)
 		}},
