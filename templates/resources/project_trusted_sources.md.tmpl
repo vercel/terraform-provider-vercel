@@ -1,0 +1,66 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.RenderedProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+## Standalone ownership and coexistence
+
+This resource works with a project created outside Terraform: no `vercel_project` resource or project import is required. It writes only the project's `trustedSources` setting with `PATCH /v9/projects/{id}`, and never creates or deletes the project.
+
+If Terraform also manages the project itself:
+
+```terraform
+resource "vercel_project" "app" {
+  name                   = "existing-app"
+  manage_trusted_sources = false
+  # Omit trusted_sources here. Keep your other existing project configuration.
+}
+
+resource "vercel_project_trusted_sources" "app" {
+  project_id = vercel_project.app.id
+  projects = [
+    { project_id = "prj_frontend" },
+  ]
+}
+```
+
+Set `manage_trusted_sources = false` before delegating ownership. It omits Trusted Sources from every project request, including follow-up requests during project creation, and stops `vercel_project` from reporting them as drift. It leaves the live configuration unchanged. Deployment protection (`manage_deployment_protection`) and Passport (`manage_passport`) have their own independent flags and standalone resources.
+
+Do not manage Trusted Sources through multiple resources, multiple Terraform states, or inline attributes for the same project.
+
+## Adoption and removal
+
+This resource owns the project's complete lists of trusted projects and external sources. Each apply sends both lists, so entries that are not in the configuration are removed. To keep existing entries, import them first: import is read-only and adopts the full live configuration. Review the plan before applying.
+
+Destroying the resource sends `trustedSources: null`, which clears trusted projects and external sources. The API preserves the stored `enable_vercel_ci_same_repository` value on clear; set it back to `true` before destroying if you disabled it and want the default restored. To stop managing Trusted Sources while keeping them, replace the resource block with:
+
+```terraform
+removed {
+  from = vercel_project_trusted_sources.app
+  lifecycle {
+    destroy = false
+  }
+}
+```
+
+The `removed` block requires Terraform 1.7 or later. Changing the project ID or an explicitly configured team ID replaces the resource, clearing Trusted Sources on the old project and writing them to the new one.
+
+## Same-repository Vercel CI access
+
+`enable_vercel_ci_same_repository` controls whether same-team Vercel CI runs can access preview and production deployments built from the CI run's repository. The API treats a missing value as enabled. This resource writes the value only when it is configured; omitting it leaves the stored value unchanged and reports the live value.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+{{ codefile "shell" .ImportFile }}
