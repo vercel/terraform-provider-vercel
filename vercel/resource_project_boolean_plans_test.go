@@ -24,7 +24,7 @@ func TestProjectNullableBooleanPlans(t *testing.T) {
 		}
 		values["name"] = tftypes.NewValue(tftypes.String, "original")
 		values["node_version"] = tftypes.NewValue(tftypes.String, "22.x")
-		for _, name := range []string{"auto_assign_custom_domains", "git_fork_protection", "manage_passport", "manage_deployment_protection"} {
+		for _, name := range []string{"auto_assign_custom_domains", "git_fork_protection", "manage_passport", "manage_deployment_protection", "manage_trusted_sources"} {
 			values[name] = tftypes.NewValue(tftypes.Bool, true)
 		}
 		return values

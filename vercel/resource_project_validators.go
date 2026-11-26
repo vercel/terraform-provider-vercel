@@ -104,3 +104,21 @@ func (*projectProtectionOwnershipValidator) ValidateResource(ctx context.Context
 		}
 	}
 }
+
+type projectTrustedSourcesOwnershipValidator struct{}
+
+func (*projectTrustedSourcesOwnershipValidator) Description(context.Context) string {
+	return "Omit inline trusted_sources when manage_trusted_sources is false."
+}
+func (v *projectTrustedSourcesOwnershipValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+func (*projectTrustedSourcesOwnershipValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var managed types.Bool
+	var trustedSources types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("manage_trusted_sources"), &managed)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("trusted_sources"), &trustedSources)...)
+	if managed.Equal(types.BoolValue(false)) && !trustedSources.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("trusted_sources"), "Conflicting Trusted Sources ownership", "Omit trusted_sources when manage_trusted_sources is false. Manage it with vercel_project_trusted_sources instead.")
+	}
+}

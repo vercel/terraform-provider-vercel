@@ -53,6 +53,9 @@ type TrustedSourcesOIDCProvider struct {
 type TrustedSources struct {
 	Projects      map[string]TrustedSourcesProject        `json:"projects,omitempty"`
 	OIDCProviders map[string][]TrustedSourcesOIDCProvider `json:"oidcProviders,omitempty"`
+	// EnableVercelCiSameRepository is nil when the API has no stored value,
+	// which it treats as enabled. Omitting it from an update preserves it.
+	EnableVercelCiSameRepository *bool `json:"enableVercelCiSameRepository,omitempty"`
 }
 
 type ProtectionBypass struct {

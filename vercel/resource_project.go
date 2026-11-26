@@ -294,6 +294,10 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "Whether this resource manages Vercel Authentication, password protection, and Trusted IPs. Defaults to true. Set false and omit those inline attributes when using the standalone vercel_project_deployment_protection resource. All three fields are then omitted from project requests. Passport, bypasses, and the project lifecycle are unaffected.",
 				Optional:    true, Computed: true, Default: booldefault.StaticBool(true),
 			},
+			"manage_trusted_sources": schema.BoolAttribute{
+				Description: "Whether this resource manages Trusted Sources. Defaults to true. Set false and omit trusted_sources when using the standalone vercel_project_trusted_sources resource; project requests then never write Trusted Sources. This does not clear existing Trusted Sources. vercel_project still owns the project lifecycle.",
+				Optional:    true, Computed: true, Default: booldefault.StaticBool(true),
+			},
 			"manage_passport": schema.BoolAttribute{
 				Description: "Whether this resource manages Passport. Defaults to true. Set false and omit passport when using the standalone vercel_project_passport resource; project updates then never write Passport. This does not disable Passport. vercel_project still owns the project lifecycle.",
 				Optional:    true, Computed: true, Default: booldefault.StaticBool(true),
@@ -370,74 +374,8 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 				Description: "Allows configured Vercel projects and external sources to reach this project's protected deployments using short-lived OIDC tokens.",
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
-					"projects": schema.SetNestedAttribute{
-						Description: "Vercel projects in the same team that can reach this project's protected deployments.",
-						Optional:    true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"project_id": schema.StringAttribute{
-									Description: "The trusted Vercel project ID.",
-									Required:    true,
-									Validators: []validator.String{
-										stringvalidator.LengthBetween(1, 64),
-									},
-								},
-								"label": schema.StringAttribute{
-									Description: "A label or description for the trusted project.",
-									Optional:    true,
-									Validators: []validator.String{
-										stringvalidator.LengthBetween(1, 100),
-									},
-								},
-								"custom_allow": schema.SetNestedAttribute{
-									Description: "Optional overrides for default same-environment matching. Saved rules replace the API defaults for this trusted project.",
-									Optional:    true,
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: trustedSourcesAccessRuleResourceSchema(),
-									},
-									Validators: []validator.Set{
-										setvalidator.SizeAtLeast(1),
-										setvalidator.SizeAtMost(20),
-									},
-								},
-							},
-						},
-						Validators: []validator.Set{
-							setvalidator.SizeAtMost(100),
-						},
-					},
-					"external_sources": schema.SetNestedAttribute{
-						Description: "External sources that can reach this project's protected deployments using short-lived OIDC tokens.",
-						Optional:    true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"issuer": schema.StringAttribute{
-									Description: "The OIDC issuer URL.",
-									Required:    true,
-									Validators: []validator.String{
-										stringvalidator.LengthBetween(1, 512),
-									},
-								},
-								"label": schema.StringAttribute{
-									Description: "A label or description for the trusted external source entry.",
-									Optional:    true,
-									Validators: []validator.String{
-										stringvalidator.LengthBetween(1, 100),
-									},
-								},
-								"to": schema.SingleNestedAttribute{
-									Description: "The target environments on this project that may be accessed.",
-									Required:    true,
-									Attributes:  trustedSourcesEnvMatcherResourceSchema(),
-								},
-								"claims": schema.MapAttribute{
-									Description: "Claims that must match on the OIDC token. Each key is a claim name, and each value is a set of accepted values. The API requires `aud` and issuer-specific identity claims.",
-									Required:    true,
-									ElementType: trustedSourcesClaimValuesType,
-								},
-							},
-						},
-					},
+					"projects":         trustedSourcesProjectsResourceSchema(),
+					"external_sources": trustedSourcesExternalSourcesResourceSchema(),
 				},
 			},
 			"oidc_token_config": schema.SingleNestedAttribute{
@@ -739,6 +677,80 @@ At this time you cannot use a Vercel Project resource with in-line ` + "`environ
 	}
 }
 
+func trustedSourcesProjectsResourceSchema() schema.SetNestedAttribute {
+	return schema.SetNestedAttribute{
+		Description: "Vercel projects in the same team that can reach this project's protected deployments.",
+		Optional:    true,
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: map[string]schema.Attribute{
+				"project_id": schema.StringAttribute{
+					Description: "The trusted Vercel project ID.",
+					Required:    true,
+					Validators: []validator.String{
+						stringvalidator.LengthBetween(1, 64),
+					},
+				},
+				"label": schema.StringAttribute{
+					Description: "A label or description for the trusted project.",
+					Optional:    true,
+					Validators: []validator.String{
+						stringvalidator.LengthBetween(1, 100),
+					},
+				},
+				"custom_allow": schema.SetNestedAttribute{
+					Description: "Optional overrides for default same-environment matching. Saved rules replace the API defaults for this trusted project.",
+					Optional:    true,
+					NestedObject: schema.NestedAttributeObject{
+						Attributes: trustedSourcesAccessRuleResourceSchema(),
+					},
+					Validators: []validator.Set{
+						setvalidator.SizeAtLeast(1),
+						setvalidator.SizeAtMost(20),
+					},
+				},
+			},
+		},
+		Validators: []validator.Set{
+			setvalidator.SizeAtMost(100),
+		},
+	}
+}
+
+func trustedSourcesExternalSourcesResourceSchema() schema.SetNestedAttribute {
+	return schema.SetNestedAttribute{
+		Description: "External sources that can reach this project's protected deployments using short-lived OIDC tokens.",
+		Optional:    true,
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: map[string]schema.Attribute{
+				"issuer": schema.StringAttribute{
+					Description: "The OIDC issuer URL.",
+					Required:    true,
+					Validators: []validator.String{
+						stringvalidator.LengthBetween(1, 512),
+					},
+				},
+				"label": schema.StringAttribute{
+					Description: "A label or description for the trusted external source entry.",
+					Optional:    true,
+					Validators: []validator.String{
+						stringvalidator.LengthBetween(1, 100),
+					},
+				},
+				"to": schema.SingleNestedAttribute{
+					Description: "The target environments on this project that may be accessed.",
+					Required:    true,
+					Attributes:  trustedSourcesEnvMatcherResourceSchema(),
+				},
+				"claims": schema.MapAttribute{
+					Description: "Claims that must match on the OIDC token. Each key is a claim name, and each value is a set of accepted values. The API requires `aud` and issuer-specific identity claims.",
+					Required:    true,
+					ElementType: trustedSourcesClaimValuesType,
+				},
+			},
+		},
+	}
+}
+
 func trustedSourcesAccessRuleResourceSchema() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"from": schema.SingleNestedAttribute{
@@ -788,6 +800,7 @@ func (r *projectResource) ConfigValidators(ctx context.Context) []resource.Confi
 		&fluidComputeBasicCPUValidator{},
 		&projectPassportOwnershipValidator{},
 		&projectProtectionOwnershipValidator{},
+		&projectTrustedSourcesOwnershipValidator{},
 	}
 }
 
@@ -795,6 +808,7 @@ func (r *projectResource) ConfigValidators(ctx context.Context) []resource.Confi
 type Project struct {
 	ManageDeploymentProtection        types.Bool   `tfsdk:"manage_deployment_protection"`
 	ManagePassport                    types.Bool   `tfsdk:"manage_passport"`
+	ManageTrustedSources              types.Bool   `tfsdk:"manage_trusted_sources"`
 	Passport                          types.Object `tfsdk:"passport"`
 	BuildCommand                      types.String `tfsdk:"build_command"`
 	DevCommand                        types.String `tfsdk:"dev_command"`
@@ -1211,6 +1225,10 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 	if p.ManageDeploymentProtection.Equal(types.BoolValue(false)) {
 		authenticationField, passwordField, trustedIPsField = nil, nil, nil
 	}
+	trustedSourcesField := projectSetting(tsReq)
+	if p.ManageTrustedSources.Equal(types.BoolValue(false)) {
+		trustedSourcesField = nil
+	}
 	return client.UpdateProjectRequest{
 		Passport:                             passport,
 		BuildCommand:                         projectSetting(p.BuildCommand.ValueStringPointer()),
@@ -1225,7 +1243,7 @@ func (p *Project) toUpdateProjectRequest(ctx context.Context, oldName string) (r
 		PasswordProtection:                   passwordField,
 		VercelAuthentication:                 authenticationField,
 		TrustedIps:                           trustedIPsField,
-		TrustedSources:                       projectSetting(tsReq),
+		TrustedSources:                       trustedSourcesField,
 		OIDCTokenConfig:                      projectSetting(oidc.toUpdateProjectRequest()),
 		OptionsAllowlist:                     projectSetting(oal.toUpdateProjectRequest()),
 		AutoExposeSystemEnvVars:              knownBoolPointer(p.AutoExposeSystemEnvVars),
@@ -2052,7 +2070,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	}
 	// Trusted Sources
 	trustedSourcesObj := types.ObjectNull(trustedSourcesAttrType.AttrTypes)
-	if response.TrustedSources != nil {
+	if response.TrustedSources != nil && !plan.ManageTrustedSources.Equal(types.BoolValue(false)) {
 		trustedSourcesObj = trustedSourcesObjectFromResponse(*response.TrustedSources)
 	}
 
@@ -2203,6 +2221,7 @@ func convertResponseToProject(ctx context.Context, response client.ProjectRespon
 	return Project{
 		ManagePassport:                    projectManageSetting(plan.ManagePassport),
 		ManageDeploymentProtection:        projectManageSetting(plan.ManageDeploymentProtection),
+		ManageTrustedSources:              projectManageSetting(plan.ManageTrustedSources),
 		BuildCommand:                      uncoerceString(fields.BuildCommand, types.StringPointerValue(response.BuildCommand)),
 		DevCommand:                        uncoerceString(fields.DevCommand, types.StringPointerValue(response.DevCommand)),
 		Environment:                       environmentEntry,
