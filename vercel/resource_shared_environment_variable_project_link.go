@@ -154,6 +154,10 @@ func (r *sharedEnvironmentVariableProjectLinkResource) Read(ctx context.Context,
 	}
 
 	response, err := r.client.GetSharedEnvironmentVariable(ctx, state.TeamID.ValueString(), state.SharedEnvironmentVariableID.ValueString())
+	if client.NotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading shared environment variable",
